@@ -42,7 +42,7 @@ palette: pulp orange #F28C28, sun gold #FFC43D, cream path #F3DFB2, jungle green
 river cyan #1FA2C7, lavender-gray #8E8DAA, terracotta #C4673A, ink #1E1A24
 ```
 
-### Shared readability block (append to every board prompt)
+### {READABILITY} Shared readability block (pasted in place of the token in board shots 2–5)
 
 ```
 three-lane running path leading straight into the distance, path lighter and warmer than the surroundings, one

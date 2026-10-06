@@ -25,8 +25,11 @@ These rules hold no matter which board is chosen, so gameplay is not affected by
 | Path | Lighter and warmer than the edges of the screen; the far distance fades into warm haze (fog from 45 m, GDD 6). | Pulls the eye down the lane. |
 | Value structure | Background mid-to-dark, path light, hazards dark with a red edge, pickups brightest. | Squint test: at 25% size in grayscale, hazards and coins must still separate. |
 
-Assumed mobile budgets until `docs/ARCHITECTURE.md` sets them `[ASSUMED]`: hero up to 8,000 triangles,
-companion up to 3,000, obstacle up to 1,500, one 1024 px texture per character, environment on shared atlases.
+Mobile budgets (from `docs/ARCHITECTURE.md`): hero up to 15k triangles, 1 material, 1024 px textures, 40 bones;
+companion up to 8k triangles, 512 px textures, 30 bones; obstacle/prop up to 2k triangles on shared atlases;
+track chunk up to 20k visible triangles, 4 materials, 2048 px atlas; up to 150k triangles and 120 draw calls on screen.
+Art target is well under these (about half), leaving room for effects. Toon outlines (Board C) must fit inside the
+draw-call and triangle limits, and shaders must be the mobile URP shaders allowed there.
 
 ---
 
@@ -108,7 +111,7 @@ background values. Coins are fine thanks to the gem and sparkle.
 
 **Production cost.** Medium to high. Tripo and Meshy produce painterly textures well, but each asset comes out
 with a slightly different brush feel and light direction baked in, so most assets need a texture clean-up or
-repaint pass to look like one world. Textures are larger (1024 px for characters, 2048 px atlases for worlds),
+repaint pass to look like one world. Textures must use the full allowed size (1024 px for characters, 2048 px atlases for worlds),
 which costs memory and download size. Most attractive in still screenshots.
 
 **Vibe references (mood only, nothing copied).** Sea of Thieves, Spyro Reignited Trilogy, Uncharted (for the

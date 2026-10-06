@@ -5,6 +5,10 @@ Newest first.
 
 | Date | Gate | Decision | Options considered | Decided by |
 |---|---|---|---|---|
+| 2026-10-06 | G1 | Macaw speaks a few words (e.g. "Vine!", "Look out!"), localized | Words / Squawks only / Squawks + catchphrase | Owner |
+| 2026-10-06 | G0 | Unity license for CI: owner's free Personal account (move to a CI-only account later) | Personal / CI account / Pro | Owner |
+| 2026-10-06 | G0 | Lowest supported device for 60 fps: iPhone 11 / SE 2nd gen (A13) | XR-XS / 11-SE2 / 12 | Owner |
+| 2026-10-06 | G0 | iOS builds compiled and signed on the owner's own Mac | Own Mac / GitHub macOS runners / Codemagic-Unity Build | Owner |
 | 2026-10-06 | G1 | Launch worlds: all 4 (Jungle, River, Mountains, Ruins) | 2 / 3 / 4 worlds | Owner |
 | 2026-10-06 | G1 | Mood: pulpy adventure (warm golden light, drums and brass, treasure-hunt feel) | Sunny cartoon comedy / Pulpy adventure / Mysterious wonder | Owner |
 | 2026-10-06 | G1 | Companion: macaw parrot (loud, colorful, flies overhead, squawks warnings) | Macaw / Capuchin / Jaguar cub / Sloth | Owner |
