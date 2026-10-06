@@ -44,6 +44,6 @@ defined in `.claude/agents/`. Read `docs/AGENT_PLAN.md` for the full plan.
 
 ## Conventions
 - C#: `PascalCase` types/methods, `_camelCase` private fields, one type per file, namespaces `JungleBooze.<Layer>`.
-- Assemblies: `JungleBooze.Core`, `.Gameplay`, `.UI`, `.Services`, `.Editor`, `.Tests.EditMode`, `.Tests.PlayMode`.
+- Assemblies: `JungleBooze.Core`, `.Gameplay`, `.UI`, `.Services`, `.App` (composition root), `.Editor`, `.Tests.EditMode`, `.Tests.PlayMode`.
 - Commits: imperative mood, reference the issue (`Add lane switching (#12)`).
 - Docs: decisions → `design/DECISIONS.md`; technical decisions → `docs/adr/NNNN-title.md`.

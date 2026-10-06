@@ -5,6 +5,10 @@ Newest first.
 
 | Date | Gate | Decision | Options considered | Decided by |
 |---|---|---|---|---|
+| 2026-10-06 | — | Add the `JungleBooze.App` assembly (composition root) to the project's assembly list | Add / Don't add | Owner |
+| 2026-10-06 | G5 | No tracking for anyone: contextual ads only, no ATT prompt | No tracking / Adults-only ATT / Decide week 4 | Owner |
+| 2026-10-06 | G6 | Paid trademark lawyer check stays in week 7 (owner accepts the risk of redoing voice/art if a name fails) | Week 3 / Week 7 | Owner |
+| 2026-10-06 | G6 | Public app name candidate for the lawyer check: "Pista & Duko: Jungle Swing", subtitle "Endless vine-swinging runner" | 8 ranked candidates in docs/compliance/ | Owner |
 | 2026-10-06 | — | **Quality over schedule:** if a world or feature isn't at full quality, launch waits. Never ship lighter versions to hit a date | Ship lighter and polish later / Delay launch | Owner |
 | 2026-10-06 | G1 | Launch language: English only; EU languages in later updates | English / English + FIGS / English + DE + FR | Owner |
 | 2026-10-06 | G2 | Hero sash worn as a band around the chest, just below the X on her back | Band below X / Keep diagonal / Move X lower | Owner |

@@ -49,8 +49,7 @@ If a new session finds an agent marked **working** but no matching output or com
 | G4–G8 | Not started |
 
 ## Open questions for the owner
-1. Add the `JungleBooze.App` assembly to the project rules' assembly list? (tech-architect proposal)
-2. Ads and prices: deferred to week 4.
+1. Ads and prices: deferred to week 4 (tracking already decided: none).
 
 ## Assumptions waiting for owner review (`[ASSUMED]`)
 - Stumble rule: clipping an obstacle's side is a stumble, the second stumble ends the run (spec 001). Judge at G3.
@@ -67,6 +66,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Log
 Newest first. One line per event.
+- 2026-10-06: Owner decided: app name candidate "Pista & Duko: Jungle Swing", lawyer check in week 7, no tracking, add the App assembly.
 - 2026-10-06: appstore-compliance finished the name check and early risk review. Top risks: "JungleBooze" leaking into bundle/product IDs (permanent), and kid hero + ads counting as directed to children.
 - 2026-10-06: Owner approved self-resume after usage limits for up to 3 days. Created the resume watchdog routine.
 - 2026-10-06: Owner set the automatic handoff threshold at about 40% of the conversation's capacity.
