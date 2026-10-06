@@ -1,0 +1,4 @@
+# App identity for fastlane. Values come from the owner's private env file
+# (~/.junglebooze/release.env, loaded by tools/build/build_ios.sh). Nothing secret lives here.
+app_identifier(ENV["JB_BUNDLE_ID"])
+team_id(ENV["APPLE_TEAM_ID"])

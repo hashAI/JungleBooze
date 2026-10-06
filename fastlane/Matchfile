@@ -1,0 +1,12 @@
+# Signing certificates and provisioning profiles are stored encrypted in a separate PRIVATE git repository.
+# Values come from environment variables (see docs/RELEASE.md and tools/build/release.env.example):
+#   MATCH_GIT_URL                  URL of the private certificates repository
+#   MATCH_PASSWORD                 Encryption password for that repository (read by match automatically)
+#   MATCH_GIT_BASIC_AUTHORIZATION  Optional, base64 of "github-username:access-token" for HTTPS access
+# Read-only by default: only "fastlane ios certs readonly:false" may create or renew certificates.
+storage_mode("git")
+git_url(ENV["MATCH_GIT_URL"])
+type("appstore")
+app_identifier([ENV["JB_BUNDLE_ID"]])
+team_id(ENV["APPLE_TEAM_ID"])
+readonly(true)

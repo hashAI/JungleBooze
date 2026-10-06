@@ -32,6 +32,13 @@ _Last updated: 2026-10-06_
 States: **working** (launched, report not received) · waiting · blocked · done.
 If a new session finds an agent marked **working** but no matching output or commit, assume that agent was interrupted. Check the listed output files and relaunch the task.
 
+## Resume watchdog
+- Routine `trig_01KrbEoPcZMAR8K2x73kVcUn` wakes the coordinating session every 4 hours (minute 23 UTC).
+- It resumes stalled work (usage limit, interruption). It does nothing while agents run or while waiting on the owner.
+- Stall started: _none_ (set this to the date/time of the first watchdog check that finds no progress; clear it when work resumes).
+- After 3 days stalled, it stops, asks the owner whether to continue, and disables itself until they answer.
+- On session handoff: the new session creates its own watchdog, deletes this one, and updates the id above.
+
 ## Owner gates
 | Gate | Status |
 |---|---|
@@ -60,6 +67,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Log
 Newest first. One line per event.
+- 2026-10-06: Owner approved self-resume after usage limits for up to 3 days. Created the resume watchdog routine.
 - 2026-10-06: Owner set the automatic handoff threshold at about 40% of the conversation's capacity.
 - 2026-10-06: art-director finished the names/sash update to the style guide and prompts.
 - 2026-10-06: Launched game-designer (spec 002), appstore-compliance (names + early review), release-engineer (iOS/TestFlight pipeline), art-director (style guide update). gameplay-engineer still running with no files written yet.

@@ -13,7 +13,8 @@ defined in `.claude/agents/`. Read `docs/AGENT_PLAN.md` for the full plan.
    the session estimates this, since it has no exact gauge), and no agents are running, it: (a) updates `docs/STATUS.md` with a "Handoff" note (what was just finished, what to launch next),
    (b) commits and pushes, (c) starts a new cloud session on the same repo and branch with the prompt
    "Continue the project: read docs/STATUS.md and design/DECISIONS.md, then carry on from the Handoff note",
-   (d) sends the owner the new session's link, and stops working in the old session.
+   (d) creates a new resume watchdog routine bound to the new session and deletes the old one (id in `docs/STATUS.md`),
+   (e) sends the owner the new session's link, and stops working in the old session.
    Never hand off while an agent is running or while a question to the owner is unanswered.
 
 ## Ground rules for every agent
