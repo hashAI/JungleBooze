@@ -60,6 +60,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Log
 Newest first. One line per event.
+- 2026-10-06: Owner approved automatic session handoff (see project rules, "Starting a session" step 3).
 - 2026-10-06: game-designer finished GDD fourth draft (all decisions applied; Mountains art moves up to week 3).
 - 2026-10-06: Quality-over-schedule added as project rule 10. Launched game-designer to apply names, sash, English-only, no-lighter-world rule, bloom and macaw placement to the GDD.
 - 2026-10-06: Owner decided: names Pista/Duko (trademark check pending), sash band below the X, English-only launch, and quality over schedule (launch waits rather than shipping a lighter world).
