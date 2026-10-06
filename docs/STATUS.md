@@ -14,20 +14,20 @@ _Last updated: 2026-10-06_
 | Agent | State | Current / last task | Output | Next for this agent |
 |---|---|---|---|---|
 | producer | not used yet | (the coordinating session does this role for now) | this file | — |
-| game-designer | done | GDD fourth draft: names Pista/Duko, sash, English-only voice plan, quality-over-schedule risk table, no bloom, macaw placement | `docs/GDD.md` | Spec 002: endless track, obstacles, coins (week 2) |
+| game-designer | **working** | Spec 002: endless track, obstacles, coins, fairness rules | `docs/specs/002-track-obstacles-coins.md` | Spec 003: vine swinging (week 3) |
 | balance-simulator | waiting | — | — | Run spec 001 targets S1–S9 on the seeded test course once movement code lands |
 | tech-architect | done (week 0) | Architecture, ADRs 0001–0002, Unity skeleton, deterministic core + tests, CI test workflow | `docs/ARCHITECTURE.md`, `docs/adr/`, `UnityProject/`, `.github/workflows/test.yml` | Week 1: Roslyn analyzers; add the `JungleBooze.App` assembly to the rules file once the owner agrees |
 | gameplay-engineer | **working** | Implementing spec 001 (player movement), bot input provider, tests named by AC id | `UnityProject/Assets/_Game/Scripts/Gameplay`, `Tests/` | Spec 002 |
 | ui-engineer | waiting | — | — | Week 4: menus, shop |
-| art-director | done | Binding style guide for Inkbound Pulp (palette, toon + ink outline approach, lighting per world, fonts, asset review checklist), final Mapcloth/Dusk prompts, 5 name pairs | `design/STYLE_GUIDE.md`, `design/prompts/` | Small fix: style guide sections 6.1 and 13 still mark the sash as assumed and names as undecided. Then generate concept images once an image API key exists |
+| art-director | **working** | Apply names Pista/Duko and sash decision to style guide and prompts | `design/STYLE_GUIDE.md`, `design/prompts/` | Generate concept images once an image API key exists |
 | asset-pipeline | waiting | — | — | Needs an image/3D generation API key from the owner |
 | audio-director | waiting | — | — | Week 5. Note: the macaw speaks a few words, so voice lines and localization are needed |
 | qa-engineer | waiting | — | — | Review spec 001 test coverage after the gameplay-engineer finishes |
 | performance-engineer | waiting | — | — | Benchmark scene (week 2+) |
 | code-reviewer | waiting | — | — | Review the spec 001 implementation |
 | monetization-engineer | waiting | — | — | Week 4–5 |
-| appstore-compliance | waiting | — | — | Checklist runs from week 5; public name must not contain "Booze" |
-| release-engineer | waiting | — | — | iOS build + TestFlight pipeline on the owner's Mac (before G3, end of week 2) |
+| appstore-compliance | **working** | Trademark check of Pista/Duko, 8 public app name candidates, early rejection-risk review, checklist refresh | `docs/compliance/`, `docs/APP_STORE_CHECKLIST.md` | Privacy manifest when SDKs are chosen |
+| release-engineer | **working** | iOS build script, fastlane beta lane, one-command build for the owner's Mac, plain-language setup guide | `fastlane/`, `tools/build/`, `docs/RELEASE.md`, `Scripts/Editor/Build/` | First TestFlight build for G3 (end of week 2) |
 
 States: **working** (launched, report not received) · waiting · blocked · done.
 If a new session finds an agent marked **working** but no matching output or commit, assume that agent was interrupted. Check the listed output files and relaunch the task.
@@ -60,6 +60,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Log
 Newest first. One line per event.
+- 2026-10-06: Launched game-designer (spec 002), appstore-compliance (names + early review), release-engineer (iOS/TestFlight pipeline), art-director (style guide update). gameplay-engineer still running with no files written yet.
 - 2026-10-06: Owner approved automatic session handoff (see project rules, "Starting a session" step 3).
 - 2026-10-06: game-designer finished GDD fourth draft (all decisions applied; Mountains art moves up to week 3).
 - 2026-10-06: Quality-over-schedule added as project rule 10. Launched game-designer to apply names, sash, English-only, no-lighter-world rule, bloom and macaw placement to the GDD.
