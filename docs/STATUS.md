@@ -14,12 +14,12 @@ _Last updated: 2026-10-06_
 | Agent | State | Current / last task | Output | Next for this agent |
 |---|---|---|---|---|
 | producer | not used yet | (the coordinating session does this role for now) | this file | — |
-| game-designer | **working** | GDD third draft: synced with every owner decision (Mapcloth, Dusk, Inkbound Pulp, talking macaw, iPhone 11 floor) | `docs/GDD.md` | Fix GDD 9.2 bloom (style guide turns bloom off); apply names Pista/Duko, English-only launch, quality-over-schedule rule in 22.1 (no lighter-world fallback); confirm macaw position (2 m ahead, 4.2 m up); spec 002 track/obstacles/coins |
+| game-designer | done | GDD fourth draft: names Pista/Duko, sash, English-only voice plan, quality-over-schedule risk table, no bloom, macaw placement | `docs/GDD.md` | Spec 002: endless track, obstacles, coins (week 2) |
 | balance-simulator | waiting | — | — | Run spec 001 targets S1–S9 on the seeded test course once movement code lands |
 | tech-architect | done (week 0) | Architecture, ADRs 0001–0002, Unity skeleton, deterministic core + tests, CI test workflow | `docs/ARCHITECTURE.md`, `docs/adr/`, `UnityProject/`, `.github/workflows/test.yml` | Week 1: Roslyn analyzers; add the `JungleBooze.App` assembly to the rules file once the owner agrees |
 | gameplay-engineer | **working** | Implementing spec 001 (player movement), bot input provider, tests named by AC id | `UnityProject/Assets/_Game/Scripts/Gameplay`, `Tests/` | Spec 002 |
 | ui-engineer | waiting | — | — | Week 4: menus, shop |
-| art-director | done | Binding style guide for Inkbound Pulp (palette, toon + ink outline approach, lighting per world, fonts, asset review checklist), final Mapcloth/Dusk prompts, 5 name pairs | `design/STYLE_GUIDE.md`, `design/prompts/` | Generate concept images once an image API key exists |
+| art-director | done | Binding style guide for Inkbound Pulp (palette, toon + ink outline approach, lighting per world, fonts, asset review checklist), final Mapcloth/Dusk prompts, 5 name pairs | `design/STYLE_GUIDE.md`, `design/prompts/` | Small fix: style guide sections 6.1 and 13 still mark the sash as assumed and names as undecided. Then generate concept images once an image API key exists |
 | asset-pipeline | waiting | — | — | Needs an image/3D generation API key from the owner |
 | audio-director | waiting | — | — | Week 5. Note: the macaw speaks a few words, so voice lines and localization are needed |
 | qa-engineer | waiting | — | — | Review spec 001 test coverage after the gameplay-engineer finishes |
@@ -60,6 +60,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Log
 Newest first. One line per event.
+- 2026-10-06: game-designer finished GDD fourth draft (all decisions applied; Mountains art moves up to week 3).
 - 2026-10-06: Quality-over-schedule added as project rule 10. Launched game-designer to apply names, sash, English-only, no-lighter-world rule, bloom and macaw placement to the GDD.
 - 2026-10-06: Owner decided: names Pista/Duko (trademark check pending), sash band below the X, English-only launch, and quality over schedule (launch waits rather than shipping a lighter world).
 - 2026-10-06: art-director finished the binding style guide and final hero/macaw prompts; proposed 5 name pairs.

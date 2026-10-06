@@ -23,26 +23,26 @@ and this document is updated.
 
 ## 1. Vision in one paragraph
 
-HERO, a barefoot, cat-like wild girl raised by the jungle's animals and dressed in clothes cut from an old
+Pista, a barefoot, cat-like wild girl raised by the jungle's animals and dressed in clothes cut from an old
 treasure map, runs, jumps and slides through an endless jungle that changes into a river, then mountains, then
 ancient ruins the further she gets. It is a pulpy treasure-hunt adventure told in a bold, ink-outlined comic-book
 style: warm golden light, pounding drums and brass, gold glinting in every ruin. The signature moment is
-**vine swinging**: HERO leaps onto a vine, the camera pulls wide, and the player picks the perfect moment to let go
-and fly over a chasm. COMPANION, a sly violet-and-orange macaw with a weakness for shiny coins, flies overhead,
+**vine swinging**: Pista leaps onto a vine, the camera pulls wide, and the player picks the perfect moment to let go
+and fly over a chasm. Duko, a sly violet-and-orange macaw with a weakness for shiny coins, flies overhead,
 calls out warnings ("Vine!", "Look out!") about what is coming, and fills up a meter that lets it swoop down and
-lift HERO over trouble. Every session gives the player something:
+lift Pista over trouble. Every session gives the player something:
 coins, a finished mission, a step towards the next unlock, and a fair shot at beating their best score on Game Center.
 
-### 1.1 Hero, companion, mood and art style (owner decisions, G1 and G2)
+### 1.1 Hero, companion, mood and art style (owner decisions, G1, G2 and G6)
 
-Full concept sheets: `design/HERO_CONCEPTS.md`.
+Full concept sheets: `design/HERO_CONCEPTS.md`. Binding visual rules: `design/STYLE_GUIDE.md`.
 
 | Item | Decision | What it means for design |
 |---|---|---|
-| **HERO** | Wild jungle kid (G1), design **H2 "Mapcloth"** (G2): a cat-like wild girl who grew up among animals, barefoot, fearless, playful. Clothes cut from an old canvas treasure map, with a **big "X" on her back**; round cloud of curly hair, teal sash, salvaged satchel. Name: `[OWNER]`, still open. | Moves like a young big cat: low, forward-leaning run with long strides, lane changes as sideways pounces, drops to hands and feet for a beat on landings, cat-like slide. Reacts to danger with a grin, not fear. Animations show joy (a whoop on a Perfect release, a roll on landing). Back-view landmark (seen 90% of the time): hair cloud plus cream map back with the "X". Because the run is already low, the slide pose must stay clearly lower than the run (1.8 m vs 0.8 m hitbox, section 6). Age reads as roughly 9–12; original design, no resemblance to famous jungle heroes. |
-| **COMPANION** | Macaw parrot (G1), design **M3 "Dusk"** (G2): an original violet-and-orange macaw (violet body and wings, sunset-orange head and chest, teal tail tip), medium and sleek. Sly, greedy coin thief who loves anything shiny. **Speaks a few words** (G1), localized. Name: `[OWNER]`. | Flying fits the "above and behind" rule perfectly. Its short spoken call-outs are the main audio readability cue (section 15). Violet is complementary to the golden light, so it pops in every world and never clashes with hazard red or coin gold; no obstacle or hazard uses violet as a main color. The coin-thief personality is the story of Lift (it grabs every coin nearby, section 15.1). Medium size keeps it off the track during call-outs. |
-| **Mood** | Pulpy adventure: warm golden light, drums and brass, treasure-hunt feel. | Every world is lit with a golden-hour rig (section 9.2). Coins are gold treasure (coins, gems, idols as visual variants with the same value). Music is one drums-and-brass theme rearranged per world. World transitions feel like discovering a new map area. |
-| **Art style** | **C "Inkbound Pulp"** (G2): bold comic-book look with ink outlines. | Ink outlines strengthen silhouette readability at speed (pillar 1): hazards keep a thick outline plus the contrasting edge highlight (9.2). Kid proportions with a slightly larger head (about 1/4 of height). UI, banners and "Perfect!" pop-ups use comic-panel and lettering style. Outline rendering must fit the 60 fps budget on the lowest supported device (section 5.2). |
+| **HERO: Pista** | Wild jungle kid (G1), design **H2 "Mapcloth"** (G2): a cat-like wild girl who grew up among animals, barefoot, fearless, playful. Clothes cut from an old canvas treasure map, with a **big "X" on her back**; round cloud of curly hair, salvaged satchel. **Teal sash worn as a band around the chest, just below the X on her back** (owner decision, G2), so it underlines the X and never crosses it; the satchel hangs from it on a short strap at the right hip. Name: **Pista** (G6, pending trademark check, section 17). | Moves like a young big cat: low, forward-leaning run with long strides, lane changes as sideways pounces, drops to hands and feet for a beat on landings, cat-like slide. Reacts to danger with a grin, not fear. Animations show joy (a whoop on a Perfect release, a roll on landing). Back-view landmark (seen 90% of the time): hair cloud plus cream map back with the "X", underlined by the teal sash band. Because the run is already low, the slide pose must stay clearly lower than the run (1.8 m vs 0.8 m hitbox, section 6). Age reads as roughly 10–12 (`design/STYLE_GUIDE.md` 6.1); original design, no resemblance to famous jungle heroes. |
+| **COMPANION: Duko** | Macaw parrot (G1), design **M3 "Dusk"** (G2): an original violet-and-orange macaw (violet body and wings, sunset-orange head and chest, teal tail tip), medium and sleek. Sly, greedy coin thief who loves anything shiny. **Speaks a few words** (G1), in English at launch (section 15.1). Name: **Duko** (G6, pending trademark check, section 17). | Flying lets it sit in the upper third of the screen, clear of the track (placement in section 15.1). Its short spoken call-outs are the main audio readability cue (section 15). Violet is complementary to the golden light, so it pops in every world and never clashes with hazard red or coin gold; no obstacle or hazard uses violet as a main color. The coin-thief personality is the story of Lift (it grabs every coin nearby, section 15.1). Medium size keeps it off the track during call-outs. |
+| **Mood** | Pulpy adventure: warm golden light, drums and brass, treasure-hunt feel. | Every world is a preset of one golden-hour lighting rig (section 9.2, `design/STYLE_GUIDE.md` section 5). Coins are gold treasure (coins, gems, idols as visual variants with the same value). Music is one drums-and-brass theme rearranged per world. World transitions feel like discovering a new map area. |
+| **Art style** | **C "Inkbound Pulp"** (G2): bold comic-book look with ink outlines. | Ink outlines strengthen silhouette readability at speed (pillar 1): only gameplay objects (Pista, Duko, hazards, coins, power-ups, vines) get an ink outline, scenery never does, and hazards also carry the hazard-red telegraph (9.2). Kid proportions with a slightly larger head (about 1/4 of height). UI, banners and "Perfect!" pop-ups use comic-panel and lettering style. Outline rendering must fit the 60 fps budget on the lowest supported device (section 5.2). |
 | **Platform** | iOS first, Android later. Lowest device for locked 60 fps: **iPhone 11 / iPhone SE (2nd gen)** (A13) (G0). iOS builds are compiled and signed on the owner's own Mac (G0). | All performance targets in this document are measured on an iPhone 11 / SE 2nd gen. |
 
 ---
@@ -71,7 +71,7 @@ When two ideas conflict, the higher pillar wins.
                   │
                   ├─► Vine section (every 35–70 s): grab, swing, release ─► coin shower + score bonus
                   │
-                  ├─► COMPANION meter fills (near-misses, Perfect releases) ─► Lift (macaw carries HERO)
+                  ├─► COMPANION meter fills (near-misses, Perfect releases) ─► Lift (Duko carries Pista)
                   │
                   └─► Hit an obstacle ─► (optional) Continue ─► Results: score, coins, mission progress
                                                                          │
@@ -155,11 +155,11 @@ When two ideas conflict, the higher pillar wins.
    (1.5 s total) plays before control returns. Buffers are cleared on pause.
 7. **Ceiling during jump:** if a high obstacle would be hit at the top of a jump, the player dies (it is
    telegraphed). The generator never places a high obstacle where a jump is the only escape.
-8. **Opposite swipe during a lane switch:** HERO reverses at once toward the lane she came from (a queued second
+8. **Opposite swipe during a lane switch:** Pista reverses at once toward the lane she came from (a queued second
    switch is cancelled instead, if there is one).
 9. **Collision categories [ASSUMED]:** running into the **front** of an obstacle (or rising into a high barrier from
    below) is lethal. Clipping the **side** of an obstacle during a lane switch, or coming down on **top** of a low
-   barrier, is a **stumble**: HERO bounces back to the old lane (side) or scrambles over (top), and is dazed for 3 s.
+   barrier, is a **stumble**: Pista bounces back to the old lane (side) or scrambles over (top), and is dazed for 3 s.
    A second stumble while dazed is lethal ("Tripped twice"). Falling into a gap is lethal.
 
 Full rules, tick values and tests: `docs/specs/001-player-movement.md`.
@@ -188,7 +188,7 @@ Heavy: death. All haptics can be switched off in Settings.
 
 ### 7.1 Player story and purpose
 
-"I see glowing vines ahead, I jump, HERO catches the vine, the camera swings wide over a canyon, I let go at
+"I see glowing vines ahead, I jump, Pista catches the vine, the camera swings wide over a canyon, I let go at
 exactly the right moment and fly through a ring of coins. I want to show someone that."
 Vines break the rhythm of dodging, give the run a high point every minute, and create the shareable clip (pillar 3).
 
@@ -203,7 +203,7 @@ A vine section is a pre-built chunk, 60–110 m long:
 ```
 
 - Each vine hangs over one lane. Its grab point is 3.0 m above the track, shown by a bright, color-blind-safe glow
-  and a ring icon.
+  (white core with a sun-gold pulse, faked with an additive sprite card, no bloom) and a ring icon pulsing at 2 Hz.
 - Below the vine there is either **ground** (a "safe" vine: missing it only loses the bonus) or a **chasm** (missing
   it is a death). Early in a run and in the tutorial, only safe vines appear (section 11).
 - Vine sections never spawn within 8 s of a world transition, and never while a speed boost is active (the
@@ -212,26 +212,26 @@ A vine section is a pre-built chunk, 60–110 m long:
 ### 7.3 Step by step
 
 1. **Approach.** The approach strip has no obstacles in the vine lane for the last 1.2 s. Coin trails lead into
-   the vine lane. COMPANION calls out 2.0 s before the grab zone: a bright spoken "Vine!" and a swoop over the
+   the vine lane. Duko calls out 2.0 s before the grab zone: a bright spoken "Vine!" and a swoop over the
    vine lane (section 15.1).
-2. **Grab.** The player swipes up (jump) so that HERO is airborne inside the grab zone (a box 2.0 m long,
+2. **Grab.** The player swipes up (jump) so that Pista is airborne inside the grab zone (a box 2.0 m long,
    1.6 m wide, from 1.6 m to 3.6 m high, centered on the vine). Grab is **automatic** on entering the box while
    airborne. A jump started up to 0.45 s before the box counts, so there is a generous timing window.
    - Coyote rule applies: a jump within 80 ms after the approach ends still counts.
    - Being in the wrong lane = no grab. Lane switching in the air into the box still grabs.
-3. **Swing.** HERO swings forward along a pendulum arc (visual radius 6 m) for **1.40 s** (swing phase 0.0 to 1.0).
+3. **Swing.** Pista swings forward along a pendulum arc (visual radius 6 m) for **1.40 s** (swing phase 0.0 to 1.0).
    - Game speed stays the same in meters per second, but presentation slows to **0.8× for the first 0.3 s**
      (a "hang" moment) and the camera pulls back to FOV 70° and tilts 8°. (Turned off by Reduce Motion.)
-   - The swing is **safe**: nothing can hit HERO while on a vine.
+   - The swing is **safe**: nothing can hit Pista while on a vine.
    - Swiping left/right during the swing **aims** at the next vine if one exists in that lane (shown by a glow).
-     Without aiming, HERO aims at the next vine in the same lane, or the landing pad.
+     Without aiming, Pista aims at the next vine in the same lane, or the landing pad.
 4. **Release.** The player swipes up during the release window:
 
    | Swing phase | Result | Effect |
    |---|---|---|
    | 0.00–0.45 | Too early | Ignored (buffered for 150 ms, so a slightly early swipe still lands in "Good") |
    | 0.45–0.66 | Good | Normal launch, coin shower, +150 score |
-   | 0.66–0.80 | **Perfect** | Higher, longer launch through a bonus coin ring, +400 score, +25% COMPANION meter, gold flash, "Perfect!" |
+   | 0.66–0.80 | **Perfect** | Higher, longer launch through a bonus coin ring, +400 score, +25% COMPANION meter, stamped "PERFECT!", radial speed lines (0.4 s) and a sun-gold trail on Pista (`design/STYLE_GUIDE.md` 10) |
    | 0.80–1.00 | Good | Normal launch |
    | No swipe by 1.00 | Auto-release | Short, safe launch, +50 score, no coin shower |
 
@@ -240,21 +240,21 @@ A vine section is a pre-built chunk, 60–110 m long:
 5. **Chain.** If the next vine is ahead in the aimed lane, a Good/Perfect release launches into its grab zone
    automatically (no extra jump needed). Auto-release reaches the next vine only if it is a "safe" vine.
    Chains are up to 3 vines. Each Perfect in a chain raises the swing multiplier: ×1, ×1.5, ×2 on the score bonus.
-6. **Landing.** HERO lands on the landing pad in the aimed lane. The landing pad is guaranteed clear for 1.0 s.
+6. **Landing.** Pista lands on the landing pad in the aimed lane. The landing pad is guaranteed clear for 1.0 s.
    A buffered swipe down on landing becomes a slide; a buffered up becomes a jump.
 
 ### 7.4 Edge cases
 
-- **Missed vine over ground:** HERO lands normally and runs on. Score bonus lost, no penalty.
-- **Missed vine over chasm:** HERO falls. 0.35 s hit-pause, camera shows the missed vine, death cause "Missed vine".
+- **Missed vine over ground:** Pista lands normally and runs on. Score bonus lost, no penalty.
+- **Missed vine over chasm:** Pista falls. 0.35 s hit-pause, camera shows the missed vine, death cause "Missed vine".
   The chasm edge has the same 80 ms coyote time as any ledge.
 - **Power-up runs out while swinging:** timers keep counting, but the visible effect ends only after landing. A
   shield that expires mid-swing stays active until 0.5 s after landing (the player never loses a shield in the air).
 - **Magnet during a swing:** pulls coins from the coin shower and the bonus ring.
-- **Assist triggered during a swing:** queued and fires on landing (the macaw never grabs HERO off a vine).
+- **Assist triggered during a swing:** queued and fires on landing (Duko never grabs Pista off a vine).
 - **Pause during a swing:** on resume the swing phase continues from where it was; the release ring is shown
   during the countdown so the player can re-time.
-- **Continue after a chasm death:** HERO respawns on the landing pad, not on the vine.
+- **Continue after a chasm death:** Pista respawns on the landing pad, not on the vine.
 
 ### 7.5 Vine numbers
 
@@ -288,11 +288,14 @@ reskins them. Color/shape language is consistent: **low = jump, high = slide, ta
 
 | Type | Answer | Telegraph |
 |---|---|---|
-| Low barrier | Jump (or change lane) | Low, wide shape; warm highlight on top edge |
-| High barrier | Slide (or change lane) | Hanging shape with a clear gap underneath; striped underside |
-| Full block | Change lane | Tall, solid, fills the lane |
-| Mover | Change lane timing | Moves between lanes on a fixed, visible path; shadow and sound cue 1.2 s ahead |
-| Gap | Jump (or vine) | Visible edge, darker void, warning marker 1.0 s ahead |
+| Low barrier | Jump (or change lane) | Low, wide shape; hazard-red band along the top edge |
+| High barrier | Slide (or change lane) | Hanging shape with a clear gap underneath; red-and-ink striped underside |
+| Full block | Change lane | Tall, solid, fills the lane; hazard-red band at hip height (about 1 m) |
+| Mover | Change lane timing | Moves between lanes on a fixed, visible path; red band on the moving part, ink ground marker and sound cue 1.2 s ahead |
+| Gap | Jump (or vine) | Visible edge, darker void, red-and-ink striped flags at the near edge 1.0 s ahead |
+
+Visual details are binding in `design/STYLE_GUIDE.md` 4.1 (hazard shapes are angular and spiky; scenery is
+round, so "spiky = do something").
 
 ### 8.2 Per world
 
@@ -303,9 +306,10 @@ reskins them. Color/shape language is consistent: **low = jump, high = slide, ta
 | **Mountains** (sunrise gold on snow, cool shadows) | Snow drift | Overhanging ice ledge | Rock pillar | Rolling snowball | **Falling rocks:** shadow marks the lane 1.3 s before impact |
 | **Ancient Ruins** (gold, stone, torchlight) | Broken column | Stone beam | Statue | Rolling stone disc | **Pressure-plate darts:** a lit plate in the lane warns 1.2 s before darts cross the lane |
 
-### 8.3 Shared obstacle kit (how four worlds fit in seven weeks)
+### 8.3 Shared obstacle kit (how four worlds are built efficiently)
 
-Four worlds are only possible on this schedule because the worlds share almost everything except their look.
+The worlds share almost everything except their look. This is how four worlds reach full quality with a small
+team; it is a build strategy, not a quality reduction.
 
 - **One gameplay prefab per archetype.** Each of the 5 archetypes has one prefab with a fixed hitbox, height and
   telegraph. A world swaps only the visual mesh and material on top of it. Hitboxes never differ between worlds,
@@ -321,7 +325,7 @@ Four worlds are only possible on this schedule because the worlds share almost e
   archetypes, and the current world decides the skin. Only the 4 gateway chunks (section 9) and the signature
   hazard chunks are world-specific.
 - **Same vine.** One vine rig and swing animation set; per world only the material changes (jungle vine, river
-  creeper, mountain rope, ruins chain).
+  creeper, mountain rope, ruins chain). The grab-point glow and ring icon never change.
 
 Rules for every obstacle:
 - The answer is visible at least **1.2 s** before impact at any speed.
@@ -356,22 +360,34 @@ The run passes through the worlds in a fixed order, then loops with a higher dif
 |---|---|---|
 | Obstacles | 5 archetype restyles + 1 signature hazard skin | Shared prefabs and hitboxes (section 8.3) |
 | Environment | Modular kit: 1 ground tile set, 2 side set-piece modules, ~8 ambient props, skybox/gradient, fog color | No unique geometry per chunk; side dressing is placed by rules, not by hand |
-| Lighting | One preset of the shared golden-hour rig (sun color, fog, ambient, bloom) | The dusk loop variant is a lighting preset only, no new art |
+| Lighting | One preset of the shared golden-hour rig (key light color and angle, shadow band tint, rim color, sky gradient, fog, color-grading LUT; values in `design/STYLE_GUIDE.md` section 5) | The dusk loop variant is a lighting preset only, no new art |
 | Gateway | 1 unique gateway chunk (cave mouth, waterfall, rope bridge, temple gate) | Shares the transition script and banner UI |
 | Music | 1 arrangement of the main drums-and-brass theme (stem swap) | One theme, four arrangements, not four separate tracks |
 | Gameplay rules | Same as every world | No world-only mechanics at launch (no swimming, no ice sliding) |
 
 Build order: **Jungle** (vertical slice, sets the quality bar), then **River** and **Ruins** (strongest treasure-hunt
-mood), then **Mountains** (largest palette shift, most new materials). If quality is at risk, Mountains is the world
-that gets the least extra dressing, never fewer gameplay features.
+mood), then **Mountains** (largest palette shift, most new materials). The simplifications above are the
+**launch scope for every world**, not a lower quality bar: each world must meet the Jungle vertical-slice quality
+bar before launch. No world ships with lighter dressing to hit a date (owner rule, quality over schedule; see 22.1).
 
 ### 9.2 Mood and lighting
 
-- One shared lighting rig with a warm key light (low sun, golden), soft fog and bloom on gold. Each world is a
-  preset of this rig, so performance cost is the same in every world.
-- Gold (coins, treasure, idols) is the brightest warm color in every world. Hazards use the shape language of 8.1
-  plus a contrasting edge highlight and the bold ink outline of the "Inkbound Pulp" style (1.1) so they never blend
-  with the warm light.
+Binding details (colors, angles, shaders): `design/STYLE_GUIDE.md` sections 2, 3 and 5. Summary:
+
+- One shared lighting rig: one realtime directional key light (low, golden, coming from ahead of the runner so
+  Pista's back sits in the mid band with a bright rim), used only by Pista, Duko, hazards and power-ups. The
+  environment is painted (unlit toon material with vertex-color shading and a per-world tint), with a gradient
+  sky, linear fog (start 45 m, end 90 m) and one subtle color-grading LUT per world. Each world is a preset of
+  this rig, so performance cost is the same in every world.
+- **No bloom and no HDR.** Coin glow, power-up halos and the vine glow are faked with additive sprite cards
+  (LDR bloom would also bloom the cream path and Pista's map cloth). No realtime shadow maps: Pista has a flat
+  blob shadow; scenery shadows are painted.
+- Coins are unlit and always the brightest, most saturated object on screen. Only coins use full-brightness coin
+  gold; gold on statues, idols and temple trim is a dull scenery gold that never sparkles.
+- Hazards are darker and less saturated than the path, carry the thick ink outline, and use the reserved
+  hazard-red telegraph from 8.1 (placement per archetype in `design/STYLE_GUIDE.md` 4.1), always paired with ink
+  stripes or an ink edge so color is never the only cue. Hazard red is used for nothing else.
+- The upper third of the screen stays light or warm in every world, because that is where Duko flies (15.1).
 - Performance: only the current world's kit plus the next one are in memory. The next world loads in the
   background during the last 300 m of the current world; the previous world unloads after the gateway.
 
@@ -387,15 +403,15 @@ can be active together.
 |---|---|---|---|
 | **Magnet** | Pulls coins from all 3 lanes within 10 m | 10 s → 20 s | Simple fade, 1 s warning flash |
 | **Shield** | Absorbs one hit: the obstacle shatters, 1.0 s invulnerability after | 20 s → 40 s, or until hit | Bubble pops; 1 s warning flicker before timeout |
-| **Speed Boost** | HERO dashes at 1.6× speed, invulnerable, auto-collects coins in the current lane, obstacles are smashed | 4 s → 8 s | 1.0 s slowdown with invulnerability, then a guaranteed 1.5 s clear stretch |
+| **Speed Boost** | Pista dashes at 1.6× speed, invulnerable, auto-collects coins in the current lane, obstacles are smashed | 4 s → 8 s | 1.0 s slowdown with invulnerability, then a guaranteed 1.5 s clear stretch |
 
 Edge cases:
 - **Runs out mid-air:** Magnet and Shield end normally (shield rule in 7.4 applies on vines). Speed Boost never ends
   in the air: if it would, it extends until landing.
-- **Speed Boost and gaps:** HERO auto-jumps gaps during a boost.
+- **Speed Boost and gaps:** Pista auto-jumps gaps during a boost.
 - **Speed Boost and vines:** a vine section is not spawned while a boost is active (7.2).
 - **Shield and gaps/chasms:** a shield does **not** save from falling. Readability: the shield bubble does not glow
-  over chasms. [ASSUMED; an option is to let the shield bounce HERO back up once.]
+  over chasms. [ASSUMED; an option is to let the shield bounce Pista back up once.]
 - **Upgrades:** each power-up has 5 levels bought with coins (section 14).
 
 ---
@@ -449,15 +465,15 @@ Goal: playing within **10 s** of opening the app, no menus, no sign-up, no ads, 
 
 | Time | What happens |
 |---|---|
-| 0–8 s | Cold start, splash, title with HERO and COMPANION. "Tap to run." (No account, no settings, no ATT prompt.) |
-| ~0 s of run | Run starts at 8 m/s. Empty track, HERO runs, COMPANION swoops down with a loud squawk and settles overhead. Its first call-out ("Vine!") is heard at the 30 s vine, so the player links word, swoop and event. |
+| 0–8 s | Cold start, splash, title with Pista and Duko. "Tap to run." (No account, no settings, no ATT prompt.) |
+| ~0 s of run | Run starts at 8 m/s. Empty track, Pista runs, Duko swoops down with a loud squawk and settles overhead. Its first call-out ("Vine!") is heard at the 30 s vine, so the player links word, swoop and event. |
 | 3 s | A log in the middle lane. A ghost hand shows **swipe left or right**. The game slows to 30% until the player swipes. |
 | 8 s | A low log across all lanes. Ghost hand: **swipe up**. Same slow-down. |
 | 13 s | A low branch across all lanes. Ghost hand: **swipe down**. |
 | 18 s | Coin trail across lanes. Text: "Grab coins!" |
 | 23 s | Magnet pickup. Coins fly in. |
 | 30 s | First vine (safe, over shallow water). Ghost hand on swipe up to grab, then a large release ring and "Swipe up when it glows!" with 30% slow-down at the Perfect band. |
-| 40 s | COMPANION meter shown filled, ghost double tap: Assist. The macaw lifts HERO over a short row of logs. |
+| 40 s | COMPANION meter shown filled, ghost double tap: Assist. Duko lifts Pista over a short row of logs. |
 | 45 s | "You're on your own!" Speed rises to 10 m/s, normal tier 1 run starts. |
 
 Tutorial rules:
@@ -513,7 +529,7 @@ Tutorial rules:
 
 - Characters are **cosmetic only.** No stat differences, so leaderboards stay fair.
 - No loot boxes and no random paid items.
-- Character concepts are `[OWNER]`. Placeholder slots: HERO (default), CHARACTER_2 to CHARACTER_5.
+- Character concepts are `[OWNER]`. Slots: HERO (default, Pista), CHARACTER_2 to CHARACTER_5.
 
 ### 13.5 Game Center
 
@@ -557,21 +573,21 @@ Tutorial rules:
 - After a death, a **Continue** screen shows for 5 s (with a skip button):
   - Once per run: watch a rewarded ad to continue (not in session 1).
   - Or pay coins: 300 for the first continue, 600 for the second, max 2 continues per run.
-  - Session 1 only: one free continue from COMPANION (the macaw swoops in, grabs HERO by the wrists and flaps her
+  - Session 1 only: one free continue from Duko (the macaw swoops in, grabs Pista by the wrists and flaps her
     back onto the track) so the player learns continues exist.
-- On continue: 2 s invulnerability, the obstacle that killed HERO is removed, 1.5 s clear stretch.
+- On continue: 2 s invulnerability, the obstacle that killed Pista is removed, 1.5 s clear stretch.
 
 ---
 
-## 15. COMPANION
+## 15. COMPANION: Duko
 
 ### 15.1 Role
 
-COMPANION is a macaw parrot (design M3 "Dusk", section 1.1): violet and orange, loud, sly, greedy for anything
-shiny, and HERO's oldest friend. It warns her because it does not want its treasure-finder hurt. It is a friend,
+Duko (role label `COMPANION`) is a macaw parrot (design M3 "Dusk", section 1.1): violet and orange, loud, sly,
+greedy for anything shiny, and Pista's oldest friend. It warns her because it does not want its treasure-finder hurt. It is a friend,
 not a second character to control. It does three jobs:
 
-1. **Calls out warnings (readability).** The macaw flies ahead a little and calls out big events: vines 2.0 s
+1. **Calls out warnings (readability).** The macaw flies just ahead of and above Pista (placement below) and calls out big events: vines 2.0 s
    early, signature hazards and movers 1.5 s early. Each call-out is a **short spoken word with a squawk accent**
    (a parrot voice: the word is clipped and ends or starts in a squawk) plus a visible swoop over the lane that
    matters. Never on-screen text. There are only **3 call-out types** so players can learn them by ear:
@@ -584,33 +600,53 @@ not a second character to control. It does three jobs:
    - The Vine and Danger calls use **one fixed word each**, always the same, so they work as learnable signals.
      Only Cheer and ambient chatter have 2–3 variants.
    - The squawk accent alone must still tell the three types apart (different pitch and rhythm), so the cue works
-     for players who do not know the language.
+     for players who do not speak English.
    - Call-outs are an extra cue, never the only one: every hazard is still readable with sound off (pillar 1).
-   - **Localization:** every word is localized into every launch language (the vine and danger words must stay
-     short in every language; the localizer may pick a different short word rather than translate literally).
-     With the "Companion voice" slider at 0, or for a language without recordings, a squawk-only fallback plays.
-   - **Audio-director needs:** voice recording of all call-out words per launch language (one voice actor
-     doing a parrot voice, or one voice processed into a parrot sound), plus squawk-only fallback versions of all
-     3 types, plus ambient chatter lines. List of words and languages: `docs/specs/companion.md` (to be updated).
+   - **Language (owner decision, G1):** the game launches in **English only**; EU languages come in later updates.
+     At launch Duko speaks the English words only, whatever the device language. With the "Companion voice"
+     slider at 0, a squawk-only fallback plays.
+   - **Ready for more languages:** each call-out is a language-neutral ID (`call.vine`, `call.danger`,
+     `call.cheer.1..3`, `chatter.1..n`) mapped to one audio clip per language; a missing language falls back to
+     English. A later language adds clips only, no code change. When a language is added, the localizer may pick a
+     different short word rather than translate literally, and every clip must pass the same ≤ 0.6 s check.
+   - **Audio-director needs (launch):** English recordings of all call-out words (one voice actor doing a parrot
+     voice, or one voice processed into a parrot sound), squawk-only fallback versions of all 3 types, and
+     ambient chatter lines. Word list: `docs/specs/companion.md` (to be updated).
 2. **Assist meter: "Lift" (one deeper mechanic, and the coin thief's favorite moment).** The meter fills from near-misses (+5%), coin streaks of 25
    (+5%), Good releases (+10%), Perfect releases (+25%). When full, a double tap triggers **Lift**:
-   1. The macaw dives, grabs HERO's wrists and lifts her to a glide height of **2.5 m** above the track for
-      **4.0 s**. HERO is invulnerable and passes over every ground obstacle.
+   1. The macaw dives, grabs Pista's wrists and lifts her to a glide height of **2.5 m** above the track for
+      **4.0 s**. Pista is invulnerable and passes over every ground obstacle.
    2. During Lift, left/right swipes still change lanes (steer for coins); up/down swipes are ignored. A magnet
       effect pulls coins from all 3 lanes within 10 m, so the player still feels in control and rewarded.
-   3. In the last **0.6 s** the macaw descends and sets HERO down. The track is guaranteed clear for **1.0 s**
-      after touchdown, and HERO keeps 0.5 s invulnerability after landing.
+   3. In the last **0.6 s** the macaw descends and sets Pista down. The track is guaranteed clear for **1.0 s**
+      after touchdown, and Pista keeps 0.5 s invulnerability after landing.
    If the player never double taps, the meter stays full (no waste, no auto-trigger) [ASSUMED].
-3. **Emotional anchor.** Celebrates new records with a loud cheer and a loop-the-loop, lands on HERO's head after
+3. **Emotional anchor.** Celebrates new records with a loud cheer and a loop-the-loop, lands on Pista's head after
    a death with a sympathetic squawk, hides a coin under a wing when idle on menus. This is the character players get attached to.
 
-Placement: the macaw flies **above and behind HERO**, in the upper third of the screen, never between the camera
-and the next 34 m of track at lane height, so it never blocks the view. Warning swoops stay at ≥ 4.0 m height
-and last ≤ 0.5 s before it returns to its place.
+Placement (aligned with `design/STYLE_GUIDE.md` 6.2): the macaw's home position is **2.0 m ahead of Pista and
+4.2 m above the track**, centered on her lane (it follows her lane changes with the camera's smoothing). With
+the camera in section 6 (6.0 m behind, 3.2 m up, FOV 60°, portrait) this puts it in the **upper third of the
+screen**, inside the center 60% horizontally, at about 23% of screen width with wings spread (limit 25% width,
+10% height). An earlier draft said "above and behind HERO"; a bird placed behind Pista in world space would sit
+3–5 m from the camera and fill 35–60% of the screen width, which breaks pillar 1. "Behind" now means *behind in
+screen depth*: higher in the frame, never in front of the track.
+
+Why this is consistent with gameplay:
+- It is above the camera (4.2 m vs 3.2 m), so it is never on the sightline from the camera to the next 34 m of
+  track at lane height and never overlaps Pista's head.
+- The 2.0 m lead is only about 0.1–0.2 s at run speed, far shorter than the 1.5–2.0 s call-out lead times, so its
+  home position never acts as an accidental cue; only the call-out swoops point at the lane that matters.
+- Lift (below) starts with a dive from this position; 2.0 m ahead and 1.7 m above the glide height (2.5 m) keeps
+  the dive short enough for the "leaves the ground within 150 ms" feel target.
+
+Warning swoops stay at ≥ 4.0 m height, may enter the middle third of the screen, and last ≤ 0.5 s before it
+returns to its home position. The world offset is a starting value in `CompanionTuning`; art reviews against
+the screen rules (upper third, ≤ 25% width), so if the camera changes, the offset is re-tuned to keep them.
 
 Lift edge cases:
 - **Double tap during a vine swing:** queued, fires on landing (7.4).
-- **Lift would end over a gap or chasm:** extends until there is ground under HERO, then descends.
+- **Lift would end over a gap or chasm:** extends until there is ground under Pista, then descends.
 - **Lift and Speed Boost:** cannot overlap. Double tap during a boost is queued until the boost's clear stretch ends.
 - **Lift and Shield:** the shield is not used up during Lift.
 - **Vine section ahead during Lift:** the generator does not start a vine section during Lift; it waits, like
@@ -637,18 +673,20 @@ limited to at most once every 8 s so the parrot stays charming, not annoying.
 | Vine call-out lead time | 2.0 s |
 | Hazard / mover call-out lead time | 1.5 s |
 | Spoken call-out length | 1–2 words, ≤ 0.6 s |
+| Home position (relative to Pista) | 2.0 m ahead, 4.2 m above the track, same lane |
+| Screen area limit (wings spread) | upper third, center 60%; ≤ 25% width, ≤ 10% height |
 | Warning swoop height / duration | ≥ 4.0 m / ≤ 0.5 s |
 | Ambient chatter cooldown | 8 s |
 
-Feel targets: Lift starts (macaw visibly diving) on the same frame as the recognized double tap; HERO leaves the
+Feel targets: Lift starts (macaw visibly diving) on the same frame as the recognized double tap; Pista leaves the
 ground within 150 ms. Acceptance criteria and bot simulation targets live in `docs/specs/companion.md`.
 Simulation target: average bot uses Lift 2–4 times per 3-minute run; Lift never causes a death within 2 s after
 touchdown in 100,000 generated segments.
 
 ### 15.3 Identity
 
-Species (G1), look and personality (G2, M3 "Dusk") and voice (a few spoken words, G1) decided (section 1.1).
-Name: `[OWNER]`. Extra companions as unlocks are possible
+Species (G1), look and personality (G2, M3 "Dusk") and voice (a few spoken words, G1; English at launch) decided
+(section 1.1). Name: **Duko** (G6), pending a proper trademark check (section 17). Extra companions as unlocks are possible
 later (cosmetic only, they reuse the Lift mechanic, so they would need to be flying or carrying animals).
 
 ---
@@ -664,7 +702,7 @@ later (cosmetic only, they reuse the Lift mechanic, so they would need to be fly
 | `DifficultyTiers` | Tier thresholds, density, min action spacing, chunk weights |
 | `VineTuning` | All of 7.5 |
 | `PowerUpTuning` | Durations per level, spawn rate, Speed Boost multiplier |
-| `CompanionTuning` | Meter gains, Lift duration/height/descent, clear stretch, call-out lead times, swoop limits, chatter cooldown |
+| `CompanionTuning` | Meter gains, Lift duration/height/descent, clear stretch, call-out lead times, home position offset, swoop limits, chatter cooldown |
 | `EconomyConfig` | Prices, mission rewards, daily calendar, continue costs |
 | `MissionPool` | Mission templates and tiered targets |
 | `WorldSequence` | World order, lengths, transitions, preload distance (300 m) |
@@ -678,12 +716,13 @@ later (cosmetic only, they reuse the Lift mechanic, so they would need to be fly
 | Item | Status | Notes |
 |---|---|---|
 | HERO concept | **Decided** (G1): wild jungle kid | See 1.1. Must be original IP. No resemblance to famous jungle heroes. |
-| HERO design | **Decided** (G2): H2 "Mapcloth", cat-like wild girl, treasure-map clothes, big "X" on her back | See 1.1 and `design/HERO_CONCEPTS.md`. Keep cheek dots pale clay, never red, and no fur (originality watch point). |
-| HERO name | `[OWNER]` | Placeholder `HERO` until chosen. |
+| HERO design | **Decided** (G2): H2 "Mapcloth", cat-like wild girl, treasure-map clothes, big "X" on her back; teal sash worn as a band around the chest, just below the X | See 1.1, `design/HERO_CONCEPTS.md` and `design/STYLE_GUIDE.md` 6.1. Keep cheek dots pale clay, never red, and no fur (originality watch point). |
+| HERO name | **Decided** (G6): **Pista**, **trademark check pending** | A quick web search found no conflict; that is not a clearance. A proper check in the US, EU and UK trademark registers (classes 9, 28, 41) and on the App Store is still needed. `HERO` stays as the role label in config and code, so a name change touches only text and audio. |
 | COMPANION species | **Decided** (G1): macaw parrot | See 1.1 and 15. |
 | COMPANION design, personality | **Decided** (G2): M3 "Dusk", violet-and-orange coin thief | See 1.1 and 15. Keep it a sleek macaw, not a tall rainbow bird (originality watch point). |
-| COMPANION voice | **Decided** (G1): speaks a few words ("Vine!", "Look out!"), localized | See 15.1. audio-director plans voice recording per launch language plus squawk-only fallbacks. |
-| COMPANION name | `[OWNER]` | Placeholder `COMPANION` until chosen. |
+| COMPANION voice | **Decided** (G1): speaks a few words ("Vine!", "Look out!") | See 15.1. English recordings at launch plus squawk-only fallbacks; structure ready for more languages. |
+| COMPANION name | **Decided** (G6): **Duko**, **trademark check pending** | Same check as the hero name, same registers and classes. `COMPANION` stays as the role label in config and code. |
+| Launch language | **Decided** (G1): English only; EU languages in later updates | Affects 15.1 (voice) and UI text. Fonts already cover Latin Extended for later EU languages (`design/STYLE_GUIDE.md` 8.3). |
 | Overall tone | **Decided** (G1): pulpy adventure | Warm golden light, treasure-hunt feel. |
 | Music mood | **Decided** (G1): drums and brass | audio-director brings samples of the main theme and one world arrangement. |
 | Art style | **Decided** (G2): C "Inkbound Pulp", bold comic-book look with ink outlines | See 1.1 and 9.2. |
@@ -697,7 +736,9 @@ later (cosmetic only, they reuse the Lift mechanic, so they would need to be fly
 alcohol words can raise the age rating, change how the store and ad networks classify the app, limit which ads
 can be shown, and clash with a game that stars a kid. **The public app name, store listing, icon and in-game
 title must not contain "Booze" or any alcohol reference.** The repo name can stay. Compliance checks the
-shortlist before G6.
+shortlist before G6, together with the trademark check of "Pista" and "Duko". If either character name fails the
+check, the owner picks a replacement from the shortlist in `design/STYLE_GUIDE.md` 13 (or a new option) before
+any store art or voice recording uses it.
 
 ---
 
@@ -778,49 +819,49 @@ Priorities: **M** = must have for launch, **S** = should have, **C** = could sli
 | 2 | Track chunks + seeded generator, 5 obstacle archetypes as shared prefabs (gray-box), coins, speed curve, tiers | M | `specs/track-generation.md`, `specs/obstacles.md`, `specs/difficulty.md` | |
 | 2 | `WorldSequence` + `WorldSkin` system and gateway transitions in gray-box: all 4 worlds playable as tinted gray-box (fog/lighting preset only) | M | `specs/worlds.md` | |
 | 2 | Death + death cause display, basic Results, first simulations and fairness fuzzer | M | `specs/death-and-results.md` | G3 |
-| 2 | Art: HERO and macaw models + core animation list started; Jungle environment kit started | M | `specs/worlds.md` | |
+| 2 | Art: Pista and Duko models + core animation list started; Jungle environment kit started; shared base shapes and world palettes locked (22.1) | M | `specs/worlds.md` | |
 | 3 | **Vine swinging** (grab, swing, release grades, chains, chasms) | M | `specs/vine-swing.md` | |
 | 3 | Power-ups: Magnet, Shield, Speed Boost | M | `specs/power-ups.md` | |
-| 3 | COMPANION: flight follow, 3 spoken call-outs (placeholder recordings in one language, squawk-only fallback), Assist meter, Lift | M | `specs/companion.md` | |
+| 3 | COMPANION: flight follow, 3 spoken call-outs (placeholder English recordings, language-neutral call-out IDs, squawk-only fallback), Assist meter, Lift | M | `specs/companion.md` | |
 | 3 | Signature hazards: lane-denial + telegraphed lane-strike behaviors (both, gray-box) | M | `specs/obstacles.md` | |
 | 3 | Continue flow (coins + free first-session continue) | M | `specs/continue.md` | |
-| 3 | Art: **Jungle complete** (vertical slice, quality bar); golden-hour lighting rig; main theme | M | `specs/worlds.md` | G4 |
+| 3 | Art: **Jungle complete** (vertical slice, quality bar); golden-hour lighting rig; main theme; Mountains palette, snow and rock material tests and gateway blockout started early (22.1) | M | `specs/worlds.md` | G4 |
 | 4 | Home, Shop, character/outfit unlocks, power-up upgrades | M | `specs/shop-and-unlocks.md` | |
 | 4 | Missions, daily reward, daily challenge | M / M / S | `specs/missions.md`, `specs/daily.md` | |
 | 4 | Save + iCloud backup, Game Center leaderboards | M | `specs/save.md`, `specs/game-center.md` | |
-| 4 | Art: **River + Ruins** restyles, environment kits, gateways, music arrangements; world streaming (preload/unload) | M | `specs/worlds.md` | |
+| 4 | Art: **River + Ruins** restyles, environment kits, gateways, music arrangements; **Mountains kit in parallel**; world streaming (preload/unload) | M | `specs/worlds.md` | |
 | 4 | Owner decisions: ads, prices (section 18) | M | `specs/monetization.md` | G5 |
 | 5 | Ads (rewarded; interstitial only if owner approves), IAP, Restore, ATT + consent | M | `specs/monetization.md` | |
 | 5 | Onboarding tutorial (section 12) | M | `specs/onboarding.md` | |
-| 5 | Audio, VFX, haptics, Settings, accessibility options; final localized COMPANION voice recordings | M | `specs/settings-accessibility.md` | |
-| 5 | Art: **Mountains** restyle, kit, gateway, arrangement; dusk loop lighting preset | M | `specs/worlds.md` | |
+| 5 | Audio, VFX, haptics, Settings, accessibility options; final English COMPANION voice recordings | M | `specs/settings-accessibility.md` | |
+| 5 | Art: **Mountains** finished to the quality bar (restyles, kit, gateway, arrangement); dusk loop lighting preset (must pass the macaw squint test against its navy sky) | M | `specs/worlds.md` | |
 | 5 | Game Center achievements | S | `specs/game-center.md` | G6 |
 | 6 | Performance pass with all 4 worlds (memory per world, streaming hitches), device matrix, beta tuning | M | — | G7 |
-| 7 | Bug fixes, compliance, submit | M | — | G8 |
-| Later | Extra obstacle variants per world, world-only mechanics, extra companions, seasonal events, world start-point selection, Android | C | — | |
+| 7 | Bug fixes, compliance (including the Pista / Duko trademark check), submit | M | — | G8 |
+| Later | Extra obstacle variants per world, world-only mechanics, extra companions, seasonal events, world start-point selection, EU languages (UI text and Duko's voice), Android | C | — | |
+
+The week numbers are the plan, not a deadline. Priority **M** means "must be at full quality before launch";
+if an M item is late, launch moves (22.1).
 
 ### 22.1 Four-world schedule risk (honest assessment)
 
-The 7-week plan holds **only** with the simplifications in 8.3 and 9.1. Even then, these are the real risks:
+**Owner rule: quality over schedule** (`design/DECISIONS.md`, 2026-10-06; project rule 10). If a world or feature
+is not at full quality, **launch waits**. Nothing ships in a lighter version to hit a date, and no world or
+feature is cut to save time. The simplifications in 8.3 and 9.1 are the planned launch scope for every world
+(shared hitboxes, restyled archetypes, rule-placed dressing), not a fallback; each world still has to meet the
+Jungle quality bar. The 7-week plan is a target. The risks below are about seeing a slip early and reducing it
+without lowering quality.
 
-1. **Art throughput is the critical path.** Weeks 4 and 5 each need full world kits (two worlds in week 4) while
-   menus, shop and monetization UI also need art. If Jungle (week 3) takes longer than planned, every later world
-   slips. Early warning: if Jungle is not at quality by the end of week 3, the plan is already a week behind.
-2. **Mountains lands in week 5, leaving one week of tuning and performance work** before submission. Its first
-   real beta feedback comes late.
-3. **Performance and memory.** Four environment kits plus streaming between them is the most likely cause of
-   hitches on the lowest supported iPhone (iPhone 11 / SE 2nd gen), together with the ink-outline rendering of the
-   chosen art style. The streaming rule (9.2) must be built in week 4, not week 6.
-4. **Test matrix grows ×4.** Every obstacle restyle needs a readability check (does the answer still read at
-   1.2 s?) in every world. Shared prefabs keep the fairness tests valid, but visual readability must be checked
-   by hand per world.
-5. **Localized voice.** The talking macaw needs voice recordings in every launch language. Each extra language
-   adds recording, editing and a timing check (≤ 0.6 s per call-out). The squawk-only fallback keeps a missing
-   language from blocking launch.
+| # | Risk | Early-warning signal (checked weekly by the producer) | Mitigation that keeps quality |
+|---|---|---|---|
+| 1 | **Art throughput is the critical path.** Weeks 4 and 5 each need full world kits (two in week 4) while menus, shop and monetization UI also need art. A late Jungle delays every world after it. | Jungle not signed off against the style guide checklist (`design/STYLE_GUIDE.md` 12) by the end of week 3; asset rejection rate above ~30% in any week; fewer world-kit assets approved than planned for two days running. | Lock the shared base shapes (8.3) and the world palettes (`design/STYLE_GUIDE.md` 5) in week 2 so later worlds only restyle. Generate and review River, Ruins and Mountains assets **in parallel** once the Jungle style is locked, instead of one world after another. Keep UI art on its own track so it never competes with world kits. |
+| 2 | **Mountains is built last** (largest palette shift, most new materials), leaving the least time for review, tuning and beta feedback. | Mountains palette, snow and rock material tests not approved by the end of week 3; Mountains squint tests failing in week 4. | **Start Mountains art early:** palette, snow and rock material tests and the gateway blockout in week 3, next to the Jungle slice, and the kit in parallel with River and Ruins in week 4. Week 5 is then finishing and review, not first creation. Put Mountains in the beta build as soon as it is playable in gray-box. |
+| 3 | **Performance and memory.** Four environment kits plus streaming, together with the inverted-hull ink outlines, are the most likely cause of hitches on the lowest supported iPhone (iPhone 11 / SE 2nd gen). | Benchmark scene over the frame budget (`design/STYLE_GUIDE.md` 3.4) or any streaming hitch above one frame on the floor device in a weekly run. | Build the streaming rule (9.2) in week 4, not week 6. Run the floor-device benchmark every week from week 2 with each new world kit. Use the levers in the style guide that keep the look (hull LOD for far hazards, lighter far environment geometry), never dropping outlines or dressing from gameplay view. |
+| 4 | **Test matrix grows ×4.** Every obstacle restyle needs a readability check (does the answer still read at 1.2 s?) in every world. Shared prefabs keep the fairness tests valid, but visual readability must be checked per world. | Squint-test or readability failures piling up for a world; readability checks scheduled later than one week after a kit lands. | Run the squint test (`design/STYLE_GUIDE.md` 7.1) as part of asset review, so each restyle is checked when it lands, not at the end. Automate screenshot capture of every archetype in every world preset so the manual check is a quick review. |
+| 5 | **Voice recording.** English only at launch (one language), so the risk is small: recording, editing and the ≤ 0.6 s timing check for a handful of clips. | Placeholder clips still in the build at the end of week 4. | Book the recording session once the word list in `docs/specs/companion.md` is final (week 3); record with spare takes. Later EU languages are post-launch updates and do not affect launch. |
 
-Fallback options if a world is behind at the end of week 5 (owner chooses; see section 23): (a) slip launch by
-one week, or (b) ship the late world with lighter dressing (fewer ambient props, simpler skybox), with the same
-gameplay, and polish it in the first update. Cutting a world is not proposed, since the owner chose four.
+If any signal fires, the producer tells the owner the expected slip in days and which mitigation is running.
+The decision is never "ship it lighter"; it is "add capacity or move the date".
 
 ---
 
@@ -833,17 +874,16 @@ Answered (2026-10-06, see `design/DECISIONS.md`):
 - G0: lowest supported device iPhone 11 / iPhone SE (2nd gen); iOS builds compiled and signed on the owner's own
   Mac; CI uses the owner's free Personal engine license for now.
 - G1: HERO (wild jungle kid), COMPANION (macaw parrot), mood (pulpy adventure), launch worlds (all four), the macaw
-  speaks a few localized words (section 15.1).
-- G2: art style C "Inkbound Pulp", HERO design H2 "Mapcloth", COMPANION design M3 "Dusk" (section 1.1).
+  speaks a few words (section 15.1).
+- G2: art style C "Inkbound Pulp", HERO design H2 "Mapcloth", COMPANION design M3 "Dusk" (section 1.1); sash worn
+  as a chest band just below the X.
+- G6: names Pista (hero) and Duko (macaw), pending a proper trademark check (section 17).
+- Launch language: English only; EU languages in later updates (section 15.1).
+- Quality over schedule: if a world or feature is not at full quality, launch waits (section 22.1).
 
 Still open:
-1. Names for HERO and COMPANION (placeholders stay until then).
-2. Ads (rewarded only, or plus light interstitials) and prices for Remove Ads / characters / coin packs:
+1. Ads (rewarded only, or plus light interstitials) and prices for Remove Ads / characters / coin packs:
    deferred by the owner to week 4. Designer recommendations are in section 18, marked `[ASSUMED]`.
-3. If a world is behind schedule at the end of week 5, which fallback does the owner prefer: slip launch by one
-   week, or ship that world with lighter dressing and polish it in the first update (section 22.1)?
-4. Launch languages: which languages ship at launch? This sets how many COMPANION voice recordings are needed
-   (section 15.1).
 
 Smaller defaults marked `[ASSUMED]` in this document (portrait only, daily calendar pauses instead of resetting,
 Assist by double tap, Lift as the Assist effect, shield does not save from chasms, rewarded-only ads at launch,
