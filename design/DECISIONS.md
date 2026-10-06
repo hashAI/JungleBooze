@@ -5,6 +5,9 @@ Newest first.
 
 | Date | Gate | Decision | Options considered | Decided by |
 |---|---|---|---|---|
+| 2026-10-06 | G2 | Macaw design: M3 "Dusk" (violet-and-orange coin thief) | M1 Blaze / M2 Goldbelly / M3 Dusk | Owner |
+| 2026-10-06 | G2 | Hero design: H2 "Mapcloth" (cat-like wild girl, treasure-map clothes, big X on her back) | H1 Topknot / H2 Mapcloth / H3 Leafcape | Owner |
+| 2026-10-06 | G2 | Art style: C "Inkbound Pulp" (bold comic-book look with ink outlines) | A Chunky Totem / B Golden Expedition / C Inkbound Pulp | Owner |
 | 2026-10-06 | G1 | Macaw speaks a few words (e.g. "Vine!", "Look out!"), localized | Words / Squawks only / Squawks + catchphrase | Owner |
 | 2026-10-06 | G0 | Unity license for CI: owner's free Personal account (move to a CI-only account later) | Personal / CI account / Pro | Owner |
 | 2026-10-06 | G0 | Lowest supported device for 60 fps: iPhone 11 / SE 2nd gen (A13) | XR-XS / 11-SE2 / 12 | Owner |
