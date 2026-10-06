@@ -5,6 +5,7 @@ Newest first.
 
 | Date | Gate | Decision | Options considered | Decided by |
 |---|---|---|---|---|
+| 2026-10-06 | — | **Focus on building and testing the game now.** Release pipeline, store and other shipping work are paused until later | — | Owner |
 | 2026-10-06 | — | Add the `JungleBooze.App` assembly (composition root) to the project's assembly list | Add / Don't add | Owner |
 | 2026-10-06 | G5 | No tracking for anyone: contextual ads only, no ATT prompt | No tracking / Adults-only ATT / Decide week 4 | Owner |
 | 2026-10-06 | G6 | Paid trademark lawyer check stays in week 7 (owner accepts the risk of redoing voice/art if a name fails) | Week 3 / Week 7 | Owner |

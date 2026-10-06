@@ -7,6 +7,7 @@ Decisions themselves live in `design/DECISIONS.md`; the plan lives in `docs/AGEN
 _Last updated: 2026-10-06_
 
 ## Current milestone
+**Owner focus: build and test the game. Release/store work is paused.**
 **Week 1: movement, deterministic core, bot player, style guide.** Week 0 is done.
 
 ## Agents: who is doing what
@@ -15,19 +16,19 @@ _Last updated: 2026-10-06_
 |---|---|---|---|---|
 | producer | not used yet | (the coordinating session does this role for now) | this file | — |
 | game-designer | **working** | Spec 002: endless track, obstacles, coins, fairness rules | `docs/specs/002-track-obstacles-coins.md` | Spec 003: vine swinging (week 3) |
-| balance-simulator | waiting | — | — | Run spec 001 targets S1–S9 on the seeded test course once movement code lands |
+| balance-simulator | **working** | Python reference model of spec 001 + seeded test course; checks targets S1–S9 offline | `tools/sim/` | Cross-check the C# simulation once it lands |
 | tech-architect | done (week 0) | Architecture, ADRs 0001–0002, Unity skeleton, deterministic core + tests, CI test workflow | `docs/ARCHITECTURE.md`, `docs/adr/`, `UnityProject/`, `.github/workflows/test.yml` | Week 1: Roslyn analyzers; add the `JungleBooze.App` assembly to the rules file once the owner agrees |
 | gameplay-engineer | **working** | Implementing spec 001 (player movement), bot input provider, tests named by AC id | `UnityProject/Assets/_Game/Scripts/Gameplay`, `Tests/` | Spec 002 |
 | ui-engineer | waiting | — | — | Week 4: menus, shop |
 | art-director | done | Style guide and prompts updated with names Pista/Duko and the chest-band sash | `design/STYLE_GUIDE.md`, `design/prompts/` | Generate concept images once an image API key exists |
 | asset-pipeline | waiting | — | — | Needs an image/3D generation API key from the owner |
 | audio-director | waiting | — | — | Week 5. Note: the macaw speaks a few words, so voice lines and localization are needed |
-| qa-engineer | waiting | — | — | Review spec 001 test coverage after the gameplay-engineer finishes |
+| qa-engineer | **working** | Test plan and acceptance-criteria coverage table for spec 001 (and 002 as it lands) | `docs/qa/TEST_PLAN.md` | Review the gameplay-engineer's tests against the plan |
 | performance-engineer | waiting | — | — | Benchmark scene (week 2+) |
 | code-reviewer | waiting | — | — | Review the spec 001 implementation |
 | monetization-engineer | waiting | — | — | Week 4–5 |
 | appstore-compliance | done | Name check (Pista: low caution, Duko: clear; not legal clearance), 8 ranked app names, 17 early risks, checklist refreshed for current Apple rules (Xcode 26 / iOS 26 SDK) | `docs/compliance/2026-10-name-and-early-review.md`, `docs/APP_STORE_CHECKLIST.md` | Privacy manifest when SDKs are chosen; follow-ups: "report an ad" option, Declared Age Range API, CI check for the word "booze" |
-| release-engineer | **working** | iOS build script, fastlane beta lane, one-command build for the owner's Mac, plain-language setup guide | `fastlane/`, `tools/build/`, `docs/RELEASE.md`, `Scripts/Editor/Build/` | First TestFlight build for G3 (end of week 2) |
+| release-engineer | paused (owner: build the game first) | Partial: build script, fastlane lanes, one-command build, setup guide (stopped mid-verification) | `fastlane/`, `tools/build/`, `docs/RELEASE.md`, `.github/workflows/build-ios.yml` | Resume later: finish and verify the Fastfile lanes |
 
 States: **working** (launched, report not received) · waiting · blocked · done.
 If a new session finds an agent marked **working** but no matching output or commit, assume that agent was interrupted. Check the listed output files and relaunch the task.
@@ -66,6 +67,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Log
 Newest first. One line per event.
+- 2026-10-06: Owner set focus on building and testing. Stopped release-engineer (work so far committed). Launched balance-simulator (reference model) and qa-engineer (test plan).
 - 2026-10-06: Owner decided: app name candidate "Pista & Duko: Jungle Swing", lawyer check in week 7, no tracking, add the App assembly.
 - 2026-10-06: appstore-compliance finished the name check and early risk review. Top risks: "JungleBooze" leaking into bundle/product IDs (permanent), and kid hero + ads counting as directed to children.
 - 2026-10-06: Owner approved self-resume after usage limits for up to 3 days. Created the resume watchdog routine.
