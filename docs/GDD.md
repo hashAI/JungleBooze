@@ -1,6 +1,6 @@
 # Game Design Document: JungleBooze (working title)
 
-**Owner:** game-designer | **Status:** Second draft (Week 0, after G1 decisions) | **Last updated:** 2026-10-06
+**Owner:** game-designer | **Status:** Second draft (Week 0, after G1 decisions; Week 1 movement refinements from spec 001) | **Last updated:** 2026-10-06
 
 This is the master design for a 3D endless runner on iOS. Every gameplay feature gets its own spec in
 `docs/specs/<feature>.md` that refines the numbers here. When a spec and this document disagree, the spec wins
@@ -118,14 +118,14 @@ When two ideas conflict, the higher pillar wins.
 | Target | Value | How it is measured |
 |---|---|---|
 | Touch movement to swipe recognized | ≤ 1 frame after threshold crossed (≤ 17 ms at 60 fps) | EditMode test on gesture recognizer with timestamped samples |
-| Swipe recognized to first visible movement | Same frame (0 frames of delay) | PlayMode test: position changes on the frame of the input event |
-| Lane switch duration | **120 ms** (ease-out), max 140 ms | PlayMode timing test |
-| Input buffer (an action pressed too early still happens) | **150 ms** | EditMode test |
-| Coyote time (jump after leaving a ledge / end of a platform) | **80 ms** | EditMode test |
-| Jump: apex height / total airtime | **1.5 m / 0.60 s** at all speeds | EditMode physics test |
-| Fast-fall: airborne to ground | ≤ **120 ms** from any height | EditMode test |
-| Slide duration | **0.65 s** (can be cancelled by a jump) | EditMode test |
-| Hitbox forgiveness | Player hitbox width 0.7 m vs 0.9 m visual; obstacle hitboxes 85% of visual | Fairness fuzzer + review |
+| Swipe recognized to first visible movement | ≤ 1 rendered frame (≤ 17 ms at 60 fps); the simulation applies the first movement on the same tick it processes the command | PlayMode test (spec 001, AC-55) |
+| Lane switch duration | **120 ms** authored = **7 ticks (117 ms)** at 60 Hz (ease-out), max 140 ms | PlayMode timing test |
+| Input buffer (an action pressed too early still happens) | **150 ms = 9 ticks** | EditMode test |
+| Coyote time (jump after leaving a ledge / end of a platform) | **80 ms** authored = **5 ticks (83 ms)** | EditMode test |
+| Jump: apex height / total airtime | **1.5 m / 0.60 s (36 ticks)** at all speeds | EditMode physics test |
+| Fast-fall: airborne to ground | ≤ **100 ms (6 ticks)** from any height (limit 120 ms) | EditMode test |
+| Slide duration | **0.65 s (39 ticks)** (can be cancelled by a jump) | EditMode test |
+| Hitbox forgiveness | Player hitbox width 0.7 m vs 0.9 m visual, depth 0.5 m; obstacle hitboxes 85% of visual | Fairness fuzzer + review |
 | Lane change "edge forgiveness" | If the player is ≥ 60% of the way into a new lane, the old lane's obstacles cannot hit them | EditMode test |
 | Frame rate | Locked 60 fps on the lowest supported iPhone | perf-engineer benchmark |
 | Death readability | 0.35 s hit-pause, then camera holds 0.8 s on the cause | PlayMode test + owner feel check |
@@ -146,10 +146,18 @@ When two ideas conflict, the higher pillar wins.
    (1.5 s total) plays before control returns. Buffers are cleared on pause.
 7. **Ceiling during jump:** if a high obstacle would be hit at the top of a jump, the player dies (it is
    telegraphed). The generator never places a high obstacle where a jump is the only escape.
+8. **Opposite swipe during a lane switch:** HERO reverses at once toward the lane they came from (a queued second
+   switch is cancelled instead, if there is one).
+9. **Collision categories [ASSUMED]:** running into the **front** of an obstacle (or rising into a high barrier from
+   below) is lethal. Clipping the **side** of an obstacle during a lane switch, or coming down on **top** of a low
+   barrier, is a **stumble**: HERO bounces back to the old lane (side) or scrambles over (top), and is dazed for 3 s.
+   A second stumble while dazed is lethal ("Tripped twice"). Falling into a gap is lethal.
+
+Full rules, tick values and tests: `docs/specs/001-player-movement.md`.
 
 ### 5.4 Haptics [ASSUMED]
 
-Light: lane bump at edge, coin streak of 10. Medium: vine grab, Perfect release, power-up pickup.
+Light: lane bump at edge, coin streak of 10. Medium: vine grab, Perfect release, power-up pickup, stumble.
 Heavy: death. All haptics can be switched off in Settings.
 
 ---
@@ -159,7 +167,7 @@ Heavy: death. All haptics can be switched off in Settings.
 | Parameter | Value |
 |---|---|
 | Lanes | 3, width 2.4 m |
-| Player capsule | 0.7 m wide, 1.8 m tall standing, 0.8 m tall sliding |
+| Player hitbox | 0.7 m wide, 0.5 m deep, 1.8 m tall standing, 0.8 m tall sliding (simulation boxes, not physics colliders) |
 | Camera | 6.0 m behind, 3.2 m above, looks 8 m ahead, FOV 60° (portrait) |
 | Camera lane follow | Follows 70% of the player's lateral move, smooth time 90 ms |
 | Visible distance | At least 1.6 s of track ahead at top speed (≥ 34 m at 21 m/s); fog starts beyond 45 m |
@@ -311,7 +319,7 @@ Rules for every obstacle:
 - No obstacle is introduced for the first time without a solo "teaching" appearance (one obstacle, nothing else
   in view) the first time the player meets it in their life.
 - Signature hazards first appear 150 m into their world, never in the first 10 s after a transition.
-- Death screen shows the obstacle icon and name ("Hit: Low branch").
+- Death screen shows the obstacle icon and name ("Hit: Low branch", or "Tripped twice: Low branch" after a stumble).
 
 ---
 
@@ -621,8 +629,9 @@ later (cosmetic only, they reuse the Lift mechanic, so they would need to be fly
 
 | Asset | Holds |
 |---|---|
-| `InputTuning` | Swipe threshold, recognition window, buffer, coyote time, double tap window (300 ms) |
-| `RunnerTuning` | Lane width, lane switch time, jump height/airtime, slide time, fast-fall, hitboxes |
+| `InputTuning` | Touch layer only: swipe threshold, recognition window, re-arm distance, tap limits, double tap window (300 ms) |
+| `RunnerTuning` | Lane width, lane switch time, jump height/airtime, slide time, fast-fall, hitboxes, input buffer, coyote time, stumble (buffer and coyote live here because the simulation applies them for touch, bots and replays alike) |
+| `RunnerPresentationTuning` | Camera offsets, follow and smoothing, hit-pause, death camera hold, bump wobble, stumble shake, run animation rate |
 | `SpeedCurve` | Distance → speed table |
 | `DifficultyTiers` | Tier thresholds, density, min action spacing, chunk weights |
 | `VineTuning` | All of 7.5 |
@@ -731,7 +740,7 @@ Priorities: **M** = must have for launch, **S** = should have, **C** = could sli
 | Week | Features | Priority | Spec file | Gate |
 |---|---|---|---|---|
 | 0 | GDD (this document), creative brief questions | M | `docs/GDD.md` | G1 |
-| 1 | Gesture input (swipes, buffer, coyote), lanes, jump, slide, fast-fall, camera, deterministic core | M | `specs/input.md`, `specs/runner-movement.md` | G2 |
+| 1 | Gesture input (swipes, buffer, coyote), lanes, jump, slide, fast-fall, camera, deterministic core | M | `specs/001-player-movement.md` | G2 |
 | 1 | Bot input provider with skill levels | M | `specs/bot-player.md` | |
 | 2 | Track chunks + seeded generator, 5 obstacle archetypes as shared prefabs (gray-box), coins, speed curve, tiers | M | `specs/track-generation.md`, `specs/obstacles.md`, `specs/difficulty.md` | |
 | 2 | `WorldSequence` + `WorldSkin` system and gateway transitions in gray-box: all 4 worlds playable as tinted gray-box (fog/lighting preset only) | M | `specs/worlds.md` | |

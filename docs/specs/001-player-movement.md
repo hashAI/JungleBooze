@@ -479,9 +479,11 @@ start values in section 3; tests read them from a `RunnerConfig` built from thos
 - **AC-06 [EditMode]** MoveRight from lane 1 changes `X` on the same tick it is processed, reaches lane-2 center
   exactly on the 7th tick, and `X` never overshoots.
 - **AC-07 [EditMode]** Progress after 1/2/3 ticks is 0.265/0.490/0.673 ± 0.001 of a lane (ease-out, k = 2).
-- **AC-08 [EditMode]** Double swipe (MoveRight on tick 0 and tick 1) from lane 0: the second move starts on tick 4 and
-  HERO is at lane-2 center on tick 11.
-- **AC-09 [EditMode]** Second same-direction swipe arriving at tick 5 of a move starts the next move on tick 5.
+- **AC-08 [EditMode]** Double swipe (MoveRight on tick 0 and tick 1) from lane 0: the second move's first `X` change is on
+  tick 4 (from the current `X`, before HERO reaches lane-1 center), and HERO is at lane-2 center on tick 10
+  (11 ticks, 183 ms, after the first swipe).
+- **AC-09 [EditMode]** A second same-direction swipe processed on tick 5 of a move that started on tick 0 starts the
+  next move on tick 5.
 - **AC-10 [EditMode]** Opposite swipe during a move with no queue reverses from the current `X` and reaches the origin
   lane center 7 ticks later; `LaneChangeStarted(reversal = true)` is emitted.
 - **AC-11 [EditMode]** Opposite swipe while a move is queued cancels the queued move only; HERO ends in the first
@@ -520,11 +522,12 @@ start values in section 3; tests read them from a `RunnerConfig` built from thos
   of command flags received (no silent drops).
 
 ### Coyote, gaps, falling
-- **AC-30 [EditMode]** Running off a ledge: a Jump on the 5th tick after leaving the ground is a full jump (36 ticks,
-  1.5 m apex) with `coyote = true`; a Jump on the 6th tick is buffered and HERO falls.
+- **AC-30 [EditMode]** Running off a ledge (leave tick `e`): a Jump on tick `e + 5` is a full jump (36 ticks,
+  1.5 m apex) with `coyote = true`; a Jump on tick `e + 6` is buffered and HERO falls.
 - **AC-31 [EditMode]** With no input after a ledge, HERO dies with cause `Fell` when `Y ≤ −1.0 m`, and every command
   after `Y < 0` is `Ignored`.
-- **AC-32 [EditMode]** A buffered Jump fires on entering `Coyote` if it is still within 9 ticks (jump pressed just before the edge while landing onto it).
+- **AC-32 [EditMode]** A jump whose landing tick has no ground under HERO gets no coyote time: HERO continues below 0,
+  a Jump buffered before that tick never fires, and HERO dies with `Fell`.
 - **AC-33 [EditMode]** A jump over a 4 m gap at 10 m/s started 1 m before the edge lands on the far side; started 5.5 m
   before the edge, it lands in the gap and dies with `Fell`.
 
@@ -600,7 +603,8 @@ start values in section 3; tests read them from a `RunnerConfig` built from thos
 | 5.2 | "Swipe to first visible movement: same frame" → "≤ 1 rendered frame (≤ 17 ms)" | A gesture recognized after the frame's steps ran is simulated next frame; "same frame" cannot be guaranteed or tested honestly |
 | 5.3 | Added rule 8 (lane reversal) and rule 9 (side and top contacts are stumbles; second stumble within 3 s is lethal) [ASSUMED] | Collision categories were not defined |
 | 5.4 | Stumble uses a medium haptic | New event |
-| 6 | Player hitbox depth 0.5 m | Needed for collisions |
+| 6 | Player hitbox depth 0.5 m; hitboxes are simulation boxes, not physics colliders | Needed for collisions |
+| 8.3 rules | Death screen text "Tripped twice: <obstacle>" after a stumble | New death cause |
 | 16 | Buffer and coyote moved from `InputTuning` to `RunnerTuning`; new `RunnerPresentationTuning` asset | Buffer and coyote live in the simulation (ARCHITECTURE 5.3) |
 | 22 | Week 1 specs are now `specs/001-player-movement.md` (and `specs/bot-player.md`) | One spec instead of two |
 
@@ -615,8 +619,8 @@ with the reference obstacles (9.2) and gaps (2–4 m), placed single or in pairs
 | # | Target | Value |
 |---|---|---|
 | S1 | **Oracle bot** (perfect timing, no reaction delay) on 10,000 gauntlet segments per speed in {8, 10, 13.5, 17.5, 21, 33.6} m/s and per tier spacing (0.90 s down to 0.45 s) | **0 deaths, 0 stumbles.** Any failure means the movement numbers make a spacing rule impossible and must be reported to the designer before week 2. |
-| S2 | Success window for the oracle (range of input ticks that clear the obstacle), per archetype per speed | Jump over low barrier **≥ 15 ticks (250 ms)**; slide under high barrier **≥ 30 ticks**; latest lane dodge of a full block **≥ 3 ticks** before front contact |
-| S3 | Jump-then-jump over two low barriers at 21 m/s | Feasible for every spacing from 0.45 s to 1.0 s |
+| S2 | Success window for the oracle (range of input ticks that clear the obstacle), per archetype per speed | Jump over low barrier **≥ 15 ticks (250 ms)**; slide under high barrier **≥ 30 ticks**; a lane dodge of a full block still succeeds with the input **3 ticks or fewer** before front contact (expected: 2) |
+| S3 | Jump-then-jump over two low barriers at 21 m/s | Feasible for every spacing of 0.45 s and more |
 | S4 | Expert bot (from `bot-player.md`) on tier-1 spacing at 10 m/s, 60 s segments | ≥ 99% survive |
 | S5 | Average bot, same setup | ≥ 90% survive; `Expired` buffered jumps ≤ 5% of buffered jumps |
 | S6 | New bot, tier-1 spacing at 8 m/s, 30 s segments | ≥ 60% survive |
