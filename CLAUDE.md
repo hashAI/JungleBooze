@@ -3,6 +3,12 @@
 A 3D endless runner for iOS built with Unity 6 LTS + C#. The game is built by a team of AI agents,
 defined in `.claude/agents/`. Read `docs/AGENT_PLAN.md` for the full plan.
 
+## Starting a session
+1. Read `docs/STATUS.md` first. It shows the current milestone, each agent's state, open owner questions,
+   assumptions, and what hasn't been verified. Then read `design/DECISIONS.md`.
+2. The coordinating session updates `docs/STATUS.md` (agent table + log line) every time it launches an agent,
+   receives an agent's report, or records an owner decision, and commits it with that work.
+
 ## Ground rules for every agent
 1. **The owner decides identity and taste.** Hero, companion, art style, name, icon, prices, and "is it fun" are
    the owner's calls. Prepare options, but never decide these yourself. Check `design/DECISIONS.md` first.

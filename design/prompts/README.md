@@ -1,16 +1,16 @@
 # Prompt Library
 
-**Owner:** art-director | **Status:** Draft templates, untested (no image key yet) | **Last updated:** 2026-10-06
+**Owner:** art-director | **Status:** Draft templates, untested (no image key yet). G2 decided: style C, hero H2, macaw M3 | **Last updated:** 2026-10-06
 
-Templates for the image generator (2D concepts) and hand-off notes for Tripo and Meshy (image-to-3D).
+Templates for the image generator (2D concepts) and hand-off notes for the image-to-3D tool.
 Every prompt is written to be pasted as-is. After a template is tested, record the seed, settings, and a
 thumbnail path in the "Test log" table of its file and change its status to **Tested**.
 
 | File | Contents |
 |---|---|
-| `style_boards.md` | Style blocks A/B/C (reusable) + one board prompt per world for each style |
-| `hero_variants.md` | Concept sheet + turnaround prompts for H1, H2, H3, plus the 3D hand-off prompt |
-| `macaw_variants.md` | Concept sheet + turnaround prompts for M1, M2, M3, plus the 3D hand-off prompt |
+| `style_boards.md` | Style blocks A/B/C (A and B archive), `{STYLE_C_CHAR}` for character sheets, one board prompt per world |
+| `hero_variants.md` | **Chosen H2:** locked SUBJECT, model sheet, expression sheet, pose sheet, 3D hand-off, in-game check. H1/H3 archive |
+| `macaw_variants.md` | **Chosen M3:** locked SUBJECT, model sheet, expression sheet, pose sheet, 3D hand-off, placement check. M1/M2 archive |
 
 ## How templates are built
 
@@ -59,9 +59,9 @@ turnaround and 3D hand-off prompts.
 8. **Log everything.** Seed, settings, date, file path, and chosen image go into the file's Test log, and the tool,
    plan, and commercial-use license go into `docs/LICENSES.md` when an asset is kept.
 
-## 3D hand-off rules (Tripo / Meshy)
+## 3D hand-off rules (image-to-3D tool)
 
-Images sent to Tripo or Meshy must be: single character, full body, front view, A-pose, neutral expression with
+Images sent to the image-to-3D tool must be: single character, full body, front view, A-pose, neutral expression with
 closed mouth, plain light-gray background, even lighting with no cast shadows, no motion blur, no loose hair strands,
-no thin straps, no transparent parts. Ask for a quad or clean triangle mesh at the budget in `design/STYLE_BOARDS.md`
-and a single texture; the asset pipeline decimates, rigs (Mixamo for humanoids), and repaints as needed.
+no thin straps, no transparent parts. Ask for a quad or clean triangle mesh at the budget in `design/STYLE_GUIDE.md`
+and a single texture; the asset pipeline decimates, rigs (auto-rigger for humanoids), and repaints as needed.

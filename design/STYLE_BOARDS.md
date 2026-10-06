@@ -1,6 +1,6 @@
 # Style Boards (Gate G2): pick 1 of 3
 
-**Owner:** art-director | **Status:** Options for the owner, nothing chosen | **Last updated:** 2026-10-06
+**Owner:** art-director | **Status:** Decided at G2 (see `design/DECISIONS.md`); binding rules now in `design/STYLE_GUIDE.md` | **Last updated:** 2026-10-06
 
 Fixed by the owner (see `design/DECISIONS.md`): pulpy adventure mood (warm golden light, drums and brass,
 treasure-hunt feel), wild jungle kid hero, macaw companion, 4 worlds (Jungle, River, Mountains, Ancient Ruins).
@@ -67,7 +67,7 @@ pale gold through mist, Mountains cool white with warm rim, Ruins orange torch g
 gem-center coin stand out cleanly. Risk: with no outlines, a dark log in front of a dark tree line can merge, so
 hazards need a light rim highlight on their top edge.
 
-**Production cost.** Lowest cost of the three. Models from Tripo or Meshy are decimated and recolored with a small
+**Production cost.** Lowest cost of the three. Models from image-to-3D tools are decimated and recolored with a small
 palette texture (one 256 px swatch for the whole world), which hides most generation flaws and keeps every
 asset consistent. Very light on phones. Weakness: characters with flat facets are less expressive; faces and hands
 look stiff in close-ups, so clips are pretty but less charming.
@@ -109,7 +109,7 @@ shafts as cheap camera-facing cards. Real-time light only on the hero, companion
 log can blend into a mossy background. Needs discipline: low-detail textures on hazards, a red edge, and darker
 background values. Coins are fine thanks to the gem and sparkle.
 
-**Production cost.** Medium to high. Tripo and Meshy produce painterly textures well, but each asset comes out
+**Production cost.** Medium to high. Image-to-3D tools produce painterly textures well, but each asset comes out
 with a slightly different brush feel and light direction baked in, so most assets need a texture clean-up or
 repaint pass to look like one world. Textures must use the full allowed size (1024 px for characters, 2048 px atlases for worlds),
 which costs memory and download size. Most attractive in still screenshots.
@@ -154,7 +154,7 @@ gradients per world. Shadows are flat color shapes, not soft blur.
 even at 21 m/s, and the selective outline rule makes hazards and pickups stand out by design. Flat colors keep
 the red hazard edge unmistakable.
 
-**Production cost.** Low to medium. Tripo and Meshy geometry works well because the toon shader flattens their
+**Production cost.** Low to medium. Generated geometry works well because the toon shader flattens their
 textures into a few color regions, which hides generation flaws and keeps assets consistent. Outlines cost extra
 draw work, which is why only gameplay objects get them (inverted-hull outlines, no full-screen effect).
 Characters stay expressive because faces and poses are drawn with clear shapes and lines. Strong in clips: it looks
@@ -170,7 +170,7 @@ like nothing else in the runner genre on the store.
 |---|---|---|---|
 | Readable at speed | Good | Fair (needs discipline) | **Best** |
 | Fits "pulpy adventure" | Good | **Best mood** | **Best "pulp" energy** |
-| AI 3D generation fit (Tripo/Meshy) | **Best** | Fair (repaint passes) | Good |
+| Generated 3D fit | **Best** | Fair (repaint passes) | Good |
 | Phone performance | **Lightest** | Heaviest | Light to medium |
 | Character charm in clips | Fair | Good | **Best** |
 | Stands out on the store | Fair (common look) | Good | **Best** |
@@ -180,7 +180,7 @@ like nothing else in the runner genre on the store.
 
 1. **Gameplay readability (pillar 1).** Outlines plus flat colors give the clearest hazard and coin reading at speed on
    a small screen, and the selective ink rule turns readability into part of the art style.
-2. **AI-generation feasibility.** The toon shader hides the small texture inconsistencies Tripo and Meshy produce, so
+2. **AI-generation feasibility.** The toon shader hides the small texture inconsistencies that image-to-3D tools produce, so
    four worlds can be built fast and still look like one game. Much cheaper to keep consistent than Board B.
 3. **Clip appeal (pillar 3).** Comic-style vine release with speed lines and a stamped "PERFECT!" makes the
    strongest 3-second hook, and the look is distinctive in a genre full of glossy realism and plain low-poly.

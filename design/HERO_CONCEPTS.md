@@ -1,6 +1,6 @@
 # Hero and Companion Concepts (Gate G2)
 
-**Owner:** art-director | **Status:** Options for the owner, nothing chosen | **Last updated:** 2026-10-06
+**Owner:** art-director | **Status:** Decided at G2 (see `design/DECISIONS.md`); binding rules now in `design/STYLE_GUIDE.md` | **Last updated:** 2026-10-06
 
 Fixed by the owner: the hero is a **wild jungle kid** (grew up among animals, barefoot, fearless, playful); the
 companion is a **macaw parrot** (loud, colorful, flies overhead, squawks warnings). Mood: pulpy adventure.
@@ -150,8 +150,8 @@ respectively), so they need more care in shape; M3 is the most distinct.
 1. **Gameplay readability.** Cream outfit plus dark round hair gives the strongest value contrast in the Jungle and
    River worlds where new players spend most of their time; the low, cat-like run makes lane changes and jumps
    read as big body movements.
-2. **AI-generation feasibility.** Simple wrap clothing, a solid hair mass, and one chunky satchel are easy for Tripo or
-   Meshy to model and easy to rig (no cape, no loose strands). The map print is just a texture.
+2. **AI-generation feasibility.** Simple wrap clothing, a solid hair mass, and one chunky satchel are easy for image-to-3D
+   tools to model and easy to rig (no cape, no loose strands). The map print is just a texture.
 3. **Clip appeal and brand.** The treasure "X" on the back is on screen all run long and ties the hero to the
    treasure-hunt mood; the "grew up with animals" body language is the most faithful to the owner's brief.
 

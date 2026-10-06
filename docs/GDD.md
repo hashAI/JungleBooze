@@ -1,15 +1,16 @@
 # Game Design Document: JungleBooze (working title)
 
-**Owner:** game-designer | **Status:** Second draft (Week 0, after G1 decisions; Week 1 movement refinements from spec 001) | **Last updated:** 2026-10-06
+**Owner:** game-designer | **Status:** Third draft (after G0, G1 and G2 decisions; Week 1 movement refinements from spec 001) | **Last updated:** 2026-10-06
 
 This is the master design for a 3D endless runner on iOS. Every gameplay feature gets its own spec in
 `docs/specs/<feature>.md` that refines the numbers here. When a spec and this document disagree, the spec wins
 and this document is updated.
 
 **Conventions in this document**
-- `HERO` is the wild jungle kid and `COMPANION` is the macaw parrot (owner decisions, G1, 2026-10-06; see
-  section 1.1). `HERO` stays as the placeholder name until the owner picks a name. `COMPANION` is used the same
-  way for the macaw until it is named.
+- `HERO` is the wild jungle girl (design H2 "Mapcloth") and `COMPANION` is the macaw parrot (design M3 "Dusk")
+  (owner decisions G1 and G2, 2026-10-06; see section 1.1). "Mapcloth" and "Dusk" are design codenames, not names.
+  `HERO` stays as the placeholder name until the owner picks a name. `COMPANION` is used the same way for the
+  macaw until it is named.
 - `[ASSUMED]` marks a default chosen by the designer so work can proceed. It stands until the owner decides otherwise.
 - `[OWNER]` marks a decision the owner must make. Options are listed, nothing is decided.
 - All tuning numbers are starting values. They live in ScriptableObjects under `Assets/_Game/Config` (section 16),
@@ -20,21 +21,27 @@ and this document is updated.
 
 ## 1. Vision in one paragraph
 
-HERO, a barefoot wild kid raised by the jungle's animals, runs, jumps and slides through an endless jungle that
-changes into a river, then mountains, then ancient ruins the further they get. It is a pulpy treasure-hunt
-adventure: warm golden light, pounding drums and brass, gold glinting in every ruin. The signature moment is
+HERO, a barefoot, cat-like wild girl raised by the jungle's animals and dressed in clothes cut from an old
+treasure map, runs, jumps and slides through an endless jungle that changes into a river, then mountains, then
+ancient ruins the further she gets. It is a pulpy treasure-hunt adventure told in a bold, ink-outlined comic-book
+style: warm golden light, pounding drums and brass, gold glinting in every ruin. The signature moment is
 **vine swinging**: HERO leaps onto a vine, the camera pulls wide, and the player picks the perfect moment to let go
-and fly over a chasm. COMPANION, a loud and colorful macaw, flies overhead, squawks warnings about what is coming,
-and fills up a meter that lets it swoop down and lift HERO over trouble. Every session gives the player something:
+and fly over a chasm. COMPANION, a sly violet-and-orange macaw with a weakness for shiny coins, flies overhead,
+calls out warnings ("Vine!", "Look out!") about what is coming, and fills up a meter that lets it swoop down and
+lift HERO over trouble. Every session gives the player something:
 coins, a finished mission, a step towards the next unlock, and a fair shot at beating their best score on Game Center.
 
-### 1.1 Hero, companion and mood (owner decisions, G1)
+### 1.1 Hero, companion, mood and art style (owner decisions, G1 and G2)
+
+Full concept sheets: `design/HERO_CONCEPTS.md`.
 
 | Item | Decision | What it means for design |
 |---|---|---|
-| **HERO** | Wild jungle kid: grew up among animals, barefoot, fearless, playful. Name: `[OWNER]`, still open. | Moves like an animal: low crouched run, swings and lands like a monkey, slides on knees and hands. Reacts to danger with a grin, not fear. Animations should show joy (a whoop on a Perfect release, a roll on landing). Age reads as roughly 10–12; original design, no resemblance to famous jungle heroes. |
-| **COMPANION** | Macaw parrot: loud, colorful, flies overhead, squawks warnings. Name: `[OWNER]`. | Flying fits the "above and behind" rule perfectly. Its squawks are the main readability cue (section 15). Its bright red, blue and yellow feathers make it the most readable color on screen, so no obstacle uses that exact palette. |
+| **HERO** | Wild jungle kid (G1), design **H2 "Mapcloth"** (G2): a cat-like wild girl who grew up among animals, barefoot, fearless, playful. Clothes cut from an old canvas treasure map, with a **big "X" on her back**; round cloud of curly hair, teal sash, salvaged satchel. Name: `[OWNER]`, still open. | Moves like a young big cat: low, forward-leaning run with long strides, lane changes as sideways pounces, drops to hands and feet for a beat on landings, cat-like slide. Reacts to danger with a grin, not fear. Animations show joy (a whoop on a Perfect release, a roll on landing). Back-view landmark (seen 90% of the time): hair cloud plus cream map back with the "X". Because the run is already low, the slide pose must stay clearly lower than the run (1.8 m vs 0.8 m hitbox, section 6). Age reads as roughly 9–12; original design, no resemblance to famous jungle heroes. |
+| **COMPANION** | Macaw parrot (G1), design **M3 "Dusk"** (G2): an original violet-and-orange macaw (violet body and wings, sunset-orange head and chest, teal tail tip), medium and sleek. Sly, greedy coin thief who loves anything shiny. **Speaks a few words** (G1), localized. Name: `[OWNER]`. | Flying fits the "above and behind" rule perfectly. Its short spoken call-outs are the main audio readability cue (section 15). Violet is complementary to the golden light, so it pops in every world and never clashes with hazard red or coin gold; no obstacle or hazard uses violet as a main color. The coin-thief personality is the story of Lift (it grabs every coin nearby, section 15.1). Medium size keeps it off the track during call-outs. |
 | **Mood** | Pulpy adventure: warm golden light, drums and brass, treasure-hunt feel. | Every world is lit with a golden-hour rig (section 9.2). Coins are gold treasure (coins, gems, idols as visual variants with the same value). Music is one drums-and-brass theme rearranged per world. World transitions feel like discovering a new map area. |
+| **Art style** | **C "Inkbound Pulp"** (G2): bold comic-book look with ink outlines. | Ink outlines strengthen silhouette readability at speed (pillar 1): hazards keep a thick outline plus the contrasting edge highlight (9.2). Kid proportions with a slightly larger head (about 1/4 of height). UI, banners and "Perfect!" pop-ups use comic-panel and lettering style. Outline rendering must fit the 60 fps budget on the lowest supported device (section 5.2). |
+| **Platform** | iOS first, Android later. Lowest device for locked 60 fps: **iPhone 11 / iPhone SE (2nd gen)** (A13) (G0). iOS builds are compiled and signed on the owner's own Mac (G0). | All performance targets in this document are measured on an iPhone 11 / SE 2nd gen. |
 
 ---
 
@@ -127,7 +134,7 @@ When two ideas conflict, the higher pillar wins.
 | Slide duration | **0.65 s (39 ticks)** (can be cancelled by a jump) | EditMode test |
 | Hitbox forgiveness | Player hitbox width 0.7 m vs 0.9 m visual, depth 0.5 m; obstacle hitboxes 85% of visual | Fairness fuzzer + review |
 | Lane change "edge forgiveness" | If the player is ≥ 60% of the way into a new lane, the old lane's obstacles cannot hit them | EditMode test |
-| Frame rate | Locked 60 fps on the lowest supported iPhone | perf-engineer benchmark |
+| Frame rate | Locked 60 fps on the lowest supported device: iPhone 11 / iPhone SE (2nd gen), A13 (owner decision, G0) | perf-engineer benchmark |
 | Death readability | 0.35 s hit-pause, then camera holds 0.8 s on the cause | PlayMode test + owner feel check |
 
 ### 5.3 Edge cases (rules every spec must follow)
@@ -146,7 +153,7 @@ When two ideas conflict, the higher pillar wins.
    (1.5 s total) plays before control returns. Buffers are cleared on pause.
 7. **Ceiling during jump:** if a high obstacle would be hit at the top of a jump, the player dies (it is
    telegraphed). The generator never places a high obstacle where a jump is the only escape.
-8. **Opposite swipe during a lane switch:** HERO reverses at once toward the lane they came from (a queued second
+8. **Opposite swipe during a lane switch:** HERO reverses at once toward the lane she came from (a queued second
    switch is cancelled instead, if there is one).
 9. **Collision categories [ASSUMED]:** running into the **front** of an obstacle (or rising into a high barrier from
    below) is lethal. Clipping the **side** of an obstacle during a lane switch, or coming down on **top** of a low
@@ -203,7 +210,7 @@ A vine section is a pre-built chunk, 60–110 m long:
 ### 7.3 Step by step
 
 1. **Approach.** The approach strip has no obstacles in the vine lane for the last 1.2 s. Coin trails lead into
-   the vine lane. COMPANION calls out 2.0 s before the grab zone: a bright "vine" squawk and a swoop over the
+   the vine lane. COMPANION calls out 2.0 s before the grab zone: a bright spoken "Vine!" and a swoop over the
    vine lane (section 15.1).
 2. **Grab.** The player swipes up (jump) so that HERO is airborne inside the grab zone (a box 2.0 m long,
    1.6 m wide, from 1.6 m to 3.6 m high, centered on the vine). Grab is **automatic** on entering the box while
@@ -361,7 +368,8 @@ that gets the least extra dressing, never fewer gameplay features.
 - One shared lighting rig with a warm key light (low sun, golden), soft fog and bloom on gold. Each world is a
   preset of this rig, so performance cost is the same in every world.
 - Gold (coins, treasure, idols) is the brightest warm color in every world. Hazards use the shape language of 8.1
-  plus a contrasting edge highlight so they never blend with the warm light.
+  plus a contrasting edge highlight and the bold ink outline of the "Inkbound Pulp" style (1.1) so they never blend
+  with the warm light.
 - Performance: only the current world's kit plus the next one are in memory. The next world loads in the
   background during the last 300 m of the current world; the previous world unloads after the gateway.
 
@@ -440,7 +448,7 @@ Goal: playing within **10 s** of opening the app, no menus, no sign-up, no ads, 
 | Time | What happens |
 |---|---|
 | 0–8 s | Cold start, splash, title with HERO and COMPANION. "Tap to run." (No account, no settings, no ATT prompt.) |
-| ~0 s of run | Run starts at 8 m/s. Empty track, HERO runs, COMPANION swoops down with a loud squawk and settles overhead. |
+| ~0 s of run | Run starts at 8 m/s. Empty track, HERO runs, COMPANION swoops down with a loud squawk and settles overhead. Its first call-out ("Vine!") is heard at the 30 s vine, so the player links word, swoop and event. |
 | 3 s | A log in the middle lane. A ghost hand shows **swipe left or right**. The game slows to 30% until the player swipes. |
 | 8 s | A low log across all lanes. Ghost hand: **swipe up**. Same slow-down. |
 | 13 s | A low branch across all lanes. Ghost hand: **swipe down**. |
@@ -547,7 +555,7 @@ Tutorial rules:
 - After a death, a **Continue** screen shows for 5 s (with a skip button):
   - Once per run: watch a rewarded ad to continue (not in session 1).
   - Or pay coins: 300 for the first continue, 600 for the second, max 2 continues per run.
-  - Session 1 only: one free continue from COMPANION (the macaw swoops in, grabs HERO by the wrists and flaps them
+  - Session 1 only: one free continue from COMPANION (the macaw swoops in, grabs HERO by the wrists and flaps her
     back onto the track) so the player learns continues exist.
 - On continue: 2 s invulnerability, the obstacle that killed HERO is removed, 1.5 s clear stretch.
 
@@ -557,19 +565,34 @@ Tutorial rules:
 
 ### 15.1 Role
 
-COMPANION is a macaw parrot: loud, colorful, cheeky, and HERO's oldest friend. It is a friend, not a second
-character to control. It does three jobs:
+COMPANION is a macaw parrot (design M3 "Dusk", section 1.1): violet and orange, loud, sly, greedy for anything
+shiny, and HERO's oldest friend. It warns her because it does not want its treasure-finder hurt. It is a friend,
+not a second character to control. It does three jobs:
 
-1. **Squawks warnings (readability).** The macaw flies ahead a little and calls out big events: vines 2.0 s
-   early, signature hazards and movers 1.5 s early. Each call-out is a squawk plus a visible swoop over the lane
-   that matters, never text. There are only **3 squawk types** so players can learn them by ear:
-   - *Vine call* (bright, rising): a vine is coming; the macaw swoops over the vine lane.
-   - *Danger call* (sharp, double): a signature hazard or mover; the macaw flaps over the dangerous lane.
-   - *Cheer* (happy chatter): Perfect release, new record, mission complete.
-   Call-outs are an extra cue, never the only one: every hazard is still readable with sound off (pillar 1).
-2. **Assist meter: "Lift" (one deeper mechanic).** The meter fills from near-misses (+5%), coin streaks of 25
+1. **Calls out warnings (readability).** The macaw flies ahead a little and calls out big events: vines 2.0 s
+   early, signature hazards and movers 1.5 s early. Each call-out is a **short spoken word with a squawk accent**
+   (a parrot voice: the word is clipped and ends or starts in a squawk) plus a visible swoop over the lane that
+   matters. Never on-screen text. There are only **3 call-out types** so players can learn them by ear:
+   - *Vine call* (bright, rising): **"Vine!"**; the macaw swoops over the vine lane.
+   - *Danger call* (sharp, urgent): **"Look out!"**; the macaw flaps over the dangerous lane.
+   - *Cheer* (happy chatter): a short cheer word such as **"Shiny!"** or **"Wow!"** [ASSUMED wording] for a Perfect
+     release, new record, mission complete.
+   Rules for the words:
+   - Each call-out is **1–2 words**, and the spoken part is **≤ 0.6 s** long so it never overlaps the next event.
+   - The Vine and Danger calls use **one fixed word each**, always the same, so they work as learnable signals.
+     Only Cheer and ambient chatter have 2–3 variants.
+   - The squawk accent alone must still tell the three types apart (different pitch and rhythm), so the cue works
+     for players who do not know the language.
+   - Call-outs are an extra cue, never the only one: every hazard is still readable with sound off (pillar 1).
+   - **Localization:** every word is localized into every launch language (the vine and danger words must stay
+     short in every language; the localizer may pick a different short word rather than translate literally).
+     With the "Companion voice" slider at 0, or for a language without recordings, a squawk-only fallback plays.
+   - **Audio-director needs:** voice recording of all call-out words per launch language (one voice actor
+     doing a parrot voice, or one voice processed into a parrot sound), plus squawk-only fallback versions of all
+     3 types, plus ambient chatter lines. List of words and languages: `docs/specs/companion.md` (to be updated).
+2. **Assist meter: "Lift" (one deeper mechanic, and the coin thief's favorite moment).** The meter fills from near-misses (+5%), coin streaks of 25
    (+5%), Good releases (+10%), Perfect releases (+25%). When full, a double tap triggers **Lift**:
-   1. The macaw dives, grabs HERO's wrists and lifts them to a glide height of **2.5 m** above the track for
+   1. The macaw dives, grabs HERO's wrists and lifts her to a glide height of **2.5 m** above the track for
       **4.0 s**. HERO is invulnerable and passes over every ground obstacle.
    2. During Lift, left/right swipes still change lanes (steer for coins); up/down swipes are ignored. A magnet
       effect pulls coins from all 3 lanes within 10 m, so the player still feels in control and rewarded.
@@ -577,7 +600,7 @@ character to control. It does three jobs:
       after touchdown, and HERO keeps 0.5 s invulnerability after landing.
    If the player never double taps, the meter stays full (no waste, no auto-trigger) [ASSUMED].
 3. **Emotional anchor.** Celebrates new records with a loud cheer and a loop-the-loop, lands on HERO's head after
-   a death with a sympathetic squawk, appears on menus. This is the character players get attached to.
+   a death with a sympathetic squawk, hides a coin under a wing when idle on menus. This is the character players get attached to.
 
 Placement: the macaw flies **above and behind HERO**, in the upper third of the screen, never between the camera
 and the next 34 m of track at lane height, so it never blocks the view. Warning swoops stay at ≥ 4.0 m height
@@ -594,7 +617,8 @@ Lift edge cases:
   (the input is not "rescued" after the fact).
 - **Pause during Lift:** remaining time continues after the countdown.
 
-Squawk volume: the macaw has its own "Companion voice" slider in Settings. Ambient chatter (not call-outs) is
+Voice volume: the macaw has its own "Companion voice" slider in Settings (at 0, call-outs fall back to squawks
+on the sound effects channel). Ambient chatter (not call-outs) is
 limited to at most once every 8 s so the parrot stays charming, not annoying.
 
 ### 15.2 Numbers
@@ -610,6 +634,7 @@ limited to at most once every 8 s so the parrot stays charming, not annoying.
 | Meter to fill (at average play) | about 40–60 s |
 | Vine call-out lead time | 2.0 s |
 | Hazard / mover call-out lead time | 1.5 s |
+| Spoken call-out length | 1–2 words, ≤ 0.6 s |
 | Warning swoop height / duration | ≥ 4.0 m / ≤ 0.5 s |
 | Ambient chatter cooldown | 8 s |
 
@@ -620,7 +645,8 @@ touchdown in 100,000 generated segments.
 
 ### 15.3 Identity
 
-Species, look and personality decided (section 1.1). Name: `[OWNER]`. Extra companions as unlocks are possible
+Species (G1), look and personality (G2, M3 "Dusk") and voice (a few spoken words, G1) decided (section 1.1).
+Name: `[OWNER]`. Extra companions as unlocks are possible
 later (cosmetic only, they reuse the Lift mechanic, so they would need to be flying or carrying animals).
 
 ---
@@ -649,13 +675,18 @@ later (cosmetic only, they reuse the Lift mechanic, so they would need to be fly
 
 | Item | Status | Notes |
 |---|---|---|
-| HERO look, personality | **Decided** (G1): wild jungle kid | See 1.1. Must be original IP. No resemblance to famous jungle heroes. |
+| HERO concept | **Decided** (G1): wild jungle kid | See 1.1. Must be original IP. No resemblance to famous jungle heroes. |
+| HERO design | **Decided** (G2): H2 "Mapcloth", cat-like wild girl, treasure-map clothes, big "X" on her back | See 1.1 and `design/HERO_CONCEPTS.md`. Keep cheek dots pale clay, never red, and no fur (originality watch point). |
 | HERO name | `[OWNER]` | Placeholder `HERO` until chosen. |
-| COMPANION species, personality | **Decided** (G1): macaw parrot | See 1.1 and 15. |
+| COMPANION species | **Decided** (G1): macaw parrot | See 1.1 and 15. |
+| COMPANION design, personality | **Decided** (G2): M3 "Dusk", violet-and-orange coin thief | See 1.1 and 15. Keep it a sleek macaw, not a tall rainbow bird (originality watch point). |
+| COMPANION voice | **Decided** (G1): speaks a few words ("Vine!", "Look out!"), localized | See 15.1. audio-director plans voice recording per launch language plus squawk-only fallbacks. |
 | COMPANION name | `[OWNER]` | Placeholder `COMPANION` until chosen. |
 | Overall tone | **Decided** (G1): pulpy adventure | Warm golden light, treasure-hunt feel. |
 | Music mood | **Decided** (G1): drums and brass | audio-director brings samples of the main theme and one world arrangement. |
-| Art style | `[OWNER]` at G2 | art-director brings 3 style boards within the pulpy-adventure mood. |
+| Art style | **Decided** (G2): C "Inkbound Pulp", bold comic-book look with ink outlines | See 1.1 and 9.2. |
+| Lowest supported device | **Decided** (G0): iPhone 11 / iPhone SE (2nd gen), A13 | Locked 60 fps target (5.2). |
+| iOS build machine | **Decided** (G0): owner's own Mac | Builds compiled and signed there. |
 | App name | `[OWNER]` at G6 | See 17.1. |
 
 ### 17.1 Name risk
@@ -748,7 +779,7 @@ Priorities: **M** = must have for launch, **S** = should have, **C** = could sli
 | 2 | Art: HERO and macaw models + core animation list started; Jungle environment kit started | M | `specs/worlds.md` | |
 | 3 | **Vine swinging** (grab, swing, release grades, chains, chasms) | M | `specs/vine-swing.md` | |
 | 3 | Power-ups: Magnet, Shield, Speed Boost | M | `specs/power-ups.md` | |
-| 3 | COMPANION: flight follow, 3 squawk call-outs, Assist meter, Lift | M | `specs/companion.md` | |
+| 3 | COMPANION: flight follow, 3 spoken call-outs (placeholder recordings in one language, squawk-only fallback), Assist meter, Lift | M | `specs/companion.md` | |
 | 3 | Signature hazards: lane-denial + telegraphed lane-strike behaviors (both, gray-box) | M | `specs/obstacles.md` | |
 | 3 | Continue flow (coins + free first-session continue) | M | `specs/continue.md` | |
 | 3 | Art: **Jungle complete** (vertical slice, quality bar); golden-hour lighting rig; main theme | M | `specs/worlds.md` | G4 |
@@ -759,7 +790,7 @@ Priorities: **M** = must have for launch, **S** = should have, **C** = could sli
 | 4 | Owner decisions: ads, prices (section 18) | M | `specs/monetization.md` | G5 |
 | 5 | Ads (rewarded; interstitial only if owner approves), IAP, Restore, ATT + consent | M | `specs/monetization.md` | |
 | 5 | Onboarding tutorial (section 12) | M | `specs/onboarding.md` | |
-| 5 | Audio, VFX, haptics, Settings, accessibility options | M | `specs/settings-accessibility.md` | |
+| 5 | Audio, VFX, haptics, Settings, accessibility options; final localized COMPANION voice recordings | M | `specs/settings-accessibility.md` | |
 | 5 | Art: **Mountains** restyle, kit, gateway, arrangement; dusk loop lighting preset | M | `specs/worlds.md` | |
 | 5 | Game Center achievements | S | `specs/game-center.md` | G6 |
 | 6 | Performance pass with all 4 worlds (memory per world, streaming hitches), device matrix, beta tuning | M | — | G7 |
@@ -776,10 +807,14 @@ The 7-week plan holds **only** with the simplifications in 8.3 and 9.1. Even the
 2. **Mountains lands in week 5, leaving one week of tuning and performance work** before submission. Its first
    real beta feedback comes late.
 3. **Performance and memory.** Four environment kits plus streaming between them is the most likely cause of
-   hitches on the lowest supported iPhone. The streaming rule (9.2) must be built in week 4, not week 6.
+   hitches on the lowest supported iPhone (iPhone 11 / SE 2nd gen), together with the ink-outline rendering of the
+   chosen art style. The streaming rule (9.2) must be built in week 4, not week 6.
 4. **Test matrix grows ×4.** Every obstacle restyle needs a readability check (does the answer still read at
    1.2 s?) in every world. Shared prefabs keep the fairness tests valid, but visual readability must be checked
    by hand per world.
+5. **Localized voice.** The talking macaw needs voice recordings in every launch language. Each extra language
+   adds recording, editing and a timing check (≤ 0.6 s per call-out). The squawk-only fallback keeps a missing
+   language from blocking launch.
 
 Fallback options if a world is behind at the end of week 5 (owner chooses; see section 23): (a) slip launch by
 one week, or (b) ship the late world with lighter dressing (fewer ambient props, simpler skybox), with the same
@@ -791,20 +826,24 @@ gameplay, and polish it in the first update. Cutting a world is not proposed, si
 
 These are collected by the coordinator; answers go to `design/DECISIONS.md`.
 
-Answered at G1 (2026-10-06, see `design/DECISIONS.md`): HERO (wild jungle kid), COMPANION (macaw parrot),
-mood (pulpy adventure), launch worlds (all four).
+Answered (2026-10-06, see `design/DECISIONS.md`):
+- Platform: iOS first, Android later.
+- G0: lowest supported device iPhone 11 / iPhone SE (2nd gen); iOS builds compiled and signed on the owner's own
+  Mac; CI uses the owner's free Personal engine license for now.
+- G1: HERO (wild jungle kid), COMPANION (macaw parrot), mood (pulpy adventure), launch worlds (all four), the macaw
+  speaks a few localized words (section 15.1).
+- G2: art style C "Inkbound Pulp", HERO design H2 "Mapcloth", COMPANION design M3 "Dusk" (section 1.1).
 
 Still open:
 1. Names for HERO and COMPANION (placeholders stay until then).
 2. Ads (rewarded only, or plus light interstitials) and prices for Remove Ads / characters / coin packs:
    deferred by the owner to week 4. Designer recommendations are in section 18, marked `[ASSUMED]`.
-
-New questions:
 3. If a world is behind schedule at the end of week 5, which fallback does the owner prefer: slip launch by one
    week, or ship that world with lighter dressing and polish it in the first update (section 22.1)?
-4. Should the macaw speak a few words (a talking parrot, for example "Vine!" / "Look out!") or only make bird
-   squawks? Words add charm and clarity but need voice recording and localization per language.
+4. Launch languages: which languages ship at launch? This sets how many COMPANION voice recordings are needed
+   (section 15.1).
 
 Smaller defaults marked `[ASSUMED]` in this document (portrait only, daily calendar pauses instead of resetting,
-Assist by double tap, Lift as the Assist effect, shield does not save from chasms, rewarded-only ads at launch)
+Assist by double tap, Lift as the Assist effect, shield does not save from chasms, rewarded-only ads at launch,
+cheer wording)
 stand unless the owner wants them changed.

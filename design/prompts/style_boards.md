@@ -1,6 +1,6 @@
 # Style Board Prompts
 
-**Status:** Draft, untested | See `design/STYLE_BOARDS.md` for the boards and `README.md` for settings.
+**Status:** Draft, untested. Style C chosen at G2 (2026-10-06); A and B are archive. | See `design/STYLE_BOARDS.md` for the boards and `README.md` for settings.
 
 Each board = 1 hero shot (vine swing) + 4 world shots (Jungle, River, Mountains, Ancient Ruins), 9:16 portrait,
 over-the-shoulder runner camera. Lay the 5 best images out side by side as one board per style.
@@ -40,6 +40,18 @@ background scenery, flat colors with two or three hard shading bands, pulp comic
 saturated sunset sky, silhouetted temples, simple clear exaggerated shapes, punchy and graphic, mobile game,
 palette: pulp orange #F28C28, sun gold #FFC43D, cream path #F3DFB2, jungle green #3A8C3F, deep teal #1B4D4A,
 river cyan #1FA2C7, lavender-gray #8E8DAA, terracotta #C4673A, ink #1E1A24
+```
+
+### {STYLE_C_CHAR} Inkbound Pulp, character sheets only (chosen style)
+
+Use this instead of `{STYLE_C}` for character, expression, pose, and 3D hand-off sheets. It drops the sky and
+temples so the neutral gray background is not fought by environment words. Rules: `design/STYLE_GUIDE.md`.
+
+```
+bold toon-shaded 3D game character art, thick dark ink #1E1A24 outer outline, thinner painted ink inner lines,
+flat colors with three hard shading bands and colored shadows, a thin hard rim light, pulp comic book adventure
+energy, simple clear exaggerated shapes, big shapes and small details, punchy and graphic, clean mobile game
+character design
 ```
 
 ### {READABILITY} Shared readability block (pasted in place of the token in board shots 2–5)
