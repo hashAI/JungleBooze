@@ -1,4 +1,4 @@
-# Coding conventions for JungleBooze. See CLAUDE.md ("Conventions") and docs/ARCHITECTURE.md.
+# Coding conventions for JungleBooze. See the project rules ("Conventions") and docs/ARCHITECTURE.md.
 # Naming and style rules are reported as warnings; Assets/csc.rsp turns compiler warnings into errors.
 root = true
 
