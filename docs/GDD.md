@@ -1,13 +1,15 @@
 # Game Design Document: JungleBooze (working title)
 
-**Owner:** game-designer | **Status:** First draft (Week 0) | **Last updated:** 2026-10-06
+**Owner:** game-designer | **Status:** Second draft (Week 0, after G1 decisions) | **Last updated:** 2026-10-06
 
 This is the master design for a 3D endless runner on iOS. Every gameplay feature gets its own spec in
 `docs/specs/<feature>.md` that refines the numbers here. When a spec and this document disagree, the spec wins
 and this document is updated.
 
 **Conventions in this document**
-- `HERO` and `COMPANION` are placeholders. The owner has not yet chosen who they are (see section 17).
+- `HERO` is the wild jungle kid and `COMPANION` is the macaw parrot (owner decisions, G1, 2026-10-06; see
+  section 1.1). `HERO` stays as the placeholder name until the owner picks a name. `COMPANION` is used the same
+  way for the macaw until it is named.
 - `[ASSUMED]` marks a default chosen by the designer so work can proceed. It stands until the owner decides otherwise.
 - `[OWNER]` marks a decision the owner must make. Options are listed, nothing is decided.
 - All tuning numbers are starting values. They live in ScriptableObjects under `Assets/_Game/Config` (section 16),
@@ -18,11 +20,21 @@ and this document is updated.
 
 ## 1. Vision in one paragraph
 
-HERO runs, jumps and slides through an endless jungle that changes into a river, then mountains, then ancient ruins
-the further they get. The signature moment is **vine swinging**: HERO jumps onto a vine, the camera pulls wide,
-and the player picks the perfect moment to let go and fly over a chasm. COMPANION, an animal friend, runs along,
-cheers, and fills up a meter that triggers a helpful burst. Every session gives the player something: coins, a
-finished mission, a step towards the next unlock, and a fair shot at beating their best score on Game Center.
+HERO, a barefoot wild kid raised by the jungle's animals, runs, jumps and slides through an endless jungle that
+changes into a river, then mountains, then ancient ruins the further they get. It is a pulpy treasure-hunt
+adventure: warm golden light, pounding drums and brass, gold glinting in every ruin. The signature moment is
+**vine swinging**: HERO leaps onto a vine, the camera pulls wide, and the player picks the perfect moment to let go
+and fly over a chasm. COMPANION, a loud and colorful macaw, flies overhead, squawks warnings about what is coming,
+and fills up a meter that lets it swoop down and lift HERO over trouble. Every session gives the player something:
+coins, a finished mission, a step towards the next unlock, and a fair shot at beating their best score on Game Center.
+
+### 1.1 Hero, companion and mood (owner decisions, G1)
+
+| Item | Decision | What it means for design |
+|---|---|---|
+| **HERO** | Wild jungle kid: grew up among animals, barefoot, fearless, playful. Name: `[OWNER]`, still open. | Moves like an animal: low crouched run, swings and lands like a monkey, slides on knees and hands. Reacts to danger with a grin, not fear. Animations should show joy (a whoop on a Perfect release, a roll on landing). Age reads as roughly 10–12; original design, no resemblance to famous jungle heroes. |
+| **COMPANION** | Macaw parrot: loud, colorful, flies overhead, squawks warnings. Name: `[OWNER]`. | Flying fits the "above and behind" rule perfectly. Its squawks are the main readability cue (section 15). Its bright red, blue and yellow feathers make it the most readable color on screen, so no obstacle uses that exact palette. |
+| **Mood** | Pulpy adventure: warm golden light, drums and brass, treasure-hunt feel. | Every world is lit with a golden-hour rig (section 9.2). Coins are gold treasure (coins, gems, idols as visual variants with the same value). Music is one drums-and-brass theme rearranged per world. World transitions feel like discovering a new map area. |
 
 ---
 
@@ -50,7 +62,7 @@ When two ideas conflict, the higher pillar wins.
                   │
                   ├─► Vine section (every 35–70 s): grab, swing, release ─► coin shower + score bonus
                   │
-                  ├─► COMPANION meter fills (near-misses, Perfect releases) ─► Assist burst
+                  ├─► COMPANION meter fills (near-misses, Perfect releases) ─► Lift (macaw carries HERO)
                   │
                   └─► Hit an obstacle ─► (optional) Continue ─► Results: score, coins, mission progress
                                                                          │
@@ -183,7 +195,8 @@ A vine section is a pre-built chunk, 60–110 m long:
 ### 7.3 Step by step
 
 1. **Approach.** The approach strip has no obstacles in the vine lane for the last 1.2 s. Coin trails lead into
-   the vine lane. COMPANION calls out (sound + gesture) 2.0 s before the grab zone.
+   the vine lane. COMPANION calls out 2.0 s before the grab zone: a bright "vine" squawk and a swoop over the
+   vine lane (section 15.1).
 2. **Grab.** The player swipes up (jump) so that HERO is airborne inside the grab zone (a box 2.0 m long,
    1.6 m wide, from 1.6 m to 3.6 m high, centered on the vine). Grab is **automatic** on entering the box while
    airborne. A jump started up to 0.45 s before the box counts, so there is a generous timing window.
@@ -221,7 +234,7 @@ A vine section is a pre-built chunk, 60–110 m long:
 - **Power-up runs out while swinging:** timers keep counting, but the visible effect ends only after landing. A
   shield that expires mid-swing stays active until 0.5 s after landing (the player never loses a shield in the air).
 - **Magnet during a swing:** pulls coins from the coin shower and the bonus ring.
-- **Assist triggered during a swing:** queued and fires on landing.
+- **Assist triggered during a swing:** queued and fires on landing (the macaw never grabs HERO off a vine).
 - **Pause during a swing:** on resume the swing phase continues from where it was; the release ring is shown
   during the countdown so the player can re-time.
 - **Continue after a chasm death:** HERO respawns on the landing pad, not on the vine.
@@ -268,10 +281,30 @@ reskins them. Color/shape language is consistent: **low = jump, high = slide, ta
 
 | World | Low (jump) | High (slide) | Full block | Mover | World signature hazard |
 |---|---|---|---|---|---|
-| **Jungle** (green, warm light) | Fallen log | Low branch | Giant tree trunk | Rolling boulder down a lane | **Thorn bush patch:** spans 2 lanes, forces the remaining lane |
-| **River** (blue, misty) | Floating driftwood | Hanging fishing net / rope | River rock | Drifting raft that slides between lanes | **Water spout:** erupts on a visible 1.5 s rhythm; pass when it is down |
-| **Mountains** (gray, snow, cold light) | Snow drift | Overhanging ice ledge | Rock pillar | Rolling snowball | **Falling rocks:** shadow marks the lane 1.3 s before impact |
+| **Jungle** (deep green, golden light shafts) | Fallen log | Low branch | Giant tree trunk | Rolling boulder down a lane | **Thorn bush patch:** spans 2 lanes, forces the remaining lane |
+| **River** (teal water, golden mist) | Floating driftwood | Hanging fishing net / rope | River rock | Drifting raft that slides between lanes | **Water spout:** erupts on a visible 1.5 s rhythm; pass when it is down |
+| **Mountains** (sunrise gold on snow, cool shadows) | Snow drift | Overhanging ice ledge | Rock pillar | Rolling snowball | **Falling rocks:** shadow marks the lane 1.3 s before impact |
 | **Ancient Ruins** (gold, stone, torchlight) | Broken column | Stone beam | Statue | Rolling stone disc | **Pressure-plate darts:** a lit plate in the lane warns 1.2 s before darts cross the lane |
+
+### 8.3 Shared obstacle kit (how four worlds fit in seven weeks)
+
+Four worlds are only possible on this schedule because the worlds share almost everything except their look.
+
+- **One gameplay prefab per archetype.** Each of the 5 archetypes has one prefab with a fixed hitbox, height and
+  telegraph. A world swaps only the visual mesh and material on top of it. Hitboxes never differ between worlds,
+  so fairness tests and bot results carry over from one world to the next.
+- **Restyle, don't remodel.** Per world and archetype: 1 visual variant at launch (20 obstacle visuals total),
+  built from a shared base shape where possible (the log, ice ledge, stone beam and branch share one blockout).
+  Extra variants per world are `C` (post-launch).
+- **Two hazard behaviors, four skins.** The signature hazards are built from only two behaviors:
+  - *Lane denial* (static, spans 2 lanes): Jungle thorn patch. It is the full-block prefab placed across 2 lanes.
+  - *Telegraphed lane strike* (a warning in a lane, then danger for a fixed time): River water spout, Mountains
+    falling rocks, Ruins pressure-plate darts. One component with tunable warning time, active time and rhythm.
+- **Same chunk library everywhere.** The 40 m track chunks are world-neutral layouts. The generator places
+  archetypes, and the current world decides the skin. Only the 4 gateway chunks (section 9) and the signature
+  hazard chunks are world-specific.
+- **Same vine.** One vine rig and swing animation set; per world only the material changes (jungle vine, river
+  creeper, mountain rope, ruins chain).
 
 Rules for every obstacle:
 - The answer is visible at least **1.2 s** before impact at any speed.
@@ -298,8 +331,31 @@ The run passes through the worlds in a fixed order, then loops with a higher dif
   a banner with the world name, and a music crossfade. It always contains a coin arc and often a vine.
 - With the distance targets in section 11, a new player sees Jungle, an average player usually reaches the River,
   and good players reach Mountains and Ruins. This gives a clear "how far can I get" goal.
-- Scope note: four worlds is a lot of art for a 7-week plan. If the owner chooses a smaller launch, the order of
-  priority is Jungle, River, Ruins, Mountains (see section 23, question 4).
+- **Launch scope (owner decision, G1):** all four worlds ship at launch.
+
+### 9.1 What each world gets at launch (and what is simplified)
+
+| Per world | At launch | Simplified / shared |
+|---|---|---|
+| Obstacles | 5 archetype restyles + 1 signature hazard skin | Shared prefabs and hitboxes (section 8.3) |
+| Environment | Modular kit: 1 ground tile set, 2 side set-piece modules, ~8 ambient props, skybox/gradient, fog color | No unique geometry per chunk; side dressing is placed by rules, not by hand |
+| Lighting | One preset of the shared golden-hour rig (sun color, fog, ambient, bloom) | The dusk loop variant is a lighting preset only, no new art |
+| Gateway | 1 unique gateway chunk (cave mouth, waterfall, rope bridge, temple gate) | Shares the transition script and banner UI |
+| Music | 1 arrangement of the main drums-and-brass theme (stem swap) | One theme, four arrangements, not four separate tracks |
+| Gameplay rules | Same as every world | No world-only mechanics at launch (no swimming, no ice sliding) |
+
+Build order: **Jungle** (vertical slice, sets the quality bar), then **River** and **Ruins** (strongest treasure-hunt
+mood), then **Mountains** (largest palette shift, most new materials). If quality is at risk, Mountains is the world
+that gets the least extra dressing, never fewer gameplay features.
+
+### 9.2 Mood and lighting
+
+- One shared lighting rig with a warm key light (low sun, golden), soft fog and bloom on gold. Each world is a
+  preset of this rig, so performance cost is the same in every world.
+- Gold (coins, treasure, idols) is the brightest warm color in every world. Hazards use the shape language of 8.1
+  plus a contrasting edge highlight so they never blend with the warm light.
+- Performance: only the current world's kit plus the next one are in memory. The next world loads in the
+  background during the last 300 m of the current world; the previous world unloads after the gateway.
 
 ---
 
@@ -376,14 +432,14 @@ Goal: playing within **10 s** of opening the app, no menus, no sign-up, no ads, 
 | Time | What happens |
 |---|---|
 | 0–8 s | Cold start, splash, title with HERO and COMPANION. "Tap to run." (No account, no settings, no ATT prompt.) |
-| ~0 s of run | Run starts at 8 m/s. Empty track, HERO runs, COMPANION joins with a short gesture. |
+| ~0 s of run | Run starts at 8 m/s. Empty track, HERO runs, COMPANION swoops down with a loud squawk and settles overhead. |
 | 3 s | A log in the middle lane. A ghost hand shows **swipe left or right**. The game slows to 30% until the player swipes. |
 | 8 s | A low log across all lanes. Ghost hand: **swipe up**. Same slow-down. |
 | 13 s | A low branch across all lanes. Ghost hand: **swipe down**. |
 | 18 s | Coin trail across lanes. Text: "Grab coins!" |
 | 23 s | Magnet pickup. Coins fly in. |
 | 30 s | First vine (safe, over shallow water). Ghost hand on swipe up to grab, then a large release ring and "Swipe up when it glows!" with 30% slow-down at the Perfect band. |
-| 40 s | COMPANION meter shown filled, ghost double tap: Assist. |
+| 40 s | COMPANION meter shown filled, ghost double tap: Assist. The macaw lifts HERO over a short row of logs. |
 | 45 s | "You're on your own!" Speed rises to 10 m/s, normal tier 1 run starts. |
 
 Tutorial rules:
@@ -483,7 +539,8 @@ Tutorial rules:
 - After a death, a **Continue** screen shows for 5 s (with a skip button):
   - Once per run: watch a rewarded ad to continue (not in session 1).
   - Or pay coins: 300 for the first continue, 600 for the second, max 2 continues per run.
-  - Session 1 only: one free continue from COMPANION ("COMPANION pulls you back!") so the player learns it exists.
+  - Session 1 only: one free continue from COMPANION (the macaw swoops in, grabs HERO by the wrists and flaps them
+    back onto the track) so the player learns continues exist.
 - On continue: 2 s invulnerability, the obstacle that killed HERO is removed, 1.5 s clear stretch.
 
 ---
@@ -492,33 +549,71 @@ Tutorial rules:
 
 ### 15.1 Role
 
-COMPANION is a friend, not a second character to control. It does three jobs:
+COMPANION is a macaw parrot: loud, colorful, cheeky, and HERO's oldest friend. It is a friend, not a second
+character to control. It does three jobs:
 
-1. **Reads the track for the player (readability).** COMPANION reacts to big events ahead: it calls out vines
-   2.0 s early, chatters before a signature hazard, and cheers on Perfect releases. These cues are sound plus a
-   visible gesture, never text.
-2. **Assist meter (one deeper mechanic).** The meter fills from near-misses (+5%), coin streaks of 25 (+5%),
-   Good releases (+10%), Perfect releases (+25%). When full, a double tap triggers **Assist**:
-   COMPANION grabs every coin in all lanes for **4 s** and clears the next obstacle in HERO's lane.
+1. **Squawks warnings (readability).** The macaw flies ahead a little and calls out big events: vines 2.0 s
+   early, signature hazards and movers 1.5 s early. Each call-out is a squawk plus a visible swoop over the lane
+   that matters, never text. There are only **3 squawk types** so players can learn them by ear:
+   - *Vine call* (bright, rising): a vine is coming; the macaw swoops over the vine lane.
+   - *Danger call* (sharp, double): a signature hazard or mover; the macaw flaps over the dangerous lane.
+   - *Cheer* (happy chatter): Perfect release, new record, mission complete.
+   Call-outs are an extra cue, never the only one: every hazard is still readable with sound off (pillar 1).
+2. **Assist meter: "Lift" (one deeper mechanic).** The meter fills from near-misses (+5%), coin streaks of 25
+   (+5%), Good releases (+10%), Perfect releases (+25%). When full, a double tap triggers **Lift**:
+   1. The macaw dives, grabs HERO's wrists and lifts them to a glide height of **2.5 m** above the track for
+      **4.0 s**. HERO is invulnerable and passes over every ground obstacle.
+   2. During Lift, left/right swipes still change lanes (steer for coins); up/down swipes are ignored. A magnet
+      effect pulls coins from all 3 lanes within 10 m, so the player still feels in control and rewarded.
+   3. In the last **0.6 s** the macaw descends and sets HERO down. The track is guaranteed clear for **1.0 s**
+      after touchdown, and HERO keeps 0.5 s invulnerability after landing.
    If the player never double taps, the meter stays full (no waste, no auto-trigger) [ASSUMED].
-3. **Emotional anchor.** Celebrates new records, reacts to deaths with sympathy, appears on menus. This is the
-   character players get attached to.
+3. **Emotional anchor.** Celebrates new records with a loud cheer and a loop-the-loop, lands on HERO's head after
+   a death with a sympathetic squawk, appears on menus. This is the character players get attached to.
 
-Placement: COMPANION travels **above and behind HERO** (flying, riding on HERO's shoulder, or swinging above),
-never in front of HERO's lane, so it never blocks the view. This works for any species the owner picks.
+Placement: the macaw flies **above and behind HERO**, in the upper third of the screen, never between the camera
+and the next 34 m of track at lane height, so it never blocks the view. Warning swoops stay at ≥ 4.0 m height
+and last ≤ 0.5 s before it returns to its place.
+
+Lift edge cases:
+- **Double tap during a vine swing:** queued, fires on landing (7.4).
+- **Lift would end over a gap or chasm:** extends until there is ground under HERO, then descends.
+- **Lift and Speed Boost:** cannot overlap. Double tap during a boost is queued until the boost's clear stretch ends.
+- **Lift and Shield:** the shield is not used up during Lift.
+- **Vine section ahead during Lift:** the generator does not start a vine section during Lift; it waits, like
+  Speed Boost (7.2).
+- **Death:** impossible during Lift. If a death happens in the same frame as the double tap, the death wins
+  (the input is not "rescued" after the fact).
+- **Pause during Lift:** remaining time continues after the countdown.
+
+Squawk volume: the macaw has its own "Companion voice" slider in Settings. Ambient chatter (not call-outs) is
+limited to at most once every 8 s so the parrot stays charming, not annoying.
 
 ### 15.2 Numbers
 
 | Parameter | Value |
 |---|---|
-| Assist duration | 4 s |
+| Lift duration (including descent) | 4.0 s |
+| Lift glide height | 2.5 m |
+| Lift descent | last 0.6 s |
+| Clear stretch after touchdown | 1.0 s |
+| Invulnerability after touchdown | 0.5 s |
+| Lift coin pull radius | 10 m, all lanes |
 | Meter to fill (at average play) | about 40–60 s |
 | Vine call-out lead time | 2.0 s |
-| Hazard call-out lead time | 1.5 s |
+| Hazard / mover call-out lead time | 1.5 s |
+| Warning swoop height / duration | ≥ 4.0 m / ≤ 0.5 s |
+| Ambient chatter cooldown | 8 s |
+
+Feel targets: Lift starts (macaw visibly diving) on the same frame as the recognized double tap; HERO leaves the
+ground within 150 ms. Acceptance criteria and bot simulation targets live in `docs/specs/companion.md`.
+Simulation target: average bot uses Lift 2–4 times per 3-minute run; Lift never causes a death within 2 s after
+touchdown in 100,000 generated segments.
 
 ### 15.3 Identity
 
-`[OWNER]` Species, name, personality, look. Extra companions as unlocks are possible later (cosmetic only).
+Species, look and personality decided (section 1.1). Name: `[OWNER]`. Extra companions as unlocks are possible
+later (cosmetic only, they reuse the Lift mechanic, so they would need to be flying or carrying animals).
 
 ---
 
@@ -532,23 +627,35 @@ never in front of HERO's lane, so it never blocks the view. This works for any s
 | `DifficultyTiers` | Tier thresholds, density, min action spacing, chunk weights |
 | `VineTuning` | All of 7.5 |
 | `PowerUpTuning` | Durations per level, spawn rate, Speed Boost multiplier |
-| `CompanionTuning` | Meter gains, Assist duration, call-out lead times |
+| `CompanionTuning` | Meter gains, Lift duration/height/descent, clear stretch, call-out lead times, swoop limits, chatter cooldown |
 | `EconomyConfig` | Prices, mission rewards, daily calendar, continue costs |
 | `MissionPool` | Mission templates and tiered targets |
-| `WorldSequence` | World order, lengths, transitions |
+| `WorldSequence` | World order, lengths, transitions, preload distance (300 m) |
+| `WorldSkin` (one per world) | Archetype visual variants, signature hazard skin, environment kit, lighting preset, music arrangement, vine material |
+| `HazardTuning` | Lane-strike warning time, active time, rhythm per signature hazard |
 
 ---
 
-## 17. Identity placeholders (owner decides)
+## 17. Identity status
 
-| Item | Status | Notes for options |
+| Item | Status | Notes |
 |---|---|---|
-| HERO name, look, personality | `[OWNER]` | Must be original IP. No resemblance to famous jungle heroes. |
-| COMPANION species, name, personality | `[OWNER]` | Any jungle animal works with the "above and behind" placement. |
-| Art style | `[OWNER]` at G2 | art-director brings 3 style boards. |
-| Music mood | `[OWNER]` | audio-director brings samples after the tone is chosen. |
-| Overall tone | `[OWNER]` | Comedy cartoon / pulpy adventure / mysterious wonder. |
-| App name | `[OWNER]` at G6 | Note: "Booze" means alcohol in English. It may affect the age rating and how the store and ad networks classify the app. Compliance should check before G6. |
+| HERO look, personality | **Decided** (G1): wild jungle kid | See 1.1. Must be original IP. No resemblance to famous jungle heroes. |
+| HERO name | `[OWNER]` | Placeholder `HERO` until chosen. |
+| COMPANION species, personality | **Decided** (G1): macaw parrot | See 1.1 and 15. |
+| COMPANION name | `[OWNER]` | Placeholder `COMPANION` until chosen. |
+| Overall tone | **Decided** (G1): pulpy adventure | Warm golden light, treasure-hunt feel. |
+| Music mood | **Decided** (G1): drums and brass | audio-director brings samples of the main theme and one world arrangement. |
+| Art style | `[OWNER]` at G2 | art-director brings 3 style boards within the pulpy-adventure mood. |
+| App name | `[OWNER]` at G6 | See 17.1. |
+
+### 17.1 Name risk
+
+"JungleBooze" is the repository and working title only. "Booze" means alcohol in English. A public app name with
+alcohol words can raise the age rating, change how the store and ad networks classify the app, limit which ads
+can be shown, and clash with a game that stars a kid. **The public app name, store listing, icon and in-game
+title must not contain "Booze" or any alcohol reference.** The repo name can stay. Compliance checks the
+shortlist before G6.
 
 ---
 
@@ -556,19 +663,29 @@ never in front of HERO's lane, so it never blocks the view. This works for any s
 
 Principles: pillar 5. Nothing interrupts a run. No ads in session 1. Rewarded ads always optional and visibly worth it.
 
+**Status:** the owner deferred ad and price decisions to week 4. Everything below is the designer's
+recommendation and is `[ASSUMED]` until then. Recommendations [ASSUMED]:
+- Launch with **rewarded ads only**; keep the interstitial row built but switched off by remote config, and decide
+  after beta data. A kid hero and a "respect the player" pillar both argue against interstitials.
+- Remove Ads: only meaningful if interstitials are on. If they stay off, sell a "Supporter Pack" instead
+  (rewards without watching + a cosmetic outfit).
+- No coin packs at launch; revisit after the economy is proven by simulation and beta.
+
 | Placement | Type | When | Caps |
 |---|---|---|---|
 | Continue | Rewarded | Continue screen after a death | Once per run; from session 2 |
 | Double coins | Rewarded | Results screen | Once per run; from session 2 |
 | Double daily reward | Rewarded | Daily reward claim | Once per day; from session 2 |
 | Free Head Start | Rewarded | Pre-run button on Home | 2 per day |
-| Between runs | Interstitial (`[OWNER]` whether to use at all) | After the Results screen, before Home | From session 2; at most 1 per 3 runs; ≥ 180 s apart; never after a run under 30 s, a purchase, or a rewarded ad |
+| Between runs | Interstitial (off at launch [ASSUMED]; owner decides in week 4) | After the Results screen, before Home | From session 2; at most 1 per 3 runs; ≥ 180 s apart; never after a run under 30 s, a purchase, or a rewarded ad |
 | Remove Ads | IAP non-consumable | Shop + Settings | Removes all interstitials. Rewarded ads stay optional. [ASSUMED option: Remove Ads also grants rewards without watching, owner to decide] |
 | Characters / outfits | IAP non-consumable | Shop | Prices from StoreKit only |
-| Coin packs | IAP consumable (`[OWNER]` whether to sell) | Shop | Fixed contents, no random |
+| Coin packs | IAP consumable (not at launch [ASSUMED]; owner decides in week 4) | Shop | Fixed contents, no random |
 | Restore Purchases | Button | Shop and Settings | Required by Apple |
 
-Price points are `[OWNER]` at G5 (monetization-engineer and balance-simulator bring projections).
+Price points are `[OWNER]`, deferred to week 4 (monetization-engineer and balance-simulator bring projections).
+Starting recommendation [ASSUMED]: characters and outfits at the lowest two or three store price tiers;
+Remove Ads or Supporter Pack one tier above the cheapest character.
 
 ---
 
@@ -585,7 +702,7 @@ App launch (cold start < 5 s)
 
 - Restart from Results to running: **under 2 s.**
 - Results screen shows: score, best, coins, death cause with icon, mission progress bars, "next unlock" progress bar.
-- Settings: music, sound, haptics, left-handed UI, Reduce Motion, color-blind mode (adds shape markers),
+- Settings: music, sound, Companion voice, haptics, left-handed UI, Reduce Motion, color-blind mode (adds shape markers),
   replay tutorial, Restore Purchases, privacy policy, credits.
 
 ---
@@ -616,23 +733,48 @@ Priorities: **M** = must have for launch, **S** = should have, **C** = could sli
 | 0 | GDD (this document), creative brief questions | M | `docs/GDD.md` | G1 |
 | 1 | Gesture input (swipes, buffer, coyote), lanes, jump, slide, fast-fall, camera, deterministic core | M | `specs/input.md`, `specs/runner-movement.md` | G2 |
 | 1 | Bot input provider with skill levels | M | `specs/bot-player.md` | |
-| 2 | Track chunks + seeded generator, 5 obstacle archetypes (gray-box), coins, speed curve, tiers | M | `specs/track-generation.md`, `specs/obstacles.md`, `specs/difficulty.md` | |
+| 2 | Track chunks + seeded generator, 5 obstacle archetypes as shared prefabs (gray-box), coins, speed curve, tiers | M | `specs/track-generation.md`, `specs/obstacles.md`, `specs/difficulty.md` | |
+| 2 | `WorldSequence` + `WorldSkin` system and gateway transitions in gray-box: all 4 worlds playable as tinted gray-box (fog/lighting preset only) | M | `specs/worlds.md` | |
 | 2 | Death + death cause display, basic Results, first simulations and fairness fuzzer | M | `specs/death-and-results.md` | G3 |
+| 2 | Art: HERO and macaw models + core animation list started; Jungle environment kit started | M | `specs/worlds.md` | |
 | 3 | **Vine swinging** (grab, swing, release grades, chains, chasms) | M | `specs/vine-swing.md` | |
 | 3 | Power-ups: Magnet, Shield, Speed Boost | M | `specs/power-ups.md` | |
-| 3 | COMPANION: follow, call-outs, Assist meter | M | `specs/companion.md` | |
-| 3 | Continue flow (coins + free first-session continue) | M | `specs/continue.md` | G4 |
+| 3 | COMPANION: flight follow, 3 squawk call-outs, Assist meter, Lift | M | `specs/companion.md` | |
+| 3 | Signature hazards: lane-denial + telegraphed lane-strike behaviors (both, gray-box) | M | `specs/obstacles.md` | |
+| 3 | Continue flow (coins + free first-session continue) | M | `specs/continue.md` | |
+| 3 | Art: **Jungle complete** (vertical slice, quality bar); golden-hour lighting rig; main theme | M | `specs/worlds.md` | G4 |
 | 4 | Home, Shop, character/outfit unlocks, power-up upgrades | M | `specs/shop-and-unlocks.md` | |
 | 4 | Missions, daily reward, daily challenge | M / M / S | `specs/missions.md`, `specs/daily.md` | |
 | 4 | Save + iCloud backup, Game Center leaderboards | M | `specs/save.md`, `specs/game-center.md` | |
-| 4 | World transitions; Jungle + River art | M | `specs/worlds.md` | G5 |
-| 5 | Ads (rewarded, capped interstitial), IAP, Restore, ATT + consent | M | `specs/monetization.md` | |
+| 4 | Art: **River + Ruins** restyles, environment kits, gateways, music arrangements; world streaming (preload/unload) | M | `specs/worlds.md` | |
+| 4 | Owner decisions: ads, prices (section 18) | M | `specs/monetization.md` | G5 |
+| 5 | Ads (rewarded; interstitial only if owner approves), IAP, Restore, ATT + consent | M | `specs/monetization.md` | |
 | 5 | Onboarding tutorial (section 12) | M | `specs/onboarding.md` | |
 | 5 | Audio, VFX, haptics, Settings, accessibility options | M | `specs/settings-accessibility.md` | |
-| 5 | Ruins and Mountains art; Game Center achievements | S / S | `specs/worlds.md` | G6 |
-| 6 | Performance pass, device matrix, beta tuning from analytics | M | — | G7 |
+| 5 | Art: **Mountains** restyle, kit, gateway, arrangement; dusk loop lighting preset | M | `specs/worlds.md` | |
+| 5 | Game Center achievements | S | `specs/game-center.md` | G6 |
+| 6 | Performance pass with all 4 worlds (memory per world, streaming hitches), device matrix, beta tuning | M | — | G7 |
 | 7 | Bug fixes, compliance, submit | M | — | G8 |
-| Later | Extra companions, seasonal events, world start-point selection, Android | C | — | |
+| Later | Extra obstacle variants per world, world-only mechanics, extra companions, seasonal events, world start-point selection, Android | C | — | |
+
+### 22.1 Four-world schedule risk (honest assessment)
+
+The 7-week plan holds **only** with the simplifications in 8.3 and 9.1. Even then, these are the real risks:
+
+1. **Art throughput is the critical path.** Weeks 4 and 5 each need full world kits (two worlds in week 4) while
+   menus, shop and monetization UI also need art. If Jungle (week 3) takes longer than planned, every later world
+   slips. Early warning: if Jungle is not at quality by the end of week 3, the plan is already a week behind.
+2. **Mountains lands in week 5, leaving one week of tuning and performance work** before submission. Its first
+   real beta feedback comes late.
+3. **Performance and memory.** Four environment kits plus streaming between them is the most likely cause of
+   hitches on the lowest supported iPhone. The streaming rule (9.2) must be built in week 4, not week 6.
+4. **Test matrix grows ×4.** Every obstacle restyle needs a readability check (does the answer still read at
+   1.2 s?) in every world. Shared prefabs keep the fairness tests valid, but visual readability must be checked
+   by hand per world.
+
+Fallback options if a world is behind at the end of week 5 (owner chooses; see section 23): (a) slip launch by
+one week, or (b) ship the late world with lighter dressing (fewer ambient props, simpler skybox), with the same
+gameplay, and polish it in the first update. Cutting a world is not proposed, since the owner chose four.
 
 ---
 
@@ -640,12 +782,20 @@ Priorities: **M** = must have for launch, **S** = should have, **C** = could sli
 
 These are collected by the coordinator; answers go to `design/DECISIONS.md`.
 
-1. Who is HERO? (look, age, personality)
-2. Which animal is COMPANION, and what is its personality?
-3. What overall tone and mood: comedy cartoon, pulpy adventure, or mysterious wonder?
-4. Launch with all four worlds, or two worlds plus free updates?
-5. How many ads are acceptable: rewarded only, or rewarded plus light interstitials?
-6. Prices for Remove Ads and characters, and whether to sell coin packs.
+Answered at G1 (2026-10-06, see `design/DECISIONS.md`): HERO (wild jungle kid), COMPANION (macaw parrot),
+mood (pulpy adventure), launch worlds (all four).
+
+Still open:
+1. Names for HERO and COMPANION (placeholders stay until then).
+2. Ads (rewarded only, or plus light interstitials) and prices for Remove Ads / characters / coin packs:
+   deferred by the owner to week 4. Designer recommendations are in section 18, marked `[ASSUMED]`.
+
+New questions:
+3. If a world is behind schedule at the end of week 5, which fallback does the owner prefer: slip launch by one
+   week, or ship that world with lighter dressing and polish it in the first update (section 22.1)?
+4. Should the macaw speak a few words (a talking parrot, for example "Vine!" / "Look out!") or only make bird
+   squawks? Words add charm and clarity but need voice recording and localization per language.
 
 Smaller defaults marked `[ASSUMED]` in this document (portrait only, daily calendar pauses instead of resetting,
-Assist by double tap, shield does not save from chasms) stand unless the owner wants them changed.
+Assist by double tap, Lift as the Assist effect, shield does not save from chasms, rewarded-only ads at launch)
+stand unless the owner wants them changed.
