@@ -1,6 +1,6 @@
 # Prompt Library
 
-**Owner:** art-director | **Status:** Draft templates, untested (no image key yet). G2 decided: style C, hero H2, macaw M3 | **Last updated:** 2026-10-06
+**Owner:** art-director | **Status:** Draft templates, untested (no image key yet). G2 decided: style C, hero H2, macaw M3; G6 names: hero Pista, macaw Duko (trademark check pending) | **Last updated:** 2026-10-06
 
 Templates for the image generator (2D concepts) and hand-off notes for the image-to-3D tool.
 Every prompt is written to be pasted as-is. After a template is tested, record the seed, settings, and a

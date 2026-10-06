@@ -1,6 +1,6 @@
 # Macaw Variant Prompts
 
-**Status:** **M3 "Dusk" chosen** at G2 (2026-10-06, `design/DECISIONS.md`). Final prompts below are draft,
+**Status:** **M3 "Dusk" chosen** at G2; macaw named **Duko** at G6 (both 2026-10-06, `design/DECISIONS.md`). Final prompts below are draft,
 untested (no image key yet). M1 and M2 are kept as archive. | Designs: `design/HERO_CONCEPTS.md` |
 Binding rules: `design/STYLE_GUIDE.md` | Settings and tips: `README.md`
 
@@ -11,7 +11,8 @@ and key art.
 
 ## CHOSEN: M3 "Dusk" (final, style C)
 
-"Dusk" is a working label, not a name. Do not put any name in a prompt.
+The macaw's name is **Duko** (trademark check pending); "Dusk" is the design label. Do not put any name in a
+prompt, not even "Duko": generators tend to render it as stray text.
 
 ### Locked SUBJECT block
 

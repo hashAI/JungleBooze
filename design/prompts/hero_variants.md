@@ -1,6 +1,6 @@
 # Hero Variant Prompts
 
-**Status:** **H2 "Mapcloth" chosen** at G2 (2026-10-06, `design/DECISIONS.md`). Final prompts below are draft,
+**Status:** **H2 "Mapcloth" chosen** at G2; hero named **Pista** at G6 (both 2026-10-06, `design/DECISIONS.md`). Final prompts below are draft,
 untested (no image key yet). H1 and H3 are kept as archive. | Designs: `design/HERO_CONCEPTS.md` |
 Binding rules: `design/STYLE_GUIDE.md` | Settings and tips: `README.md`
 
@@ -11,7 +11,8 @@ on a neutral background). Use `{STYLE_C}` only for in-world shots and key art.
 
 ## CHOSEN: H2 "Mapcloth" (final, style C)
 
-"Mapcloth" is a working label, not a name. Do not put any name in a prompt.
+The hero's name is **Pista** (trademark check pending); "Mapcloth" is the design label. Do not put any name
+in a prompt, not even "Pista": generators tend to render it as stray text.
 
 ### Locked SUBJECT block
 
@@ -23,21 +24,21 @@ tall, lean with long arms and slightly oversized hands and bare feet, crouched f
 brown skin #6B4029, a big round cloud of curly dark brown hair #2B1B14 wider than her shoulders, big expressive eyes,
 thick brows, two pale clay #E3C3A0 dots on each cheek, wearing a wrap top and knee-length wrap shorts cut from an old
 canvas treasure map in cream #EFE0BD with faded sepia #8A5A2B map lines and a dotted trail, a large bold sepia X
-printed high on the back between the shoulder blades, {SASH}, a chunky leather #8C5530 satchel on her right hip
-on a short saffron #F2A900 strap, simple woven ankle bands #D4A85A, barefoot, a small carved bamboo whistle #C9B26B
-tucked in the sash
+printed high on the back between the shoulder blades, a teal #178F8A cloth sash wrapped around her chest under the
+arms like a band, sitting just below the X on the back so it never covers the X, a chunky leather #8C5530 satchel
+on her right hip on a short saffron #F2A900 strap, simple woven ankle bands #D4A85A, barefoot, a small carved bamboo
+whistle #C9B26B tucked in the sash
 ```
 
-**{SASH}** `[ASSUMED]` until the owner confirms (see `design/STYLE_GUIDE.md` 6.1):
-- Default (A, readability fix): `a teal #178F8A cloth sash wrapped around her chest under the arms like a band, sitting
-  just below the shoulder blades on the back so it never covers the X`
-- Original concept (B): `a teal #178F8A cloth sash worn diagonally across the chest`
+**Sash:** locked by the owner at G2 (2026-10-06): a band around the chest just below the X on her back
+(`design/STYLE_GUIDE.md` 6.1). The diagonal sash from the G2 concept is retired; do not use it.
 
 **Mapcloth negative** (add to the global negative in `README.md`)
 ```
 adult, teenager, shoes, sandals, boots, hat, cape, red clothing, green clothing, red face paint, fur, fur cape,
 mask, wolf, tapa cloth pattern, Polynesian patterns, tribal tattoos, readable words or letters on the map, thin
-dangling straps, loose flowing hair strands, jewelry chains, sash covering the X on the back, multiple characters
+dangling straps, loose flowing hair strands, jewelry chains, sash covering the X on the back, diagonal sash, sash
+across the shoulder, multiple characters
 ```
 
 ### 1. Character model sheet (3:1, for the 3D team and every later prompt)

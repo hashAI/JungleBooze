@@ -7,7 +7,8 @@ UI, icons, and store art. If an asset breaks a rule here, it is rejected or the 
 
 Owner decisions this guide is built on (`design/DECISIONS.md`): art style **C "Inkbound Pulp"**, hero **H2
 "Mapcloth"**, macaw **M3 "Dusk"**, pulpy-adventure mood, 4 worlds (Jungle, River, Mountains, Ancient Ruins).
-"Mapcloth" and "Dusk" are working labels, not names (see section 13).
+Names (G6, 2026-10-06): the hero is **Pista**, the macaw is **Duko** (trademark check pending, see section 13).
+"Mapcloth" and "Dusk" remain the design labels for the chosen concepts.
 
 Items marked `[ASSUMED]` are art-director defaults that stand until the owner or a later decision changes them.
 
@@ -58,7 +59,7 @@ coins and the white core of the vine glow.
 | Name | Hex | Role |
 |---|---|---|
 | Ink | `#1E1A24` | All outlines, painted inner lines, darkest accents, UI borders, text |
-| Pulp orange | `#F28C28` | Sunset skies, primary UI button, Dusk's head and chest |
+| Pulp orange | `#F28C28` | Sunset skies, primary UI button, Duko's head and chest |
 | Sun gold | `#FFC43D` | Key light tint, rim light in Mountains, UI highlights |
 | Cream path | `#F3DFB2` | Running path base (lit) |
 | Jungle green | `#3A8C3F` | Jungle foliage mid-tone |
@@ -69,7 +70,7 @@ coins and the white core of the vine glow.
 | Parchment | `#F7E9C6` | UI panels |
 | Scenery gold (dull) | `#B8892E` | Gold on statues, idols, and temple trim. Darker and less saturated than coin gold, never sparkles, never spins. |
 
-### 2.3 Hero palette: "Mapcloth"
+### 2.3 Hero palette: Pista (design "Mapcloth")
 
 | Part | Hex |
 |---|---|
@@ -86,7 +87,7 @@ coins and the white core of the vine glow.
 
 Banned on the hero: hazard red, coin gold `#FFD23F`, jungle green as a main color, the power-up glow colors.
 
-### 2.4 Macaw palette: "Dusk"
+### 2.4 Macaw palette: Duko (design "Dusk")
 
 | Part | Hex |
 |---|---|
@@ -98,7 +99,7 @@ Banned on the hero: hazard red, coin gold `#FFD23F`, jungle green as a main colo
 | Face patch | `#F5EBDD` |
 | Eye | iris `#1E1A24` with a sun gold `#FFC43D` ring |
 
-The tail tip shares the coin-gem turquoise on purpose: Dusk is the treasure thief.
+The tail tip shares the coin-gem turquoise on purpose: Duko is the treasure thief.
 
 ### 2.5 Value structure (every screen, every world)
 
@@ -200,7 +201,7 @@ Estimate for a busy frame on the floor device (iPhone 11 / SE 2nd gen):
 | **Hazards** | Angular, jagged, triangles, heavy at the base, leaning toward the player. Thorns, splinters, broken edges. | The only spiky things in a lane. Spiky means "do something." |
 | **Scenery** | Rounded, lobed, leaning away from the path, soft silhouettes. Big leaves, fat roots, worn round stones. | Calm, never confused with hazards. |
 | **Pickups** | Perfect circles (coins), simple bold icons (power-ups): a "U" magnet, a dome bubble, a chevron. | Instantly recognizable, even when tiny. |
-| **Characters** | Circles and long S-curves. Mapcloth: a round hair cloud on long lean lines. Dusk: a teardrop body with a long tapered tail. | Alive and friendly, distinct from both scenery and hazards. |
+| **Characters** | Circles and long S-curves. Pista: a round hair cloud on long lean lines. Duko: a teardrop body with a long tapered tail. | Alive and friendly, distinct from both scenery and hazards. |
 | **Vines** | Thick, smooth, hanging curves with one glowing grab ring. | Inviting, never spiky. |
 
 Proportions of the world: big shapes, small details. A track-side prop has at most 3 readable parts.
@@ -256,7 +257,7 @@ Rules for every preset:
 
 ## 6. Characters
 
-### 6.1 Mapcloth (hero)
+### 6.1 Pista (hero, design H2 "Mapcloth")
 
 **Proportions** (style C):
 - About **4 heads tall** to the top of the skull; the hair cloud adds about 0.4 head on top and is about 1.4 head
@@ -271,10 +272,10 @@ Rules for every preset:
 1. The **round hair cloud** is the top landmark. It squashes on landings and stretches on jumps.
 2. The **sepia "X"** sits between the shoulder blades, about 1/3 of the back's width, line weight like the ink
    outline. It must be readable at 64 px character height.
-3. **The sash does not cross the X.** `[ASSUMED]` The teal sash is worn as a band around the chest, under the
-   arms, sitting just below the shoulder blades on the back, so it underlines the X. The satchel hangs from it
-   on a short saffron strap on the right hip. (The H2 concept shows a diagonal sash, which would cut through the
-   X from behind; this is a readability fix and needs owner confirmation.)
+3. **The sash does not cross the X.** (Owner decision, G2 2026-10-06.) The teal sash is worn as a band around
+   the chest, under the arms, sitting just below the X on the back, so it underlines the X and never covers it.
+   The satchel hangs from it on a short saffron strap on the right hip. The diagonal sash from the H2 concept is
+   retired: never draw or model it, because it cuts through the X from behind.
 4. Bare dark skin on arms and legs against the cream cloth gives four clear limb shapes: lane changes, jumps,
    and slides read from the limbs alone.
 5. Satchel bounce is secondary motion on the right hip only; it never sits above the waist.
@@ -284,7 +285,7 @@ expressions use texture swaps or 6–8 blendshapes (only if the bone/skin budget
 
 **Budget:** art target ≤ 12k triangles (hard limit 15k), 1 material, 1024² texture, ≤ 40 bones.
 
-### 6.2 Dusk (macaw)
+### 6.2 Duko (macaw, design M3 "Dusk")
 
 **Size** `[ASSUMED]`: wingspan **1.0 m** (about 0.6 of the hero's height), body plus tail 0.85 m (tail is half).
 That is a bit smaller than the concept's 3/4 ratio so the bird stays inside its screen area. It still reads as
@@ -528,10 +529,17 @@ off on characters, hazards, pickups, icons, and anything new; asset-pipeline may
 
 ---
 
-## 13. Identity note: names (owner decides later)
+## 13. Identity note: names
 
-The hero and the macaw still need names. "Mapcloth" and "Dusk" are working labels only. Until the owner picks
-names, docs use `HERO` and `COMPANION` (GDD conventions).
+**Decided (G6, 2026-10-06, `design/DECISIONS.md`): the hero is Pista, the macaw is Duko.** Both are pending a
+proper trademark check (see the end of this section). Use the names in player-facing text and art direction;
+technical docs may keep the GDD placeholders `HERO` and `COMPANION`. "Mapcloth" and "Dusk" stay as the design
+labels of the chosen concepts (H2 and M3). Never put either name into an image prompt (generators tend to
+render it as stray text).
+
+### Name-pair shortlist (archive)
+
+The list the owner chose from, kept for the record and as fallbacks if the trademark check fails.
 
 Criteria: original; two syllables or close to it; spelled the way it sounds in English, Spanish, Italian,
 French, German, Portuguese, and Polish (no "th", "w", "j", "ch", "c" before e/i); no bad meaning in those
@@ -539,14 +547,14 @@ languages; nothing alcohol-related; no known game, film, toy, or mascot characte
 
 | # | Hero | Macaw | Meaning / why | Quick search result (2026-10-06) |
 |---|---|---|---|---|
-| 1 | **Pista** | **Duko** | Pista = "trail / clue" in Spanish, "track" in Italian: a treasure hunter on the run. Duko echoes "ducat", an old gold coin, for the coin thief. | No game, toy, or character use found for either. Pista is also a Hungarian nickname for the male name István (harmless). |
+| 1 (CHOSEN) | **Pista** | **Duko** | Pista = "trail / clue" in Spanish, "track" in Italian: a treasure hunter on the run. Duko echoes "ducat", an old gold coin, for the coin thief. | No game, toy, or character use found for either. Pista is also a Hungarian nickname for the male name István (harmless). |
 | 2 | **Fera** | **Rubo** | Fera = "wild beast" in Portuguese and Latin roots, a nod to the wild kid. Rubo = "I steal" in Italian. | No character or trademark found for either. A game called "Fer.al" exists (different name, different spelling). |
 | 3 | **Selva** | **Florin** | Selva = "jungle" in Spanish, Italian, Portuguese. Florin is an old gold coin. | No game or toy use found. Florin is also a common man's name in Romania (harmless); Selva is used by unrelated furniture brands. |
 | 4 | **Ilka** | **Orito** | Ilka is a short, bright Central European girl's name. Orito = "little bit of gold" in Spanish. | No game, toy, or character use found for either. |
 | 5 | **Tamsa** | **Tinko** | Invented, playful, alliterative pair that says "duo". Tinko sounds like a clink of coins. | No exact match found. Tinko is close to "Tink" (a protected Disney nickname for Tinker Bell), so it is the weakest pair. |
 
-**Art-director favorite: Pista and Duko.** Both are short, sound the same in every launch language, and carry the
-treasure-hunt story (trail and gold coin) without explaining it.
+**Chosen by the owner (G6): Pista and Duko** (also the art-director recommendation). Both are short, sound the
+same in every launch language, and carry the treasure-hunt story (trail and gold coin) without explaining it.
 
 Names dropped after the quick search (for the record): Tavi (clothing marks, "Rikki-Tikki-Tavi"), Ilo
 ("ilomilo" game character), Kiko (several cartoon characters), Pako (parrot plush and TV parrot "Paco"), Atla
@@ -554,6 +562,6 @@ Names dropped after the quick search (for the record): Tavi (clothing marks, "Ri
 series), Marga (a 1940s jungle-comic character), Lupa and Mira (recent game and film characters), Kirra (a
 best-selling doll), Picaro (children's entertainment mark), Bruma (sounds like a famous manga heroine).
 
-**This is a quick web search only, not a trademark clearance.** Before the owner commits to a name, do a proper
-check in the US, EU, and UK trademark registers (classes 9, 28, 41) and on the App Store; appstore-compliance
-already checks app-name candidates before G6 (GDD 17.1).
+**The search above was a quick web search only, not a trademark clearance.** Before launch, Pista and Duko still
+need a proper check in the US, EU, and UK trademark registers (classes 9, 28, 41) and on the App Store
+(appstore-compliance, GDD 17.1). If either name fails, the owner picks again from the archive above.

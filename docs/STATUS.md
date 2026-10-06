@@ -19,7 +19,7 @@ _Last updated: 2026-10-06_
 | tech-architect | done (week 0) | Architecture, ADRs 0001–0002, Unity skeleton, deterministic core + tests, CI test workflow | `docs/ARCHITECTURE.md`, `docs/adr/`, `UnityProject/`, `.github/workflows/test.yml` | Week 1: Roslyn analyzers; add the `JungleBooze.App` assembly to the rules file once the owner agrees |
 | gameplay-engineer | **working** | Implementing spec 001 (player movement), bot input provider, tests named by AC id | `UnityProject/Assets/_Game/Scripts/Gameplay`, `Tests/` | Spec 002 |
 | ui-engineer | waiting | — | — | Week 4: menus, shop |
-| art-director | **working** | Apply names Pista/Duko and sash decision to style guide and prompts | `design/STYLE_GUIDE.md`, `design/prompts/` | Generate concept images once an image API key exists |
+| art-director | done | Style guide and prompts updated with names Pista/Duko and the chest-band sash | `design/STYLE_GUIDE.md`, `design/prompts/` | Generate concept images once an image API key exists |
 | asset-pipeline | waiting | — | — | Needs an image/3D generation API key from the owner |
 | audio-director | waiting | — | — | Week 5. Note: the macaw speaks a few words, so voice lines and localization are needed |
 | qa-engineer | waiting | — | — | Review spec 001 test coverage after the gameplay-engineer finishes |
@@ -60,6 +60,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Log
 Newest first. One line per event.
+- 2026-10-06: art-director finished the names/sash update to the style guide and prompts.
 - 2026-10-06: Launched game-designer (spec 002), appstore-compliance (names + early review), release-engineer (iOS/TestFlight pipeline), art-director (style guide update). gameplay-engineer still running with no files written yet.
 - 2026-10-06: Owner approved automatic session handoff (see project rules, "Starting a session" step 3).
 - 2026-10-06: game-designer finished GDD fourth draft (all decisions applied; Mountains art moves up to week 3).
