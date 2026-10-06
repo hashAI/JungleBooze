@@ -41,6 +41,7 @@ The repository currently contains only `ProjectVersion.txt` under `ProjectSettin
 - Quality: a single "Mobile" quality level; delete the others.
 - Editor: Asset Serialization = Force Text, Version Control = Visible Meta Files.
 - Time: Fixed Timestep is **not** used by gameplay (gameplay uses `FixedStepTimeSource`); leave physics at default and do not rely on `FixedUpdate` for simulation.
+- Frame rate: `Application.targetFrameRate = 60` set by the composition root (ProMotion devices would otherwise render at up to 120 Hz and spend battery and thermal headroom).
 - Enter Play Mode Options: enabled, domain reload off. This forbids static mutable state (good: it is also banned by section 6).
 
 ---
@@ -145,7 +146,7 @@ Contract: **same build + same platform + same seed + same input stream + same co
 - Headless simulations do not call `Accumulate`; they call `Step()` in a tight loop as fast as the CPU allows.
 
 ### 5.3 `IInputProvider` (`Core/Input`)
-- `InputCommand` is a `[Flags] byte` enum: `MoveLeft`, `MoveRight`, `Jump`, `Slide`, `Action` (`Action` is [ASSUMED] for vine grab until the GDD fixes the control scheme). Values are persisted in replays: append only, never renumber.
+- `InputCommand` is a `[Flags] byte` enum matching GDD section 5.1: `MoveLeft`, `MoveRight` (swipe left/right), `Jump` (swipe up), `Slide` (swipe down), `CompanionAssist` (double tap). Commands are intents; the simulation interprets them by context (e.g. `Jump` while swinging releases the vine, `Slide` in the air fast-falls). The 150 ms input buffer and 80 ms coyote time from the GDD live in the simulation, not in the provider, so bots and replays get them too. Values are persisted in replays: append only, never renumber.
 - `ReadCommands(tick)` is called exactly once per simulation step with increasing ticks and must not allocate.
 - Implementations:
 

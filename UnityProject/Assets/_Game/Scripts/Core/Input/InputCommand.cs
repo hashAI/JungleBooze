@@ -3,7 +3,9 @@ using System;
 namespace JungleBooze.Core
 {
     /// <summary>
-    /// Player intents for one simulation tick. Flags, because one tick can carry more than one
+    /// Player intents for one simulation tick, matching the gestures in GDD section 5.1
+    /// (swipe left/right/up/down, double tap). Context (ground, air, vine) is resolved by the simulation.
+    /// Flags, because one tick can carry more than one
     /// command (for example a lane change and a jump buffered in the same step).
     /// The numeric values are stored in replays: never renumber existing members, only append.
     /// </summary>
@@ -16,7 +18,7 @@ namespace JungleBooze.Core
         Jump = 1 << 2,
         Slide = 1 << 3,
 
-        /// <summary>Context action (tap), for example grabbing a vine. [ASSUMED] until the GDD fixes the control scheme.</summary>
-        Action = 1 << 4,
+        /// <summary>Double tap: activate the companion assist (GDD section 5.1).</summary>
+        CompanionAssist = 1 << 4,
     }
 }
