@@ -5,6 +5,10 @@ Newest first.
 
 | Date | Gate | Decision | Options considered | Decided by |
 |---|---|---|---|---|
+| 2026-10-06 | — | **Quality over schedule:** if a world or feature isn't at full quality, launch waits. Never ship lighter versions to hit a date | Ship lighter and polish later / Delay launch | Owner |
+| 2026-10-06 | G1 | Launch language: English only; EU languages in later updates | English / English + FIGS / English + DE + FR | Owner |
+| 2026-10-06 | G2 | Hero sash worn as a band around the chest, just below the X on her back | Band below X / Keep diagonal / Move X lower | Owner |
+| 2026-10-06 | G6 | Names: hero "Pista", macaw "Duko" (pending a proper trademark check in US/EU/UK registers and the App Store) | Pista/Duko, Fera/Rubo, Selva/Florin, Ilka/Orito, Tamsa/Tinko | Owner |
 | 2026-10-06 | G2 | Macaw design: M3 "Dusk" (violet-and-orange coin thief) | M1 Blaze / M2 Goldbelly / M3 Dusk | Owner |
 | 2026-10-06 | G2 | Hero design: H2 "Mapcloth" (cat-like wild girl, treasure-map clothes, big X on her back) | H1 Topknot / H2 Mapcloth / H3 Leafcape | Owner |
 | 2026-10-06 | G2 | Art style: C "Inkbound Pulp" (bold comic-book look with ink outlines) | A Chunky Totem / B Golden Expedition / C Inkbound Pulp | Owner |
