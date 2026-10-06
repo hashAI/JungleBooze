@@ -1,0 +1,27 @@
+{
+    "name": "JungleBooze.Tests.PlayMode",
+    "rootNamespace": "JungleBooze.Tests.PlayMode",
+    "references": [
+        "JungleBooze.Core",
+        "JungleBooze.Gameplay",
+        "JungleBooze.UI",
+        "JungleBooze.Services",
+        "JungleBooze.App",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner",
+        "Unity.PerformanceTesting"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

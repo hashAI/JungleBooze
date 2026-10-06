@@ -1,0 +1,19 @@
+{
+    "name": "JungleBooze.App",
+    "rootNamespace": "JungleBooze.App",
+    "references": [
+        "JungleBooze.Core",
+        "JungleBooze.Gameplay",
+        "JungleBooze.UI",
+        "JungleBooze.Services"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

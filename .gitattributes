@@ -1,0 +1,95 @@
+# Normalize text files to LF in the repository.
+* text=auto eol=lf
+
+# ---- Code and text ----
+*.cs     text eol=lf diff=csharp
+*.shader text eol=lf
+*.hlsl   text eol=lf
+*.cginc  text eol=lf
+*.json   text eol=lf
+*.asmdef text eol=lf
+*.asmref text eol=lf
+*.rsp    text eol=lf
+*.md     text eol=lf
+*.yml    text eol=lf
+*.yaml   text eol=lf
+*.py     text eol=lf
+*.sh     text eol=lf
+
+# ---- Unity YAML (force text serialization in Editor settings) ----
+# Merge with Unity's Smart Merge (configure once: see docs/ARCHITECTURE.md, "Source control").
+*.meta       text eol=lf
+*.unity      text eol=lf merge=unityyamlmerge linguist-generated
+*.prefab     text eol=lf merge=unityyamlmerge linguist-generated
+*.asset      text eol=lf merge=unityyamlmerge linguist-generated
+*.mat        text eol=lf merge=unityyamlmerge linguist-generated
+*.anim       text eol=lf merge=unityyamlmerge linguist-generated
+*.controller text eol=lf merge=unityyamlmerge linguist-generated
+*.overrideController text eol=lf merge=unityyamlmerge linguist-generated
+*.physicMaterial text eol=lf merge=unityyamlmerge linguist-generated
+*.playable   text eol=lf merge=unityyamlmerge linguist-generated
+*.mask       text eol=lf merge=unityyamlmerge linguist-generated
+*.brush      text eol=lf merge=unityyamlmerge linguist-generated
+*.flare      text eol=lf merge=unityyamlmerge linguist-generated
+*.fontsettings text eol=lf merge=unityyamlmerge linguist-generated
+*.guiskin    text eol=lf merge=unityyamlmerge linguist-generated
+*.giparams   text eol=lf merge=unityyamlmerge linguist-generated
+*.renderTexture text eol=lf merge=unityyamlmerge linguist-generated
+*.spriteatlas text eol=lf merge=unityyamlmerge linguist-generated
+*.terrainlayer text eol=lf merge=unityyamlmerge linguist-generated
+*.mixer      text eol=lf merge=unityyamlmerge linguist-generated
+*.shadervariants text eol=lf merge=unityyamlmerge linguist-generated
+*.preset     text eol=lf merge=unityyamlmerge linguist-generated
+*.uxml       text eol=lf
+*.uss        text eol=lf
+
+# ---- Git LFS: binary art ----
+*.png  filter=lfs diff=lfs merge=lfs -text
+*.jpg  filter=lfs diff=lfs merge=lfs -text
+*.jpeg filter=lfs diff=lfs merge=lfs -text
+*.tga  filter=lfs diff=lfs merge=lfs -text
+*.tif  filter=lfs diff=lfs merge=lfs -text
+*.tiff filter=lfs diff=lfs merge=lfs -text
+*.psd  filter=lfs diff=lfs merge=lfs -text
+*.exr  filter=lfs diff=lfs merge=lfs -text
+*.hdr  filter=lfs diff=lfs merge=lfs -text
+*.webp filter=lfs diff=lfs merge=lfs -text
+*.ktx2 filter=lfs diff=lfs merge=lfs -text
+
+# ---- Git LFS: 3D ----
+*.fbx   filter=lfs diff=lfs merge=lfs -text
+*.FBX   filter=lfs diff=lfs merge=lfs -text
+*.obj   filter=lfs diff=lfs merge=lfs -text
+*.blend filter=lfs diff=lfs merge=lfs -text
+*.glb   filter=lfs diff=lfs merge=lfs -text
+*.gltf  filter=lfs diff=lfs merge=lfs -text
+*.dae   filter=lfs diff=lfs merge=lfs -text
+*.3ds   filter=lfs diff=lfs merge=lfs -text
+*.max   filter=lfs diff=lfs merge=lfs -text
+*.ma    filter=lfs diff=lfs merge=lfs -text
+*.mb    filter=lfs diff=lfs merge=lfs -text
+
+# ---- Git LFS: audio and video ----
+*.wav  filter=lfs diff=lfs merge=lfs -text
+*.mp3  filter=lfs diff=lfs merge=lfs -text
+*.ogg  filter=lfs diff=lfs merge=lfs -text
+*.aif  filter=lfs diff=lfs merge=lfs -text
+*.aiff filter=lfs diff=lfs merge=lfs -text
+*.flac filter=lfs diff=lfs merge=lfs -text
+*.m4a  filter=lfs diff=lfs merge=lfs -text
+*.mp4  filter=lfs diff=lfs merge=lfs -text
+*.mov  filter=lfs diff=lfs merge=lfs -text
+*.webm filter=lfs diff=lfs merge=lfs -text
+
+# ---- Git LFS: fonts, native libraries, archives ----
+*.ttf    filter=lfs diff=lfs merge=lfs -text
+*.otf    filter=lfs diff=lfs merge=lfs -text
+*.dll    filter=lfs diff=lfs merge=lfs -text
+*.a      filter=lfs diff=lfs merge=lfs -text
+*.so     filter=lfs diff=lfs merge=lfs -text
+*.bundle filter=lfs diff=lfs merge=lfs -text
+*.zip    filter=lfs diff=lfs merge=lfs -text
+*.7z     filter=lfs diff=lfs merge=lfs -text
+*.cubemap filter=lfs diff=lfs merge=lfs -text
+# Baked lighting data (binary)
+LightingData.asset filter=lfs diff=lfs merge=lfs -text

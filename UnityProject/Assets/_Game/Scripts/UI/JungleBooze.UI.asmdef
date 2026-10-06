@@ -1,0 +1,18 @@
+{
+    "name": "JungleBooze.UI",
+    "rootNamespace": "JungleBooze.UI",
+    "references": [
+        "JungleBooze.Core",
+        "JungleBooze.Gameplay",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

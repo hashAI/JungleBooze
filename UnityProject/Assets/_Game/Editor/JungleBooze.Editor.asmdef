@@ -1,0 +1,22 @@
+{
+    "name": "JungleBooze.Editor",
+    "rootNamespace": "JungleBooze.Editor",
+    "references": [
+        "JungleBooze.Core",
+        "JungleBooze.Gameplay",
+        "JungleBooze.UI",
+        "JungleBooze.Services",
+        "JungleBooze.App"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
