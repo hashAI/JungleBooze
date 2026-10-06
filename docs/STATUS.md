@@ -26,7 +26,7 @@ _Last updated: 2026-10-06_
 | performance-engineer | waiting | — | — | Benchmark scene (week 2+) |
 | code-reviewer | waiting | — | — | Review the spec 001 implementation |
 | monetization-engineer | waiting | — | — | Week 4–5 |
-| appstore-compliance | **working** | Trademark check of Pista/Duko, 8 public app name candidates, early rejection-risk review, checklist refresh | `docs/compliance/`, `docs/APP_STORE_CHECKLIST.md` | Privacy manifest when SDKs are chosen |
+| appstore-compliance | done | Name check (Pista: low caution, Duko: clear; not legal clearance), 8 ranked app names, 17 early risks, checklist refreshed for current Apple rules (Xcode 26 / iOS 26 SDK) | `docs/compliance/2026-10-name-and-early-review.md`, `docs/APP_STORE_CHECKLIST.md` | Privacy manifest when SDKs are chosen; follow-ups: "report an ad" option, Declared Age Range API, CI check for the word "booze" |
 | release-engineer | **working** | iOS build script, fastlane beta lane, one-command build for the owner's Mac, plain-language setup guide | `fastlane/`, `tools/build/`, `docs/RELEASE.md`, `Scripts/Editor/Build/` | First TestFlight build for G3 (end of week 2) |
 
 States: **working** (launched, report not received) · waiting · blocked · done.
@@ -67,6 +67,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Log
 Newest first. One line per event.
+- 2026-10-06: appstore-compliance finished the name check and early risk review. Top risks: "JungleBooze" leaking into bundle/product IDs (permanent), and kid hero + ads counting as directed to children.
 - 2026-10-06: Owner approved self-resume after usage limits for up to 3 days. Created the resume watchdog routine.
 - 2026-10-06: Owner set the automatic handoff threshold at about 40% of the conversation's capacity.
 - 2026-10-06: art-director finished the names/sash update to the style guide and prompts.
