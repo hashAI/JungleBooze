@@ -27,8 +27,10 @@ defined in `.claude/agents/`. Read `docs/AGENT_PLAN.md` for the full plan.
 8. **Apple-safe by default.** Anything touching ads, tracking, purchases, or user data must be checked
    against `docs/APP_STORE_CHECKLIST.md` by appstore-compliance.
 9. **Small branches, reviewed.** Every change goes through code-reviewer, and CI must be green before merge.
-10. **Honest reporting.** Report failing tests, missed budgets, and skipped steps exactly as they are.
-11. **No AI attribution in git or GitHub. This is a hard rule.** Commit messages, author/committer fields, trailers
+10. **Quality over schedule (owner's rule).** Never cut quality, polish, or content to hit a date. If something isn't
+    at full quality, it isn't done, and the launch waits. Report schedule risk early instead of shipping a lighter version.
+11. **Honest reporting.** Report failing tests, missed budgets, and skipped steps exactly as they are.
+12. **No AI attribution in git or GitHub. This is a hard rule.** Commit messages, author/committer fields, trailers
     (no `Co-Authored-By`, no session links), PR titles and bodies, review comments, tags, and release notes
     never contain the name of the AI tool, its vendor, or any model name. Commits are authored as the owner.
 
