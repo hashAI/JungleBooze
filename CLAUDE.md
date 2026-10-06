@@ -9,8 +9,8 @@ defined in `.claude/agents/`. Read `docs/AGENT_PLAN.md` for the full plan.
 2. The coordinating session updates `docs/STATUS.md` (agent table + log line) every time it launches an agent,
    receives an agent's report, or records an owner decision, and commits it with that work.
 
-3. **Automatic handoff (owner-approved).** When the coordinating session's conversation gets large, and no agents are
-   running, it: (a) updates `docs/STATUS.md` with a "Handoff" note (what was just finished, what to launch next),
+3. **Automatic handoff (owner-approved).** When the coordinating session's conversation is about 40% full (owner's threshold;
+   the session estimates this, since it has no exact gauge), and no agents are running, it: (a) updates `docs/STATUS.md` with a "Handoff" note (what was just finished, what to launch next),
    (b) commits and pushes, (c) starts a new cloud session on the same repo and branch with the prompt
    "Continue the project: read docs/STATUS.md and design/DECISIONS.md, then carry on from the Handoff note",
    (d) sends the owner the new session's link, and stops working in the old session.

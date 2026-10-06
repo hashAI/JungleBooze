@@ -60,6 +60,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Log
 Newest first. One line per event.
+- 2026-10-06: Owner set the automatic handoff threshold at about 40% of the conversation's capacity.
 - 2026-10-06: art-director finished the names/sash update to the style guide and prompts.
 - 2026-10-06: Launched game-designer (spec 002), appstore-compliance (names + early review), release-engineer (iOS/TestFlight pipeline), art-director (style guide update). gameplay-engineer still running with no files written yet.
 - 2026-10-06: Owner approved automatic session handoff (see project rules, "Starting a session" step 3).
