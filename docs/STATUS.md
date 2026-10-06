@@ -14,7 +14,7 @@ _Last updated: 2026-10-06_
 | Agent | State | Current / last task | Output | Next for this agent |
 |---|---|---|---|---|
 | producer | not used yet | (the coordinating session does this role for now) | this file | — |
-| game-designer | done (follow-up queued) | GDD third draft: synced with every owner decision (Mapcloth, Dusk, Inkbound Pulp, talking macaw, iPhone 11 floor) | `docs/GDD.md` | Fix GDD 9.2 bloom (style guide turns bloom off); apply names Pista/Duko, English-only launch, quality-over-schedule rule in 22.1 (no lighter-world fallback); confirm macaw position (2 m ahead, 4.2 m up); spec 002 track/obstacles/coins |
+| game-designer | **working** | GDD third draft: synced with every owner decision (Mapcloth, Dusk, Inkbound Pulp, talking macaw, iPhone 11 floor) | `docs/GDD.md` | Fix GDD 9.2 bloom (style guide turns bloom off); apply names Pista/Duko, English-only launch, quality-over-schedule rule in 22.1 (no lighter-world fallback); confirm macaw position (2 m ahead, 4.2 m up); spec 002 track/obstacles/coins |
 | balance-simulator | waiting | — | — | Run spec 001 targets S1–S9 on the seeded test course once movement code lands |
 | tech-architect | done (week 0) | Architecture, ADRs 0001–0002, Unity skeleton, deterministic core + tests, CI test workflow | `docs/ARCHITECTURE.md`, `docs/adr/`, `UnityProject/`, `.github/workflows/test.yml` | Week 1: Roslyn analyzers; add the `JungleBooze.App` assembly to the rules file once the owner agrees |
 | gameplay-engineer | **working** | Implementing spec 001 (player movement), bot input provider, tests named by AC id | `UnityProject/Assets/_Game/Scripts/Gameplay`, `Tests/` | Spec 002 |
@@ -60,6 +60,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Log
 Newest first. One line per event.
+- 2026-10-06: Quality-over-schedule added as project rule 10. Launched game-designer to apply names, sash, English-only, no-lighter-world rule, bloom and macaw placement to the GDD.
 - 2026-10-06: Owner decided: names Pista/Duko (trademark check pending), sash band below the X, English-only launch, and quality over schedule (launch waits rather than shipping a lighter world).
 - 2026-10-06: art-director finished the binding style guide and final hero/macaw prompts; proposed 5 name pairs.
 - 2026-10-06: game-designer finished the GDD sync (third draft). Art-director files committed mid-task.
