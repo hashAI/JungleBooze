@@ -1,0 +1,284 @@
+# JungleBooze Architecture
+
+Owner: tech-architect. Status: **Week 0 baseline**. Changes to anything marked "hard to undo" need an ADR in `docs/adr/`.
+
+This document is also the template for later games in the portfolio: keep game-specific details in clearly marked sections.
+
+Items marked `[ASSUMED]` are defaults the team proceeds with until the owner or a later ADR says otherwise.
+
+---
+
+## 1. Goals
+
+1. **Deterministic, testable gameplay.** The whole run is a pure function of *(seed, input stream, config, build)*. Bots, replays and balance simulations reuse the exact game code.
+2. **Hard mobile budgets.** 60 fps on the floor iPhone, zero per-frame GC allocations during a run (section 10).
+3. **Swappable services.** Ads, IAP, analytics, save, Game Center and haptics sit behind interfaces so tests, bots and the editor run without SDKs.
+4. **Boring technology.** Unity 6 LTS, URP, UPM packages from Unity, plain C#. Every extra dependency must be approved by tech-architect and recorded in `docs/LICENSES.md`.
+
+---
+
+## 2. Engine and project
+
+| Item | Choice | Notes |
+|---|---|---|
+| Engine | Unity 6 LTS, stream 6000.3 | ADR 0001. Pinned in `UnityProject/ProjectSettings/ProjectVersion.txt`. Upgrade only to newer patches of the same LTS stream, in a dedicated PR. |
+| Render pipeline | URP, mobile-tuned | ADR 0001. Forward rendering, no realtime shadows except a single blob/projected shadow under characters [ASSUMED]. |
+| Scripting backend | IL2CPP, ARM64 only | Required for iOS. |
+| API compatibility | .NET Standard 2.1 | Smallest surface; enough for Core. |
+| C# version | C# 9 (Unity's compiler) | No file-scoped namespaces, no records in serialized types. |
+| Input | Input System package (Enhanced Touch) | Only the touch adapter talks to it (section 5.3). |
+| Content loading | Addressables | For content loaded after boot (worlds, skins, audio banks). Boot scene and first-run content ship in the player. |
+| UI | uGUI for HUD/menus [ASSUMED] | UI Toolkit runtime is an option; ui-engineer may propose an ADR. |
+| Minimum iOS | iOS 15 [ASSUMED] | Confirm against the Unity 6.3 minimum and the floor device decision. |
+
+### 2.1 Project settings to apply on first editor open (not yet committed)
+
+The repository currently contains only `ProjectVersion.txt` under `ProjectSettings/`. The first person to open the project in the Unity editor must apply and commit the following, in one PR:
+
+- Platform: iOS. Target iPhone only, Portrait [ASSUMED, pending GDD].
+- Player: IL2CPP, ARM64, Color Space = Linear, Graphics API = Metal only, Incremental GC on, Managed Stripping Level = Medium (raise to High after link.xml is in place), "Prebake Collision Meshes" on.
+- Graphics: assign a URP asset `Assets/_Game/Config/Rendering/URP-Mobile.asset` with the settings in ADR 0001.
+- Quality: a single "Mobile" quality level; delete the others.
+- Editor: Asset Serialization = Force Text, Version Control = Visible Meta Files.
+- Time: Fixed Timestep is **not** used by gameplay (gameplay uses `FixedStepTimeSource`); leave physics at default and do not rely on `FixedUpdate` for simulation.
+- Enter Play Mode Options: enabled, domain reload off. This forbids static mutable state (good: it is also banned by section 6).
+
+---
+
+## 3. Layers and assemblies
+
+```
+                    ┌──────────────────────────────┐
+                    │ JungleBooze.App              │  composition root, boot, scene flow
+                    └──┬───────────┬───────────┬───┘
+                       │           │           │
+          ┌────────────▼──┐  ┌─────▼──────┐  ┌─▼──────────────────┐
+          │ JungleBooze.UI│  │            │  │ JungleBooze.Services│  SDK adapters (ads, IAP, ...)
+          └──┬─────────┬──┘  │            │  └─────────┬──────────┘
+             │         │     │            │            │
+             │   ┌─────▼─────▼──────────┐ │            │
+             │   │ JungleBooze.Gameplay │ │            │
+             │   └─────────┬────────────┘ │            │
+             │             │              │            │
+          ┌──▼─────────────▼──────────────▼────────────▼──┐
+          │ JungleBooze.Core   (no UnityEngine)            │
+          └───────────────────────────────────────────────┘
+```
+
+| Assembly | Folder | References | Purpose |
+|---|---|---|---|
+| `JungleBooze.Core` | `Scripts/Core` | none (`noEngineReferences: true`) | Deterministic primitives (`IRandom`, `ITimeSource`, `IInputProvider`), events, state machines, service **interfaces**, save data model and migrations. Pure C#, runs in any .NET. |
+| `JungleBooze.Gameplay` | `Scripts/Gameplay` | Core, Unity.InputSystem | Simulation (runner, lanes, track generation, obstacles, vine swing, power-ups, companion) as plain C#; thin MonoBehaviour "views" that render simulation state; touch and bot input providers. |
+| `JungleBooze.UI` | `Scripts/UI` | Core, Gameplay, Unity.InputSystem | HUD, menus, shop, settings, onboarding. Reads Gameplay state, calls Core service interfaces. |
+| `JungleBooze.Services` | `Scripts/Services` | Core (+ SDK assemblies later) | Concrete adapters for ads, IAP, analytics, save, Game Center, haptics, plus null/fake implementations for editor and tests. |
+| `JungleBooze.App` | `Scripts/App` | Core, Gameplay, UI, Services | Composition root: builds the object graph, owns the run driver and scene flow. The only assembly that knows concrete service types. |
+| `JungleBooze.Editor` | `Editor` | all runtime assemblies | Editor tools, validators (asset budgets), batch-mode entry points (headless simulations, build scripts). Editor-only. |
+| `JungleBooze.Tests.EditMode` | `Tests/EditMode` | Core, Gameplay, Services, test runner | Fast unit tests of plain C# logic. Editor-only. |
+| `JungleBooze.Tests.PlayMode` | `Tests/PlayMode` | all runtime assemblies, test runner, Performance Testing | Scene behavior, frame loop, allocation and performance tests. |
+
+Rules:
+- References only point **down** the diagram. Gameplay never references UI, App or Services; Services never references Gameplay or UI.
+- All runtime assemblies have `autoReferenced: false`, so nothing in `Assembly-CSharp` can quietly depend on them. Scripts outside `_Game` (`Assembly-CSharp`) are not allowed.
+- `JungleBooze.App` was added beyond the original assembly list in the project rules, because the composition root must see concrete types from every layer without making any layer depend on another sideways. The assembly list in the project rules should be updated to include it.
+- Each assembly has an `AssemblyInfo.cs` exposing internals to the test assemblies only.
+- Namespaces follow `JungleBooze.<Layer>` (sub-namespaces allowed, e.g. `JungleBooze.Gameplay.Track`). Folders inside Core (`Random/`, `Time/`, `Input/`) do not add namespace segments.
+
+### 3.1 Folder layout
+
+```
+UnityProject/
+  Assets/
+    csc.rsp                       compiler options (warnings as errors)
+    _Game/
+      Scripts/{Core,Gameplay,UI,Services,App}
+      Config/                     ScriptableObject assets (tuning, rendering, audio mix)
+      Prefabs/  Scenes/  Art/  Audio/
+      Editor/                     JungleBooze.Editor
+      Tests/{EditMode,PlayMode}
+  Packages/manifest.json
+  ProjectSettings/
+```
+
+Third-party SDKs installed as UPM packages stay in `Packages/`. Any SDK that must live in `Assets/` goes in `Assets/ThirdParty/<Vendor>/` and is never edited.
+
+---
+
+## 4. Data flow of one frame during a run
+
+```
+ Unity Update (App/RunDriver, the only per-frame entry point)
+   │
+   ├─ steps = time.Accumulate(Time.unscaledDeltaTime)     real time → whole fixed steps
+   │
+   ├─ repeat steps times:                                 SIMULATION (deterministic)
+   │     cmds = input.ReadCommands(time.Tick)             touch / bot / replay
+   │     simulation.Step(cmds)                            uses IRandom streams, config SOs, time.DeltaTime
+   │     events → ring buffer (coin picked, hit, near-miss)
+   │     time.Step()
+   │
+   ├─ presentation.Sync(simulation state, time.InterpolationAlpha)   VIEWS (non-deterministic, visual only)
+   │     move pooled GameObjects, play VFX/SFX/haptics for buffered events
+   │
+   └─ UI reads state snapshot (score, coins, distance)   UI
+```
+
+- **Simulation → presentation is one-way.** Views never write simulation state. Cosmetic randomness (particle variation, idle animations) uses its own `IRandom` stream or Unity's random, never the simulation streams.
+- **Events** from simulation to presentation go through a pre-allocated ring buffer of structs (no C# `event` delegates in the hot path, no boxing).
+- **Services are called at the edges**, never from inside `Step()`: e.g. analytics is sent when the run ends, haptics are triggered by the presentation layer reading buffered events.
+
+---
+
+## 5. Deterministic core (ADR 0002)
+
+Contract: **same build + same platform + same seed + same input stream + same config ⇒ identical run**, independent of frame rate, device speed and frame hitches.
+
+### 5.1 `IRandom` (`Core/Random`)
+- Implementation: `Pcg32Random` (PCG32 XSH-RR, 64-bit state). Verified against the reference C implementation's published test vector in EditMode tests.
+- API: `NextUInt`, `NextInt(min, maxExclusive)` (unbiased), `NextFloat()` in [0,1), `NextFloat(min, max)`, `Chance(p)`, `Fork(streamId)`.
+- **One stream per subsystem.** The run creates a root generator from the run seed and forks fixed stream ids at setup: track generation, obstacle variants, pickups, bot, cosmetic. Adding a random call in one subsystem must not change any other subsystem's sequence. Stream ids are constants in one file and are never renumbered.
+- Banned in simulation code: `UnityEngine.Random`, `System.Random`, `Guid.NewGuid`, `DateTime.Now`, hash codes of reference types, iteration over `Dictionary`/`HashSet` where order affects results. code-reviewer enforces this; an analyzer rule will follow (section 12).
+
+### 5.2 `ITimeSource` (`Core/Time`)
+- Implementation: `FixedStepTimeSource`, 60 steps/s [ASSUMED], max 5 steps per rendered frame (excess time after a hitch is dropped, not simulated).
+- Simulation reads only `Tick`, `DeltaTime` (constant) and `ElapsedSeconds` (= `Tick * step`, no drift). `UnityEngine.Time` is banned in simulation code.
+- `InterpolationAlpha` is for views only, to smooth motion between the last two simulation states on 120 Hz ProMotion displays or when frames are uneven.
+- Headless simulations do not call `Accumulate`; they call `Step()` in a tight loop as fast as the CPU allows.
+
+### 5.3 `IInputProvider` (`Core/Input`)
+- `InputCommand` is a `[Flags] byte` enum: `MoveLeft`, `MoveRight`, `Jump`, `Slide`, `Action` (`Action` is [ASSUMED] for vine grab until the GDD fixes the control scheme). Values are persisted in replays: append only, never renumber.
+- `ReadCommands(tick)` is called exactly once per simulation step with increasing ticks and must not allocate.
+- Implementations:
+
+| Provider | Assembly | Use |
+|---|---|---|
+| `TouchInputProvider` | Gameplay | Device. Reads Enhanced Touch in `Update`, recognizes swipes/taps, queues commands; `ReadCommands` drains the queue (one command per tick, extras buffered for a short, configurable window). Thresholds come from a ScriptableObject. |
+| `BotInputProvider` | Gameplay | Simulations. Reads simulation state, applies reaction delay and error rate from a skill profile ScriptableObject, uses its own `IRandom` stream. |
+| `ReplayInputProvider` | Core (done) | Plays back an `InputRecording` (seed + sparse list of tick/command frames). |
+| `RecordingInputProvider` | Core (done) | Decorator that records any provider. Always on in development builds so every bug report carries a replay. |
+
+- A replay file = header (format version, build version, seed, config hash) + frames. A replay is only guaranteed valid for the same build and platform (see ADR 0002 on floating point).
+
+---
+
+## 6. Composition root and dependency injection
+
+- **Hand-rolled composition root** [ASSUMED] in `JungleBooze.App`: a `Boot` scene contains one `AppRoot` MonoBehaviour that constructs services and passes them through constructors. No DI container in Week 0; VContainer is the approved upgrade path if the graph grows past what is comfortable by hand (needs an ADR).
+- **No singletons, no static mutable state, no `FindObjectOfType`, no service locator** in game code. Static readonly constants and pure static helpers are fine.
+- MonoBehaviours that need dependencies receive them through an `Init(...)` method called by the root or by a factory, never by looking them up.
+- Lifetime scopes: **App** (services, save, config) → **Session/Menu** → **Run** (simulation, pools, run-scoped streams). A run scope is created and disposed per run.
+
+---
+
+## 7. Services (interfaces in Core, adapters in Services)
+
+All interfaces are async-friendly but allocation-light, work offline, and have a `Null`/fake implementation used in editor, tests and bots. Sketch (final signatures are set by the implementing agent and reviewed here):
+
+| Interface | Responsibilities | Adapter (planned) | Notes |
+|---|---|---|---|
+| `IAdsService` | Load/show rewarded and interstitial, availability, frequency caps hook | Ad mediation SDK (G5 decision) | Never shown in first session. Rewarded ads opt-in only. Must respect ATT + consent state. |
+| `IConsentService` | ATT prompt, GDPR/UK consent, current consent state | ATT via iOS plugin + consent SDK | Must run before any tracking SDK initializes. |
+| `IPurchaseService` | Product catalog with localized prices, purchase, restore, entitlement state | Unity IAP (StoreKit) | Prices always from StoreKit. Restore Purchases required. |
+| `IAnalyticsService` | Log typed events (`RunEnded`, `PurchaseCompleted`, ...) | TBD | Events are structs, batched; no PII. Must match App Privacy labels. |
+| `ISaveService` | Load/save `SaveData`, atomic write, migrations, iCloud sync hook | File system + iCloud key-value/document | See section 9. |
+| `ILeaderboardService` | Authenticate, submit score, show leaderboards/achievements | Game Center | Optional for play; no login wall. |
+| `IHapticsService` | Play semantic haptics (`Light`, `Success`, `Failure`, ...) | Core Haptics via native plugin | Respects settings toggle. |
+| `IRemoteConfigService` | Optional overrides for tuning values | TBD (G5) | Defaults always ship in ScriptableObjects. |
+
+Adding any SDK: tech-architect checks license, binary size impact, `PrivacyInfo.xcprivacy`, maintenance status and alternatives, records it in `docs/LICENSES.md`, and appstore-compliance checks it against `docs/APP_STORE_CHECKLIST.md`.
+
+---
+
+## 8. Configuration: ScriptableObjects
+
+- All tuning lives in ScriptableObject assets under `Assets/_Game/Config/` (project rule 4): speeds, lane width, jump/slide timings, spawn tables, difficulty curve, economy prices, touch thresholds, bot skill profiles, pool sizes.
+- Pattern: a ScriptableObject (`RunnerConfigAsset`) is the authoring wrapper; at run start it is converted into an immutable plain C# config (`RunnerConfig`) that the simulation uses. Core and simulation code never touch `ScriptableObject` types, so EditMode tests and headless sims construct configs directly.
+- Configs carry `OnValidate` range checks and EditMode tests that load every config asset and validate it.
+- A config hash (stable hash of serialized values) is stored in replays and sim reports.
+
+---
+
+## 9. Save data (hard to undo; ADR to follow in Week 4)
+
+- `SaveData` is a plain C# class in Core with an integer `Version`. Serialized as JSON [ASSUMED] (readable, diffable, small).
+- **Migrations:** one `ISaveMigration` per version step (`From = n`, `To = n+1`), applied in order on load. Every migration has an EditMode test with a fixture file of the old format. Fixture files are never deleted.
+- **Atomic writes:** write to `save.json.tmp`, flush, then replace `save.json` (keep `save.json.bak` of the previous good file). On load: try main, then backup, then defaults. A corrupt save never crashes the game.
+- **Unknown future versions** (downgrade) are loaded read-only and not overwritten.
+- iCloud backup and conflict resolution (prefer most progress) is added in Week 4 behind `ISaveService`.
+- No PII in saves. Purchases are re-derived from StoreKit entitlements, not trusted from the save file.
+
+---
+
+## 10. Performance and asset budgets
+
+Hard limits (project rule 6). Measured on the **floor device** (to be confirmed by the owner; recommended iPhone XR/11-class, A12/A13) in a release IL2CPP build, by performance-engineer with the benchmark scene.
+
+### 10.1 Runtime budgets
+
+| Metric | Budget |
+|---|---|
+| Frame rate | 60 fps sustained during a 10-minute run (no thermal drop below 55 fps p95) |
+| CPU frame time | ≤ 10 ms (main thread) |
+| GPU frame time | ≤ 12 ms |
+| Simulation step | ≤ 1 ms per step (≤ 0.5 ms target) |
+| Draw calls (SetPass + batches) | ≤ 120 |
+| Triangles on screen | ≤ 150k |
+| GC allocations during a run | 0 bytes per frame (checked by PlayMode tests with `Is.Not.AllocatingGCMemory()` and profiler captures) |
+| Memory (resident) | ≤ 600 MB |
+| Cold start to interactive | ≤ 5 s; first run playable within 10 s of opening |
+| App download size | ≤ 200 MB (target ≤ 150 MB) |
+
+### 10.2 Asset budgets [ASSUMED initial values; asset-pipeline enforces with an editor validator]
+
+| Asset | Budget |
+|---|---|
+| Hero character | ≤ 15k triangles, 1 material, ≤ 1024² texture set, ≤ 40 bones |
+| Companion | ≤ 8k triangles, 1 material, ≤ 512² textures, ≤ 30 bones |
+| Obstacle / prop | ≤ 2k triangles (LOD0), share atlases |
+| Track chunk (environment) | ≤ 20k triangles visible, ≤ 4 materials, atlas ≤ 2048² |
+| Textures | ASTC (6x6 default, 4x4 for hero/UI), mipmaps on for 3D, no uncompressed textures in builds |
+| Audio | Music: streamed, AAC/Vorbis ~128 kbps; SFX: compressed in memory/ADPCM, mono unless stereo is needed |
+| Shaders | URP Simple Lit / Unlit / custom mobile shaders only; strip unused variants |
+| Animations | Optimized (keyframe reduction), humanoid only if retargeting is required |
+
+### 10.3 Rules that keep budgets
+- **Pool everything spawned** (track chunks, obstacles, coins, VFX, audio sources). Pools are pre-warmed at run start with sizes from config; growth during a run is logged as a warning in development builds.
+- No `Instantiate`/`Destroy`, LINQ, string concatenation/formatting, boxing, closures or `foreach` over interfaces in per-frame code. UI text updates only when values change, using cached/non-allocating formatting.
+- GPU instancing / SRP Batcher compatible materials; static batching for track chunk geometry.
+- Addressables groups per world; the first world ships in the player.
+
+---
+
+## 11. Testing and CI
+
+- **EditMode** (`JungleBooze.Tests.EditMode`): all Core and simulation logic, config validation, save migrations, determinism (same seed → same sequence; jittery vs smooth frame pacing → identical result; record → replay → identical result).
+- **PlayMode** (`JungleBooze.Tests.PlayMode`): scene wiring, frame loop, pools, allocation checks, performance measurements (Unity Performance Testing package).
+- **Headless simulation** (Week 1+): batch-mode entry point in `JungleBooze.Editor` runs N seeded bot runs and writes JSON reports for balance-simulator.
+- **CI:** `.github/workflows/test.yml` runs EditMode and PlayMode tests on every PR via GameCI on Linux. Needs secrets `UNITY_LICENSE`, `UNITY_EMAIL`, `UNITY_PASSWORD`. PRs from forks do not get secrets and will fail the secrets check by design. The iOS build workflow (macOS runner) is owned by release-engineer.
+
+---
+
+## 12. Code quality
+
+- `.editorconfig` at repo root defines naming and style (PascalCase types/methods, `_camelCase` private fields, `I` prefix for interfaces, braces always, block-scoped namespaces).
+- `Assets/csc.rsp`: `-warnaserror+` (warnings are errors), `-nowarn:0649` (Unity serialized fields).
+- Roslyn analyzers (planned, Week 1, each needs approval and a `docs/LICENSES.md` entry): the open-source Unity analyzer package (`Microsoft.Unity.Analyzers`, MIT) and a small in-house analyzer that bans `UnityEngine.Random`, `UnityEngine.Time` and `System.Random` inside `JungleBooze.Core` and simulation namespaces.
+
+---
+
+## 13. Source control
+
+- Git + Git LFS (rules in `.gitattributes`): textures, models, audio, video, fonts and native binaries are stored in LFS. Watch the GitHub LFS storage/bandwidth quota; CI checks out LFS on every run.
+- Unity YAML files use Unity's Smart Merge. One-time local setup:
+  `git config merge.unityyamlmerge.driver '"<Unity editor path>/Data/Tools/UnityYAMLMerge" merge -p %O %B %A %A'`
+- `.meta` files are always committed together with their asset. Never commit `Library/`, `Temp/`, `Logs/`, `UserSettings/`, `obj/`, `Build/`.
+
+---
+
+## 14. ADR index
+
+| # | Title | Status |
+|---|---|---|
+| [0001](adr/0001-engine-and-render-pipeline.md) | Engine and render pipeline: Unity 6 LTS + URP (mobile) | Accepted |
+| [0002](adr/0002-deterministic-simulation-core.md) | Deterministic simulation core | Accepted |
+| 0003 (planned) | Save format, migrations and iCloud | Week 4 |
+| 0004 (planned) | Composition root: hand-rolled vs VContainer (if needed) | When needed |
