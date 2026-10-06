@@ -152,7 +152,7 @@ Contract: **same build + same platform + same seed + same input stream + same co
 
 | Provider | Assembly | Use |
 |---|---|---|
-| `TouchInputProvider` | Gameplay | Device. Reads Enhanced Touch in `Update`, recognizes swipes/taps, queues commands; `ReadCommands` drains the queue (one command per tick, extras buffered for a short, configurable window). Thresholds come from a ScriptableObject. |
+| `TouchInputProvider` | Gameplay | Device. Reads Enhanced Touch in `Update` and feeds a plain C# `GestureRecognizer` (EditMode-tested with timestamped samples, per GDD 5.2). Recognized gestures go into a fixed-size queue; `ReadCommands` returns one per tick so two fast swipes are never merged. Thresholds (28 pt, 250 ms, re-arm distance, double-tap window) come from a ScriptableObject. |
 | `BotInputProvider` | Gameplay | Simulations. Reads simulation state, applies reaction delay and error rate from a skill profile ScriptableObject, uses its own `IRandom` stream. |
 | `ReplayInputProvider` | Core (done) | Plays back an `InputRecording` (seed + sparse list of tick/command frames). |
 | `RecordingInputProvider` | Core (done) | Decorator that records any provider. Always on in development builds so every bug report carries a replay. |
