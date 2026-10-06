@@ -14,12 +14,12 @@ _Last updated: 2026-10-06_
 | Agent | State | Current / last task | Output | Next for this agent |
 |---|---|---|---|---|
 | producer | not used yet | (the coordinating session does this role for now) | this file | — |
-| game-designer | done | GDD third draft: synced with every owner decision (Mapcloth, Dusk, Inkbound Pulp, talking macaw, iPhone 11 floor) | `docs/GDD.md` | Spec 002: endless track, obstacles, coins (week 2) |
+| game-designer | done (follow-up queued) | GDD third draft: synced with every owner decision (Mapcloth, Dusk, Inkbound Pulp, talking macaw, iPhone 11 floor) | `docs/GDD.md` | Fix GDD 9.2 bloom (style guide turns bloom off); confirm macaw position (2 m ahead, 4.2 m up); spec 002 track/obstacles/coins |
 | balance-simulator | waiting | — | — | Run spec 001 targets S1–S9 on the seeded test course once movement code lands |
 | tech-architect | done (week 0) | Architecture, ADRs 0001–0002, Unity skeleton, deterministic core + tests, CI test workflow | `docs/ARCHITECTURE.md`, `docs/adr/`, `UnityProject/`, `.github/workflows/test.yml` | Week 1: Roslyn analyzers; add the `JungleBooze.App` assembly to the rules file once the owner agrees |
 | gameplay-engineer | **working** | Implementing spec 001 (player movement), bot input provider, tests named by AC id | `UnityProject/Assets/_Game/Scripts/Gameplay`, `Tests/` | Spec 002 |
 | ui-engineer | waiting | — | — | Week 4: menus, shop |
-| art-director | **working** | Final style guide for Inkbound Pulp, final Mapcloth/Dusk prompts, 5 name-pair suggestions | `design/STYLE_GUIDE.md`, `design/prompts/` | Name options for the owner |
+| art-director | done | Binding style guide for Inkbound Pulp (palette, toon + ink outline approach, lighting per world, fonts, asset review checklist), final Mapcloth/Dusk prompts, 5 name pairs | `design/STYLE_GUIDE.md`, `design/prompts/` | Generate concept images once an image API key exists |
 | asset-pipeline | waiting | — | — | Needs an image/3D generation API key from the owner |
 | audio-director | waiting | — | — | Week 5. Note: the macaw speaks a few words, so voice lines and localization are needed |
 | qa-engineer | waiting | — | — | Review spec 001 test coverage after the gameplay-engineer finishes |
@@ -42,7 +42,8 @@ If a new session finds an agent marked **working** but no matching output or com
 | G4–G8 | Not started |
 
 ## Open questions for the owner
-1. Names for the hero and the macaw (art-director is preparing 5 pairs).
+1. Names for the hero and the macaw. Options: Pista/Duko (recommended), Fera/Rubo, Selva/Florin, Ilka/Orito, Tamsa/Tinko. Needs a proper trademark check before committing.
+6. Hero's sash: band below the X on her back (recommended), keep diagonal, or move the X lower?
 2. If a world runs late at the end of week 5: delay launch a week, or ship it with lighter decoration?
 3. Add the `JungleBooze.App` assembly to the project rules' assembly list? (tech-architect proposal)
 4. Ads and prices: deferred to week 4.
@@ -55,12 +56,15 @@ If a new session finds an agent marked **working** but no matching output or com
 - Coins are gold with a turquoise gem center so they read against gold scenery.
 
 ## Not yet verified
+- Style guide draw-call and triangle estimates (78/120 draws, ~137k/150k tris) need the benchmark scene.
+- Image prompts are untested (no image API key).
 - **Nothing has been compiled.** The cloud container has no Unity or .NET. First real check: opening the project on the owner's Mac, or the GitHub test workflow once the secrets exist.
 - Unity editor version `6000.3.0f1` and package versions weren't checked against Unity's registry.
 - Hand-made `.meta` files and asmdefs are unconfirmed until Unity opens the project.
 
 ## Log
 Newest first. One line per event.
+- 2026-10-06: art-director finished the binding style guide and final hero/macaw prompts; proposed 5 name pairs.
 - 2026-10-06: game-designer finished the GDD sync (third draft). Art-director files committed mid-task.
 - 2026-10-06: Launched gameplay-engineer (spec 001) and game-designer (GDD sync). Created this status board.
 - 2026-10-06: game-designer finished spec 001 (65 acceptance criteria) and aligned the GDD.
