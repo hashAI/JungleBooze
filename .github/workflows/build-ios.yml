@@ -1,0 +1,103 @@
+# OPTIONAL: build and upload to TestFlight from GitHub, using the owner's own Mac as a self-hosted runner.
+#
+# Status: DISABLED until the owner registers the Mac as a runner. Until then this workflow does nothing except
+# print a note. Builds are made locally with tools/build/build_ios.sh (docs/RELEASE.md).
+#
+# To enable (docs/RELEASE.md, "Optional: start builds from GitHub"):
+#   1. GitHub repository > Settings > Actions > Runners > New self-hosted runner > macOS. Follow the commands
+#      on the Mac, logged in as the same macOS user that runs tools/build/build_ios.sh, and add the label
+#      "junglebooze-mac". Install it as a service so it starts automatically.
+#   2. GitHub repository > Settings > Secrets and variables > Actions > Variables: add IOS_SELF_HOSTED_RUNNER = true
+#   3. Actions tab > "iOS build (owner's Mac)" > Run workflow (on branch main).
+#
+# Secrets stay on the Mac: the build reads ~/.junglebooze/release.env on the runner, so no Apple keys or
+# passwords are stored in GitHub.
+#
+# Safety:
+#   - Only manual runs (workflow_dispatch) from main. Never add pull_request triggers: code from a pull request
+#     would run on the owner's Mac with access to the signing keys.
+#   - The build only starts if the "Unity tests" workflow passed for the same commit. Failing checks are never skipped.
+#   - tools/build/build_ios.sh refuses dirty or unpushed working copies.
+
+name: iOS build (owner's Mac)
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: "Player type"
+        type: choice
+        options: [release, development]
+        default: release
+
+concurrency:
+  group: ios-build
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  not-enabled:
+    name: Self-hosted Mac runner not enabled
+    if: vars.IOS_SELF_HOSTED_RUNNER != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain
+        run: |
+          echo "::notice::iOS builds from GitHub are not enabled. Register the owner's Mac as a self-hosted runner"
+          echo "::notice::and set the repository variable IOS_SELF_HOSTED_RUNNER=true (see docs/RELEASE.md)."
+          echo "::notice::Until then, build on the Mac with tools/build/build_ios.sh."
+
+  build:
+    name: Build and upload to TestFlight
+    if: vars.IOS_SELF_HOSTED_RUNNER == 'true'
+    runs-on: [self-hosted, macOS, junglebooze-mac]
+    timeout-minutes: 120
+    steps:
+      - name: Only from main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Release builds are made from main only (this run is on ${GITHUB_REF})."
+          exit 1
+
+      - name: Require green tests for this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          url="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/test.yml/runs?head_sha=${GITHUB_SHA}&status=completed&per_page=1"
+          conclusion="$(curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" "$url" \
+            | /usr/bin/python3 -c 'import json,sys; r=json.load(sys.stdin)["workflow_runs"]; print(r[0]["conclusion"] if r else "none")')"
+          if [ "$conclusion" != "success" ]; then
+            echo "::error::'Unity tests' has not passed for ${GITHUB_SHA} (latest completed result: ${conclusion}). Fix the tests first."
+            exit 1
+          fi
+          echo "Unity tests passed for ${GITHUB_SHA}."
+
+      - name: Checkout main (with LFS)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          lfs: true
+          fetch-depth: 50
+          clean: true
+
+      - name: Build, sign and upload
+        env:
+          JB_BUILD_TYPE: ${{ inputs.build_type }}
+        run: |
+          if [ "$(git rev-parse HEAD)" != "${GITHUB_SHA}" ]; then
+            echo "::error::main moved after this run started; the tested commit is not the one checked out. Start the run again."
+            exit 1
+          fi
+          tools/build/build_ios.sh
+
+      - name: Keep logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build-logs-${{ github.run_number }}
+          path: UnityProject/Builds/logs/
+          if-no-files-found: ignore
+          retention-days: 14

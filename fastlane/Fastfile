@@ -24,6 +24,9 @@ require "fileutils"
 
 default_platform(:ios)
 
+# Do not regenerate fastlane/README.md: it would leave the working copy changed and block the next build.
+skip_docs
+
 REPO_ROOT = `git rev-parse --show-toplevel`.strip
 UNITY_PROJECT = File.join(REPO_ROOT, "UnityProject")
 BUILD_ROOT = File.join(UNITY_PROJECT, "Builds") # ignored by git
@@ -33,7 +36,7 @@ IPA_DIR = File.join(BUILD_ROOT, "ipa")
 LOG_DIR = File.join(BUILD_ROOT, "logs")
 UNITY_BUILD_METHOD = "JungleBooze.Editor.Build.BuildScript.BuildIos"
 APP_TARGET = "Unity-iPhone"
-SETTINGS_HINT = "Add it to ~/.junglebooze/release.env (see docs/RELEASE.md, step 9)."
+SETTINGS_HINT = "Add it to ~/.junglebooze/release.env (see docs/RELEASE.md, step 8)."
 
 def read_key_values(path)
   File.readlines(path).each_with_object({}) do |line, values|
