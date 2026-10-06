@@ -1,16 +1,18 @@
 # Game Design Document: JungleBooze (working title)
 
-**Owner:** game-designer | **Status:** Third draft (after G0, G1 and G2 decisions; Week 1 movement refinements from spec 001) | **Last updated:** 2026-10-06
+**Owner:** game-designer | **Status:** Fourth draft (after G0, G1, G2 and G6 name decisions, the quality-over-schedule rule, and alignment with the binding `design/STYLE_GUIDE.md`) | **Last updated:** 2026-10-06
 
 This is the master design for a 3D endless runner on iOS. Every gameplay feature gets its own spec in
 `docs/specs/<feature>.md` that refines the numbers here. When a spec and this document disagree, the spec wins
 and this document is updated.
 
 **Conventions in this document**
-- `HERO` is the wild jungle girl (design H2 "Mapcloth") and `COMPANION` is the macaw parrot (design M3 "Dusk")
-  (owner decisions G1 and G2, 2026-10-06; see section 1.1). "Mapcloth" and "Dusk" are design codenames, not names.
-  `HERO` stays as the placeholder name until the owner picks a name. `COMPANION` is used the same way for the
-  macaw until it is named.
+- The hero is **Pista**, the wild jungle girl (design H2 "Mapcloth"), and the companion is **Duko**, the macaw
+  parrot (design M3 "Dusk") (owner decisions G1, G2 and G6, 2026-10-06; see section 1.1). "Mapcloth" and "Dusk"
+  are design codenames, not names. Both names are **pending a proper trademark check** (section 17).
+- Prose uses the names. `HERO` and `COMPANION` stay as **role labels** in tables, config assets, code and specs
+  (for example `CompanionTuning`, the `HERO` shop slot), so nothing in code or config has to change if a name
+  fails the trademark check.
 - `[ASSUMED]` marks a default chosen by the designer so work can proceed. It stands until the owner decides otherwise.
 - `[OWNER]` marks a decision the owner must make. Options are listed, nothing is decided.
 - All tuning numbers are starting values. They live in ScriptableObjects under `Assets/_Game/Config` (section 16),
