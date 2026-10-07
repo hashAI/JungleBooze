@@ -43,6 +43,9 @@ namespace JungleBooze.Gameplay.Config
         [Header("Pause")]
         [SerializeField] private float _resumeCountdownMs = 1500f;
 
+        [Header("Game Over")]
+        [SerializeField] private float _gameOverInputLockMs = 400f;
+
         public RunnerPresentationConfig ToConfig()
         {
             return new RunnerPresentationConfig
@@ -69,6 +72,7 @@ namespace JungleBooze.Gameplay.Config
                 RunAnimRateMin = _runAnimRateMin,
                 RunAnimRateMax = _runAnimRateMax,
                 ResumeCountdownMs = _resumeCountdownMs,
+                GameOverInputLockMs = _gameOverInputLockMs,
             };
         }
 

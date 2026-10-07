@@ -8,6 +8,7 @@ Owner: balance-simulator. Python 3 standard library only (nothing to install).
 | `test_runner_model.py` | unittest suite pinning the model to the spec tick numbers (AC-01 to AC-46 where they apply to simulation). |
 | `test_golden.py` | Checks the golden files still match the model and pins their key numbers. |
 | `test_course.py` | Seeded movement gauntlet (spec 001 section 15): reference obstacles and 2–4 m gaps, single or pairs, GDD 11.2 tier spacing. |
+| `test_bots.py` | Bot harness checks: deterministic bot runs, I9 accounting on bot runs, what-if config overrides reach the runner. |
 | `bots.py` | Oracle solver (DFS over per-tick commands) and expert / average / new skill bots (profiles [ASSUMED]). |
 | `run_targets.py` | Runs S1–S9 and writes the report. Raw results go to `out/` (git-ignored: regenerate them; the committed artifact is the report in `docs/sim-reports/`). |
 | `report.py` | Builds `docs/sim-reports/<date>-spec001.md` from `out/*.json`. |
@@ -17,11 +18,12 @@ Owner: balance-simulator. Python 3 standard library only (nothing to install).
 
 ```
 cd tools/sim
-python3 -I -m unittest -v                 # all tests (59, under 1 s)
+python3 -I -m unittest -v                 # all tests (64, about 1 s)
 python3 -I golden.py --check              # golden files match the model (exit 1 if not)
 python3 -I golden.py                      # regenerate golden files (only after a spec change)
 python3 -I run_targets.py all             # S1..S9 + report (S1 about 23 min on 4 cores, bots a few min)
 python3 -I run_targets.py bots            # S4..S7 only (13,400 bot runs)
+python3 -I run_targets.py whatif          # candidate tuning variants on the S5/S6 seeds (model only, nothing applied)
 python3 -I run_targets.py report          # rebuild the report from out/
 ```
 

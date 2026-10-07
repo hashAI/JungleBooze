@@ -15,7 +15,13 @@ namespace JungleBooze.Gameplay.Session
         /// <summary>HERO died: hit-pause, then camera hold. The simulation does not step.</summary>
         Dying = 3,
 
-        /// <summary>Game Over panel is shown; waiting for Restart.</summary>
+        /// <summary>Game Over panel is shown; waiting for Run again / Same track.</summary>
         GameOver = 4,
+
+        /// <summary>
+        /// Run set up, HERO idle at the start, "tap to run" prompt (spec 002 section 12.1). Nothing steps. The first
+        /// tap, swipe or key only starts the run; it is not passed to the simulation.
+        /// </summary>
+        Ready = 5,
     }
 }

@@ -6,7 +6,8 @@ namespace JungleBooze.Gameplay.Session
 {
     /// <summary>
     /// Owns one play session: the fixed-step clock, the current run's simulations (runner + world), the run seed,
-    /// pause / resume countdown, death timing and Restart (spec 001 sections 8 and 10.6, ARCHITECTURE section 4).
+    /// the Ready prompt, pause / resume countdown, death timing, Game Over input lock, Run again / Same track and
+    /// the session best (spec 001 sections 8 and 10.6, spec 002 section 12, ARCHITECTURE section 4).
     /// Plain C#: the run driver feeds it real frame time; EditMode tests can drive it directly.
     /// No allocations in <see cref="Advance"/>; <see cref="Restart"/> allocates (new run scope).
     /// </summary>
@@ -28,6 +29,7 @@ namespace JungleBooze.Gameplay.Session
         private InputCommand _pendingFlags;
         private double _countdownLeft;
         private double _deathElapsed;
+        private double _gameOverElapsed;
 
         public GameSession(
             RunnerConfig config,
@@ -44,7 +46,7 @@ namespace JungleBooze.Gameplay.Session
             Timings = timings;
             _seedSource = new Pcg32Random(sessionSeed, SeedStreamId);
             _time = new FixedStepTimeSource(RunnerConfig.TicksPerSecond, MaxStepsPerFrame);
-            StartNewRun();
+            StartNewRun(NextSeed(), SessionPhase.Ready);
         }
 
         public RunnerConfig Config => _config;
@@ -69,6 +71,22 @@ namespace JungleBooze.Gameplay.Session
 
         /// <summary>Real seconds left in the resume countdown (0 outside <see cref="SessionPhase.Countdown"/>).</summary>
         public double CountdownSecondsLeft => Phase == SessionPhase.Countdown ? _countdownLeft : 0.0;
+
+        /// <summary>Best distance in m over the finished runs of this session (memory only, spec 002 12.3).</summary>
+        public double BestDistanceM { get; private set; }
+
+        /// <summary>True when the run that just ended beat the previous session best.</summary>
+        public bool LastRunWasBest { get; private set; }
+
+        /// <summary>Real seconds since the Game Over panel appeared (0 outside <see cref="SessionPhase.GameOver"/>).</summary>
+        public double GameOverElapsedSeconds => Phase == SessionPhase.GameOver ? _gameOverElapsed : 0.0;
+
+        /// <summary>
+        /// True while Game Over buttons must ignore input (spec 002 12.1: <c>gameOverInputLockMs</c>), and in every
+        /// phase other than <see cref="SessionPhase.GameOver"/>.
+        /// </summary>
+        public bool GameOverInputLocked =>
+            Phase != SessionPhase.GameOver || _gameOverElapsed < Timings.GameOverInputLockSeconds;
 
         /// <summary>Real seconds since <c>Died</c> (meaningful in <see cref="SessionPhase.Dying"/>).</summary>
         public double DeathElapsedSeconds => _deathElapsed;
@@ -100,7 +118,7 @@ namespace JungleBooze.Gameplay.Session
 
         /// <summary>
         /// Advances the session by one rendered frame of real time. Steps the simulation only while
-        /// <see cref="SessionPhase.Running"/>. Returns the number of simulation steps run.
+        /// <see cref="SessionPhase.Running"/>. Returns the number of simulation steps run. Never allocates.
         /// </summary>
         public int Advance(double realDeltaSeconds)
         {
@@ -133,14 +151,48 @@ namespace JungleBooze.Gameplay.Session
                     _deathElapsed += realDeltaSeconds;
                     if (_deathElapsed >= Timings.HitPauseSeconds + Timings.DeathHoldSeconds)
                     {
-                        Phase = SessionPhase.GameOver;
+                        EnterGameOver();
                     }
 
+                    break;
+
+                case SessionPhase.GameOver:
+                    _gameOverElapsed += realDeltaSeconds;
                     break;
             }
 
             LastFrameSteps = stepsRun;
             return stepsRun;
+        }
+
+        /// <summary>
+        /// Ready → Running: the first tap, swipe or key (spec 002 12.1). Returns false in any other phase.
+        /// </summary>
+        public bool Begin()
+        {
+            if (Phase != SessionPhase.Ready)
+            {
+                return false;
+            }
+
+            _time.ClearAccumulator();
+            Phase = SessionPhase.Running;
+            return true;
+        }
+
+        /// <summary>
+        /// Ends the death sequence now and shows Game Over (spec 002 12.1: app sent to background while dying).
+        /// Returns false outside <see cref="SessionPhase.Dying"/>.
+        /// </summary>
+        public bool CompleteDying()
+        {
+            if (Phase != SessionPhase.Dying)
+            {
+                return false;
+            }
+
+            EnterGameOver();
+            return true;
         }
 
         /// <summary>Pause button, P/Escape, app background or focus loss. Works while running or counting down.</summary>
@@ -182,12 +234,22 @@ namespace JungleBooze.Gameplay.Session
         }
 
         /// <summary>
-        /// Starts a new run with a new seed. Allowed from any phase (the HUD only offers it on Game Over).
-        /// Allocates the new run scope.
+        /// "Run again": starts a new run with a new seed, straight into <see cref="SessionPhase.Running"/> (the button
+        /// press is the "tap to run", spec 002 12.2). Allowed from any phase; the run driver only offers it on
+        /// Game Over after the input lock. Allocates the new run scope.
         /// </summary>
         public void Restart()
         {
-            StartNewRun();
+            StartNewRun(NextSeed(), SessionPhase.Running);
+        }
+
+        /// <summary>
+        /// "Same track": starts a new run with the current run's seed (same chunks, mirrors and coins), straight into
+        /// <see cref="SessionPhase.Running"/>. Allocates the new run scope.
+        /// </summary>
+        public void RestartSameTrack()
+        {
+            StartNewRun(RunSeed, SessionPhase.Running);
         }
 
         /// <summary>
@@ -201,8 +263,7 @@ namespace JungleBooze.Gameplay.Session
                 return false;
             }
 
-            _deathElapsed = 0.0;
-            Phase = SessionPhase.Dying;
+            EnterDying();
             return true;
         }
 
@@ -223,8 +284,7 @@ namespace JungleBooze.Gameplay.Session
 
                 if (Runner.Current.IsDead)
                 {
-                    _deathElapsed = 0.0;
-                    Phase = SessionPhase.Dying;
+                    EnterDying();
                     break;
                 }
             }
@@ -232,9 +292,33 @@ namespace JungleBooze.Gameplay.Session
             return run;
         }
 
-        private void StartNewRun()
+        private void EnterDying()
         {
-            RunSeed = ((ulong)_seedSource.NextUInt() << 32) | _seedSource.NextUInt();
+            _deathElapsed = 0.0;
+            double distance = DistanceM;
+            LastRunWasBest = distance > BestDistanceM;
+            if (LastRunWasBest)
+            {
+                BestDistanceM = distance;
+            }
+
+            Phase = SessionPhase.Dying;
+        }
+
+        private void EnterGameOver()
+        {
+            _gameOverElapsed = 0.0;
+            Phase = SessionPhase.GameOver;
+        }
+
+        private ulong NextSeed()
+        {
+            return ((ulong)_seedSource.NextUInt() << 32) | _seedSource.NextUInt();
+        }
+
+        private void StartNewRun(ulong seed, SessionPhase startPhase)
+        {
+            RunSeed = seed;
             World = _worldFactory.Create(RunSeed, _config)
                 ?? throw new InvalidOperationException("The world factory returned null.");
             Runner = World.CreateRunner(_config, _speedCurve)
@@ -244,10 +328,12 @@ namespace JungleBooze.Gameplay.Session
             _pendingFlags = InputCommand.None;
             _countdownLeft = 0.0;
             _deathElapsed = 0.0;
+            _gameOverElapsed = 0.0;
+            LastRunWasBest = false;
             LastStepCommands = InputCommand.None;
             LastFrameSteps = 0;
             RunNumber++;
-            Phase = SessionPhase.Running;
+            Phase = startPhase;
         }
     }
 }

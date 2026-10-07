@@ -29,7 +29,7 @@ compiler on the Mac is the fastest way to find remaining errors; fix whatever th
 **FP1 plan (stages; tick as they land):**
 - [x] A1 gameplay-engineer: movement simulation (spec 001 minus collisions) + EditMode tests (AC-01–14, 16–33, 45–46, 61–63; collisions deferred to B)
 - [x] A2 game-designer: spec 002 (track, obstacles, coins): 16 Jungle chunks, generator, coins/score, fairness rules, run lifecycle, AC-201–250
-- [ ] A3 balance-simulator: Python reference model of spec 001 + golden traces (the only code we can execute here)
+- [x] A3 balance-simulator: Python reference model (64 tests pass), 6 golden traces, targets report: S1–S3, S6–S8 pass; S4/S5 fail (bot mistake profiles, low-barrier jump is the tightest timing)
 - [ ] B1 gameplay-engineer: collisions in the runner (spec 001 §9 + spec 002 changes), extended ITrackQuery, stumble/daze/near-miss + tests
 - [ ] B2 gameplay-engineer: track simulation (chunk data, 16-chunk library, seeded generator, coins, score, run lifecycle) + tests
 - [ ] B3 gameplay-engineer: chunk fairness validator (spec 002 §11) as an EditMode test + editor menu
@@ -48,7 +48,7 @@ and commit after every agent report.
 |---|---|---|---|---|
 | producer | not used yet | (the coordinating session does this role for now) | this file | — |
 | game-designer | done (stage A2) | Spec 002: track, obstacles, coins, generator, fairness, lifecycle | `docs/specs/002-track-obstacles-coins.md` | Apply spec 002's listed changes to spec 001 and the GDD; spec 003 vine swinging |
-| balance-simulator | **working** (resumed) | A3: finish unit tests, remaining targets, report | `tools/sim/`, `docs/sim-reports/` | Fairness fuzzing for spec 002 |
+| balance-simulator | done (A3) | Python reference model, golden traces, S1–S9 report (`docs/sim-reports/2026-10-07-spec001.md`) | `tools/sim/`, `docs/sim-reports/` | Fairness fuzzing for spec 002; recommendations R1–R6 go to game-designer |
 | tech-architect | done (stage D) | First-open bootstrap: URP mobile asset, input set to Both, iOS basics (placeholder bundle id `com.pistaduko.junglerunner`, iOS 15, portrait), empty Run scene in build list; Mac play guide | `Assets/_Game/Editor/Setup/`, `docs/adr/0003-first-playable-bootstrap.md`, `docs/PLAY_FIRST_BUILD.md` | Add EditMode tests for `ProjectSetupRules`; Roslyn analyzers |
 | gameplay-engineer | **working** (2 instances, resumed) | B1: collisions in `Runner/`. B2: generator, track world, coins, score, lifecycle in `Track/` | `Scripts/Gameplay/Runner/`, `Scripts/Gameplay/Track/`, `Tests/EditMode/` | B3: chunk fairness validator |
 | ui-engineer | **working** (resumed) | C1: finish presentation (Session, Views, Controls, App bootstrap, HUD), PlayMode tests, Run again / Same track, controls table | `Scripts/Gameplay/{Session,Views,Controls}`, `Scripts/App`, `Scripts/UI/Hud`, `Tests/` | C2: track/obstacle/coin views |
@@ -85,6 +85,7 @@ If a new session finds an agent marked **working** but no matching output or com
 1. Ads and prices: deferred to week 4 (tracking already decided: none).
 
 ## Assumptions waiting for owner review (`[ASSUMED]`)
+- Possible feel change for the owner later: jump airtime 600 ms → 650 ms (same 1.5 m height) makes low barriers easier; the simulation shows average-player survival 87% → 90%. Not applied.
 - Movement interpretations for the game-designer to confirm: pending inputs counted while pending; the swipe that cancels a queued lane move counts as Executed; 0 ms means "off" for coyote and run-start ramp.
 - Placeholder app name "Jungle Runner" and bundle id `com.pistaduko.junglerunner`; minimum iOS 15.0; portrait, iPhone only; URP for FP1 with a built-in fallback menu.
 - Stumble rule: clipping an obstacle's side is a stumble, the second stumble ends the run (spec 001). Judge at G3.
@@ -102,6 +103,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Log
 Newest first. One line per event.
+- 2026-10-07: Stage A3 done (balance-simulator): reference model, 64 unit tests green, targets report with S4/S5 failing on bot profiles.
 - 2026-10-07: Owner wants to play progress ASAP. Added early preview FP0 (flat world) right after C1.
 - 2026-10-07 06:30 UTC: Usage limit hit ~01:10 and stopped all four agents; checkpoints had saved work up to 01:05. Resumed B1, B2, C1 and A3 from their saved files after the limit reset.
 - 2026-10-07: Launched B1 (collisions) and B2 (track, coins, score, run lifecycle) in parallel.

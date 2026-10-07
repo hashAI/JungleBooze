@@ -14,7 +14,10 @@ namespace JungleBooze.Gameplay.Controls
     /// <list type="table">
     /// <item>Left arrow / A: MoveLeft. Right arrow / D: MoveRight.</item>
     /// <item>Up arrow / W / Space: Jump. Down arrow / S: Slide.</item>
-    /// <item>P / Escape: pause toggle. R: restart (Game Over). K: end run (development builds only).</item>
+    /// <item>P / Escape: pause toggle. R: Run again (Game Over). T: Same track (Game Over).
+    /// K: end run (development builds only).</item>
+    /// <item>Confirm keys (Space, Enter, keypad Enter): the primary button on Game Over (Run again).</item>
+    /// <item>Any gameplay or confirm key starts the run from the Ready prompt.</item>
     /// </list>
     /// </summary>
     public static class KeyboardBindings
@@ -27,8 +30,9 @@ namespace JungleBooze.Gameplay.Controls
             Key.RightArrow, Key.D,
             Key.UpArrow, Key.W, Key.Space,
             Key.DownArrow, Key.S,
+            Key.Enter, Key.NumpadEnter,
             Key.P, Key.Escape,
-            Key.R,
+            Key.R, Key.T,
             Key.K,
         };
 
@@ -65,11 +69,19 @@ namespace JungleBooze.Gameplay.Controls
                     return RunMetaAction.TogglePause;
                 case Key.R:
                     return RunMetaAction.Restart;
+                case Key.T:
+                    return RunMetaAction.RestartSameTrack;
                 case Key.K:
                     return RunMetaAction.DebugEndRun;
                 default:
                     return RunMetaAction.None;
             }
+        }
+
+        /// <summary>True for keys that press the primary button of a panel (Space, Enter, keypad Enter).</summary>
+        public static bool IsConfirmKey(Key key)
+        {
+            return key == Key.Space || key == Key.Enter || key == Key.NumpadEnter;
         }
 #endif
 
@@ -81,8 +93,9 @@ namespace JungleBooze.Gameplay.Controls
             KeyCode.RightArrow, KeyCode.D,
             KeyCode.UpArrow, KeyCode.W, KeyCode.Space,
             KeyCode.DownArrow, KeyCode.S,
+            KeyCode.Return, KeyCode.KeypadEnter,
             KeyCode.P, KeyCode.Escape,
-            KeyCode.R,
+            KeyCode.R, KeyCode.T,
             KeyCode.K,
         };
 
@@ -119,11 +132,19 @@ namespace JungleBooze.Gameplay.Controls
                     return RunMetaAction.TogglePause;
                 case KeyCode.R:
                     return RunMetaAction.Restart;
+                case KeyCode.T:
+                    return RunMetaAction.RestartSameTrack;
                 case KeyCode.K:
                     return RunMetaAction.DebugEndRun;
                 default:
                     return RunMetaAction.None;
             }
+        }
+
+        /// <summary>True for keys that press the primary button of a panel (Space, Return, keypad Enter).</summary>
+        public static bool IsConfirmKeyCode(KeyCode key)
+        {
+            return key == KeyCode.Space || key == KeyCode.Return || key == KeyCode.KeypadEnter;
         }
 #endif
     }

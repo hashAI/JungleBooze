@@ -24,8 +24,10 @@ do the same until game-designer rules otherwise, so the golden traces stay valid
    next group to 0.5 m past the gap (`stretched` counts in S1). Spec 002 adds `gapLandingClearM` (1.0 m) and metre
    spacing per tier, which covers this for the generator.
 3. **A 4 m gap at 8-10 m/s has the narrowest window in the game:** 15 ticks (250 ms) of take-off at 8 m/s and 21 at
-   10 m/s, counting coyote. It is the main killer of the new bot (S6 table). Spec 002 F6 already limits 4.0 m gaps to
-   tier 2+ and keeps tutorial speed out of the bands; the `gaps<=3m` rows above measure the effect. See R2.
+   10 m/s, counting coyote (spec 002 AC-213 says 15 ± 1 ground ticks + 5 coyote at 10 m/s; the model gives 16 + 5,
+   inside that tolerance). Falling into gaps is one of the two main execution death causes of the new bot (S6
+   table). Spec 002 F6 already limits 4.0 m gaps to tier 2+ and keeps tutorial speed out of the bands; the
+   `gaps<=3m` rows above measure the effect. See R2.
 4. **Jump-from-slide or stand-up while boxes already overlap has no collision category.** 9.3 classifies a contact by
    the axis that started overlapping last, but a hitbox that grows inside a tick (stand-up, jump out of a slide
    under a high barrier) overlaps "from the start". Model: lethal (`inside`), the same as rising into a high barrier.
@@ -85,6 +87,16 @@ do the same until game-designer rules otherwise, so the golden traces stay valid
 22. S2 lane-dodge wording ("succeeds with the input 3 ticks or fewer before front contact, expected 2") is read as
     "the latest input that still dodges is at most 3 ticks before the contact tick".
 23. S8 and S9 measure the C# runner; they cannot be run until it exists. The model-side S8 only proves the harness.
+24. **S5 "`Expired` <= 5% of buffered jumps" is not measurable at tier-1 spacing:** at 0.90 s spacing a player (or bot)
+    almost never presses Jump while airborne, so the sample is a handful of jumps (see the S5 row). Buffered jumps only
+    become common from tier 4 (matrix: hundreds per 300 runs). Suggest measuring this on tier 3-4 spacing, or on the
+    full-run setup in week 2.
+25. **The low-barrier jump is the tightest timing in the game and dominates deaths.** Its window is 16-22 ticks
+    (S2a), against 40 for the slide and about 180 for the lane dodge. Low-barrier front hits are the largest execution
+    death cause of the average bot (S5) and about half of the new bot's. Together with the [ASSUMED] 0.5% decision-error
+    rate it keeps S5 under 90% (92.0% with decision errors off; see R6). It is 67% of all S5 deaths, above the balance-simulator default of "no single death
+    cause > 35%" (spec 001 S7 replaces that default for this stage, so it is reported, not scored). This does not
+    break spec 001 (S2a passes); it is a feel and difficulty question for the designer.
 """
 
 ASSUMPTIONS = """\
@@ -117,7 +129,8 @@ RECOMMENDATIONS = """\
 |---|---|---|---|
 | R1 | Decide what a Speed Boost does over gaps: at 33.6 m/s the 3.0 m FP1 gap is crossed by coyote time alone. Options: (a) boosted HERO auto-jumps gaps, (b) the generator never places 3.0 m gaps where a boost can be active, (c) coyote only applies when the ground does not come back within the coyote distance. Inside the speed bands, keep spec 002 F6 (`>= 2.85 m at 21 m/s`); the measurements here confirm it. | power-ups spec (week 3), spec 002 F6 | No "run across a gap" case at any speed; gaps always mean "jump". |
 | R2 | Keep spec 002 F6 as written (4.0 m gaps tier 2+ only, max gap from `vMin`), and also make spec 001 section 15 use the spec 002 gap lengths instead of "2-4 m". Optionally add an S2 target "gap take-off window >= 20 ticks at the band's slowest speed". | spec 001 section 15, spec 002 | New-bot survival in S6 rises from {s6} to {s6g} with gaps <= 3 m (same seeds); average bot (S5) from {s5} to {s5g}. |
-| R3 | Write `bot-player.md` with skill profiles that include a per-decision error rate. With the assumed 0.2% expert error rate, S4 (99%) cannot pass on a 24-obstacle minute whatever the movement tuning; for 99% the expert error rate must be <= about 0.06% per obstacle group. | game-designer / bot-player spec | S4-S6 become meaningful tests of movement instead of tests of the bot assumptions. |
-| R4 | Keep the low-barrier depth <= 0.6 m and the player hitbox depth <= 0.5 m at tutorial speed: the 8 m/s jump window is {jmin} ticks against the 15-tick target, a 1-tick margin. A 0.7 m barrier would fail S2a at 8 m/s. | spec 002 obstacle sizes | S2a stays green when final obstacle sizes land. |
+| R3 | Write `bot-player.md` with skill profiles that include a per-decision error rate. With the assumed 0.2% expert error rate, S4 (99%) cannot pass on a {s4_groups}-group minute whatever the movement tuning: every S4 death comes from an injected decision error ({s4} survive; {s4n} with decision errors off), and {s4_leth} of decision errors are lethal. For 99% the expert error rate must be <= about {s4_err_need} per obstacle group, or S4 should be defined on timing alone. | game-designer / bot-player spec | S4-S6 become meaningful tests of movement instead of tests of the bot assumptions. |
+| R4 | Keep the low barrier at <= 0.6 m deep and <= 0.8 m tall (and the player hitbox depth <= 0.5 m) while 8 m/s is a playable speed: the 8 m/s jump window is {jmin} ticks against the 15-tick target, a 1-tick margin. Measured at 8 m/s (min over 10 placements): 0.7 m deep gives exactly 15 (zero margin); 0.8 m deep or 0.9 m tall gives 14 (S2a FAIL); 1.0 m tall gives 12. | spec 002 obstacle sizes | S2a stays green when final obstacle sizes land. |
 | R5 | Resolve spec issues 4, 7, 8, 12 and 13 in spec 001 before the C# collision stage (B), because they change tick-exact results that the golden traces and EditMode tests pin. | spec 001 | C# and the reference model agree tick for tick. |
+| R6 | Only if the designer wants S5 to pass with the [ASSUMED] average profile: raise `jumpAirtimeMs` from 600 to 650 (39 ticks) and keep the 1.5 m apex. This is a feel change (lower gravity, 13.7 m jumps at 21 m/s instead of 12.6 m), so it is the designer's and owner's call, and spec 002 jump-length-based spacing must be re-checked. Alternative with no feel change: accept S5 as failing until `bot-player.md` defines the average profile (R3). | spec 001 3.1, spec 002 spacing | Measured on the same seeds: S5 {s5} -> {wi650_s5} (650 ms) or {wi700_s5} (700 ms); S6 {s6} -> {wi650_s6} / {wi700_s6}; 8 m/s jump window 16 -> {wi650_w8} / {wi700_w8} ticks; S3 still feasible. S1 and golden traces must be re-run. |
 """

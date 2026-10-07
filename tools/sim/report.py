@@ -137,6 +137,9 @@ def write_report(path, out):
         exp_txt = ("%d of %d buffered jumps expired (%s)" % (s5["expired"], s5["buffered_entered"],
                                                               pct(s5["expired_share"]))
                    if s5["buffered_entered"] else "0 buffered jumps (not exercised)")
+        if 0 < s5["buffered_entered"] < 30:
+            exp_txt += (" - sample too small to judge: at tier-1 spacing the bot almost never presses Jump in the "
+                        "air (spec issue 24)")
         ok5 = s5["survive_rate"] >= 0.90 and (s5["expired_share"] <= 0.05)
         rows.append(("S5", "Average bot, same setup: >= 90% survive; Expired <= 5% of buffered jumps",
                      "%s of %d survive (decision errors off: %s); %s" % (pct(s5["survive_rate"]), s5["n"],
@@ -357,14 +360,66 @@ def write_report(path, out):
               s9["python_mean_step_us"])
         w("")
 
+    whatif = _load(out, "whatif")
+    if whatif:
+        w("## What-if: candidate tuning, measured in the model (not applied)")
+        w("")
+        w("Same seeds as the S5 / S6 target runs (%d runs each), same [ASSUMED] bot profiles (decision errors on). "
+          "Jump apex stays 1.5 m, so a longer airtime means lower gravity and a longer, floatier jump. S2a = "
+          "low-barrier jump window (min-max over 10 sub-tick placements). S3 = oracle, two full-width low-barrier "
+          "rows at 21 m/s, spacings 0.45 to 0.90 s (step 0.05 s, 5 phases each)." % whatif["rows"][0]["runs"])
+        w("")
+        w("| Variant | Jump ticks | g m/s2 | v0 m/s | Jump length at 21 m/s | S2a 8 m/s | S2a 10 m/s | S2a 21 m/s | "
+          "S3 | S5 average survive | S6 new survive |")
+        w("|---|---|---|---|---|---|---|---|---|---|---|")
+        for r in whatif["rows"]:
+            w("| %s | %d | %.2f | %.2f | %.1f m | %d-%d | %d-%d | %d-%d | %s | %s | %s |" % (
+                r["variant"], r["jump_ticks"], r["gravity"], r["jump_v0"], r["jump_ticks"] / 60.0 * 21.0,
+                r["jump_window_8"][0], r["jump_window_8"][1], r["jump_window_10"][0], r["jump_window_10"][1],
+                r["jump_window_21"][0], r["jump_window_21"][1],
+                "feasible at all" if r["s3_first_infeasible_spacing"] is None
+                else "fails from %.2f s" % r["s3_first_infeasible_spacing"],
+                pct(r["s5_survive"]), pct(r["s6_survive"])))
+        w("")
+        w("Not re-run for the variants: S1 (360,000 oracle segments, about 23 min each) and the golden traces. Both "
+          "must be re-run if a variant is adopted.")
+        w("")
+
     import report_text
-    fill = dict(s6="n/a", s6g="n/a", s5="n/a", s5g="n/a", jmin="n/a")
+    fill = dict(s6="n/a", s6g="n/a", s5="n/a", s5g="n/a", jmin="n/a", s4="n/a", s4n="n/a", s4_leth="n/a",
+                s4_groups="n/a", s4_err_need="n/a", wi650_s5="n/a", wi650_s6="n/a", wi700_s5="n/a",
+                wi700_s6="n/a", wi650_w8="n/a", wi700_w8="n/a")
     if bots:
         sm = bots["summaries"]
         for k, tgt in (("s6", "S6"), ("s6g", "S6-gap3"), ("s5", "S5"), ("s5g", "S5-gap3")):
             x = _find(sm, tgt)
             if x:
                 fill[k] = pct(x["survive_rate"])
+        s4x = _find(sm, "S4")
+        s4nx = _find(sm, "no-decision-errors", "expert-noerr")
+        if s4x and s4nx:
+            fill["s4"] = pct(s4x["survive_rate"])
+            fill["s4n"] = pct(s4nx["survive_rate"])
+            runs_p = os.path.join(out, "bot_runs.jsonl")
+            if os.path.exists(runs_p):
+                with open(runs_p) as f:
+                    rs = [json.loads(l) for l in f if '"target": "S4"' in l]
+                if rs:
+                    groups = sum(r["groups"] for r in rs) / float(len(rs))
+                    inj = sum(1 for r in rs if r["death"] and r["death"]["error_injected"])
+                    er = PROFILES["expert"].error_rate
+                    leth = inj / (er * groups * len(rs)) if er else 0.0
+                    fill["s4_groups"] = "%.1f" % groups
+                    fill["s4_leth"] = "%.0f%%" % (100 * leth)
+                    if leth > 0:
+                        fill["s4_err_need"] = "%.2f%%" % (100 * (1 - 0.99 ** (1 / groups)) / leth)
+    if whatif:
+        for r in whatif["rows"]:
+            key = {650.0: "wi650", 700.0: "wi700"}.get(r["overrides"].get("jump_airtime_ms"))
+            if key:
+                fill[key + "_s5"] = pct(r["s5_survive"])
+                fill[key + "_s6"] = pct(r["s6_survive"])
+                fill[key + "_w8"] = str(r["jump_window_8"][0])
     if s2:
         fill["jmin"] = str(min(r["min_window"] for r in s2["rows"] if r["archetype"] == "LowBarrier"))
     w(report_text.SPEC_ISSUES.rstrip())

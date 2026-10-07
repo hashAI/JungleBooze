@@ -38,6 +38,12 @@ namespace JungleBooze.Gameplay.Views
         /// <summary>Spec 001 section 8.3: 3-2-1 countdown of 1.5 s real time. [ASSUMED] lives in this asset.</summary>
         public float ResumeCountdownMs = 1500f;
 
+        /// <summary>
+        /// Spec 002 section 12.1: Game Over buttons ignore input for 400 ms. [ASSUMED] Lives here until the run-flow
+        /// config (spec 002 <c>RunFlow</c>) is wired into the App in stage C2.
+        /// </summary>
+        public float GameOverInputLockMs = 400f;
+
         /// <summary>Reduce Motion setting (no settings screen yet): turns off the stumble camera shake.</summary>
         public bool ReduceMotion;
 
@@ -48,7 +54,11 @@ namespace JungleBooze.Gameplay.Views
 
         public SessionTimings ToSessionTimings()
         {
-            return new SessionTimings(HitPauseMs / 1000.0, DeathCameraHoldMs / 1000.0, ResumeCountdownMs / 1000.0);
+            return new SessionTimings(
+                HitPauseMs / 1000.0,
+                DeathCameraHoldMs / 1000.0,
+                ResumeCountdownMs / 1000.0,
+                GameOverInputLockMs / 1000.0);
         }
 
         /// <summary>Range checks. Appends one message per problem; returns true when there are none. Allocates.</summary>
@@ -80,6 +90,7 @@ namespace JungleBooze.Gameplay.Views
             CheckRange(errors, "runAnimReferenceSpeedMps", RunAnimReferenceSpeedMps, 1f, 50f);
             CheckRange(errors, "runAnimRateMin", RunAnimRateMin, 0.1f, RunAnimRateMax);
             CheckRange(errors, "resumeCountdownMs", ResumeCountdownMs, 0f, 5000f);
+            CheckRange(errors, "gameOverInputLockMs", GameOverInputLockMs, 0f, 2000f);
             return errors.Count == before;
         }
 

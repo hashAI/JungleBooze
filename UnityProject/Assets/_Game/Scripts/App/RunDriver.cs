@@ -9,9 +9,10 @@ namespace JungleBooze.App
 {
     /// <summary>
     /// The only per-frame entry point of a run (ARCHITECTURE section 4). Each frame: read device input, handle
-    /// pause/restart keys, advance the <see cref="GameSession"/> by real frame time (fixed 60 Hz steps), hand the
-    /// simulation's events to every view, then let every view render the interpolated state.
-    /// Pauses on app background and focus loss (spec 001 8.1); never auto-resumes.
+    /// the Ready prompt, pause and Game Over keys, advance the <see cref="GameSession"/> by real frame time (fixed
+    /// 60 Hz steps), hand the simulation's events to every view, then let every view render the interpolated state.
+    /// Pauses on app background and focus loss (spec 001 8.1); never auto-resumes. Backgrounded while dying, it
+    /// shows Game Over directly (spec 002 12.1). Game Over actions are ignored during the input lock.
     /// No allocations per frame (except the development-build error log on event-buffer overflow).
     /// </summary>
     public sealed class RunDriver : MonoBehaviour, IRunCommands
@@ -40,6 +41,7 @@ namespace JungleBooze.App
             _input = input ?? throw new ArgumentNullException(nameof(input));
             _views = views ?? throw new ArgumentNullException(nameof(views));
             _kit = kit;
+            _input.GameplayEnabled = _session.Phase == SessionPhase.Running;
             BeginViews();
         }
 
@@ -56,17 +58,42 @@ namespace JungleBooze.App
             _session?.RequestResume();
         }
 
-        /// <summary>Starts a new run with a new seed and resets input and views.</summary>
+        /// <summary>Game Over "Run again" (button, R, Space, Enter): new seed. Ignored outside Game Over and during the lock.</summary>
         public void Restart()
         {
-            if (_session == null)
+            TryRestart(false);
+        }
+
+        /// <summary>Game Over "Same track" (button, T): same seed. Ignored outside Game Over and during the lock.</summary>
+        public void RestartSameTrack()
+        {
+            TryRestart(true);
+        }
+
+        /// <summary>
+        /// Restarts from Game Over once the input lock is over: rebuilds the run scope in place (no scene reload),
+        /// clears input and snaps every view to the new run. Returns false if the restart was ignored.
+        /// </summary>
+        public bool TryRestart(bool sameTrack)
+        {
+            if (_session == null || _session.Phase != SessionPhase.GameOver || _session.GameOverInputLocked)
             {
-                return;
+                return false;
             }
 
-            _session.Restart();
+            if (sameTrack)
+            {
+                _session.RestartSameTrack();
+            }
+            else
+            {
+                _session.Restart();
+            }
+
             _input.Reset();
+            _input.GameplayEnabled = true;
             BeginViews();
+            return true;
         }
 
         /// <summary>
@@ -83,7 +110,21 @@ namespace JungleBooze.App
             // Input is read before the frame's steps (spec 001 12.6). Gameplay input only while running.
             _input.GameplayEnabled = _session.Phase == SessionPhase.Running;
             _input.Poll(realTimeSeconds);
-            HandleMetaAction(_input.ConsumeMetaAction());
+            RunMetaAction meta = _input.ConsumeMetaAction();
+            bool confirm = _input.ConsumeConfirm();
+            bool startPress = _input.ConsumeStartPress();
+
+            HandleMetaAction(meta);
+            if (_session.Phase == SessionPhase.Ready && startPress)
+            {
+                // Spec 002 12.1: the first tap, swipe or key only starts the run (it was not queued).
+                _session.Begin();
+                _input.GameplayEnabled = true;
+            }
+            else if (_session.Phase == SessionPhase.GameOver && confirm)
+            {
+                TryRestart(false);
+            }
 
             _session.Advance(realDeltaSeconds);
 
@@ -105,7 +146,7 @@ namespace JungleBooze.App
         {
             if (pauseStatus)
             {
-                Pause();
+                OnBackgrounded();
             }
         }
 
@@ -113,8 +154,19 @@ namespace JungleBooze.App
         {
             if (!hasFocus)
             {
-                Pause();
+                OnBackgrounded();
             }
+        }
+
+        /// <summary>App backgrounded or lost focus: pause a running run; skip the rest of a death sequence.</summary>
+        private void OnBackgrounded()
+        {
+            if (_session != null && _session.CompleteDying())
+            {
+                return;
+            }
+
+            Pause();
         }
 
         private void OnDestroy()
@@ -140,11 +192,11 @@ namespace JungleBooze.App
                     break;
 
                 case RunMetaAction.Restart:
-                    if (_session.Phase == SessionPhase.GameOver)
-                    {
-                        Restart();
-                    }
+                    TryRestart(false);
+                    break;
 
+                case RunMetaAction.RestartSameTrack:
+                    TryRestart(true);
                     break;
 
                 case RunMetaAction.DebugEndRun:

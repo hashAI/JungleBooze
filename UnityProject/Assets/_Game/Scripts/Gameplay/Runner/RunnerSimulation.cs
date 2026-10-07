@@ -1329,6 +1329,14 @@ namespace JungleBooze.Gameplay.Runner
                     return;
                 }
 
+                if (_stumbledThisTick)
+                {
+                    // A second clip on the very tick of a stumble is the same "you clipped it" moment: the obstacle
+                    // is ignored for its pass (flag set above) and no second stumble is counted. Ties and doubt go
+                    // to the player (pillar 2). [ASSUMED]
+                    continue;
+                }
+
                 if (_dazeTicksLeft > 0)
                 {
                     // 9.4.5: a second stumble while dazed is lethal ("Tripped twice").

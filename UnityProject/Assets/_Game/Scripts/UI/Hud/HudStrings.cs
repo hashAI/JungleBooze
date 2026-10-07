@@ -9,10 +9,28 @@ namespace JungleBooze.UI.Hud
         public const string DistanceUnit = "m";
         public const string Paused = "Paused";
         public const string Resume = "Resume";
+        public const string PauseButtonName = "Pause";
+
+        // Ready prompt (spec 002 12.1).
+        public const string ReadyPromptKeyboard = "Swipe or press a key to run";
+        public const string ReadyPromptTouch = "Swipe or tap to run";
+
+        // Game Over panel (spec 002 12.1 and 12.4).
         public const string GameOver = "Game Over";
         public const string Distance = "Distance";
-        public const string Restart = "Restart";
-        public const string RestartKeyHint = "or press R";
-        public const string PauseButtonName = "Pause";
+        public const string Coins = "Coins";
+        public const string Score = "Score";
+        public const string Best = "Best";
+        public const string NewBest = "New best!";
+        public const string Seed = "Seed";
+        public const string RunAgain = "Run again";
+        public const string SameTrack = "Same track";
+        public const string GameOverKeyHint = "Space: run again    T: same track";
+
+        // Generic cause lines, used until the track world names the obstacle (spec 002 12.4, [ASSUMED] wording).
+        public const string CauseHit = "Hit an obstacle";
+        public const string CauseTrippedTwice = "Tripped twice";
+        public const string CauseFell = "Fell into a ravine";
+        public const string CauseEnded = "Run ended";
     }
 }

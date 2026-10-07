@@ -23,6 +23,8 @@ namespace JungleBooze.Gameplay.Controls
         private readonly CommandQueue _queue;
         private readonly float _pixelsPerPoint;
         private RunMetaAction _pendingMeta;
+        private bool _confirmPressed;
+        private bool _startPressed;
         private bool _gameplayEnabled = true;
 
         public PlayerInputAdapter(InputConfig config, float pixelsPerPoint)
@@ -49,7 +51,9 @@ namespace JungleBooze.Gameplay.Controls
             {
                 if (_gameplayEnabled && !value)
                 {
-                    Reset();
+                    // Presses (start, confirm) survive: they belong to the phase that is starting.
+                    _swipes.Cancel();
+                    _queue.Clear();
                 }
 
                 _gameplayEnabled = value;
@@ -85,20 +89,59 @@ namespace JungleBooze.Gameplay.Controls
             return action;
         }
 
-        /// <summary>Cancels the tracked touch and drops queued commands (pause, focus loss, restart).</summary>
+        /// <summary>
+        /// Cancels the tracked touch and drops queued commands and unconsumed presses (pause, focus loss, restart).
+        /// </summary>
         public void Reset()
         {
             _swipes.Cancel();
             _queue.Clear();
+            _confirmPressed = false;
+            _startPressed = false;
         }
 
         /// <summary>
-        /// Feeds a gameplay command as if a key had been pressed (tests, on-screen debug buttons).
-        /// Ignored while <see cref="GameplayEnabled"/> is false.
+        /// Feeds a gameplay command as if a key had been pressed (tests, on-screen debug buttons). Not queued while
+        /// <see cref="GameplayEnabled"/> is false, but still counts as a start press. Returns true if queued.
         /// </summary>
         public bool InjectCommand(InputCommand command)
         {
-            return _gameplayEnabled && _queue.TryEnqueue(command);
+            if (command == InputCommand.None)
+            {
+                return false;
+            }
+
+            int before = _queue.Count;
+            OnKey(command, RunMetaAction.None, false);
+            return _queue.Count > before;
+        }
+
+        /// <summary>
+        /// True once if a confirm key (Space, Enter) was pressed since the last call, then clears it. Pressed even
+        /// while <see cref="GameplayEnabled"/> is false (Game Over's primary button).
+        /// </summary>
+        public bool ConsumeConfirm()
+        {
+            bool pressed = _confirmPressed;
+            _confirmPressed = false;
+            return pressed;
+        }
+
+        /// <summary>
+        /// True once if any gameplay key, confirm key, tap or click started since the last call, then clears it.
+        /// The Ready prompt uses it to start the run (spec 002 12.1); pause and restart keys do not count.
+        /// </summary>
+        public bool ConsumeStartPress()
+        {
+            bool pressed = _startPressed;
+            _startPressed = false;
+            return pressed;
+        }
+
+        /// <summary>Feeds a confirm key press (tests).</summary>
+        public void InjectConfirm()
+        {
+            OnKey(InputCommand.None, RunMetaAction.None, true);
         }
 
         /// <summary>Feeds a meta action (tests).</summary>
@@ -116,6 +159,11 @@ namespace JungleBooze.Gameplay.Controls
         /// </summary>
         public void FeedPointer(bool pressedThisFrame, bool isPressed, Vector2 screenPixels, double nowSeconds)
         {
+            if (pressedThisFrame)
+            {
+                _startPressed = true;
+            }
+
             if (!_gameplayEnabled)
             {
                 if (_swipes.IsTracking)
@@ -161,12 +209,22 @@ namespace JungleBooze.Gameplay.Controls
 #endif
         }
 
-        private void OnKey(InputCommand command, RunMetaAction meta)
+        private void OnKey(InputCommand command, RunMetaAction meta, bool confirm)
         {
             if (meta != RunMetaAction.None)
             {
                 _pendingMeta = meta;
                 return;
+            }
+
+            if (confirm)
+            {
+                _confirmPressed = true;
+            }
+
+            if (confirm || command != InputCommand.None)
+            {
+                _startPressed = true;
             }
 
             if (_gameplayEnabled && command != InputCommand.None)
@@ -187,7 +245,10 @@ namespace JungleBooze.Gameplay.Controls
                     Key key = keys[i];
                     if (keyboard[key].wasPressedThisFrame)
                     {
-                        OnKey(KeyboardBindings.CommandForKey(key), KeyboardBindings.MetaActionForKey(key));
+                        OnKey(
+                            KeyboardBindings.CommandForKey(key),
+                            KeyboardBindings.MetaActionForKey(key),
+                            KeyboardBindings.IsConfirmKey(key));
                     }
                 }
             }
@@ -226,7 +287,10 @@ namespace JungleBooze.Gameplay.Controls
                 KeyCode code = codes[i];
                 if (UnityEngine.Input.GetKeyDown(code))
                 {
-                    OnKey(KeyboardBindings.CommandForKeyCode(code), KeyboardBindings.MetaActionForKeyCode(code));
+                    OnKey(
+                        KeyboardBindings.CommandForKeyCode(code),
+                        KeyboardBindings.MetaActionForKeyCode(code),
+                        KeyboardBindings.IsConfirmKeyCode(code));
                 }
             }
 

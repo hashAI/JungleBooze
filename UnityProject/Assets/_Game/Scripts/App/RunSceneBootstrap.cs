@@ -102,7 +102,7 @@ namespace JungleBooze.App
                 configs.Runner,
                 configs.SpeedCurve,
                 input,
-                new FlatRunWorldFactory(),
+                CreateWorldFactory(configs),
                 presentation.ToSessionTimings(),
                 sessionSeed);
 
@@ -122,6 +122,17 @@ namespace JungleBooze.App
             }
 
             return driver;
+        }
+
+        /// <summary>
+        /// THE SWAP POINT for the run world. First Playable stage C1 runs on endless flat ground
+        /// (<see cref="FlatRunWorldFactory"/>). Stage C2 returns the track world factory from
+        /// <c>Scripts/Gameplay/Track</c> here (built from the track configs added to <see cref="RunConfigSet"/>),
+        /// and adds the track, obstacle and coin views to the driver's view list in <see cref="Build"/>.
+        /// </summary>
+        private static IRunWorldFactory CreateWorldFactory(RunConfigSet configs)
+        {
+            return new FlatRunWorldFactory();
         }
 
         /// <summary>Session seed from the wall clock. Seeds pick the run; the simulation itself never reads the clock.</summary>
