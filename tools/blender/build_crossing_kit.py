@@ -9,7 +9,8 @@ Geometry is authored directly in Unity space (x right, y up, z forward; metres) 
 Conventions: Tree_Trunk origin = base centre; Tree_Branch local +X runs trunk -> path, origin at the trunk end;
 Vine_Liana hangs along -Y from the origin at its top; Vine_Tuft origin = centre, flower faces -Z.
 v2: Prop_Rock origin = base centre (about 1.3 x 0.7 x 1.1 m); Prop_Root origin = base centre, long axis X (2.0 x 0.5 x 0.5 m);
-Vine_Creeper hangs along -Y from its top (5 m, 4 cm thick, dark green, no gold/orange)."""
+Vine_Creeper hangs along -Y from its top (5 m, 4 cm thick, dark green, no gold/orange).
+v3: also builds the obstacle wave 1 pieces (Obst_*, see build_obstacle_wave1.py); --no-obstacles skips them."""
 import math, os, random, sys
 import bpy, bmesh
 from mathutils import Vector
@@ -25,9 +26,18 @@ PAL = {  # name: (base, shadow). Palette from tools/assetgen/jungle_crossing_pro
     "orange":   ("#F28C28", "#B5651D"),
     "stone":    ("#8A7B68", "#4E463C"),   # v2 (same family as the gray-box rock colour)
     "creeper":  ("#2B6B3A", "#143D2A"),   # v2: thin dark-green creeper, darker than the live liana
+    # v3 (obstacle wave 1, spec 005): rows are APPENDED so every earlier row keeps its index and colour.
+    "soil":      ("#7A5C3E", "#3F2E21"),  # displaced soil, lips, wallow rim
+    "pad":       ("#3A2F2A", "#1E1A24"),  # dark contact / bowl colour
+    "sand":      ("#D9C08E", "#9C8456"),  # sand bar, scuffed gravel
+    "heartwood": ("#E6D6B0", "#B39B6E"),  # splintered break (pale wood)
+    "thorn":     ("#3E4A2E", "#1F2A18"),  # thorn green (spec 005 section 9)
+    "ink":       ("#1E1A24", "#0F0D12"),  # style guide ink: thorn tips, mark flanks
+    "ochre":     ("#D7263D", "#8F1A2A"),  # HAZARD RED, red-ochre trail marks ONLY (spec 005 G8), always flanked by ink
+    "pod":       ("#B09A62", "#6E5C36"),  # seed pods (non-hazard colour)
 }
 ROWS = list(PAL)
-CW, CH, NCOL, NROW = 64, 32, 8, 16  # 512 px atlas: row (32 px) = colour, column (64 px) = shade (0 shadow band, 1 base, 2 light band)
+CW, CH, NCOL, NROW = 64, 16, 8, 32  # 512 px atlas: row (16 px, 32 rows since v3) = colour, column (64 px) = shade (0 shadow band, 1 base, 2 light band)
 W_ATLAS = CW * NCOL
 
 def hexc(h): return tuple(int(h[i:i + 2], 16) / 255 for i in (1, 3, 5))
@@ -39,14 +49,20 @@ def shade_color(name, s):
     if s == 1: return base
     return lerp(base, hexc("#FFE9A0"), 0.22)
 
+_ATLAS = None
 def atlas_pixels():
-    W = W_ATLAS; px = [0.0] * (W * CH * NROW * 4)
-    for y in range(W):
-        for x in range(W):
-            r, s = y // CH, x // CW
-            c = shade_color(ROWS[r], s) if r < len(ROWS) and s < 3 else (0.5, 0.5, 0.5)
-            i = (y * W + x) * 4; px[i:i + 4] = [c[0], c[1], c[2], 1.0]
-    return px
+    global _ATLAS
+    if _ATLAS is None:
+        W = W_ATLAS; rows = []
+        for y in range(W):
+            r = y // CH; line = []
+            for x in range(W):
+                s = x // CW
+                c = shade_color(ROWS[r], s) if r < len(ROWS) and s < 3 else (0.5, 0.5, 0.5)
+                line.extend((c[0], c[1], c[2], 1.0))
+            rows.append(line)
+        _ATLAS = [v for line in rows for v in line]
+    return _ATLAS
 
 LIGHT = Vector((0.35, 0.75, 0.55)).normalized()  # key from above-front (Unity space)
 
@@ -285,7 +301,11 @@ def build_creeper():
 def main():
     d = sys.argv[1]; glb = sys.argv[sys.argv.index("--glb-dir") + 1] if "--glb-dir" in sys.argv else None
     os.makedirs(d, exist_ok=True); total = {}
-    for fn in (build_trunk, build_branch, build_liana, build_tuft, build_fern, build_rock, build_root, build_creeper):
+    fns = [build_trunk, build_branch, build_liana, build_tuft, build_fern, build_rock, build_root, build_creeper]
+    if "--no-obstacles" not in sys.argv:  # v3: obstacle wave 1 (spec 005), same atlas, same exporter
+        import build_obstacle_wave1 as w1
+        fns += w1.builders()
+    for fn in fns:
         bpy.ops.wm.read_factory_settings(use_empty=True)
         b = fn(); total[b.name] = b.finish(d, glb)
     print(total)

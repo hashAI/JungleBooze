@@ -1,0 +1,634 @@
+{
+ "schema": "junglebooze.golden-trace.v2",
+ "name": "11_vine_missed_over_chasm",
+ "spec": "docs/specs/004-fixed-pivot-swing.md",
+ "description": "10 m/s on spec 001 movement over the 16 m chasm (rim at pivot-4, far edge pivot+12), vine at z=100. Jump on tick 54 is later than the grab window, the hero leaves the zone airborne-low/falls: no grab, the hero falls into the chasm (Died Fell; the vine layer relabels it MissedVine).",
+ "seed": 1011,
+ "generator": "tools/sim/pendulum_golden.py (pendulum_model.py, float64)",
+ "config": {
+  "ropeLengthM": 14.0,
+  "grabPointHeightM": 3.0,
+  "swingGravityMps2": 22.0,
+  "catchMinSpeedMps": 13.0,
+  "catchMaxSpeedMps": 16.0,
+  "grabMaxAngleDeg": 10.0,
+  "handToFeetM": 1.75,
+  "grabBlendMs": 100.0,
+  "swingMaxMs": 1600.0,
+  "goodStartMs": 450.0,
+  "perfectStartMs": 700.0,
+  "perfectWidthMs": 183.0,
+  "releaseBufferMs": 150.0,
+  "launchGravityMps2": 16.0,
+  "perfectImpulseMps": 3.0,
+  "goodImpulseMps": 1.5,
+  "poorImpulseMps": 0.0,
+  "impulseAngleDeg": 30.0,
+  "releaseMinForwardMps": 6.0,
+  "releaseMinUpMps": 2.0,
+  "chainArriveFeetM": 1.5,
+  "chainFlightMinS": 0.85,
+  "chainFlightMaxS": 1.5,
+  "chainSpacingM": 18.0
+ },
+ "derived": {
+  "pivotHeightM": 17.0,
+  "goodStartTick": 27,
+  "perfectStartTick": 42,
+  "perfectEndTickExclusive": 53,
+  "releaseBufferTicks": 9,
+  "swingMaxTicks": 96,
+  "grabBlendTicks": 6
+ },
+ "precision": "float64 reference; compare a float32 implementation within `tolerance`",
+ "vines": [
+  {
+   "id": 1,
+   "z": 100.0,
+   "lane": 1,
+   "row": 0,
+   "over_chasm": true
+  }
+ ],
+ "grab": null,
+ "speed": {
+  "fixedSpeedMps": 10.0,
+  "useStartRamp": false,
+  "speedMultiplier": 1.0
+ },
+ "startZ": 90.0,
+ "track": {
+  "kind": "gaps",
+  "gaps": [
+   {
+    "z0": 96.0,
+    "z1": 112.0,
+    "x0": -50.0,
+    "x1": 50.0
+   }
+  ]
+ },
+ "inputs": [
+  {
+   "tick": 54,
+   "cmd": "Jump"
+  }
+ ],
+ "expect": {
+  "jumpTick": 54,
+  "grabbed": false,
+  "died": true,
+  "deathCause": "Fell (sim classifies MissedVine: vine row within [-40, +16] m, not grabbed)",
+  "deathTick": 57,
+  "grabWindowJumpTicks": [
+   19,
+   42
+  ]
+ },
+ "tolerance": {
+  "x": 0.0001,
+  "y": 0.0001,
+  "z": 0.0001,
+  "theta": 5e-06,
+  "omega": 5e-06
+ },
+ "ticks": [
+  {
+   "t": 0,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 90.166667,
+   "state": "Running",
+   "events": []
+  },
+  {
+   "t": 1,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 90.333333,
+   "state": "Running",
+   "events": []
+  },
+  {
+   "t": 2,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 90.5,
+   "state": "Running",
+   "events": []
+  },
+  {
+   "t": 3,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 90.666667,
+   "state": "Running",
+   "events": []
+  },
+  {
+   "t": 4,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 90.833333,
+   "state": "Running",
+   "events": []
+  },
+  {
+   "t": 5,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 91.0,
+   "state": "Running",
+   "events": []
+  },
+  {
+   "t": 6,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 91.166667,
+   "state": "Running",
+   "events": []
+  },
+  {
+   "t": 7,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 91.333333,
+   "state": "Running",
+   "events": []
+  },
+  {
+   "t": 8,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 91.5,
+   "state": "Running",
+   "events": []
+  },
+  {
+   "t": 9,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 91.666667,
+   "state": "Running",
+   "events": []
+  },
+  {
+   "t": 10,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 91.833333,
+   "state": "Running",
+   "events": []
+  },
+  {
+   "t": 11,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 92.0,
+   "state": "Running",
+   "events": []
+  },
+  {
+   "t": 12,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 92.166667,
+   "state": "Running",
+   "events": []
+  },
+  {
+   "t": 13,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 92.333333,
+   "state": "Running",
+   "events": []
+  },
+  {
+   "t": 14,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 92.5,
+   "state": "Running",
+   "events": []
+  },
+  {
+   "t": 15,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 92.666667,
+   "state": "Running",
+   "events": []
+  },
+  {
+   "t": 16,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 92.833333,
+   "state": "Running",
+   "events": []
+  },
+  {
+   "t": 17,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 93.0,
+   "state": "Running",
+   "events": []
+  },
+  {
+   "t": 18,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 93.166667,
+   "state": "Running",
+   "events": []
+  },
+  {
+   "t": 19,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 93.333333,
+   "state": "Running",
+   "events": []
+  },
+  {
+   "t": 20,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 93.5,
+   "state": "Running",
+   "events": []
+  },
+  {
+   "t": 21,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 93.666667,
+   "state": "Running",
+   "events": []
+  },
+  {
+   "t": 22,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 93.833333,
+   "state": "Running",
+   "events": []
+  },
+  {
+   "t": 23,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 94.0,
+   "state": "Running",
+   "events": []
+  },
+  {
+   "t": 24,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 94.166667,
+   "state": "Running",
+   "events": []
+  },
+  {
+   "t": 25,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 94.333333,
+   "state": "Running",
+   "events": []
+  },
+  {
+   "t": 26,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 94.5,
+   "state": "Running",
+   "events": []
+  },
+  {
+   "t": 27,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 94.666667,
+   "state": "Running",
+   "events": []
+  },
+  {
+   "t": 28,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 94.833333,
+   "state": "Running",
+   "events": []
+  },
+  {
+   "t": 29,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 95.0,
+   "state": "Running",
+   "events": []
+  },
+  {
+   "t": 30,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 95.166667,
+   "state": "Running",
+   "events": []
+  },
+  {
+   "t": 31,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 95.333333,
+   "state": "Running",
+   "events": []
+  },
+  {
+   "t": 32,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 95.5,
+   "state": "Running",
+   "events": []
+  },
+  {
+   "t": 33,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 95.666667,
+   "state": "Running",
+   "events": []
+  },
+  {
+   "t": 34,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 95.833333,
+   "state": "Running",
+   "events": []
+  },
+  {
+   "t": 35,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 96.0,
+   "state": "Running",
+   "events": []
+  },
+  {
+   "t": 36,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 96.166667,
+   "state": "Running",
+   "events": []
+  },
+  {
+   "t": 37,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 96.333333,
+   "state": "Coyote",
+   "events": [
+    {
+     "type": "LeftGround",
+     "coyote": true
+    }
+   ]
+  },
+  {
+   "t": 38,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 96.5,
+   "state": "Coyote",
+   "events": []
+  },
+  {
+   "t": 39,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 96.666667,
+   "state": "Coyote",
+   "events": []
+  },
+  {
+   "t": 40,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 96.833333,
+   "state": "Coyote",
+   "events": []
+  },
+  {
+   "t": 41,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 97.0,
+   "state": "Coyote",
+   "events": []
+  },
+  {
+   "t": 42,
+   "cmd": [],
+   "x": 0.0,
+   "y": 0.0,
+   "z": 97.166667,
+   "state": "Falling",
+   "events": []
+  },
+  {
+   "t": 43,
+   "cmd": [],
+   "x": 0.0,
+   "y": -0.00463,
+   "z": 97.333333,
+   "state": "Falling",
+   "events": []
+  },
+  {
+   "t": 44,
+   "cmd": [],
+   "x": 0.0,
+   "y": -0.018519,
+   "z": 97.5,
+   "state": "Falling",
+   "events": []
+  },
+  {
+   "t": 45,
+   "cmd": [],
+   "x": 0.0,
+   "y": -0.041667,
+   "z": 97.666667,
+   "state": "Falling",
+   "events": []
+  },
+  {
+   "t": 46,
+   "cmd": [],
+   "x": 0.0,
+   "y": -0.074074,
+   "z": 97.833333,
+   "state": "Falling",
+   "events": []
+  },
+  {
+   "t": 47,
+   "cmd": [],
+   "x": 0.0,
+   "y": -0.115741,
+   "z": 98.0,
+   "state": "Falling",
+   "events": []
+  },
+  {
+   "t": 48,
+   "cmd": [],
+   "x": 0.0,
+   "y": -0.166667,
+   "z": 98.166667,
+   "state": "Falling",
+   "events": []
+  },
+  {
+   "t": 49,
+   "cmd": [],
+   "x": 0.0,
+   "y": -0.226852,
+   "z": 98.333333,
+   "state": "Falling",
+   "events": []
+  },
+  {
+   "t": 50,
+   "cmd": [],
+   "x": 0.0,
+   "y": -0.296296,
+   "z": 98.5,
+   "state": "Falling",
+   "events": []
+  },
+  {
+   "t": 51,
+   "cmd": [],
+   "x": 0.0,
+   "y": -0.375,
+   "z": 98.666667,
+   "state": "Falling",
+   "events": []
+  },
+  {
+   "t": 52,
+   "cmd": [],
+   "x": 0.0,
+   "y": -0.462963,
+   "z": 98.833333,
+   "state": "Falling",
+   "events": []
+  },
+  {
+   "t": 53,
+   "cmd": [],
+   "x": 0.0,
+   "y": -0.560185,
+   "z": 99.0,
+   "state": "Falling",
+   "events": []
+  },
+  {
+   "t": 54,
+   "cmd": [
+    "Jump"
+   ],
+   "x": 0.0,
+   "y": -0.666667,
+   "z": 99.166667,
+   "state": "Falling",
+   "events": []
+  },
+  {
+   "t": 55,
+   "cmd": [],
+   "x": 0.0,
+   "y": -0.782407,
+   "z": 99.333333,
+   "state": "Falling",
+   "events": []
+  },
+  {
+   "t": 56,
+   "cmd": [],
+   "x": 0.0,
+   "y": -0.907407,
+   "z": 99.5,
+   "state": "Falling",
+   "events": []
+  },
+  {
+   "t": 57,
+   "cmd": [],
+   "x": 0.0,
+   "y": -1.041667,
+   "z": 99.666667,
+   "state": "Dead",
+   "events": [
+    {
+     "type": "Died",
+     "cause": "Fell",
+     "archetype": null,
+     "obstacleId": null,
+     "afterStumble": false
+    }
+   ]
+  }
+ ]
+}

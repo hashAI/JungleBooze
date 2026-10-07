@@ -1,0 +1,2126 @@
+{
+ "schema": "junglebooze.golden-trace.v2",
+ "name": "10_vine_chain_two",
+ "spec": "docs/specs/004-fixed-pivot-swing.md",
+ "description": "Chain of two vines 18 m apart (zigzag lanes 0 and 2). Entry 21 m/s clamps to 16 m/s; Perfect release at swing tick 47 is guided to vine B (T clamped to [0.85, 1.5] s, arrival feet 1.5 m, gravity 16); B is caught automatically on the first tick the zone test passes; second swing starts at the arrival vx (clamped to 13..16); Good release at swing tick 40; free landing on the pad.",
+ "seed": 1010,
+ "generator": "tools/sim/pendulum_golden.py (pendulum_model.py, float64)",
+ "config": {
+  "ropeLengthM": 14.0,
+  "grabPointHeightM": 3.0,
+  "swingGravityMps2": 22.0,
+  "catchMinSpeedMps": 13.0,
+  "catchMaxSpeedMps": 16.0,
+  "grabMaxAngleDeg": 10.0,
+  "handToFeetM": 1.75,
+  "grabBlendMs": 100.0,
+  "swingMaxMs": 1600.0,
+  "goodStartMs": 450.0,
+  "perfectStartMs": 700.0,
+  "perfectWidthMs": 183.0,
+  "releaseBufferMs": 150.0,
+  "launchGravityMps2": 16.0,
+  "perfectImpulseMps": 3.0,
+  "goodImpulseMps": 1.5,
+  "poorImpulseMps": 0.0,
+  "impulseAngleDeg": 30.0,
+  "releaseMinForwardMps": 6.0,
+  "releaseMinUpMps": 2.0,
+  "chainArriveFeetM": 1.5,
+  "chainFlightMinS": 0.85,
+  "chainFlightMaxS": 1.5,
+  "chainSpacingM": 18.0
+ },
+ "derived": {
+  "pivotHeightM": 17.0,
+  "goodStartTick": 27,
+  "perfectStartTick": 42,
+  "perfectEndTickExclusive": 53,
+  "releaseBufferTicks": 9,
+  "swingMaxTicks": 96,
+  "grabBlendTicks": 6
+ },
+ "precision": "float64 reference; compare a float32 implementation within `tolerance`",
+ "vines": [
+  {
+   "id": 1,
+   "z": 100.0,
+   "lane": 0,
+   "row": 0,
+   "over_chasm": false
+  },
+  {
+   "id": 2,
+   "z": 118.0,
+   "lane": 2,
+   "row": 1,
+   "over_chasm": false
+  }
+ ],
+ "grab": {
+  "tick": 0,
+  "vIn": 21.0,
+  "z": 98.9,
+  "y": 1.2,
+  "x": -2.4,
+  "vineId": 1
+ },
+ "speed": {
+  "speedMultiplier": 1.0
+ },
+ "inputs": [
+  {
+   "tick": 47,
+   "cmd": "Jump",
+   "note": "release swipe A (swing tick of A)"
+  },
+  {
+   "tick": 130,
+   "cmd": "Jump",
+   "note": "release swipe B (global tick; swing tick 40 of B)"
+  }
+ ],
+ "expect": {
+  "catchSpeedA": 16.0,
+  "releaseTickA": 47,
+  "gradeA": "Perfect",
+  "guidedFlight": {
+   "T": 0.85,
+   "vx": 10.493631,
+   "vy": 3.159766
+  },
+  "grabTickB": 90,
+  "grabZB": 116.775743,
+  "grabYB": 2.609138,
+  "arrivalVxB": 10.493631,
+  "catchSpeedB": 13.0,
+  "releaseTickB": 40,
+  "gradeB": "Good",
+  "landingTick": 191,
+  "landingZ": 135.149014
+ },
+ "tolerance": {
+  "x": 0.0001,
+  "y": 0.0001,
+  "z": 0.0001,
+  "theta": 5e-06,
+  "omega": 5e-06
+ },
+ "ticks": [
+  {
+   "t": 0,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 1.2,
+   "z": 98.9,
+   "hand_y": 2.95,
+   "swing": {
+    "theta": -0.078652,
+    "omega": 1.142857
+   },
+   "events": [
+    {
+     "type": "VineGrabbed",
+     "vIn": 21.0,
+     "catchSpeed": 16.0
+    }
+   ]
+  },
+  {
+   "t": 1,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 1.210055,
+   "z": 99.166505,
+   "hand_y": 2.960055,
+   "swing": {
+    "theta": -0.059571,
+    "omega": 1.144915
+   },
+   "events": []
+  },
+  {
+   "t": 2,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 1.220001,
+   "z": 99.433677,
+   "hand_y": 2.970001,
+   "swing": {
+    "theta": -0.040463,
+    "omega": 1.146474
+   },
+   "events": []
+  },
+  {
+   "t": 3,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 1.229866,
+   "z": 99.701303,
+   "hand_y": 2.979866,
+   "swing": {
+    "theta": -0.021337,
+    "omega": 1.147534
+   },
+   "events": []
+  },
+  {
+   "t": 4,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 1.239669,
+   "z": 99.969169,
+   "hand_y": 2.989669,
+   "swing": {
+    "theta": -0.002202,
+    "omega": 1.148092
+   },
+   "events": []
+  },
+  {
+   "t": 5,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 1.249416,
+   "z": 100.237059,
+   "hand_y": 2.999416,
+   "swing": {
+    "theta": 0.016934,
+    "omega": 1.14815
+   },
+   "events": []
+  },
+  {
+   "t": 6,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 1.259102,
+   "z": 100.504759,
+   "hand_y": 3.009102,
+   "swing": {
+    "theta": 0.036062,
+    "omega": 1.147707
+   },
+   "events": []
+  },
+  {
+   "t": 7,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 1.271304,
+   "z": 100.772055,
+   "hand_y": 3.021304,
+   "swing": {
+    "theta": 0.055175,
+    "omega": 1.146762
+   },
+   "events": []
+  },
+  {
+   "t": 8,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 1.288588,
+   "z": 101.038732,
+   "hand_y": 3.038588,
+   "swing": {
+    "theta": 0.074263,
+    "omega": 1.145318
+   },
+   "events": []
+  },
+  {
+   "t": 9,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 1.310916,
+   "z": 101.304579,
+   "hand_y": 3.060916,
+   "swing": {
+    "theta": 0.09332,
+    "omega": 1.143375
+   },
+   "events": []
+  },
+  {
+   "t": 10,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 1.338242,
+   "z": 101.569387,
+   "hand_y": 3.088242,
+   "swing": {
+    "theta": 0.112335,
+    "omega": 1.140934
+   },
+   "events": []
+  },
+  {
+   "t": 11,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 1.370508,
+   "z": 101.832948,
+   "hand_y": 3.120508,
+   "swing": {
+    "theta": 0.131302,
+    "omega": 1.137998
+   },
+   "events": []
+  },
+  {
+   "t": 12,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 1.407647,
+   "z": 102.095059,
+   "hand_y": 3.157647,
+   "swing": {
+    "theta": 0.150211,
+    "omega": 1.134569
+   },
+   "events": []
+  },
+  {
+   "t": 13,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 1.449582,
+   "z": 102.355519,
+   "hand_y": 3.199582,
+   "swing": {
+    "theta": 0.169055,
+    "omega": 1.13065
+   },
+   "events": []
+  },
+  {
+   "t": 14,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 1.496226,
+   "z": 102.614133,
+   "hand_y": 3.246226,
+   "swing": {
+    "theta": 0.187826,
+    "omega": 1.126243
+   },
+   "events": []
+  },
+  {
+   "t": 15,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 1.547481,
+   "z": 102.870709,
+   "hand_y": 3.297481,
+   "swing": {
+    "theta": 0.206515,
+    "omega": 1.121353
+   },
+   "events": []
+  },
+  {
+   "t": 16,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 1.603242,
+   "z": 103.125061,
+   "hand_y": 3.353242,
+   "swing": {
+    "theta": 0.225115,
+    "omega": 1.115983
+   },
+   "events": []
+  },
+  {
+   "t": 17,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 1.663396,
+   "z": 103.377007,
+   "hand_y": 3.413396,
+   "swing": {
+    "theta": 0.243617,
+    "omega": 1.110137
+   },
+   "events": []
+  },
+  {
+   "t": 18,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 1.727818,
+   "z": 103.626374,
+   "hand_y": 3.477818,
+   "swing": {
+    "theta": 0.262014,
+    "omega": 1.103819
+   },
+   "events": []
+  },
+  {
+   "t": 19,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 1.796379,
+   "z": 103.872993,
+   "hand_y": 3.546379,
+   "swing": {
+    "theta": 0.280298,
+    "omega": 1.097035
+   },
+   "events": []
+  },
+  {
+   "t": 20,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 1.86894,
+   "z": 104.116701,
+   "hand_y": 3.61894,
+   "swing": {
+    "theta": 0.298461,
+    "omega": 1.08979
+   },
+   "events": []
+  },
+  {
+   "t": 21,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 1.945356,
+   "z": 104.357343,
+   "hand_y": 3.695356,
+   "swing": {
+    "theta": 0.316496,
+    "omega": 1.082088
+   },
+   "events": []
+  },
+  {
+   "t": 22,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 2.025474,
+   "z": 104.594772,
+   "hand_y": 3.775474,
+   "swing": {
+    "theta": 0.334395,
+    "omega": 1.073937
+   },
+   "events": []
+  },
+  {
+   "t": 23,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 2.109138,
+   "z": 104.828845,
+   "hand_y": 3.859138,
+   "swing": {
+    "theta": 0.352151,
+    "omega": 1.065341
+   },
+   "events": []
+  },
+  {
+   "t": 24,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 2.196183,
+   "z": 105.059432,
+   "hand_y": 3.946183,
+   "swing": {
+    "theta": 0.369756,
+    "omega": 1.056308
+   },
+   "events": []
+  },
+  {
+   "t": 25,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 2.286439,
+   "z": 105.286405,
+   "hand_y": 4.036439,
+   "swing": {
+    "theta": 0.387203,
+    "omega": 1.046843
+   },
+   "events": []
+  },
+  {
+   "t": 26,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 2.379733,
+   "z": 105.509648,
+   "hand_y": 4.129733,
+   "swing": {
+    "theta": 0.404486,
+    "omega": 1.036953
+   },
+   "events": []
+  },
+  {
+   "t": 27,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 2.475886,
+   "z": 105.729051,
+   "hand_y": 4.225886,
+   "swing": {
+    "theta": 0.421597,
+    "omega": 1.026646
+   },
+   "events": []
+  },
+  {
+   "t": 28,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 2.574718,
+   "z": 105.944512,
+   "hand_y": 4.324718,
+   "swing": {
+    "theta": 0.438529,
+    "omega": 1.015928
+   },
+   "events": []
+  },
+  {
+   "t": 29,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 2.676042,
+   "z": 106.155939,
+   "hand_y": 4.426042,
+   "swing": {
+    "theta": 0.455276,
+    "omega": 1.004808
+   },
+   "events": []
+  },
+  {
+   "t": 30,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 2.779671,
+   "z": 106.363246,
+   "hand_y": 4.529671,
+   "swing": {
+    "theta": 0.471831,
+    "omega": 0.993291
+   },
+   "events": []
+  },
+  {
+   "t": 31,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 2.885415,
+   "z": 106.566356,
+   "hand_y": 4.635415,
+   "swing": {
+    "theta": 0.488187,
+    "omega": 0.981387
+   },
+   "events": []
+  },
+  {
+   "t": 32,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 2.993081,
+   "z": 106.7652,
+   "hand_y": 4.743081,
+   "swing": {
+    "theta": 0.504339,
+    "omega": 0.969103
+   },
+   "events": []
+  },
+  {
+   "t": 33,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 3.102476,
+   "z": 106.959717,
+   "hand_y": 4.852476,
+   "swing": {
+    "theta": 0.52028,
+    "omega": 0.956447
+   },
+   "events": []
+  },
+  {
+   "t": 34,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 3.213407,
+   "z": 107.149854,
+   "hand_y": 4.963407,
+   "swing": {
+    "theta": 0.536003,
+    "omega": 0.943428
+   },
+   "events": []
+  },
+  {
+   "t": 35,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 3.325677,
+   "z": 107.335566,
+   "hand_y": 5.075677,
+   "swing": {
+    "theta": 0.551504,
+    "omega": 0.930052
+   },
+   "events": []
+  },
+  {
+   "t": 36,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 3.439093,
+   "z": 107.516813,
+   "hand_y": 5.189093,
+   "swing": {
+    "theta": 0.566776,
+    "omega": 0.916329
+   },
+   "events": []
+  },
+  {
+   "t": 37,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 3.55346,
+   "z": 107.693566,
+   "hand_y": 5.30346,
+   "swing": {
+    "theta": 0.581814,
+    "omega": 0.902267
+   },
+   "events": []
+  },
+  {
+   "t": 38,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 3.668586,
+   "z": 107.865802,
+   "hand_y": 5.418586,
+   "swing": {
+    "theta": 0.596612,
+    "omega": 0.887874
+   },
+   "events": []
+  },
+  {
+   "t": 39,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 3.784276,
+   "z": 108.033503,
+   "hand_y": 5.534276,
+   "swing": {
+    "theta": 0.611165,
+    "omega": 0.873159
+   },
+   "events": []
+  },
+  {
+   "t": 40,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 3.900341,
+   "z": 108.196661,
+   "hand_y": 5.650341,
+   "swing": {
+    "theta": 0.625467,
+    "omega": 0.858131
+   },
+   "events": []
+  },
+  {
+   "t": 41,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 4.016593,
+   "z": 108.355271,
+   "hand_y": 5.766593,
+   "swing": {
+    "theta": 0.639513,
+    "omega": 0.842797
+   },
+   "events": []
+  },
+  {
+   "t": 42,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 4.132843,
+   "z": 108.509337,
+   "hand_y": 5.882843,
+   "swing": {
+    "theta": 0.6533,
+    "omega": 0.827166
+   },
+   "events": []
+  },
+  {
+   "t": 43,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 4.248909,
+   "z": 108.658868,
+   "hand_y": 5.998909,
+   "swing": {
+    "theta": 0.66682,
+    "omega": 0.811247
+   },
+   "events": []
+  },
+  {
+   "t": 44,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 4.364608,
+   "z": 108.803877,
+   "hand_y": 6.114608,
+   "swing": {
+    "theta": 0.680071,
+    "omega": 0.795049
+   },
+   "events": []
+  },
+  {
+   "t": 45,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 4.479763,
+   "z": 108.944384,
+   "hand_y": 6.229763,
+   "swing": {
+    "theta": 0.693047,
+    "omega": 0.778579
+   },
+   "events": []
+  },
+  {
+   "t": 46,
+   "state": "Carried",
+   "x": -2.4,
+   "y": 4.594199,
+   "z": 109.080413,
+   "hand_y": 6.344199,
+   "swing": {
+    "theta": 0.705745,
+    "omega": 0.761846
+   },
+   "events": []
+  },
+  {
+   "t": 47,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 4.64464,
+   "z": 109.255307,
+   "launch": {
+    "vx": 10.493631,
+    "vy": 3.159766,
+    "y0": 4.594199,
+    "vxRaw": 10.716157,
+    "vyRaw": 8.417878
+   },
+   "events": [
+    {
+     "type": "VineReleased",
+     "grade": "Perfect",
+     "auto": false
+    }
+   ]
+  },
+  {
+   "t": 48,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 4.690636,
+   "z": 109.430201,
+   "events": []
+  },
+  {
+   "t": 49,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 4.732187,
+   "z": 109.605095,
+   "events": []
+  },
+  {
+   "t": 50,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 4.769295,
+   "z": 109.779989,
+   "events": []
+  },
+  {
+   "t": 51,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 4.801957,
+   "z": 109.954883,
+   "events": []
+  },
+  {
+   "t": 52,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 4.830176,
+   "z": 110.129777,
+   "events": []
+  },
+  {
+   "t": 53,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 4.85395,
+   "z": 110.30467,
+   "events": []
+  },
+  {
+   "t": 54,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 4.873279,
+   "z": 110.479564,
+   "events": []
+  },
+  {
+   "t": 55,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 4.888164,
+   "z": 110.654458,
+   "events": []
+  },
+  {
+   "t": 56,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 4.898605,
+   "z": 110.829352,
+   "events": []
+  },
+  {
+   "t": 57,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 4.904601,
+   "z": 111.004246,
+   "events": []
+  },
+  {
+   "t": 58,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 4.906152,
+   "z": 111.17914,
+   "events": []
+  },
+  {
+   "t": 59,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 4.90326,
+   "z": 111.354034,
+   "events": []
+  },
+  {
+   "t": 60,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 4.895922,
+   "z": 111.528927,
+   "events": []
+  },
+  {
+   "t": 61,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 4.884141,
+   "z": 111.703821,
+   "events": []
+  },
+  {
+   "t": 62,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 4.867914,
+   "z": 111.878715,
+   "events": []
+  },
+  {
+   "t": 63,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 4.847244,
+   "z": 112.053609,
+   "events": []
+  },
+  {
+   "t": 64,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 4.822129,
+   "z": 112.228503,
+   "events": []
+  },
+  {
+   "t": 65,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 4.792569,
+   "z": 112.403397,
+   "events": []
+  },
+  {
+   "t": 66,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 4.758566,
+   "z": 112.578291,
+   "events": []
+  },
+  {
+   "t": 67,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 4.720117,
+   "z": 112.753184,
+   "events": []
+  },
+  {
+   "t": 68,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 4.677224,
+   "z": 112.928078,
+   "events": []
+  },
+  {
+   "t": 69,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 4.629887,
+   "z": 113.102972,
+   "events": []
+  },
+  {
+   "t": 70,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 4.578105,
+   "z": 113.277866,
+   "events": []
+  },
+  {
+   "t": 71,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 4.521879,
+   "z": 113.45276,
+   "events": []
+  },
+  {
+   "t": 72,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 4.461209,
+   "z": 113.627654,
+   "events": []
+  },
+  {
+   "t": 73,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 4.396094,
+   "z": 113.802548,
+   "events": []
+  },
+  {
+   "t": 74,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 4.326534,
+   "z": 113.977441,
+   "events": []
+  },
+  {
+   "t": 75,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 4.25253,
+   "z": 114.152335,
+   "events": []
+  },
+  {
+   "t": 76,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 4.174082,
+   "z": 114.327229,
+   "events": []
+  },
+  {
+   "t": 77,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 4.091189,
+   "z": 114.502123,
+   "events": []
+  },
+  {
+   "t": 78,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 4.003852,
+   "z": 114.677017,
+   "events": []
+  },
+  {
+   "t": 79,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 3.91207,
+   "z": 114.851911,
+   "events": []
+  },
+  {
+   "t": 80,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 3.815844,
+   "z": 115.026804,
+   "events": []
+  },
+  {
+   "t": 81,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 3.715174,
+   "z": 115.201698,
+   "events": []
+  },
+  {
+   "t": 82,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 3.610059,
+   "z": 115.376592,
+   "events": []
+  },
+  {
+   "t": 83,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 3.500499,
+   "z": 115.551486,
+   "events": []
+  },
+  {
+   "t": 84,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 3.386495,
+   "z": 115.72638,
+   "events": []
+  },
+  {
+   "t": 85,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 3.268047,
+   "z": 115.901274,
+   "events": []
+  },
+  {
+   "t": 86,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 3.145154,
+   "z": 116.076168,
+   "events": []
+  },
+  {
+   "t": 87,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 3.017817,
+   "z": 116.251061,
+   "events": []
+  },
+  {
+   "t": 88,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 2.886035,
+   "z": 116.425955,
+   "events": []
+  },
+  {
+   "t": 89,
+   "state": "Falling",
+   "x": -2.4,
+   "y": 2.749809,
+   "z": 116.600849,
+   "events": []
+  },
+  {
+   "t": 90,
+   "state": "Carried",
+   "x": 2.4,
+   "y": 2.609138,
+   "z": 116.775743,
+   "hand_y": 4.359138,
+   "swing": {
+    "theta": -0.087559,
+    "omega": 0.928571
+   },
+   "events": [
+    {
+     "type": "VineGrabbed",
+     "vIn": 10.493631,
+     "catchSpeed": 13.0,
+     "chain": true
+    }
+   ]
+  },
+  {
+   "t": 91,
+   "state": "Carried",
+   "x": 2.4,
+   "y": 2.192919,
+   "z": 116.992251,
+   "hand_y": 3.942919,
+   "swing": {
+    "theta": -0.072044,
+    "omega": 0.930862
+   },
+   "events": []
+  },
+  {
+   "t": 92,
+   "state": "Carried",
+   "x": 2.4,
+   "y": 1.852564,
+   "z": 117.20944,
+   "hand_y": 3.602564,
+   "swing": {
+    "theta": -0.056499,
+    "omega": 0.932747
+   },
+   "events": []
+  },
+  {
+   "t": 93,
+   "state": "Carried",
+   "x": 2.4,
+   "y": 1.588101,
+   "z": 117.427165,
+   "hand_y": 3.338101,
+   "swing": {
+    "theta": -0.040928,
+    "omega": 0.934226
+   },
+   "events": []
+  },
+  {
+   "t": 94,
+   "state": "Carried",
+   "x": 2.4,
+   "y": 1.399551,
+   "z": 117.645279,
+   "hand_y": 3.149551,
+   "swing": {
+    "theta": -0.02534,
+    "omega": 0.935298
+   },
+   "events": []
+  },
+  {
+   "t": 95,
+   "state": "Carried",
+   "x": 2.4,
+   "y": 1.286928,
+   "z": 117.863635,
+   "hand_y": 3.036928,
+   "swing": {
+    "theta": -0.009741,
+    "omega": 0.935961
+   },
+   "events": []
+  },
+  {
+   "t": 96,
+   "state": "Carried",
+   "x": 2.4,
+   "y": 1.250241,
+   "z": 118.082082,
+   "hand_y": 3.000241,
+   "swing": {
+    "theta": 0.005863,
+    "omega": 0.936216
+   },
+   "events": []
+  },
+  {
+   "t": 97,
+   "state": "Carried",
+   "x": 2.4,
+   "y": 1.253225,
+   "z": 118.300474,
+   "hand_y": 3.003225,
+   "swing": {
+    "theta": 0.021464,
+    "omega": 0.936063
+   },
+   "events": []
+  },
+  {
+   "t": 98,
+   "state": "Carried",
+   "x": 2.4,
+   "y": 1.259611,
+   "z": 118.518662,
+   "hand_y": 3.009611,
+   "swing": {
+    "theta": 0.037056,
+    "omega": 0.935501
+   },
+   "events": []
+  },
+  {
+   "t": 99,
+   "state": "Carried",
+   "x": 2.4,
+   "y": 1.269386,
+   "z": 118.736498,
+   "hand_y": 3.019386,
+   "swing": {
+    "theta": 0.052631,
+    "omega": 0.93453
+   },
+   "events": []
+  },
+  {
+   "t": 100,
+   "state": "Carried",
+   "x": 2.4,
+   "y": 1.282531,
+   "z": 118.953834,
+   "hand_y": 3.032531,
+   "swing": {
+    "theta": 0.068184,
+    "omega": 0.933152
+   },
+   "events": []
+  },
+  {
+   "t": 101,
+   "state": "Carried",
+   "x": 2.4,
+   "y": 1.299019,
+   "z": 119.170525,
+   "hand_y": 3.049019,
+   "swing": {
+    "theta": 0.083707,
+    "omega": 0.931368
+   },
+   "events": []
+  },
+  {
+   "t": 102,
+   "state": "Carried",
+   "x": 2.4,
+   "y": 1.318818,
+   "z": 119.386425,
+   "hand_y": 3.068818,
+   "swing": {
+    "theta": 0.099193,
+    "omega": 0.929178
+   },
+   "events": []
+  },
+  {
+   "t": 103,
+   "state": "Carried",
+   "x": 2.4,
+   "y": 1.341889,
+   "z": 119.601391,
+   "hand_y": 3.091889,
+   "swing": {
+    "theta": 0.114636,
+    "omega": 0.926585
+   },
+   "events": []
+  },
+  {
+   "t": 104,
+   "state": "Carried",
+   "x": 2.4,
+   "y": 1.368186,
+   "z": 119.815283,
+   "hand_y": 3.118186,
+   "swing": {
+    "theta": 0.130029,
+    "omega": 0.923589
+   },
+   "events": []
+  },
+  {
+   "t": 105,
+   "state": "Carried",
+   "x": 2.4,
+   "y": 1.397658,
+   "z": 120.02796,
+   "hand_y": 3.147658,
+   "swing": {
+    "theta": 0.145366,
+    "omega": 0.920193
+   },
+   "events": []
+  },
+  {
+   "t": 106,
+   "state": "Carried",
+   "x": 2.4,
+   "y": 1.430246,
+   "z": 120.239287,
+   "hand_y": 3.180246,
+   "swing": {
+    "theta": 0.160639,
+    "omega": 0.916399
+   },
+   "events": []
+  },
+  {
+   "t": 107,
+   "state": "Carried",
+   "x": 2.4,
+   "y": 1.465887,
+   "z": 120.449128,
+   "hand_y": 3.215887,
+   "swing": {
+    "theta": 0.175843,
+    "omega": 0.91221
+   },
+   "events": []
+  },
+  {
+   "t": 108,
+   "state": "Carried",
+   "x": 2.4,
+   "y": 1.504511,
+   "z": 120.657354,
+   "hand_y": 3.254511,
+   "swing": {
+    "theta": 0.19097,
+    "omega": 0.907628
+   },
+   "events": []
+  },
+  {
+   "t": 109,
+   "state": "Carried",
+   "x": 2.4,
+   "y": 1.546043,
+   "z": 120.863837,
+   "hand_y": 3.296043,
+   "swing": {
+    "theta": 0.206014,
+    "omega": 0.902657
+   },
+   "events": []
+  },
+  {
+   "t": 110,
+   "state": "Carried",
+   "x": 2.4,
+   "y": 1.590402,
+   "z": 121.068451,
+   "hand_y": 3.340402,
+   "swing": {
+    "theta": 0.220969,
+    "omega": 0.8973
+   },
+   "events": []
+  },
+  {
+   "t": 111,
+   "state": "Carried",
+   "x": 2.4,
+   "y": 1.637504,
+   "z": 121.271078,
+   "hand_y": 3.387504,
+   "swing": {
+    "theta": 0.235828,
+    "omega": 0.891559
+   },
+   "events": []
+  },
+  {
+   "t": 112,
+   "state": "Carried",
+   "x": 2.4,
+   "y": 1.687257,
+   "z": 121.471598,
+   "hand_y": 3.437257,
+   "swing": {
+    "theta": 0.250586,
+    "omega": 0.88544
+   },
+   "events": []
+  },
+  {
+   "t": 113,
+   "state": "Carried",
+   "x": 2.4,
+   "y": 1.739566,
+   "z": 121.6699,
+   "hand_y": 3.489566,
+   "swing": {
+    "theta": 0.265235,
+    "omega": 0.878945
+   },
+   "events": []
+  },
+  {
+   "t": 114,
+   "state": "Carried",
+   "x": 2.4,
+   "y": 1.794332,
+   "z": 121.865876,
+   "hand_y": 3.544332,
+   "swing": {
+    "theta": 0.279769,
+    "omega": 0.87208
+   },
+   "events": []
+  },
+  {
+   "t": 115,
+   "state": "Carried",
+   "x": 2.4,
+   "y": 1.851451,
+   "z": 122.059419,
+   "hand_y": 3.601451,
+   "swing": {
+    "theta": 0.294183,
+    "omega": 0.864848
+   },
+   "events": []
+  },
+  {
+   "t": 116,
+   "state": "Carried",
+   "x": 2.4,
+   "y": 1.910816,
+   "z": 122.250431,
+   "hand_y": 3.660816,
+   "swing": {
+    "theta": 0.308471,
+    "omega": 0.857254
+   },
+   "events": []
+  },
+  {
+   "t": 117,
+   "state": "Carried",
+   "x": 2.4,
+   "y": 1.972315,
+   "z": 122.438815,
+   "hand_y": 3.722315,
+   "swing": {
+    "theta": 0.322626,
+    "omega": 0.849302
+   },
+   "events": []
+  },
+  {
+   "t": 118,
+   "state": "Carried",
+   "x": 2.4,
+   "y": 2.035835,
+   "z": 122.624482,
+   "hand_y": 3.785835,
+   "swing": {
+    "theta": 0.336643,
+    "omega": 0.840998
+   },
+   "events": []
+  },
+  {
+   "t": 119,
+   "state": "Carried",
+   "x": 2.4,
+   "y": 2.101257,
+   "z": 122.807344,
+   "hand_y": 3.851257,
+   "swing": {
+    "theta": 0.350515,
+    "omega": 0.832347
+   },
+   "events": []
+  },
+  {
+   "t": 120,
+   "state": "Carried",
+   "x": 2.4,
+   "y": 2.168462,
+   "z": 122.98732,
+   "hand_y": 3.918462,
+   "swing": {
+    "theta": 0.364238,
+    "omega": 0.823354
+   },
+   "events": []
+  },
+  {
+   "t": 121,
+   "state": "Carried",
+   "x": 2.4,
+   "y": 2.237327,
+   "z": 123.164333,
+   "hand_y": 3.987327,
+   "swing": {
+    "theta": 0.377805,
+    "omega": 0.814024
+   },
+   "events": []
+  },
+  {
+   "t": 122,
+   "state": "Carried",
+   "x": 2.4,
+   "y": 2.307727,
+   "z": 123.338313,
+   "hand_y": 4.057727,
+   "swing": {
+    "theta": 0.391211,
+    "omega": 0.804363
+   },
+   "events": []
+  },
+  {
+   "t": 123,
+   "state": "Carried",
+   "x": 2.4,
+   "y": 2.379537,
+   "z": 123.50919,
+   "hand_y": 4.129537,
+   "swing": {
+    "theta": 0.40445,
+    "omega": 0.794376
+   },
+   "events": []
+  },
+  {
+   "t": 124,
+   "state": "Carried",
+   "x": 2.4,
+   "y": 2.452627,
+   "z": 123.676904,
+   "hand_y": 4.202627,
+   "swing": {
+    "theta": 0.417518,
+    "omega": 0.78407
+   },
+   "events": []
+  },
+  {
+   "t": 125,
+   "state": "Carried",
+   "x": 2.4,
+   "y": 2.526868,
+   "z": 123.841396,
+   "hand_y": 4.276868,
+   "swing": {
+    "theta": 0.430409,
+    "omega": 0.77345
+   },
+   "events": []
+  },
+  {
+   "t": 126,
+   "state": "Carried",
+   "x": 2.4,
+   "y": 2.60213,
+   "z": 124.002615,
+   "hand_y": 4.35213,
+   "swing": {
+    "theta": 0.443118,
+    "omega": 0.762522
+   },
+   "events": []
+  },
+  {
+   "t": 127,
+   "state": "Carried",
+   "x": 2.4,
+   "y": 2.678282,
+   "z": 124.160511,
+   "hand_y": 4.428282,
+   "swing": {
+    "theta": 0.455639,
+    "omega": 0.751292
+   },
+   "events": []
+  },
+  {
+   "t": 128,
+   "state": "Carried",
+   "x": 2.4,
+   "y": 2.755191,
+   "z": 124.315041,
+   "hand_y": 4.505191,
+   "swing": {
+    "theta": 0.467969,
+    "omega": 0.739768
+   },
+   "events": []
+  },
+  {
+   "t": 129,
+   "state": "Carried",
+   "x": 2.4,
+   "y": 2.832726,
+   "z": 124.466167,
+   "hand_y": 4.582726,
+   "swing": {
+    "theta": 0.480101,
+    "omega": 0.727954
+   },
+   "events": []
+  },
+  {
+   "t": 130,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 2.921455,
+   "z": 124.638471,
+   "launch": {
+    "vx": 10.338239,
+    "vy": 5.45707,
+    "y0": 2.832726,
+    "vxRaw": 10.338239,
+    "vyRaw": 5.45707
+   },
+   "events": [
+    {
+     "type": "VineReleased",
+     "grade": "Good",
+     "auto": false
+    }
+   ]
+  },
+  {
+   "t": 131,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 3.00574,
+   "z": 124.810775,
+   "events": []
+  },
+  {
+   "t": 132,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 3.08558,
+   "z": 124.983079,
+   "events": []
+  },
+  {
+   "t": 133,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 3.160975,
+   "z": 125.155383,
+   "events": []
+  },
+  {
+   "t": 134,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 3.231927,
+   "z": 125.327687,
+   "events": []
+  },
+  {
+   "t": 135,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 3.298433,
+   "z": 125.499991,
+   "events": []
+  },
+  {
+   "t": 136,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 3.360496,
+   "z": 125.672295,
+   "events": []
+  },
+  {
+   "t": 137,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 3.418113,
+   "z": 125.844599,
+   "events": []
+  },
+  {
+   "t": 138,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 3.471287,
+   "z": 126.016903,
+   "events": []
+  },
+  {
+   "t": 139,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 3.520016,
+   "z": 126.189207,
+   "events": []
+  },
+  {
+   "t": 140,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 3.5643,
+   "z": 126.361511,
+   "events": []
+  },
+  {
+   "t": 141,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 3.60414,
+   "z": 126.533815,
+   "events": []
+  },
+  {
+   "t": 142,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 3.639536,
+   "z": 126.706119,
+   "events": []
+  },
+  {
+   "t": 143,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 3.670487,
+   "z": 126.878423,
+   "events": []
+  },
+  {
+   "t": 144,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 3.696994,
+   "z": 127.050727,
+   "events": []
+  },
+  {
+   "t": 145,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 3.719056,
+   "z": 127.223031,
+   "events": []
+  },
+  {
+   "t": 146,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 3.736674,
+   "z": 127.395335,
+   "events": []
+  },
+  {
+   "t": 147,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 3.749847,
+   "z": 127.567639,
+   "events": []
+  },
+  {
+   "t": 148,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 3.758576,
+   "z": 127.739942,
+   "events": []
+  },
+  {
+   "t": 149,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 3.762861,
+   "z": 127.912246,
+   "events": []
+  },
+  {
+   "t": 150,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 3.762701,
+   "z": 128.08455,
+   "events": []
+  },
+  {
+   "t": 151,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 3.758097,
+   "z": 128.256854,
+   "events": []
+  },
+  {
+   "t": 152,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 3.749048,
+   "z": 128.429158,
+   "events": []
+  },
+  {
+   "t": 153,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 3.735554,
+   "z": 128.601462,
+   "events": []
+  },
+  {
+   "t": 154,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 3.717617,
+   "z": 128.773766,
+   "events": []
+  },
+  {
+   "t": 155,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 3.695235,
+   "z": 128.94607,
+   "events": []
+  },
+  {
+   "t": 156,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 3.668408,
+   "z": 129.118374,
+   "events": []
+  },
+  {
+   "t": 157,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 3.637137,
+   "z": 129.290678,
+   "events": []
+  },
+  {
+   "t": 158,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 3.601421,
+   "z": 129.462982,
+   "events": []
+  },
+  {
+   "t": 159,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 3.561261,
+   "z": 129.635286,
+   "events": []
+  },
+  {
+   "t": 160,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 3.516657,
+   "z": 129.80759,
+   "events": []
+  },
+  {
+   "t": 161,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 3.467608,
+   "z": 129.979894,
+   "events": []
+  },
+  {
+   "t": 162,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 3.414115,
+   "z": 130.152198,
+   "events": []
+  },
+  {
+   "t": 163,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 3.356177,
+   "z": 130.324502,
+   "events": []
+  },
+  {
+   "t": 164,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 3.293795,
+   "z": 130.496806,
+   "events": []
+  },
+  {
+   "t": 165,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 3.226968,
+   "z": 130.66911,
+   "events": []
+  },
+  {
+   "t": 166,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 3.155697,
+   "z": 130.841414,
+   "events": []
+  },
+  {
+   "t": 167,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 3.079982,
+   "z": 131.013718,
+   "events": []
+  },
+  {
+   "t": 168,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 2.999822,
+   "z": 131.186022,
+   "events": []
+  },
+  {
+   "t": 169,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 2.915218,
+   "z": 131.358326,
+   "events": []
+  },
+  {
+   "t": 170,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 2.826169,
+   "z": 131.53063,
+   "events": []
+  },
+  {
+   "t": 171,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 2.732676,
+   "z": 131.702934,
+   "events": []
+  },
+  {
+   "t": 172,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 2.634738,
+   "z": 131.875238,
+   "events": []
+  },
+  {
+   "t": 173,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 2.532356,
+   "z": 132.047542,
+   "events": []
+  },
+  {
+   "t": 174,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 2.425529,
+   "z": 132.219846,
+   "events": []
+  },
+  {
+   "t": 175,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 2.314258,
+   "z": 132.39215,
+   "events": []
+  },
+  {
+   "t": 176,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 2.198542,
+   "z": 132.564454,
+   "events": []
+  },
+  {
+   "t": 177,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 2.078383,
+   "z": 132.736758,
+   "events": []
+  },
+  {
+   "t": 178,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 1.953778,
+   "z": 132.909062,
+   "events": []
+  },
+  {
+   "t": 179,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 1.824729,
+   "z": 133.081366,
+   "events": []
+  },
+  {
+   "t": 180,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 1.691236,
+   "z": 133.25367,
+   "events": []
+  },
+  {
+   "t": 181,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 1.553298,
+   "z": 133.425974,
+   "events": []
+  },
+  {
+   "t": 182,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 1.410916,
+   "z": 133.598278,
+   "events": []
+  },
+  {
+   "t": 183,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 1.26409,
+   "z": 133.770582,
+   "events": []
+  },
+  {
+   "t": 184,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 1.112819,
+   "z": 133.942886,
+   "events": []
+  },
+  {
+   "t": 185,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 0.957103,
+   "z": 134.11519,
+   "events": []
+  },
+  {
+   "t": 186,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 0.796943,
+   "z": 134.287494,
+   "events": []
+  },
+  {
+   "t": 187,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 0.632339,
+   "z": 134.459798,
+   "events": []
+  },
+  {
+   "t": 188,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 0.46329,
+   "z": 134.632102,
+   "events": []
+  },
+  {
+   "t": 189,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 0.289797,
+   "z": 134.804406,
+   "events": []
+  },
+  {
+   "t": 190,
+   "state": "Falling",
+   "x": 2.4,
+   "y": 0.111859,
+   "z": 134.97671,
+   "events": []
+  },
+  {
+   "t": 191,
+   "state": "Landed",
+   "x": 2.4,
+   "y": 0.0,
+   "z": 135.149014,
+   "events": [
+    {
+     "type": "Landed",
+     "fromVine": true
+    }
+   ]
+  }
+ ]
+}
