@@ -39,16 +39,41 @@ namespace JungleBooze.Gameplay.Runner
         /// <summary>Flags: Coyote (set when a coyote window was opened).</summary>
         LeftGround = 12,
 
-        /// <summary>Collision stage. Flags: Side or Top; ObstacleId; Archetype.</summary>
+        /// <summary>Flags: Side or Top; EntityId = obstacle id; Archetype.</summary>
         Stumbled = 13,
 
-        /// <summary>Collision stage.</summary>
+        /// <summary>The daze window after a stumble ran out.</summary>
         DazeEnded = 14,
 
-        /// <summary>Collision stage. ObstacleId.</summary>
+        /// <summary>EntityId = obstacle id; Archetype.</summary>
         NearMiss = 15,
 
-        /// <summary>Value = <see cref="DeathCause"/>, Archetype, ObstacleId, Flags: AfterStumble.</summary>
+        /// <summary>
+        /// Value = <see cref="DeathCause"/>, Archetype, EntityId = obstacle id (0 for a fall), Flags: AfterStumble.
+        /// </summary>
         Died = 16,
+
+        // ---- Spec 002 section 13.1 (track, coins, score). Append-only. ----
+
+        /// <summary>Value = chunk library index; Flags: ChunkMirrored, plus the chunk kind in the upper bits (track defines).</summary>
+        ChunkEntered = 17,
+
+        /// <summary>Value = tier.</summary>
+        TierChanged = 18,
+
+        /// <summary>EntityId = obstacle id, Lane = from lane, Value = to lane.</summary>
+        MoverStarted = 19,
+
+        /// <summary>EntityId = obstacle id, Lane = end lane.</summary>
+        MoverSettled = 20,
+
+        /// <summary>EntityId = coin id, Lane, Value = coin value.</summary>
+        CoinCollected = 21,
+
+        /// <summary>Value = streak length.</summary>
+        CoinStreak = 22,
+
+        /// <summary>Value = points; Flags: BonusNearMiss or BonusStreak.</summary>
+        ScoreBonus = 23,
     }
 }

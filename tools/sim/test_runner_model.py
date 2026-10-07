@@ -475,12 +475,14 @@ class CollisionTests(unittest.TestCase):
         by_tick = dict((p["tick"], p) for p in s)
         self.assertEqual(by_tick[stick + 9]["x"], 0.0)
         self.assertNotEqual(by_tick[stick + 8]["x"], 0.0)
+        # DazeTicksLeft = 180 on the stumble tick
         r2 = Runner(c, obstacles=[make_obstacle(c, 3, FULL_BLOCK, 2, 2.0, depth=6.0)])
         run(r2, {}, 20)
-        run(r2, {r2.tick: MOVE_RIGHT}, r2.stumbles and 0 or 1)
+        r2.step(MOVE_RIGHT)
         while not r2.stumbles:
             r2.step()
         self.assertEqual(r2.daze_left, 180)
+        self.assertEqual(r2.stumbles[0]["tick"], r2.tick - 1)
 
     def test_top_stumble_ac39(self):
         c = cfg()

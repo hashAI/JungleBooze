@@ -32,5 +32,14 @@ namespace JungleBooze.Gameplay.Runner
 
         /// <summary>Died: second stumble while dazed.</summary>
         public const byte AfterStumble = 1 << 0;
+
+        /// <summary>ChunkEntered: the chunk is mirrored.</summary>
+        public const byte ChunkMirrored = 1 << 0;
+
+        /// <summary>ScoreBonus: the bonus came from a near-miss.</summary>
+        public const byte BonusNearMiss = 1 << 0;
+
+        /// <summary>ScoreBonus: the bonus came from a completed coin streak.</summary>
+        public const byte BonusStreak = 1 << 1;
     }
 }

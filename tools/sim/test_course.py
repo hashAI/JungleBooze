@@ -97,10 +97,10 @@ def _pick(rng, weights):
     return weights[-1][0]
 
 
-def random_group(rng, cfg, z0, kinds=GROUP_WEIGHTS):
+def random_group(rng, cfg, z0, kinds=GROUP_WEIGHTS, gap_max=4.0):
     kind = _pick(rng, kinds)
     if kind == "gap":
-        length = rng.uniform(2.0, 4.0)
+        length = rng.uniform(2.0, gap_max)
         return Group("gap", z0, z0 + length, dict((l, GAP) for l in range(cfg.lane_count)), length)
     if kind == "single":
         lanes = {rng.randrange(cfg.lane_count): rng.choice(ARCHETYPES)}
@@ -136,7 +136,7 @@ def gauntlet_segment(seed, speed, tier, n_groups=3, lead_s=1.2, cfg=None):
     return Course(cfg, groups, start_lane, seed, speed, spacing, stretched)
 
 
-def run_course(seed, speed, tier, duration_s, cfg=None, lead_s=2.0):
+def run_course(seed, speed, tier, duration_s, cfg=None, lead_s=2.0, gap_max=4.0):
     """S4-S6 course: tier density for mean spacing, tier minimum as the floor."""
     rng = random.Random(seed)
     cfg = cfg or RunnerConfig(fixed_speed_mps=speed, use_start_ramp=False)
@@ -151,7 +151,7 @@ def run_course(seed, speed, tier, duration_s, cfg=None, lead_s=2.0):
     while z < length:
         z, s = _place(groups, z)
         stretched += s
-        g = random_group(rng, cfg, z)
+        g = random_group(rng, cfg, z, gap_max=gap_max)
         groups.append(g)
         z = g.z0 + rng.uniform(min_d, hi_d)
     return Course(cfg, groups, cfg.start_lane, seed, speed, t["min_spacing_s"], stretched)

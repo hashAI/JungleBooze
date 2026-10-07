@@ -151,6 +151,12 @@ PROFILES = {
     "average": SkillProfile("average", reaction_ms=400, timing_sigma_ms=67, error_rate=0.005),
     "new": SkillProfile("new", reaction_ms=600, timing_sigma_ms=100, error_rate=0.02),
 }
+# Same profiles with the decision-error rate set to 0: isolates deaths caused by timing alone,
+# which is the part the movement numbers control.
+for _k in list(PROFILES):
+    _p = PROFILES[_k]
+    PROFILES[_k + "-noerr"] = SkillProfile(_k + "-noerr", _p.reaction_ticks * 1000 / 60.0,
+                                          _p.sigma_ticks * 1000 / 60.0, 0.0)
 
 
 def _tick_when_z(r0_z, r0_tick, speed, z_target):

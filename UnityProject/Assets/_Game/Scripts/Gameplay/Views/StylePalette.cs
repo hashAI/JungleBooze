@@ -1,0 +1,57 @@
+using UnityEngine;
+
+namespace JungleBooze.Gameplay.Views
+{
+    /// <summary>
+    /// Colors from design/STYLE_GUIDE.md section 2 (sRGB hex; Unity converts to linear when set on a material).
+    /// Gray-box and HUD code takes every color from here, never from inline literals.
+    /// </summary>
+    public static class StylePalette
+    {
+        // 2.2 Core style palette.
+        public static readonly Color Ink = Hex(0x1E, 0x1A, 0x24);
+        public static readonly Color PulpOrange = Hex(0xF2, 0x8C, 0x28);
+        public static readonly Color SunGold = Hex(0xFF, 0xC4, 0x3D);
+        public static readonly Color CreamPath = Hex(0xF3, 0xDF, 0xB2);
+        public static readonly Color JungleGreen = Hex(0x3A, 0x8C, 0x3F);
+        public static readonly Color DeepCanopyTeal = Hex(0x1B, 0x4D, 0x4A);
+        public static readonly Color Parchment = Hex(0xF7, 0xE9, 0xC6);
+
+        // 2.1 Signal colors (coins only).
+        public static readonly Color CoinGold = Hex(0xFF, 0xD2, 0x3F);
+        public static readonly Color CoinRim = Hex(0xC9, 0x8A, 0x12);
+        public static readonly Color CoinGem = Hex(0x2E, 0xC4, 0xB6);
+
+        // 2.3 Pista ("Mapcloth").
+        public static readonly Color PistaMapCloth = Hex(0xEF, 0xE0, 0xBD);
+        public static readonly Color PistaMapLines = Hex(0x8A, 0x5A, 0x2B);
+        public static readonly Color PistaTealSash = Hex(0x17, 0x8F, 0x8A);
+        public static readonly Color PistaSatchelStrap = Hex(0xF2, 0xA9, 0x00);
+        public static readonly Color PistaSatchel = Hex(0x8C, 0x55, 0x30);
+        public static readonly Color PistaSkin = Hex(0x6B, 0x40, 0x29);
+        public static readonly Color PistaHair = Hex(0x2B, 0x1B, 0x14);
+
+        // Section 5, Jungle world column.
+        public static readonly Color JungleKeyLight = Hex(0xFF, 0xD2, 0x7A);
+        public static readonly Color JungleShadowTint = Hex(0x2E, 0x5B, 0x57);
+        public static readonly Color JungleFog = Hex(0xE9, 0xC9, 0x8A);
+        public static readonly Color JungleSkyHorizon = Hex(0xFF, 0xE3, 0xA3);
+
+        /// <summary>Second path tone so ground tiles visibly scroll (sun-bleached plank, section 5).</summary>
+        public static readonly Color PathAlternate = Hex(0xE9, 0xD3, 0xA6);
+
+        /// <summary>Blob shadow: ink at 35% over the cream path, baked into an opaque color (section 3).</summary>
+        public static readonly Color BlobShadow = Color.Lerp(CreamPath, Ink, 0.35f);
+
+        /// <summary>Lane marker dashes: ink at 25% over the cream path.</summary>
+        public static readonly Color LaneMarker = Color.Lerp(CreamPath, Ink, 0.25f);
+
+        /// <summary>Overlay behind HUD panels: ink at 55% opacity.</summary>
+        public static readonly Color Dim = new Color(Ink.r, Ink.g, Ink.b, 0.55f);
+
+        private static Color Hex(byte r, byte g, byte b)
+        {
+            return new Color32(r, g, b, 255);
+        }
+    }
+}

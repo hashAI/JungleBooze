@@ -298,7 +298,8 @@ MATRIX_SPEED = {1: 10.0, 2: 12.0, 3: 13.5, 4: 15.5, 5: 17.5, 6: 21.0}
 
 
 def _bot_run(setup, seed):
-    course = run_course(seed, setup["speed"], setup["tier"], setup["duration_s"])
+    course = run_course(seed, setup["speed"], setup["tier"], setup["duration_s"],
+                        gap_max=setup.get("gap_max", 4.0))
     bot = SkillBot(PROFILES[setup["bot"]], seed)
     plan = bot.plan(course)
     max_ticks = int(setup["duration_s"] * 60) + 90
@@ -365,14 +366,33 @@ def _summ(setup, runs):
                 median_ticks=sorted(r["ticks"] for r in runs)[n // 2])
 
 
+def _seed_slot(st):
+    """Variants reuse the seeds of the setup they compare against."""
+    order = {("S4", "expert"): 0, ("S5", "average"): 1, ("S6", "new"): 2,
+             ("S6-gap3", "new"): 2, ("S5-gap3", "average"): 1,
+             ("no-decision-errors", "expert-noerr"): 0, ("no-decision-errors", "average-noerr"): 1,
+             ("no-decision-errors", "new-noerr"): 2}
+    key = (st["target"], st["bot"])
+    if key in order:
+        return order[key]
+    return 10 + ("expert", "average", "new").index(st["bot"]) * 10 + st["tier"]
+
+
 def bots(workers=4, matrix_runs=300):
     setups = list(BOT_SETUPS)
     for bot in ("expert", "average", "new"):
         for tier, sp in sorted(MATRIX_SPEED.items()):
             setups.append(dict(target="matrix", bot=bot, speed=sp, tier=tier, duration_s=60, runs=matrix_runs))
+    # variants for recommendations (same seeds as the target setups)
+    setups.append(dict(target="S6-gap3", bot="new", speed=8.0, tier=1, duration_s=30, runs=1000, gap_max=3.0))
+    setups.append(dict(target="S5-gap3", bot="average", speed=10.0, tier=1, duration_s=60, runs=1000, gap_max=3.0))
+    for prof, er in (("expert", 0.0), ("average", 0.0), ("new", 0.0)):
+        setups.append(dict(target="no-decision-errors", bot=prof + "-noerr",
+                           speed=10.0 if prof != "new" else 8.0, tier=1,
+                           duration_s=60 if prof != "new" else 30, runs=1000))
     jobs = []
     for si, st in enumerate(setups):
-        base = 7000000 + si * 100000
+        base = 7000000 + _seed_slot(st) * 100000
         seeds = list(range(base, base + st["runs"]))
         for k in range(0, len(seeds), 100):
             jobs.append((st, seeds[k:k + 100]))
@@ -380,7 +400,7 @@ def bots(workers=4, matrix_runs=300):
         out = pool.map(_bot_job, jobs)
     per = {}
     for (st, _), chunk in zip(jobs, out):
-        key = "%s|%s|%s|%s" % (st["target"], st["bot"], st["tier"], st["speed"])
+        key = "%s|%s|%s|%s|%s" % (st["target"], st["bot"], st["tier"], st["speed"], st.get("gap_max", 4.0))
         per.setdefault(key, (st, []))[1].extend(chunk)
     summaries = [_summ(st, runs) for st, runs in per.values()]
     # write per-run rows for the three target setups

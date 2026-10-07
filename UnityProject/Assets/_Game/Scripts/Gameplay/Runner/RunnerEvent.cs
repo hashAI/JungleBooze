@@ -11,9 +11,20 @@ namespace JungleBooze.Gameplay.Runner
         public sbyte Dir;
         public byte Lane;
         public byte Flags;
-        public int ObstacleId;
+        /// <summary>
+        /// Obstacle id (Stumbled, NearMiss, Died, MoverStarted, MoverSettled) or coin id (CoinCollected); 0 if none.
+        /// Renamed from <c>ObstacleId</c> by spec 002 section 16.1.5.
+        /// </summary>
+        public int EntityId;
         public byte Archetype;
         public short Value;
+
+        /// <summary>Same field as <see cref="EntityId"/>, kept for code written against the spec 001 name.</summary>
+        public int ObstacleId
+        {
+            get => EntityId;
+            set => EntityId = value;
+        }
 
         public bool HasFlag(byte flag)
         {
@@ -22,7 +33,7 @@ namespace JungleBooze.Gameplay.Runner
 
         public override string ToString()
         {
-            return Type + "@" + Tick + " dir=" + Dir + " lane=" + Lane + " flags=" + Flags + " value=" + Value;
+            return Type + "@" + Tick + " dir=" + Dir + " lane=" + Lane + " flags=" + Flags + " value=" + Value + " entity=" + EntityId + " archetype=" + Archetype;
         }
     }
 }
