@@ -33,12 +33,12 @@ SEGMENT = 12.0
 
 # Source -> (atlas cell x, cell y, cells wide, cells high, decimate ratio). 4x4 grid of 256 px cells.
 SOURCES = {
-    "Foliage_TreeA": (0, 0, 2, 2, 0.62),
-    "Foliage_TreeB": (2, 0, 2, 2, 0.5),
-    "Foliage_CanopyTree": (0, 2, 2, 2, 0.55),
-    "Foliage_Bush": (2, 2, 1, 1, 0.6),
+    "Foliage_TreeA": (0, 0, 2, 2, 0.5),
+    "Foliage_TreeB": (2, 0, 2, 2, 0.42),
+    "Foliage_CanopyTree": (0, 2, 2, 2, 0.45),
+    "Foliage_Bush": (2, 2, 1, 1, 0.5),
     "Foliage_FernClump": (3, 2, 1, 1, 0.55),
-    "Foliage_BigLeaf": (2, 3, 1, 1, 0.4),
+    "Foliage_BigLeaf": (2, 3, 1, 1, 0.32),
     "Prop_RockCluster": (3, 3, 1, 0.75, 0.6),  # bottom quarter of this cell holds the flat swatches
 }
 
@@ -50,9 +50,9 @@ def hexc(h):
 # Flat swatches (sRGB), drawn in the strip under the rock texture. Shadow = jungle floor in shade.
 SWATCHES = {
     "shadow": hexc("173A22"),
-    "curtain_dark": hexc("163F3A"),
-    "curtain_mid": hexc("1F5A45"),
-    "curtain_light": hexc("2E7A47"),
+    "curtain_dark": hexc("12332F"),
+    "curtain_mid": hexc("1A4A3C"),
+    "curtain_light": hexc("27673F"),
     "grass_lit": hexc("5DA845"),
     "grass_dark": hexc("2F6E35"),
     "trunk": hexc("3A2E2A"),
@@ -74,6 +74,8 @@ def build_atlas():
         tex = trimesh.load(os.path.join(MODELS, name + ".glb"), force="mesh").visual.material.baseColorTexture.convert("RGB")
         _, _, _, _, (x0, y0, x1, y1) = cell_uv_rect(cx, cy, cw, ch)
         img = np.asarray(tex.resize((x1 - x0, y1 - y0), Image.LANCZOS))
+        if name != "Prop_RockCluster":
+            img = lush(img)
         # Edge-extend into the padding so mips do not bleed the neighbour's colors.
         img = np.pad(img, ((PAD, PAD), (PAD, PAD), (0, 0)), mode="edge")
         atlas[y0 - PAD:y1 + PAD, x0 - PAD:x1 + PAD] = img
@@ -89,6 +91,19 @@ def build_atlas():
         uv[k] = ((x + sw / 2) / ATLAS, 1 - (y + sh / 2) / ATLAS)
     Image.fromarray(atlas).save(os.path.join(OUT, "Jungle_Atlas_basecolor.png"), optimize=True)
     return uv
+
+
+def lush(img):
+    """Grades Meshy's teal-gray foliage toward the style guide's saturated jungle greens (hue pulled toward
+    green, saturation x1.35, a touch brighter). Browns, trunks and flowers outside the green hues are untouched."""
+    hsv = np.asarray(Image.fromarray(img).convert("HSV")).astype(np.float32)
+    h, s_, v = hsv[..., 0] * 360 / 255, hsv[..., 1], hsv[..., 2]
+    green = (h > 70) & (h < 200)
+    h = np.where(green, h - 0.45 * (h - 118), h)
+    s_ = np.where(green, np.minimum(255, s_ * 1.35 + 12), s_)
+    v = np.where(green, np.minimum(255, v * 1.1), v)
+    out = np.stack([h * 255 / 360, s_, v], -1).astype(np.uint8)
+    return np.asarray(Image.fromarray(out, "HSV").convert("RGB"))
 
 
 # Unity <-> Blender for an FBX written with axis_forward -Z, axis_up Y, baked space transform:
@@ -223,46 +238,48 @@ def compose(variant, src, uvs):
         return a + rng.random() * (b - a)
 
     # Path-edge tufts: real scale, right at the edge, never on the lanes.
-    for i in range(7):
-        z = -6 + (i + 0.2 + rng.random() * 0.6) * SEGMENT / 7
-        parts.append(bm_object_unity("tuft", tuft(rng, uvs), unity_matrix((jit(-0.15, 0.45), 0, z), rng.random() * 360, jit(0.8, 1.3))))
+    for i in range(14):
+        z = -6 + (i + 0.2 + rng.random() * 0.6) * SEGMENT / 14
+        x = jit(-0.15, 0.45) if i % 2 == 0 else jit(0.8, 3.5)
+        parts.append(bm_object_unity("tuft", tuft(rng, uvs), unity_matrix((x, 0, z), rng.random() * 360, jit(0.9, 1.4) * (1 + x * 0.25))))
 
+    # Each variant: near row at the path edge, one tall "edge giant" leaning slightly over the path margin (frames the
+    # top corners of the portrait screen), a mid row of trees with bushes between the trunks, and a tall back tree.
     if variant == "A":
-        put("Foliage_FernClump", jit(0.5, 1.0), -4.0, jit(0.9, 1.2), shadow=0.5)
-        put("Foliage_BigLeaf", jit(1.4, 2.0), -1.0, jit(1.1, 1.4))
-        put("Foliage_FernClump", jit(0.6, 1.2), 2.6, jit(1.0, 1.3), shadow=0.5)
-        put("Prop_RockCluster", jit(0.5, 1.0), 5.0, jit(0.6, 0.8))
-        put("Foliage_Bush", jit(2.4, 3.2), 0.8, jit(1.0, 1.3), shadow=0.8)
-        put("Foliage_TreeA", jit(3.6, 4.6), -2.5, jit(1.25, 1.45), shadow=1.0)
-        put("Foliage_TreeB", jit(5.5, 6.5), 3.5, jit(1.0, 1.25), shadow=0.6)
-        put("Foliage_CanopyTree", jit(8.5, 9.5), -0.5, jit(0.95, 1.1))
+        put("Foliage_FernClump", jit(0.5, 0.9), -4.2, jit(0.9, 1.2), shadow=0.5)
+        put("Foliage_BigLeaf", jit(1.2, 1.7), -1.4, jit(1.1, 1.4))
+        put("Foliage_FernClump", jit(0.6, 1.1), 2.4, jit(1.0, 1.3), shadow=0.5)
+        put("Prop_RockCluster", jit(0.5, 0.9), 5.0, jit(0.6, 0.8))
+        put("Foliage_TreeB", 2.4, 0.6, 1.35, lean=7.0, shadow=0.7)
+        put("Foliage_Bush", jit(3.0, 3.6), -3.6, jit(1.1, 1.4), shadow=0.8)
+        put("Foliage_Bush", jit(4.6, 5.4), 3.4, jit(1.2, 1.5), shadow=0.8)
+        put("Foliage_TreeA", jit(5.0, 5.8), -2.0, jit(1.35, 1.55), shadow=1.0)
+        put("Foliage_CanopyTree", jit(8.5, 9.5), 2.0, jit(1.0, 1.15))
     elif variant == "B":
         put("Prop_RockCluster", jit(0.4, 0.8), -4.6, jit(0.7, 0.9))
-        put("Foliage_FernClump", jit(0.6, 1.1), -1.6, jit(1.0, 1.3), shadow=0.5)
-        put("Foliage_BigLeaf", jit(1.2, 1.8), 1.5, jit(1.0, 1.3))
+        put("Foliage_FernClump", jit(0.6, 1.1), -1.8, jit(1.0, 1.3), shadow=0.5)
+        put("Foliage_BigLeaf", jit(1.1, 1.6), 1.2, jit(1.0, 1.3))
         put("Foliage_FernClump", jit(0.5, 1.0), 4.4, jit(0.9, 1.2), shadow=0.5)
-        put("Foliage_Bush", jit(2.6, 3.4), -3.5, jit(1.1, 1.4), shadow=0.8)
-        put("Foliage_TreeB", jit(3.8, 4.6), 0.0, jit(1.05, 1.3), shadow=0.6)
-        put("Foliage_TreeA", jit(6.0, 7.0), 4.0, jit(1.3, 1.5), shadow=1.0)
-        put("Foliage_CanopyTree", jit(9.0, 10.0), -4.0, jit(1.0, 1.15))
-    else:  # C: a big tree right at the edge leaning over the path margin (frames the top corner)
+        put("Foliage_CanopyTree", 2.8, -3.0, 0.8, lean=6.0, shadow=0.9)
+        put("Foliage_Bush", jit(3.2, 3.8), 3.0, jit(1.1, 1.4), shadow=0.8)
+        put("Foliage_TreeB", jit(5.2, 6.0), 4.5, jit(1.15, 1.3), shadow=0.6)
+        put("Foliage_Bush", jit(5.0, 5.8), 0.0, jit(1.2, 1.5), shadow=0.8)
+        put("Foliage_TreeA", jit(7.5, 8.5), -1.0, jit(1.5, 1.7), shadow=1.0)
+    else:
         put("Foliage_FernClump", jit(0.5, 0.9), -4.5, jit(1.0, 1.2), shadow=0.5)
-        put("Foliage_CanopyTree", 2.6, -1.0, 0.85, lean=9.0, shadow=0.9)
-        put("Foliage_BigLeaf", jit(1.0, 1.5), 1.8, jit(1.1, 1.4))
-        put("Foliage_FernClump", jit(0.6, 1.1), 4.2, jit(1.0, 1.3), shadow=0.5)
-        put("Prop_RockCluster", jit(1.6, 2.2), 0.6, jit(0.6, 0.8))
-        put("Foliage_Bush", jit(3.6, 4.4), 4.0, jit(1.0, 1.3), shadow=0.8)
-        put("Foliage_TreeA", jit(5.8, 6.8), 3.0, jit(1.2, 1.4), shadow=1.0)
-        put("Foliage_TreeB", jit(7.5, 8.5), -4.0, jit(1.15, 1.35), shadow=0.6)
+        put("Foliage_CanopyTree", 2.6, -0.8, 0.95, lean=9.0, shadow=0.9)
+        put("Foliage_BigLeaf", jit(1.0, 1.5), 2.0, jit(1.1, 1.4))
+        put("Foliage_FernClump", jit(0.6, 1.1), 4.6, jit(1.0, 1.3), shadow=0.5)
+        put("Foliage_Bush", jit(3.6, 4.2), 3.6, jit(1.1, 1.4), shadow=0.8)
+        put("Foliage_Bush", jit(4.0, 4.8), -4.2, jit(1.1, 1.4), shadow=0.8)
+        put("Foliage_TreeA", jit(6.0, 6.8), 2.0, jit(1.3, 1.5), shadow=1.0)
+        put("Foliage_TreeB", jit(8.0, 9.0), -3.5, jit(1.2, 1.4), shadow=0.6)
 
-    # Mid fill: low blobs so no floor shows between the trunks; far curtain: tall dark blobs that close the view.
-    for z in (-3.0, 3.0):
-        parts.append(bm_object_unity("fill", blob(rng, jit(1.6, 2.2), (1.0, 1.0, 0.55), uvs),
-                                     unity_matrix((jit(4.5, 6.5), 0.4, z + jit(-1, 1)), rng.random() * 360)))
+    # Far curtain: tall dark faceted canopy masses that close the view behind the trees.
     for z in (-4.5, 0.0, 4.5):
-        r = jit(3.6, 4.6)
-        parts.append(bm_object_unity("curtain", blob(rng, r, (0.8, 1.2, 1.15), uvs),
-                                     unity_matrix((jit(11.5, 13.5), r * 0.75, z + jit(-0.8, 0.8)), rng.random() * 360)))
+        r = jit(3.8, 4.8)
+        parts.append(bm_object_unity("curtain", blob(rng, r, (0.75, 1.0, 1.35), uvs),
+                                     unity_matrix((jit(11.5, 13.0), r * 0.9, z + jit(-0.8, 0.8)), rng.random() * 360)))
 
     bpy.ops.object.select_all(action="DESELECT")
     for p in parts:

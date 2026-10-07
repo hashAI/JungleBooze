@@ -22,7 +22,7 @@ LANES = (-2.4, 0.0, 2.4)
 TRAIL_PERIOD = 6.0    # m along Z per texture repeat
 FLOOR_PERIOD = 6.0    # m per repeat on the verges
 CREAM = np.array([0xF3, 0xDF, 0xB2]) / 255.0
-FLOOR_TINT = np.array([0x2F, 0x7A, 0x3C]) / 255.0  # StylePalette.JungleFloor
+FLOOR_TINT = np.array([0x2A, 0x66, 0x36]) / 255.0  # StylePalette.JungleFloor
 INK = np.array([0x1E, 0x1A, 0x24]) / 255.0
 
 
@@ -84,8 +84,8 @@ def trail(size=1024, seed=7):
     # Sand bands: two hard-edged darker tones (no gradients, style guide 3.2).
     band1 = n1 > 0.18
     band2 = n1 > 0.48
-    img[band1] = np.array([0.93, 0.89, 0.83])
-    img[band2] = np.array([0.86, 0.80, 0.72])
+    img[band1] = np.array([0.95, 0.92, 0.88])
+    img[band2] = np.array([0.89, 0.85, 0.80])
 
     # Worn foot tracks down each lane centre: slightly smoother, lighter sand with wavy hard edges.
     for lx in LANES:

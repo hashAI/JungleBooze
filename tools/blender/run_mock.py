@@ -49,8 +49,15 @@ WALL_LEN, WALL_BEHIND, WALL_INSET = 12.0, 12.0, 0.0
 WALL_NAMES = ["Jungle_WallA", "Jungle_WallB", "Jungle_WallC"]
 WALL_HEIGHT_MIN, WALL_HEIGHT_SPAN = 0.92, 0.22
 SKY_RADIUS = 150.0
-KEY_PITCH, KEY_YAW, KEY_INTENSITY = 38.0, -35.0, 1.15
-AMBIENT_SKY_MIX, AMBIENT_EQUATOR_MIX, AMBIENT_GROUND_INK = 0.5, 0.55, 0.35
+KEY_PITCH, KEY_YAW, KEY_INTENSITY = 38.0, -35.0, 1.0
+AMBIENT_SKY_WHITE, AMBIENT_EQUATOR_MIX, AMBIENT_GROUND_INK = 0.6, 0.5, 0.0
+
+
+# --set NAME=VALUE overrides any constant above (look exploration).
+for i, a in enumerate(ARGS):
+    if a == "--set":
+        k, v = ARGS[i + 1].split("=")
+        globals()[k] = float(v)
 
 
 def hexc(h):
@@ -67,10 +74,10 @@ def lin(c):
 
 THEMES = {
     "jungle": dict(key=hexc("FFD27A"), shadow=hexc("2E5B57"), horizon=hexc("FFE3A3"), top=hexc("FFB347"),
-                   fog=hexc("E9C98A"), path=hexc("F3DFB2"), verge=hexc("2F7A3C"), lawn=hexc("3A8C3F")),
+                   fog=hexc("E9C98A"), path=hexc("F3DFB2"), verge=hexc("2A6636"), lawn=hexc("3A8C3F")),
     "dusk": dict(key=hexc("FF9A5A"), shadow=hexc("2B3A67"), horizon=hexc("FF8C42"), top=hexc("2B3A67"),
                  fog=hexc("B0607A"), path=lerp(hexc("F3DFB2"), hexc("FF9A5A"), 0.35),
-                 verge=lerp(hexc("2F7A3C"), hexc("2B3A67"), 0.45), lawn=hexc("3A8C3F")),
+                 verge=lerp(hexc("2A6636"), hexc("2B3A67"), 0.45), lawn=hexc("3A8C3F")),
 }
 TH = THEMES[WORLD]
 INK = hexc("1E1A24")
@@ -107,7 +114,7 @@ if BEFORE:
 else:
     KEY = key_dir_unity(KEY_PITCH, KEY_YAW)
     KEY_I = KEY_INTENSITY
-    AMB = (lerp(TH["horizon"], TH["top"], AMBIENT_SKY_MIX),
+    AMB = (lerp(TH["shadow"], (1, 1, 1), AMBIENT_SKY_WHITE),
            lerp(TH["shadow"], TH["horizon"], AMBIENT_EQUATOR_MIX),
            lerp(TH["shadow"], INK, AMBIENT_GROUND_INK))
 L_TO = Vector(U(*[-c for c in KEY])).normalized()  # toward the light, Blender space
