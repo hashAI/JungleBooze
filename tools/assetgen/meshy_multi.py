@@ -32,7 +32,7 @@ def poll(tid, outdir, name):
     def dl(u, fn): open(os.path.join(outdir, fn), "wb").write(requests.get(u, timeout=300).content)
     dl(r["model_urls"]["glb"], name + ".glb")
     if r.get("thumbnail_url"): dl(r["thumbnail_url"], name + "_thumb.png")
-    for i, u in enumerate(r.get("thumbnail_urls") or []): dl(u, f"{name}_thumb_{i}.png")
+    for k, u in (r.get("thumbnail_urls") or {}).items(): dl(u, f"{name}_thumb_{k}.png")
     print("done")
 
 if __name__ == "__main__":
