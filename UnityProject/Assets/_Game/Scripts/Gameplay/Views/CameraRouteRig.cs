@@ -70,12 +70,14 @@ namespace JungleBooze.Gameplay.Views
             double s = input.HeroS;
             frame.Sample(s + _tuning.YawNearM, out PathPose near);
             frame.Sample(s + _tuning.YawFarM, out PathPose far);
+            frame.Sample(s + ProbeDistancesM[ProbeDistancesM.Length - 1], out PathPose end);
             frame.Sample(s, out PathPose hero);
             work.AimNearYawRad = Mathf.Atan2(near.Tangent.x, near.Tangent.z);
             work.AimFarYawRad = Mathf.Atan2(far.Tangent.x, far.Tangent.z);
             work.RoutePitchRad = Mathf.Atan(near.GradePct * 0.01f);
             work.BankDeg = hero.BankDeg;
             work.CurvatureAbs = Mathf.Max(Mathf.Abs(hero.Curvature), Mathf.Abs(far.Curvature));
+            work.CurvatureAheadAbs = Mathf.Max(work.CurvatureAbs, Mathf.Abs(end.Curvature));
             return work;
         }
 

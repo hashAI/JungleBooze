@@ -47,5 +47,8 @@ namespace JungleBooze.Gameplay.Views
 
         /// <summary>Largest absolute curvature (1/m) at the hero and at hero + YawFarM.</summary>
         public float CurvatureAbs;
+
+        /// <summary>Largest absolute curvature (1/m) at the hero and 22 and 40 m ahead; the screen-edge safety clamp is off on a straight.</summary>
+        public float CurvatureAheadAbs;
     }
 }

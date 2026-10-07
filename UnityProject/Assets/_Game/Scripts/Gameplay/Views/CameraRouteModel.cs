@@ -14,6 +14,17 @@ namespace JungleBooze.Gameplay.Views
     /// </summary>
     public sealed class CameraRouteModel
     {
+        private const float SafetySlack = 0.92f;
+
+        /// <summary>Smoothing of the swing roll (the pendulum angle drops to 0 at the release).</summary>
+        private const float SwingRollSmoothSeconds = 0.12f;
+
+        /// <summary>The safety clamp fades in with curvature and is fully on at R = 300 m or tighter (0 on a straight, so today's feel stays exact).</summary>
+        private const float SafetyFullCurvatureRadiusM = 300f;
+
+        /// <summary>The landing FOV dip happens while the swing blend is below this (the last 30 percent of the return).</summary>
+        private const float LandPunchWindow = 0.3f;
+
         private readonly RunnerPresentationConfig _config;
         private readonly CameraRouteTuning _tuning;
 
@@ -34,6 +45,8 @@ namespace JungleBooze.Gameplay.Views
         private float _swingBlend;
         private float _swingEase;
         private float _swingRoll;
+        private float _swingRollTarget;
+        private float _velSwingRoll;
         private float _bump;
         private int _openSide = 1;
         private float _aimYaw;
@@ -42,6 +55,7 @@ namespace JungleBooze.Gameplay.Views
         private float _velSafetyFov;
         private float _fovNoSafety;
         private float _dt;
+        private float _safetyGate;
         private bool _reduceMotion;
 
         public CameraRouteModel(RunnerPresentationConfig config, CameraRouteTuning tuning)
@@ -137,6 +151,8 @@ namespace JungleBooze.Gameplay.Views
             }
 
             UpdateSwingValues(input);
+            _swingRoll = _swingRollTarget;
+            _velSwingRoll = 0f;
             _yaw = LeadYaw(input) - SideYaw();
             _aimYaw = _yaw;
             Advance(0f, input);
@@ -149,6 +165,7 @@ namespace JungleBooze.Gameplay.Views
         public void Advance(float dt, in CameraRouteInput input)
         {
             _dt = dt > 0f ? dt : 0f;
+            _safetyGate = Mathf.Clamp01(input.CurvatureAheadAbs * SafetyFullCurvatureRadiusM);
             bool rm = input.ReduceMotion;
             _reduceMotion = rm;
 
@@ -179,8 +196,17 @@ namespace JungleBooze.Gameplay.Views
             }
 
             bool returning = !rm && swingTarget < 0.5f && _swingBlend > 0f && _swingBlend < 1f;
-            _bump = returning ? -_tuning.LandFovOvershootDeg * Mathf.Sin(Mathf.PI * (1f - _swingBlend)) : 0f;
+            _bump = returning ? -_tuning.LandFovOvershootDeg * Mathf.Sin(Mathf.PI * Mathf.Clamp01(1f - (_swingBlend / LandPunchWindow))) : 0f;
             UpdateSwingValues(input);
+            if (rm)
+            {
+                _swingRoll = 0f;
+                _velSwingRoll = 0f;
+            }
+            else if (_dt > 0f)
+            {
+                _swingRoll = Mathf.SmoothDamp(_swingRoll, _swingRollTarget, ref _velSwingRoll, SwingRollSmoothSeconds, Mathf.Infinity, _dt);
+            }
 
             // Bank roll: 0.8 x bank, capped at 5 deg and 20 deg/s.
             if (rm)
@@ -297,12 +323,13 @@ namespace JungleBooze.Gameplay.Views
             float aspect = _tuning.AspectWidthOverHeight;
             float keep = 1f - _tuning.SafetyMargin;
             float limit = Mathf.Atan(Mathf.Tan(_fovNoSafety * 0.5f * Mathf.Deg2Rad) * aspect * keep);
-            float lag = Mathf.Abs(WrapPi(_aimYaw + _safetyYawDelta - _yaw));
-            float lagAllow = Mathf.Min(lag, 0.35f * limit);
-            float limitEff = Mathf.Max(0.05f, limit - lagAllow);
 
-            float lo = maxRel - limitEff;
-            float hi = minRel + limitEff;
+            // The camera trails its aim by (yaw rate x smoothing time) in a steady bend: shift the points by that lag
+            // (signed), and keep a further 8 percent of the half-FOV free for everything else.
+            float lag = Mathf.Clamp(_velYaw * (_tuning.YawTimeMs / 1000f), -0.4f * limit, 0.4f * limit);
+            float limitEff = limit * SafetySlack;
+            float lo = maxRel + lag - limitEff;
+            float hi = minRel + lag + limitEff;
             float delta;
             float fovTarget = 0f;
             if (lo <= hi)
@@ -312,7 +339,7 @@ namespace JungleBooze.Gameplay.Views
             else
             {
                 delta = 0.5f * (lo + hi);
-                float half = (0.5f * (maxRel - minRel)) + lagAllow;
+                float half = 0.5f * (maxRel - minRel) / SafetySlack;
                 if (half < 1.5f)
                 {
                     float needFov = 2f * Mathf.Atan(Mathf.Tan(half) / (aspect * keep)) * Mathf.Rad2Deg;
@@ -325,8 +352,8 @@ namespace JungleBooze.Gameplay.Views
             }
 
             float maxYaw = _tuning.SafetyMaxYawExtraDeg * Mathf.Deg2Rad;
-            _safetyYawDelta = Mathf.Clamp(delta, -maxYaw, maxYaw);
-            SmoothSafetyFov(_reduceMotion ? 0f : fovTarget);
+            _safetyYawDelta = Mathf.Clamp(delta, -maxYaw, maxYaw) * _safetyGate;
+            SmoothSafetyFov(_reduceMotion ? 0f : fovTarget * _safetyGate);
         }
 
         /// <summary>Wraps an angle to [-pi, pi].</summary>
@@ -368,7 +395,7 @@ namespace JungleBooze.Gameplay.Views
             float b = _swingBlend;
             _swingEase = b * b * (3f - (2f * b));
             float roll = _tuning.SwingRollGain * input.SwingAngleRad * Mathf.Rad2Deg * _swingEase;
-            _swingRoll = Mathf.Clamp(roll, -_tuning.SwingRollMaxDeg, _tuning.SwingRollMaxDeg);
+            _swingRollTarget = Mathf.Clamp(roll, -_tuning.SwingRollMaxDeg, _tuning.SwingRollMaxDeg);
         }
 
         private void RecomputeOutputs()
