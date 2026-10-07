@@ -33,7 +33,7 @@ compiler on the Mac is the fastest way to find remaining errors; fix whatever th
 - [x] A2 game-designer: spec 002 (track, obstacles, coins): 16 Jungle chunks, generator, coins/score, fairness rules, run lifecycle, AC-201–250
 - [x] A3 balance-simulator: Python reference model (64 tests pass), 6 golden traces, targets report: S1–S3, S6–S8 pass; S4/S5 fail (bot mistake profiles, low-barrier jump is the tightest timing)
 - [x] B1 gameplay-engineer: collisions (swept AABB, lethal vs stumble, daze, edge forgiveness, near-miss, step hooks) + tests for AC-34–45
-- [ ] B2 gameplay-engineer (running): track simulation (chunk data, 16-chunk library, seeded generator, coins, score, run lifecycle). Tests deferred by owner
+- [x] B2 gameplay-engineer: track simulation (generator, TrackSimulation as ITrackQuery, coin layout, scoring, TrackRunWorld/Factory, RunSession lifecycle, config assets, .meta files). Tests deferred by owner; 4 track test files written but never run
 - [ ] B3 gameplay-engineer: chunk fairness validator (spec 002 §11) as an EditMode test + editor menu
 - [x] C1 ui-engineer: presentation (bootstrap, session with Ready/Dying/GameOver, Run again/Same track, input, gray-box views, HUD, PlayMode tests). Swap point for C2: `RunSceneBootstrap.CreateWorldFactory`.
 - [ ] C2 ui-engineer: swap in `TrackRunWorldFactory`, add track/obstacle/coin views, resolve `RunSession` vs `GameSession` overlap
@@ -52,7 +52,7 @@ and commit after every agent report.
 | game-designer | done (stage A2) | Spec 002: track, obstacles, coins, generator, fairness, lifecycle | `docs/specs/002-track-obstacles-coins.md` | Apply spec 002's listed changes to spec 001 and the GDD; spec 003 vine swinging |
 | balance-simulator | done (A3) | Python reference model, golden traces, S1–S9 report (`docs/sim-reports/2026-10-07-spec001.md`) | `tools/sim/`, `docs/sim-reports/` | Fairness fuzzing for spec 002; recommendations R1–R6 go to game-designer |
 | tech-architect | done (stage D) | First-open bootstrap: URP mobile asset, input set to Both, iOS basics (placeholder bundle id `com.pistaduko.junglerunner`, iOS 15, portrait), empty Run scene in build list; Mac play guide | `Assets/_Game/Editor/Setup/`, `docs/adr/0003-first-playable-bootstrap.md`, `docs/PLAY_FIRST_BUILD.md` | Add EditMode tests for `ProjectSetupRules`; Roslyn analyzers |
-| gameplay-engineer | **working** (1 instance: B2) | B1 done. B2: track code (generator, track world, coins, score, lifecycle) — owner said skip tests for now; it is verifying code consistency and missing .meta files instead | `Scripts/Gameplay/Track/`, `Config/Track/` | Paused for owner review after B2 reports |
+| gameplay-engineer | done (B1, B2) | Collisions and track code finished; not compiled | `Scripts/Gameplay/Runner/`, `Scripts/Gameplay/Track/`, `Config/Track/` | Deferred tests (track AC-208–248), B3 validator — after owner review |
 | ui-engineer | done (C1) | Presentation layer + 3 PlayMode test files + controls table | `Scripts/Gameplay/{Session,Views,Controls}`, `Scripts/App`, `Scripts/UI/Hud`, `Tests/` | C2: swap in TrackRunWorldFactory, add track/obstacle/coin views, resolve RunSession vs GameSession overlap |
 | art-director | done | Style guide and prompts updated with names Pista/Duko and the chest-band sash | `design/STYLE_GUIDE.md`, `design/prompts/` | Generate concept images once an image API key exists |
 | asset-pipeline | waiting | — | — | Needs an image/3D generation API key from the owner |
@@ -88,6 +88,7 @@ If a new session finds an agent marked **working** but no matching output or com
 1. Ads and prices: deferred to week 4 (tracking already decided: none).
 
 ## Assumptions waiting for owner review (`[ASSUMED]`)
+- Track: seam-fallback breather doesn't reset the breather timer; each breather gets its own pick; mover moves for 30 ticks after its trigger tick; random stream ids TrackGeneration=1…Cosmetic=5.
 - Collisions: a second obstacle clipped on the same tick as a stumble is ignored; obstacles touched while invulnerable are ignored for that pass; a box already overlapping at tick start is a stumble, never a death; sliding under a standard high barrier counts as a near-miss.
 - Possible feel change for the owner later: jump airtime 600 ms → 650 ms (same 1.5 m height) makes low barriers easier; the simulation shows average-player survival 87% → 90%. Not applied.
 - Movement interpretations for the game-designer to confirm: pending inputs counted while pending; the swipe that cancels a queued lane move counts as Executed; 0 ms means "off" for coyote and run-start ramp.
@@ -98,6 +99,8 @@ If a new session finds an agent marked **working** but no matching output or com
 - Coins are gold with a turquoise gem center so they read against gold scenery.
 
 ## Not yet verified
+- Track code (B2): compile risks flagged by the agent: a property named `Track` inside namespace `JungleBooze.Gameplay.Track`; properties named like their types; `ref readonly` returns. Runner↔track integration never exercised. No `.asset` config files yet (code defaults are used).
+- Overlap: `RunSession` (track) and `GameSession` (presentation) both implement the run lifecycle; C2 must pick one.
 - Stage D bootstrap script: APIs checked by hand against Unity/URP source, not compiled. `-warnaserror+` is on, so any warning breaks the build.
 - Style guide draw-call and triangle estimates (78/120 draws, ~137k/150k tris) need the benchmark scene.
 - Image prompts are untested (no image API key).
@@ -107,6 +110,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Log
 Newest first. One line per event.
+- 2026-10-07: Stage B2 done (track code, no new tests). All agents finished. Project is paused for the owner's code review.
 - 2026-10-07: Owner deferred tests; track agent redirected from writing tests to verifying code consistency and .meta files.
 - 2026-10-07: Owner stopped the code-reviewer to save tokens. Track agent (B2) continues to finish its tests.
 - 2026-10-07: Stage B1 done (gameplay-engineer): collisions + tests. Not compiled.
