@@ -2,8 +2,12 @@
 
 Real low-poly art for the run views. Each view looks for a prefab by name in `Resources/EnvironmentArt/`
 (`EnvironmentArt.cs`). If the prefab is missing the view keeps its gray-box primitive, so art can land one piece at a time.
-Workflow: put models in `Models/` named exactly as below, optionally add `Materials/EnvAtlas.mat`, then run the menu
-`JungleBooze > Art > Build Environment Prefabs` (checks triangle budgets, strips colliders, assigns the atlas).
+Workflow: put models (`.fbx`) in `Models/` named exactly as below, with a sibling `<Name>.png` base color texture. The
+prefabs are built automatically when the models import or when the editor opens and a prefab is missing
+(`Editor/Art/EnvironmentAutoBuild.cs`); the menu `JungleBooze > Art > Build Environment Prefabs` does the same by hand.
+The builder checks triangle budgets, strips colliders, and gives each model its own URP Simple Lit material
+(`Materials/<Name>_Mat.mat`, created from the PNG). A shared `Materials/EnvAtlas.mat` is only used for models that have no PNG.
+Missing prefabs leave the gray-box in place.
 
 The simulation owns collision. Art is scaled by the view to the hitbox, so author it to the fit rule below
 (pivot and size matter; export with Y up, meters, 1 unit = 1 m).

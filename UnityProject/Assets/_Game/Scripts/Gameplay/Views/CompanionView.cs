@@ -2,6 +2,8 @@ using JungleBooze.Gameplay.Companion;
 using JungleBooze.Gameplay.Runner;
 using JungleBooze.Gameplay.Session;
 using UnityEngine;
+using UnityEngine.Animations;
+using UnityEngine.Playables;
 
 namespace JungleBooze.Gameplay.Views
 {
@@ -34,6 +36,21 @@ namespace JungleBooze.Gameplay.Views
         private const float ModelFlapRollDeg = 14f;
         private const float ModelFlapBobM = 0.04f;
         private const float ModelPoseSmoothSeconds = 0.1f;
+        private const float ModelClipBlendSeconds = 0.12f;
+
+        /// <summary>
+        /// Facing fix for the imported Duko model, in degrees about Y (default 0). If he flies backward or sideways in
+        /// the Game view, change this (180 flips front and back) and press Play again.
+        /// </summary>
+        public const float ModelYawFixDeg = 0f;
+
+        private const int ClipIdle = 0;
+        private const int ClipFlap = 1;
+        private const int ClipTailWag = 2;
+        private const int ClipCount = 3;
+
+        // Substrings that find Duko's embedded clips by name (Idle, Flap, TailWag).
+        private static readonly string[] ClipNameParts = { "idle", "flap", "tail" };
 
         private RunnerConfig _runnerConfig;
         private CompanionConfig _config;
@@ -52,6 +69,11 @@ namespace JungleBooze.Gameplay.Views
         private bool _snap;
         private Transform _visualHolder;
         private float _visualPitch;
+        private PlayableGraph _graph;
+        private AnimationMixerPlayable _mixer;
+        private readonly bool[] _clipLoaded = new bool[ClipCount];
+        private readonly float[] _clipWeights = new float[ClipCount];
+        private bool _graphReady;
 
         /// <summary>World position of the bird (where its speech bubble is anchored).</summary>
         public Vector3 BubbleAnchor => _position + new Vector3(0f, 0.55f, 0f);
@@ -73,7 +95,7 @@ namespace JungleBooze.Gameplay.Views
                 GameObject visual = Instantiate(prefab, _model);
                 visual.name = "DukoVisual";
                 visual.transform.localPosition = Vector3.zero;
-                visual.transform.localRotation = Quaternion.identity;
+                visual.transform.localRotation = Quaternion.Euler(0f, ModelYawFixDeg, 0f);
                 RunnerView.FitToHeight(visual, ModelHeightM);
                 // Pivot at the body center: the fitted model stands on y = 0, so lift it into a holder.
                 Transform holder = new GameObject("DukoHolder").transform;
@@ -81,6 +103,7 @@ namespace JungleBooze.Gameplay.Views
                 visual.transform.SetParent(holder, true);
                 visual.transform.localPosition -= new Vector3(0f, ModelHeightM * 0.5f, 0f);
                 _visualHolder = holder;
+                BuildAnimation(visual);
                 return;
             }
 
@@ -97,6 +120,109 @@ namespace JungleBooze.Gameplay.Views
 
             _leftWing = CreateWing(kit, "LeftWing", -1f);
             _rightWing = CreateWing(kit, "RightWing", 1f);
+        }
+
+        private void OnDestroy()
+        {
+            if (_graph.IsValid())
+            {
+                _graph.Destroy();
+            }
+        }
+
+        /// <summary>
+        /// Plays Duko's embedded clips (Idle, Flap, TailWag) through a PlayableGraph, so no AnimatorController asset
+        /// is needed. When no clip is found the graph is not built and the procedural flight pose is used alone.
+        /// </summary>
+        private void BuildAnimation(GameObject visual)
+        {
+            AnimationClip[] clips = Resources.LoadAll<AnimationClip>(ModelResourcePath);
+            _graph = PlayableGraph.Create("DukoAnimation");
+            _graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
+            _mixer = AnimationMixerPlayable.Create(_graph, ClipCount);
+            bool any = false;
+            for (int i = 0; i < ClipCount; i++)
+            {
+                AnimationClip clip = RunnerView.FindClip(clips, ClipNameParts[i]);
+                if (clip == null)
+                {
+                    continue;
+                }
+
+                AnimationClipPlayable playable = AnimationClipPlayable.Create(_graph, clip);
+                _graph.Connect(playable, 0, _mixer, i);
+                _mixer.SetInputWeight(i, 0f);
+                _clipLoaded[i] = true;
+                any = true;
+            }
+
+            if (!any)
+            {
+                _graph.Destroy();
+                return;
+            }
+
+            Animator animator = visual.GetComponentInChildren<Animator>();
+            if (animator == null)
+            {
+                animator = visual.AddComponent<Animator>();
+            }
+
+            animator.applyRootMotion = false;
+            animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+            AnimationPlayableOutput output = AnimationPlayableOutput.Create(_graph, "Duko", animator);
+            output.SetSourcePlayable(_mixer);
+            _graph.Play();
+            _graphReady = true;
+        }
+
+        private int ResolveClip(int wanted)
+        {
+            if (_clipLoaded[wanted])
+            {
+                return wanted;
+            }
+
+            if (_clipLoaded[ClipFlap])
+            {
+                return ClipFlap;
+            }
+
+            for (int i = 0; i < ClipCount; i++)
+            {
+                if (_clipLoaded[i])
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        private void UpdateAnimation(bool perched, bool cheering, float dt)
+        {
+            if (!_graphReady)
+            {
+                return;
+            }
+
+            int active = ResolveClip(perched ? ClipIdle : (cheering ? ClipTailWag : ClipFlap));
+            float k = dt <= 0f ? 0f : 1f - Mathf.Exp(-dt / ModelClipBlendSeconds);
+            for (int i = 0; i < ClipCount; i++)
+            {
+                if (!_clipLoaded[i])
+                {
+                    continue;
+                }
+
+                _clipWeights[i] += ((i == active ? 1f : 0f) - _clipWeights[i]) * k;
+                _mixer.SetInputWeight(i, _clipWeights[i]);
+            }
+
+            if (dt > 0f)
+            {
+                _graph.Evaluate(dt);
+            }
         }
 
         public void BeginRun(GameSession session)
@@ -232,8 +358,11 @@ namespace JungleBooze.Gameplay.Views
                 float pk = dt <= 0f ? 0f : 1f - Mathf.Exp(-dt / ModelPoseSmoothSeconds);
                 _visualPitch += (targetPitch - _visualPitch) * pk;
                 float beat = perched ? 0f : Mathf.Sin(_flapClock * 2f * Mathf.PI);
-                _visualHolder.localRotation = Quaternion.Euler(_visualPitch, 0f, ModelFlapRollDeg * beat);
+                // The embedded Flap clip already beats the wings, so the procedural roll is only the fallback.
+                float roll = _graphReady ? 0f : ModelFlapRollDeg * beat;
+                _visualHolder.localRotation = Quaternion.Euler(_visualPitch, 0f, roll);
                 _visualHolder.localPosition = new Vector3(0f, ModelFlapBobM * beat, 0f);
+                UpdateAnimation(perched, _loopLeft > 0f, dt);
             }
             else
             {

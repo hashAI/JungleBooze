@@ -43,6 +43,12 @@ namespace JungleBooze.Gameplay.Views
         private const string ClipResourcePrefix = "Characters/Pista/Pista_";
         private const float ClipBlendSeconds = 0.08f;
 
+        /// <summary>
+        /// Facing fix for the imported models, in degrees about Y (default 0). If Pista or Duko runs backward or
+        /// sideways in the Game view, change this (180 flips front and back) and press Play again.
+        /// </summary>
+        public const float ModelYawFixDeg = 0f;
+
         private static readonly string[] ClipNames = { "run", "jump", "slide", "stumble", "idle" };
 
         private enum CharPose
@@ -127,7 +133,7 @@ namespace JungleBooze.Gameplay.Views
             _visual = Instantiate(prefab, _model);
             _visual.name = "PistaVisual";
             _visual.transform.localPosition = Vector3.zero;
-            _visual.transform.localRotation = Quaternion.identity;
+            _visual.transform.localRotation = Quaternion.Euler(0f, ModelYawFixDeg, 0f);
             FitToHeight(_visual, _runnerConfig.StandingHeightM);
             BuildAnimationGraph();
             return true;
@@ -180,7 +186,7 @@ namespace JungleBooze.Gameplay.Views
             bool any = false;
             for (int i = 0; i < ClipNames.Length; i++)
             {
-                AnimationClip clip = Resources.Load<AnimationClip>(ClipResourcePrefix + ClipNames[i]);
+                AnimationClip clip = FindClip(Resources.LoadAll<AnimationClip>(ClipResourcePrefix + ClipNames[i]), null);
                 if (clip == null)
                 {
                     continue;
@@ -203,6 +209,31 @@ namespace JungleBooze.Gameplay.Views
             output.SetSourcePlayable(_mixer);
             _graph.Play();
             _graphReady = true;
+        }
+
+        /// <summary>
+        /// First real clip in <paramref name="clips"/> (editor-only "__preview__" clips are skipped); when
+        /// <paramref name="nameContains"/> is set, the clip name must contain it (case-insensitive). Null if none.
+        /// Setup-time only.
+        /// </summary>
+        internal static AnimationClip FindClip(AnimationClip[] clips, string nameContains)
+        {
+            for (int i = 0; i < clips.Length; i++)
+            {
+                string clipName = clips[i].name;
+                if (clipName.StartsWith("__preview__", System.StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if (nameContains == null ||
+                    clipName.IndexOf(nameContains, System.StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    return clips[i];
+                }
+            }
+
+            return null;
         }
 
         private CharPose ChoosePose(GameSession session, RunnerState current)

@@ -267,6 +267,7 @@ namespace JungleBooze.App
             AudioPlayback audio = audioObject.AddComponent<AudioPlayback>();
             audio.SetCatalog(Resources.Load<AudioCatalog>("RunAudioCatalog"));
             audio.Bind(save);
+            audioObject.AddComponent<UiTapAudioBinder>().Init(audio);
             var audioView = new RunAudioView(audio);
 
             driver.Init(session, input, new IRunView[] { eventCounter, tutorial, audioView, ground, worldView, gaps, obstacles, hazardView, vineView, coinView, powerUpView, runnerView, companionView, cameraView, hud, companionHud, tutorialView, continueView }, kit);

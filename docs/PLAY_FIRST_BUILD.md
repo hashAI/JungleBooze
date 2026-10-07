@@ -9,6 +9,45 @@ Written for: MacBook with Apple M4 chip, 24 GB memory. Owner: tech-architect. Te
 
 ---
 
+## Quick start (already set up Unity before? start here)
+
+1. In Terminal, in your `JungleBooze` folder: `git pull`, then `git lfs pull`. The second command downloads the
+   models, textures and audio, which are stored with Git LFS. Without it the art files are tiny text stubs and the game
+   shows gray boxes and plays no sound. (GitHub Desktop pulls LFS files by itself.)
+2. Open the **`UnityProject`** folder in Unity Hub with **Unity 6000.3.25f1** (the Hub offers it, or pick the 6000.3
+   version you have). Close Unity before pulling.
+3. Wait for the first import: 10 to 20 minutes the first time (the character and environment models are large).
+4. What to expect on first open:
+   - The usual setup dialogs (see Step 4 below). Answer **Yes** and **Restart now** when asked.
+   - The Console (Window > General > Console) shows `Environment prefabs built: N of 17.` once the environment models
+     have imported. This is automatic; you do not need to click anything. If it says fewer than 17, or you see red
+     errors, run **JungleBooze > Art > Build Environment Prefabs** from the menu once more and send the Console text.
+   - The Pista and Duko models need no steps: they are loaded straight from `Art/Characters/Resources`.
+5. Open the scene **Run** (`Assets/_Game/Scenes/Run`) and press **Play**. Click once inside the Game view, then press
+   any key or tap to start. Controls are in the table in Step 5. Sound plays from the start (menu music, then the
+   jungle music); turn your Mac volume up.
+
+### If a model faces the wrong way
+
+Open `UnityProject/Assets/_Game/Scripts/Gameplay/Views/RunnerView.cs` and change `ModelYawFixDeg` (near the top,
+default `0f`) for Pista, or the same constant in `CompanionView.cs` for Duko. Use `180f` if the model shows its back
+or runs backward, `90f` or `-90f` if it is sideways. Save, wait for Unity to recompile, press Play again.
+
+### Known issues in this build (be honest with yourself when judging it)
+
+- The models and their animations were generated and prepared without Unity. **Nobody has seen them in Unity yet.**
+  Expect to find wrong sizes, wrong facing, odd animation blends or stretched textures; each is a quick fix once seen.
+  Pista's clips are run, jump, slide, stumble and idle; Duko's are Idle (perched), Flap (flying) and TailWag (cheer).
+- The art has a painterly look from the AI generator. Whether it fits the "Inkbound Pulp" style is your call.
+- The Meshy (model generator) commercial licence terms are **not verified** (see `docs/LICENSES.md`). Do not ship
+  until they are.
+- If a model or prefab is missing or fails to load, the game falls back to the gray-box shapes for that piece, so
+  the game is always playable.
+- If the environment looks pink or black: Edit > Project Settings > Graphics must show **URP-Mobile**
+  (JungleBooze > Setup > Run Project Setup fixes it). The environment prefabs get a URP material automatically.
+
+---
+
 ## What you need
 
 | Item | Why | Notes |
@@ -30,8 +69,8 @@ Written for: MacBook with Apple M4 chip, 24 GB memory. Owner: tech-architect. Te
 
 ## Step 2: Install Unity 6.3 LTS with iOS Build Support
 
-The project is pinned to the **Unity 6.3 LTS** line. The file `UnityProject/ProjectSettings/ProjectVersion.txt`
-says `6000.3.0f1`. Any newer patch of the same line (`6000.3.something`) is fine and preferred, because patches only
+The project is pinned to the **Unity 6.3 LTS** line (the owner's Mac uses **6000.3.25f1**). The file
+`UnityProject/ProjectSettings/ProjectVersion.txt` may say an older patch such as `6000.3.0f1`. Any newer patch of the same line (`6000.3.something`) is fine and preferred, because patches only
 fix bugs.
 
 1. In Unity Hub, click **Installs** (left side) > **Install Editor**.
@@ -169,8 +208,8 @@ Notes:
 - **Chains** (from about 600 m): two or three vines in a row. While swinging, swipe toward the lane of the next vine
   (its glow grows when aimed at); a GOOD or PERFECT release then flies you straight to it. Each PERFECT in a chain
   raises the bonus multiplier (x1, x1.5, x2).
-- **Duko, the macaw** (gray-box: violet body, orange head, turquoise tail tip) flies just ahead of and above Pista.
-  He calls out big moments in a speech bubble (no audio yet): **"Vine!"** about 2 s before a vine section (he swoops
+- **Duko, the macaw** (the real model; gray-box shapes if the model is missing) flies just ahead of and above Pista.
+  He calls out big moments in a speech bubble (and a voice line): **"Vine!"** about 2 s before a vine section (he swoops
   over the vine lane), **"Look out!"** about 1.5 s before a rolling boulder or a signature hazard (he swoops over that
   lane), and a cheer (**"Shiny!"**, **"Wow!"**, **"Yeah!"**) for a PERFECT release or when you pass your best
   distance. After a death he perches on Pista's head.
