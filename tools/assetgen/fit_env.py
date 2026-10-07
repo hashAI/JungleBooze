@@ -23,6 +23,9 @@ SPEC = {
  "Prop_VineBranch": dict(kind=CUBE, tex=512), "Prop_Signpost": dict(kind="real", height=2.0, tex=512),
  "Foliage_TreeA": dict(kind="real", height=4.0, tex=1024), "Foliage_TreeB": dict(kind="real", height=6.0, tex=1024),
  "Foliage_Bush": dict(kind="real", width=1.8, tex=512),
+ # Jungle wall kit sources (merged into Jungle_Wall* by tools/blender/build_jungle_kit.py; not loaded on their own).
+ "Foliage_FernClump": dict(kind="real", width=1.4, tex=512), "Foliage_BigLeaf": dict(kind="real", height=1.7, tex=512),
+ "Foliage_CanopyTree": dict(kind="real", height=10.0, tex=1024), "Prop_RockCluster": dict(kind="real", width=1.5, tex=512),
 }
 
 def keep_faces(m, mask):
@@ -37,6 +40,11 @@ def cleanup(name, m):
     elif name == "Hazard_ThornPatch":  # drop the loose ground skirt around the slab
         ext = np.abs(m.vertices[m.faces])[:, :, [0, 2]].max(axis=(1, 2)); low = m.vertices[m.faces][:, :, 1].min(1)
         keep_faces(m, ~((ext > 0.78) & (low < -0.26)) & ~(c[:, 1] < -0.33) | (c[:, 1] > -0.26) & (ext <= 0.9))
+    elif name == "Foliage_FernClump":  # drop the ground skirt and the pale root patch
+        lo, hi = m.bounds[0][1], m.bounds[1][1]
+        keep_faces(m, c[:, 1] > lo + 0.12 * (hi - lo))
+    elif name == "Prop_RockCluster":  # drop the stray stump and the leaves above the rocks
+        keep_faces(m, (c[:, 0] > -0.42) & (c[:, 1] < 0.26))
     elif name == "Obstacle_LowBarrier":  # drop the little sapling on top of the log
         keep_faces(m, c[:, 1] < m.bounds[0][1] + 0.62 * (m.bounds[1][1] - m.bounds[0][1]) * 1.0)
 
@@ -56,7 +64,19 @@ def paint(name, m, tex):
     elif name == "Hazard_ThornPatch":  # stripe the slab sides
         for sel, colr in ((True, RED), (False, INK)):
             tex = G.paint_by_position(m, tex, lambda p, s=sel: (p[:, 1] < 0.14) & (p[:, 1] > -0.4) & (stripes((p[:, 0] + p[:, 2]) * 0.7 + p[:, 1], 0.13) == s), colr)
+    elif name in ("Foliage_BigLeaf", "Foliage_FernClump"):
+        tex = recolor_scenery(tex)
     return tex
+
+def recolor_scenery(tex):
+    """Scenery may not use coin gold (style guide 2.1): turn saturated yellows lime-green, and near-whites dark green."""
+    a = np.asarray(tex.convert("RGB")).astype(np.float32) / 255.0
+    mx, mn = a.max(2), a.min(2); sat = (mx - mn) / (mx + 1e-6)
+    yellow = (a[..., 0] > 0.55) & (a[..., 1] > 0.5) & (a[..., 2] < 0.45) & (sat > 0.4) & (np.abs(a[..., 0] - a[..., 1]) < 0.3)
+    a[yellow] = a[yellow][:, [0, 1, 2]] * np.array([0.55, 0.85, 0.35]) + np.array([0.0, 0.05, 0.02])
+    white = (mn > 0.72) & (sat < 0.2)
+    a[white] = np.array([0.12, 0.32, 0.2])
+    return Image.fromarray((np.clip(a, 0, 1) * 255).astype(np.uint8))
 
 def place(spec, m):
     lo, hi = m.bounds; ext = hi - lo; ctr = (lo + hi) / 2; k = spec["kind"]; V = m.vertices

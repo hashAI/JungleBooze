@@ -35,4 +35,13 @@ ENV_PROMPTS = {
    texture="tan trunk with ink bands, jungle green #3A8C3F fronds with deep teal #1B4D4A shading, no red"),
  "Foliage_Bush": dict(prompt='A stylized low-poly jungle bush: one dense rounded mound of overlapping leaf clumps with a few broad leaves, sitting on the ground, no soil base, no disc, no trees.',
    texture='jungle green #3A8C3F with deep teal #1B4D4A shading bands and a few orange flowers #F28C28'),
+ # Jungle wall kit (look pass, 2026-10-07): merged into Jungle_Wall* clusters by tools/blender/build_jungle_kit.py.
+ "Foliage_FernClump": dict(prompt="A lush clump of jungle ferns: nine long arching fern fronds radiating out from one center, low and wide, sitting on the ground, nothing else, no pot, no soil base, no rocks.",
+   texture="bright jungle green #3A8C3F fronds with lighter yellow-green #8DC63F tips and deep teal #1B4D4A shading bands near the center, no red"),
+ "Foliage_CanopyTree": dict(prompt="A huge stylized rainforest canopy tree: tall straight thick trunk with buttress roots, a very wide flat umbrella-shaped crown made of big layered leaf clumps, crown much wider than tall, all leaves in the upper half, nothing else, no ground base.",
+   texture="grey-brown trunk with ink-dark bark bands, deep jungle green #2F7A3A crown with deep teal #1B4D4A shadow bands and lighter green tops, no red"),
+ "Prop_RockCluster": dict(prompt="A cluster of three chunky mossy jungle rocks of different sizes huddled together, low and wide, rounded faceted shapes, sitting on the ground, nothing else.",
+   texture="warm grey-brown stone with hard flat shading bands, bright green moss on the tops, ink-dark cracks, no red"),
+ "Foliage_BigLeaf": dict(prompt="A tropical elephant-ear plant: a clump of seven huge heart-shaped broad leaves on long stems fanning outward and upward, sitting on the ground, nothing else, no pot, no soil base.",
+   texture="bright yellow-green #7CB342 leaves with darker green #2E7D32 veins and deep teal #1B4D4A shading bands at the base, no red"),
 }

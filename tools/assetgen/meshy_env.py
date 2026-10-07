@@ -10,7 +10,7 @@ H = {"Authorization": "Bearer " + os.environ.get("MESHY_API_KEY", "")}
 HERE = Path(__file__).parent
 LEDGER = HERE / "env_spend_log.jsonl"  # append-only; safe for parallel runs
 RAW = Path(os.environ.get("ENV_RAW", HERE / "raw_env"))
-CAP = 450
+CAP = int(os.environ.get("MESHY_ENV_CAP", "450"))  # running total over the whole ledger
 STYLE = ("Inkbound Pulp style: stylized low-poly game prop, bold flat colors, two or three hard shading bands, "
          "dark ink-colored (#1E1A24) edge accents, hand-painted, no text, no logo, single object.")
 from env_prompts import ENV_PROMPTS  # noqa: E402
@@ -43,8 +43,10 @@ def run(name, poly, model):
     RAW.mkdir(parents=True, exist_ok=True)
     if t["status"] == "SUCCEEDED":
         (RAW / f"{name}.glb").write_bytes(requests.get(t["model_urls"]["glb"], timeout=300).content)
+    b1 = bal()
     add({"date": str(date.today()), "name": name, "model": model, "preview_task": pid, "refine_task": rid,
-                         "status": t["status"], "credits_est": 15 if model == "meshy-6-lite" else 30, "polycount_req": int(poly)})
+                         "status": t["status"], "credits_est": 15 if model == "meshy-6-lite" else 30, "polycount_req": int(poly),
+                         "balance_before": b0, "balance_after": b1})
     print(name, t["status"], "est total", sum(e.get("credits_est", 0) for e in led()["entries"]))
 
 if __name__ == "__main__":
