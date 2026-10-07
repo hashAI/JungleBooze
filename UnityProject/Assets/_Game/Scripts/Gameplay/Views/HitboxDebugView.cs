@@ -1,4 +1,5 @@
 using JungleBooze.Gameplay.Hazards;
+using JungleBooze.Gameplay.Path;
 using JungleBooze.Gameplay.Runner;
 using JungleBooze.Gameplay.Session;
 using JungleBooze.Gameplay.Track;
@@ -59,6 +60,7 @@ namespace JungleBooze.Gameplay.Views
         private int _shown;
         private bool _overlay;
         private float _pathHalfWidthM;
+        private PathFrame _frame;
 
         private bool _pending;
         private RunnerEventType _pendingType;
@@ -71,8 +73,15 @@ namespace JungleBooze.Gameplay.Views
         /// <summary>True while the hitbox overlay is on.</summary>
         public bool OverlayEnabled => _overlay;
 
+        /// <summary>The route the boxes are drawn on (spec 003). Call before <see cref="Init"/>; default is the straight route.</summary>
+        public void SetFrame(PathFrame frame)
+        {
+            _frame = frame;
+        }
+
         public void Init(GrayBoxKit kit, RunnerConfig runnerConfig, ObstacleView obstacleView, HazardView hazardView)
         {
+            _frame = PathPlacement.OrIdentity(_frame);
             _runnerConfig = runnerConfig;
             _obstacleView = obstacleView;
             _hazardView = hazardView;
@@ -286,7 +295,8 @@ namespace JungleBooze.Gameplay.Views
                 t.gameObject.SetActive(true);
             }
 
-            t.localPosition = new Vector3(cx, cy, cz);
+            // cz is the simulation distance s: the box sits at (s, x, y) on the route, rotated like the route there.
+            PathPlacement.Place(_frame, t, cz, cx, cy);
             t.localScale = new Vector3(sx, sy, sz);
             if (_categories[_used] != category)
             {

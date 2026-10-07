@@ -1,4 +1,5 @@
 using JungleBooze.Gameplay.Companion;
+using JungleBooze.Gameplay.Path;
 using JungleBooze.Gameplay.Runner;
 using JungleBooze.Gameplay.Session;
 using UnityEngine;
@@ -65,6 +66,9 @@ namespace JungleBooze.Gameplay.Views
         private Transform _leftWing;
         private Transform _rightWing;
         private Vector3 _position;
+        private Vector3 _worldPosition;
+        private Vector3 _worldUp = Vector3.up;
+        private PathFrame _frame;
         private Vector3 _velocity;
         private float _followX;
         private float _followVelX;
@@ -82,14 +86,21 @@ namespace JungleBooze.Gameplay.Views
         private readonly float[] _clipWeights = new float[ClipCount];
         private bool _graphReady;
 
-        /// <summary>World position of the bird (where its speech bubble is anchored).</summary>
-        public Vector3 BubbleAnchor => _position + new Vector3(0f, 0.55f, 0f);
+        /// <summary>World position of the bird (where its speech bubble is anchored): above the bird along the route's up.</summary>
+        public Vector3 BubbleAnchor => _worldPosition + (_worldUp * 0.55f);
 
         /// <summary>The bird is carrying HERO (Lift or a Continue rescue).</summary>
         public bool IsCarrying { get; private set; }
 
+        /// <summary>The route things are placed on (spec 003). Call before <see cref="Init"/>; default is the straight route.</summary>
+        public void SetFrame(PathFrame frame)
+        {
+            _frame = frame;
+        }
+
         public void Init(GrayBoxKit kit, RunnerConfig runnerConfig, CompanionConfig config)
         {
+            _frame = PathPlacement.OrIdentity(_frame);
             _runnerConfig = runnerConfig;
             _config = config ?? CompanionConfig.CreateDefault();
 
@@ -355,7 +366,12 @@ namespace JungleBooze.Gameplay.Views
                 _position.z = target.z;
             }
 
-            transform.localPosition = _position;
+            // _position is in path space (x lateral, y height, z distance); the route maps it into the world.
+            _frame.Sample(_position.z, out PathPose pose);
+            _worldPosition = PathPlacement.Point(pose, _position.x, _position.y);
+            _worldUp = pose.Up;
+            transform.localPosition = _worldPosition;
+            transform.localRotation = PathPlacement.Orientation(pose);
 
             // Wing beat and the cheer loop-the-loop.
             float flapHz = IsCarrying ? _config.FlapHz * CarryFlapFactor : _config.FlapHz;

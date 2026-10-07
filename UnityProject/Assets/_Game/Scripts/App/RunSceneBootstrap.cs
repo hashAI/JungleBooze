@@ -110,6 +110,13 @@ namespace JungleBooze.App
             WorldTheme startTheme = WorldThemes.Get(WorldKind.Jungle, false);
             ApplyLightingAndFog(presentation, look, startTheme);
 
+            // Spec 003 T3: the route every view places itself on. Straight (identity) unless RouteTuning.DebugRoute is on
+            // or, in dev builds, F4 switched the next run to the curved debug route. Rebuilt from the run seed on every BeginRun.
+            RouteTuning routeTuning = RouteTuning.CreateDefault();
+            var routeSource = new SelectableRouteSource { Curved = routeTuning.DebugRoute };
+            var pathFrame = new PathFrame(routeTuning, routeSource);
+            var pathFrameView = new PathFrameRunView(pathFrame, Debug.isDebugBuild ? routeSource : null);
+
             // Camera (portrait follow camera, spec 001 section 10).
             var cameraObject = new GameObject("RunCamera");
             cameraObject.transform.SetParent(root.transform, false);
@@ -122,6 +129,7 @@ namespace JungleBooze.App
             camera.allowHDR = false;
             cameraObject.AddComponent<AudioListener>();
             FollowCameraView cameraView = cameraObject.AddComponent<FollowCameraView>();
+            cameraView.SetFrame(pathFrame);
             cameraView.Init(camera, presentation);
 
             // Key light (style guide section 5, Jungle; angle and intensity from the look config). No realtime shadow
@@ -146,6 +154,7 @@ namespace JungleBooze.App
             var groundObject = new GameObject("Ground");
             groundObject.transform.SetParent(root.transform, false);
             GroundView ground = groundObject.AddComponent<GroundView>();
+            ground.SetFrame(pathFrame);
             ground.Init(kit, configs.Runner, presentation.FogEndM, look);
 
             // Stage C2: ravines, obstacles and coins from the generated track.
@@ -154,23 +163,27 @@ namespace JungleBooze.App
             var gapObject = new GameObject("Gaps");
             gapObject.transform.SetParent(root.transform, false);
             GapView gaps = gapObject.AddComponent<GapView>();
+            gaps.SetFrame(pathFrame);
             gaps.Init(kit, configs.Runner, presentation.FogEndM);
 
             var obstacleObject = new GameObject("Obstacles");
             obstacleObject.transform.SetParent(root.transform, false);
             ObstacleView obstacles = obstacleObject.AddComponent<ObstacleView>();
+            obstacles.SetFrame(pathFrame);
             obstacles.Init(kit, configs.Runner, presentation.FogEndM);
 
             // GDD 8.3: thorn patches and telegraphed lane strikes (ObstacleView skips those archetypes).
             var hazardObject = new GameObject("Hazards");
             hazardObject.transform.SetParent(root.transform, false);
             HazardView hazardView = hazardObject.AddComponent<HazardView>();
+            hazardView.SetFrame(pathFrame);
             hazardView.Init(kit, configs.Runner, presentation.FogEndM);
 
             // GDD 7: vines (rope, glow, release ring, Perfect feedback).
             var vineObject = new GameObject("Vines");
             vineObject.transform.SetParent(root.transform, false);
             VineView vineView = vineObject.AddComponent<VineView>();
+            vineView.SetFrame(pathFrame);
             vineView.Init(
                 kit,
                 configs.Runner,
@@ -181,18 +194,21 @@ namespace JungleBooze.App
             var coinObject = new GameObject("Coins");
             coinObject.transform.SetParent(root.transform, false);
             CoinView coinView = coinObject.AddComponent<CoinView>();
+            coinView.SetFrame(pathFrame);
             coinView.Init(kit, trackSetup != null ? trackSetup.Track.MaxActiveCoins : CoinViewFallbackPool, presentation.FogEndM);
 
             // GDD 10: pickup icons, shield bubble, magnet rings and speed lines.
             var powerUpObject = new GameObject("PowerUps");
             powerUpObject.transform.SetParent(root.transform, false);
             PowerUpView powerUpView = powerUpObject.AddComponent<PowerUpView>();
+            powerUpView.SetFrame(pathFrame);
             powerUpView.Init(kit, configs.Runner, presentation, presentation.FogEndM);
 
             // GDD 9: world themes (palette, fog, ground and obstacle tint) and the gateway frames.
             var worldObject = new GameObject("Worlds");
             worldObject.transform.SetParent(root.transform, false);
             WorldThemeView worldView = worldObject.AddComponent<WorldThemeView>();
+            worldView.SetFrame(pathFrame);
             worldView.Init(
                 camera,
                 keyLight,
@@ -208,6 +224,7 @@ namespace JungleBooze.App
             var runnerObject = new GameObject("Pista");
             runnerObject.transform.SetParent(root.transform, false);
             RunnerView runnerView = runnerObject.AddComponent<RunnerView>();
+            runnerView.SetFrame(pathFrame);
             runnerView.Init(kit, configs.Runner, presentation);
 
             // GDD 15: the companion macaw (gray-box).
@@ -215,6 +232,7 @@ namespace JungleBooze.App
             var companionObject = new GameObject("Companion");
             companionObject.transform.SetParent(root.transform, false);
             CompanionView companionView = companionObject.AddComponent<CompanionView>();
+            companionView.SetFrame(pathFrame);
             companionView.Init(kit, configs.Runner, companionConfig);
 
             // Input and session.
@@ -299,12 +317,9 @@ namespace JungleBooze.App
                 var hitboxObject = new GameObject("HitboxDebug");
                 hitboxObject.transform.SetParent(root.transform, false);
                 hitboxDebug = hitboxObject.AddComponent<HitboxDebugView>();
+                hitboxDebug.SetFrame(pathFrame);
                 hitboxDebug.Init(kit, configs.Runner, obstacles, hazardView);
             }
-
-            // Spec 003 T1: the straight route (identity mapping). Rebuilt from the run seed on every BeginRun; no view reads it yet.
-            var pathFrame = new PathFrame(RouteTuning.CreateDefault(), new StraightRouteSource());
-            var pathFrameView = new PathFrameRunView(pathFrame);
 
             var views = new System.Collections.Generic.List<IRunView>
             {

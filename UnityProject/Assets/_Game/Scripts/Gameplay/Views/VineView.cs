@@ -1,3 +1,4 @@
+using JungleBooze.Gameplay.Path;
 using JungleBooze.Gameplay.Runner;
 using JungleBooze.Gameplay.Session;
 using JungleBooze.Gameplay.Track;
@@ -66,6 +67,7 @@ namespace JungleBooze.Gameplay.Views
         private int _shown;
         private TrackSimulation _track;
         private VineConfig _vines;
+        private PathFrame _frame;
 
         private Transform _activeRope;
         private Transform _ringRoot;
@@ -84,8 +86,15 @@ namespace JungleBooze.Gameplay.Views
         /// <summary>Vines shown last frame (tests).</summary>
         public int ShownVineCount => _shown;
 
+        /// <summary>The route things are placed on (spec 003). Call before <see cref="Init"/>; default is the straight route.</summary>
+        public void SetFrame(PathFrame frame)
+        {
+            _frame = frame;
+        }
+
         public void Init(GrayBoxKit kit, RunnerConfig runnerConfig, VineConfig vineConfig, float viewDistanceM, Font font)
         {
+            _frame = PathPlacement.OrIdentity(_frame);
             _runnerConfig = runnerConfig;
             _vines = vineConfig;
             _viewDistanceM = viewDistanceM;
@@ -300,7 +309,12 @@ namespace JungleBooze.Gameplay.Views
                     }
 
                     Slot slot = _slots[used++];
-                    slot.Root.transform.localPosition = new Vector3(_runnerConfig.LaneCenterX(v.Lane), 0f, (float)v.Z);
+                    float laneX = _runnerConfig.LaneCenterX(v.Lane);
+                    _frame.Sample(v.Z, out PathPose vinePose);
+                    Vector3 rootPosition = PathPlacement.Point(vinePose, laneX, 0f);
+                    Quaternion rootRotation = PathPlacement.Orientation(vinePose);
+                    slot.Root.transform.localPosition = rootPosition;
+                    slot.Root.transform.localRotation = rootRotation;
                     if (!slot.Root.activeSelf)
                     {
                         slot.Root.SetActive(true);
@@ -329,9 +343,13 @@ namespace JungleBooze.Gameplay.Views
 
                     if (sign)
                     {
-                        float laneX = _runnerConfig.LaneCenterX(v.Lane);
+                        // At the path edge, SignpostLeadM before the vine along the route (placed in world, then
+                        // expressed in the vine root's frame because the signpost is its child).
                         float side = laneX > 0.01f ? 1f : -1f;
-                        slot.Signpost.transform.localPosition = new Vector3(side * _signpostX - laneX, 0f, -SignpostLeadM);
+                        _frame.Sample(v.Z - SignpostLeadM, out PathPose signPose);
+                        Quaternion inverseRoot = Quaternion.Inverse(rootRotation);
+                        slot.Signpost.transform.localPosition = inverseRoot * (PathPlacement.Point(signPose, side * _signpostX, 0f) - rootPosition);
+                        slot.Signpost.transform.localRotation = inverseRoot * PathPlacement.Orientation(signPose);
                     }
                 }
             }
@@ -367,16 +385,21 @@ namespace JungleBooze.Gameplay.Views
             float angle = both ? Mathf.Lerp(previous.SwingAngleRad, current.SwingAngleRad, alpha) : current.SwingAngleRad;
             float phase = both ? Mathf.Lerp(previous.SwingPhase, current.SwingPhase, alpha) : current.SwingPhase;
 
-            Vector3 hand = new Vector3(heroX, heroY + RunnerView.HandAboveFeetM, (float)heroZ);
-            Vector3 up = new Vector3(0f, Mathf.Cos(angle), -Mathf.Sin(angle));
+            // The rope is drawn in the route frame at the hero (pendulum angle in the frame's y/z plane), then mapped.
+            _frame.Sample(heroZ, out PathPose handPose);
+            Quaternion rot = PathPlacement.Orientation(handPose);
+            Vector3 hand = PathPlacement.Point(handPose, heroX, heroY + RunnerView.HandAboveFeetM);
+            Vector3 localUp = new Vector3(0f, Mathf.Cos(angle), -Mathf.Sin(angle));
+            Vector3 up = rot * localUp;
             float length = _vines.SwingRadiusM;
             _activeRope.localPosition = hand + up * (length * 0.5f);
-            _activeRope.localRotation = Quaternion.FromToRotation(Vector3.up, up);
+            _activeRope.localRotation = rot * Quaternion.FromToRotation(Vector3.up, localUp);
             _activeRope.localScale = new Vector3(RopeDiameterM, length * 0.5f, RopeDiameterM);
 
             bool inPerfect = phase >= _vines.PerfectStartPhase && phase < _vines.PerfectEndPhase;
             float flash = inPerfect ? 1f + 0.25f * Mathf.Abs(Mathf.Sin(_clock * RingFlashHz * Mathf.PI)) : 1f;
-            _ringRoot.localPosition = hand + new Vector3(0f, 0f, -RingTowardCameraM);
+            _ringRoot.localPosition = hand + (rot * new Vector3(0f, 0f, -RingTowardCameraM));
+            _ringRoot.localRotation = rot;
             _ringRoot.localScale = new Vector3(flash, flash, 1f);
             for (int k = 0; k < RingSegments; k++)
             {
@@ -396,7 +419,9 @@ namespace JungleBooze.Gameplay.Views
         private void RenderFeedback(in RunnerState state, float heroX, float heroY, double heroZ, float dt, bool frozen)
         {
             float step = frozen ? 0f : dt;
-            Vector3 hero = new Vector3(heroX, heroY, (float)heroZ);
+            _frame.Sample(heroZ, out PathPose pose);
+            Quaternion rot = PathPlacement.Orientation(pose);
+            Vector3 hero = PathPlacement.Point(pose, heroX, heroY);
 
             if (_stamp != null)
             {
@@ -409,7 +434,8 @@ namespace JungleBooze.Gameplay.Views
                 if (showStamp)
                 {
                     float u = 1f - _stampLeft / StampSeconds;
-                    _stamp.transform.localPosition = hero + new Vector3(0f, StampAboveFeetM + StampRiseM * u, StampAheadM);
+                    _stamp.transform.localPosition = hero + (rot * new Vector3(0f, StampAboveFeetM + StampRiseM * u, StampAheadM));
+                    _stamp.transform.localRotation = rot;
                     float scale = u < 0.15f ? Mathf.Lerp(1.6f, 1f, u / 0.15f) : 1f;
                     _stamp.transform.localScale = new Vector3(scale, scale, scale);
                     _stampLeft -= step;
@@ -425,7 +451,8 @@ namespace JungleBooze.Gameplay.Views
             if (lines)
             {
                 float u = 1f - _speedLinesLeft / SpeedLineSeconds;
-                _speedLinesRoot.localPosition = hero + new Vector3(0f, 0.9f, 0f);
+                _speedLinesRoot.localPosition = hero + (rot * new Vector3(0f, 0.9f, 0f));
+                _speedLinesRoot.localRotation = rot;
                 float spread = 1f + u;
                 _speedLinesRoot.localScale = new Vector3(spread, spread, 1f);
                 _speedLinesLeft -= step;
@@ -444,7 +471,7 @@ namespace JungleBooze.Gameplay.Views
                         _trailPositions[k] = _trailPositions[k - 1];
                     }
 
-                    _trailPositions[0] = hero + new Vector3(0f, 0.9f, 0f);
+                    _trailPositions[0] = hero + (rot * new Vector3(0f, 0.9f, 0f));
                     if (_trailCount < TrailLength)
                     {
                         _trailCount++;

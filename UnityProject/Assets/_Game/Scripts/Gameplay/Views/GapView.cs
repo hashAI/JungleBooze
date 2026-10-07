@@ -1,3 +1,4 @@
+using JungleBooze.Gameplay.Path;
 using JungleBooze.Gameplay.Runner;
 using JungleBooze.Gameplay.Session;
 using JungleBooze.Gameplay.Track;
@@ -38,12 +39,20 @@ namespace JungleBooze.Gameplay.Views
         private Transform[] _edgeFar;
         private int _shown;
         private TrackSimulation _track;
+        private PathFrame _frame;
 
         /// <summary>Gaps shown last frame (tests).</summary>
         public int ShownGapCount => _shown;
 
+        /// <summary>The route things are placed on (spec 003). Call before <see cref="Init"/>; default is the straight route.</summary>
+        public void SetFrame(PathFrame frame)
+        {
+            _frame = frame;
+        }
+
         public void Init(GrayBoxKit kit, RunnerConfig runnerConfig, float viewDistanceM)
         {
+            _frame = PathPlacement.OrIdentity(_frame);
             _runnerConfig = runnerConfig;
             _viewDistanceM = viewDistanceM;
             _pathHalfWidthM = runnerConfig.LaneCount * runnerConfig.LaneWidthM * 0.5f + PathMarginM;
@@ -122,23 +131,26 @@ namespace JungleBooze.Gameplay.Views
                     float cx = (x0 + x1) * 0.5f;
                     float length = o.GapLengthM;
 
-                    _slots[used].Root.transform.localPosition = new Vector3(0f, 0f, (float)o.Z);
+                    // The slab is rigid, so the root sits at the middle of the gap with the route's rotation there;
+                    // children are laid out from the gap start (local z = -length / 2) to the gap end (+length / 2).
+                    float half = length * 0.5f;
+                    PathPlacement.Place(_frame, _slots[used].Root.transform, o.Z + half, 0f, 0f);
                     if (!_slots[used].Root.activeSelf)
                     {
                         _slots[used].Root.SetActive(true);
                     }
 
-                    _slabs[used].localPosition = new Vector3(cx, SlabTopM - SlabThicknessM * 0.5f, length * 0.5f);
+                    _slabs[used].localPosition = new Vector3(cx, SlabTopM - SlabThicknessM * 0.5f, 0f);
                     _slabs[used].localScale = new Vector3(width, SlabThicknessM, length);
-                    _redMarkers[used].localPosition = new Vector3(cx, MarkerHeightM * 0.5f, -(MarkerGapToEdgeM + MarkerDepthM * 0.5f));
+                    _redMarkers[used].localPosition = new Vector3(cx, MarkerHeightM * 0.5f, -half - (MarkerGapToEdgeM + MarkerDepthM * 0.5f));
                     _redMarkers[used].localScale = new Vector3(width, MarkerHeightM, MarkerDepthM);
-                    _inkMarkers[used].localPosition = new Vector3(cx, MarkerHeightM * 0.5f, -(MarkerGapToEdgeM + MarkerDepthM * 1.5f));
+                    _inkMarkers[used].localPosition = new Vector3(cx, MarkerHeightM * 0.5f, -half - (MarkerGapToEdgeM + MarkerDepthM * 1.5f));
                     _inkMarkers[used].localScale = new Vector3(width, MarkerHeightM, MarkerDepthM);
                     if (_edgeNear[used] != null)
                     {
-                        _edgeNear[used].localPosition = new Vector3(cx, 0f, 0f);
+                        _edgeNear[used].localPosition = new Vector3(cx, 0f, -half);
                         _edgeNear[used].localScale = new Vector3(width, 1f, 1f);
-                        _edgeFar[used].localPosition = new Vector3(cx, 0f, length);
+                        _edgeFar[used].localPosition = new Vector3(cx, 0f, half);
                         _edgeFar[used].localScale = new Vector3(width, 1f, 1f);
                     }
 

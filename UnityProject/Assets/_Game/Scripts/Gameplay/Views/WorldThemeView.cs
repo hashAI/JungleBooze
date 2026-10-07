@@ -1,4 +1,5 @@
 using System;
+using JungleBooze.Gameplay.Path;
 using JungleBooze.Gameplay.Runner;
 using JungleBooze.Gameplay.Session;
 using JungleBooze.Gameplay.Track;
@@ -33,6 +34,10 @@ namespace JungleBooze.Gameplay.Views
         private const int TextFontSize = 64;
         private const float TextMaxChars = 12f;
 
+        // The key light's yaw follows the route heading, low-passed (spec 003 section 7.3: about 200 m, 9 s at 21 m/s).
+        private const float KeyYawTimeConstantS = 9f;
+        private const float KeyYawEpsilonDeg = 0.01f;
+
         private Camera _camera;
         private Light _keyLight;
         private SkyView _sky;
@@ -41,6 +46,11 @@ namespace JungleBooze.Gameplay.Views
         private ObstacleView _obstacles;
         private TrackSimulation _track;
         private float _viewDistanceM;
+        private PathFrame _frame;
+        private Quaternion _keyBase = Quaternion.identity;
+        private float _keyYawDeg;
+        private float _appliedKeyYawDeg;
+        private bool _keyYawValid;
 
         private int _segment = -1;
         private int _appliedFrom = -1;
@@ -65,6 +75,12 @@ namespace JungleBooze.Gameplay.Views
             return _worldNames[(int)kind];
         }
 
+        /// <summary>The route the gateway and the key light follow (spec 003). Call before <see cref="Init"/>; default is the straight route.</summary>
+        public void SetFrame(PathFrame frame)
+        {
+            _frame = frame;
+        }
+
         public void Init(
             Camera camera,
             Light keyLight,
@@ -77,8 +93,10 @@ namespace JungleBooze.Gameplay.Views
             SkyView sky,
             EnvironmentLookConfig look)
         {
+            _frame = PathPlacement.OrIdentity(_frame);
             _camera = camera;
             _keyLight = keyLight;
+            _keyBase = keyLight != null ? keyLight.transform.localRotation : Quaternion.identity;
             _sky = sky;
             _look = look ?? EnvironmentLookConfig.CreateDefault();
             _ground = ground;
@@ -163,6 +181,7 @@ namespace JungleBooze.Gameplay.Views
             _appliedTo = -1;
             _appliedT = -1f;
             _gateSegment = -1;
+            _keyYawValid = false;
             Render(session, 1f, 0f);
         }
 
@@ -177,6 +196,10 @@ namespace JungleBooze.Gameplay.Views
                 return;
             }
 
+            RunnerSimulation runner = session.Runner;
+            RunnerInterpolation.Evaluate(runner.Previous, runner.Current, alpha, out _, out _, out double z);
+            UpdateKeyHeading(z, realDeltaSeconds);
+
             if (_track == null || _track.Worlds == null)
             {
                 if (_gate.gameObject.activeSelf)
@@ -187,8 +210,6 @@ namespace JungleBooze.Gameplay.Views
                 return;
             }
 
-            RunnerSimulation runner = session.Runner;
-            RunnerInterpolation.Evaluate(runner.Previous, runner.Current, alpha, out _, out _, out double z);
             WorldScheduleConfig worlds = _track.Worlds;
             int segment = _track.WorldSegmentAt(z);
 
@@ -267,7 +288,40 @@ namespace JungleBooze.Gameplay.Views
             if (_keyLight != null)
             {
                 _keyLight.color = theme.KeyLight;
-                _keyLight.transform.localRotation = KeyRotation(theme, _look);
+                _keyBase = KeyRotation(theme, _look);
+                _keyLight.transform.localRotation = Quaternion.Euler(0f, _keyYawDeg, 0f) * _keyBase;
+                _appliedKeyYawDeg = _keyYawDeg;
+            }
+        }
+
+        /// <summary>
+        /// Turns the key light about the vertical axis with the route heading at HERO, low-passed, so the golden light
+        /// keeps coming from ahead on a bend. On the straight route the heading is 0 and the rotation is the theme's.
+        /// </summary>
+        private void UpdateKeyHeading(double z, float dt)
+        {
+            if (_keyLight == null)
+            {
+                return;
+            }
+
+            _frame.Sample(z, out PathPose pose);
+            float target = PathPlacement.HeadingYawDeg(pose);
+            if (dt <= 0f || !_keyYawValid)
+            {
+                _keyYawDeg = target;
+                _keyYawValid = true;
+            }
+            else
+            {
+                float k = 1f - Mathf.Exp(-dt / KeyYawTimeConstantS);
+                _keyYawDeg += Mathf.DeltaAngle(_keyYawDeg, target) * k;
+            }
+
+            if (Mathf.Abs(_keyYawDeg - _appliedKeyYawDeg) > KeyYawEpsilonDeg)
+            {
+                _appliedKeyYawDeg = _keyYawDeg;
+                _keyLight.transform.localRotation = Quaternion.Euler(0f, _keyYawDeg, 0f) * _keyBase;
             }
         }
 
@@ -334,7 +388,7 @@ namespace JungleBooze.Gameplay.Views
                 }
             }
 
-            _gate.localPosition = new Vector3(0f, 0f, (float)gateZ);
+            PathPlacement.Place(_frame, _gate, gateZ, 0f, 0f);
             if (!_gate.gameObject.activeSelf)
             {
                 _gate.gameObject.SetActive(true);

@@ -1,3 +1,4 @@
+using JungleBooze.Gameplay.Path;
 using JungleBooze.Gameplay.Runner;
 using JungleBooze.Gameplay.Session;
 using JungleBooze.Gameplay.Track;
@@ -26,14 +27,22 @@ namespace JungleBooze.Gameplay.Views
         private int _shown;
         private float _spinDeg;
         private TrackSimulation _track;
+        private PathFrame _frame;
 
         /// <summary>Coins shown last frame (tests).</summary>
         public int ShownCoinCount => _shown;
 
         private float _viewDistanceM;
 
+        /// <summary>The route the coins are placed on (spec 003). Call before <see cref="Init"/>; default is the straight route.</summary>
+        public void SetFrame(PathFrame frame)
+        {
+            _frame = frame;
+        }
+
         public void Init(GrayBoxKit kit, int poolSize, float viewDistanceM)
         {
+            _frame = PathPlacement.OrIdentity(_frame);
             _viewDistanceM = viewDistanceM;
             int size = Mathf.Clamp(poolSize, 1, MaxPool);
             _coins = new Transform[size];
@@ -137,8 +146,9 @@ namespace JungleBooze.Gameplay.Views
         private void Place(int slot, in CoinInstance c)
         {
             Transform t = _coins[slot];
-            t.localPosition = new Vector3(c.X, c.Y, (float)c.Z);
-            t.localRotation = Quaternion.Euler(0f, _spinDeg + c.Id * PhasePerIdDeg, 0f);
+            _frame.Sample(c.Z, out PathPose pose);
+            t.localPosition = PathPlacement.Point(pose, c.X, c.Y);
+            t.localRotation = PathPlacement.Orientation(pose) * Quaternion.Euler(0f, _spinDeg + c.Id * PhasePerIdDeg, 0f);
             if (!t.gameObject.activeSelf)
             {
                 t.gameObject.SetActive(true);

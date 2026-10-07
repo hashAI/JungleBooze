@@ -1,3 +1,4 @@
+using JungleBooze.Gameplay.Path;
 using JungleBooze.Gameplay.PowerUps;
 using JungleBooze.Gameplay.Runner;
 using JungleBooze.Gameplay.Session;
@@ -89,6 +90,7 @@ namespace JungleBooze.Gameplay.Views
 
         private float _time;
         private TrackRunWorld _world;
+        private PathFrame _frame;
 
         /// <summary>
         /// Reduce Motion (from the save, live): no speed lines and no shard bursts. Starts from the config's value
@@ -100,8 +102,15 @@ namespace JungleBooze.Gameplay.Views
             set => _reduceMotion = value;
         }
 
+        /// <summary>The route things are placed on (spec 003). Call before <see cref="Init"/>; default is the straight route.</summary>
+        public void SetFrame(PathFrame frame)
+        {
+            _frame = frame;
+        }
+
         public void Init(GrayBoxKit kit, RunnerConfig runnerConfig, RunnerPresentationConfig presentation, float viewDistanceM)
         {
+            _frame = PathPlacement.OrIdentity(_frame);
             _runnerConfig = runnerConfig;
             _reduceMotion = presentation != null && presentation.ReduceMotion;
             _viewDistanceM = viewDistanceM;
@@ -163,13 +172,18 @@ namespace JungleBooze.Gameplay.Views
             RunnerInterpolation.Evaluate(runner.Previous, runner.Current, alpha, out float heroX, out float heroY, out double heroZ);
             var hero = new Vector3(heroX, heroY, (float)heroZ);
 
+            // The simulation position (hero) is only used for simulation queries; everything drawn goes through the route.
+            _frame.Sample(heroZ, out PathPose pose);
+            Vector3 heroWorld = PathPlacement.Point(pose, heroX, heroY);
+            Quaternion rot = PathPlacement.Orientation(pose);
+
             PowerUpSystem powerUps = _world?.PowerUps;
             RenderPickups(powerUps, heroZ);
             bool dead = runner.Current.IsDead;
-            RenderShield(powerUps, hero, dead);
-            RenderMagnet(powerUps, hero, dead);
-            RenderSpeedLines(powerUps, hero, dead);
-            SpawnPendingShards(hero);
+            RenderShield(powerUps, hero, heroWorld, rot, dead);
+            RenderMagnet(powerUps, heroWorld, rot, dead);
+            RenderSpeedLines(powerUps, heroWorld, rot, dead);
+            SpawnPendingShards(heroWorld, rot, heroZ);
             UpdateShards(session.Phase == SessionPhase.Paused ? 0f : realDeltaSeconds);
         }
 
@@ -277,7 +291,9 @@ namespace JungleBooze.Gameplay.Views
                         slot.Boost.SetActive(p.Type == PowerUpType.SpeedBoost);
                     }
 
-                    slot.Root.localPosition = new Vector3(p.X, p.Y + bob, (float)p.Z);
+                    _frame.Sample(p.Z, out PathPose pickupPose);
+                    slot.Root.localPosition = PathPlacement.Point(pickupPose, p.X, p.Y + bob);
+                    slot.Root.localRotation = PathPlacement.Orientation(pickupPose);
                     slot.Icon.localRotation = spin;
                     if (!slot.Root.gameObject.activeSelf)
                     {
@@ -346,7 +362,7 @@ namespace JungleBooze.Gameplay.Views
             return (ring == 0 && k >= 3 && k <= 5) || (ring == 1 && k >= 4 && k <= 5);
         }
 
-        private void RenderShield(PowerUpSystem powerUps, Vector3 hero, bool dead)
+        private void RenderShield(PowerUpSystem powerUps, Vector3 hero, Vector3 heroWorld, Quaternion rot, bool dead)
         {
             bool on = powerUps != null && !dead && powerUps.IsActive(PowerUpType.Shield);
             if (on && powerUps.IsEnding(PowerUpType.Shield))
@@ -364,8 +380,8 @@ namespace JungleBooze.Gameplay.Views
                 return;
             }
 
-            _bubble.localPosition = hero + new Vector3(0f, BubbleCenterM, 0f);
-            _bubble.localRotation = Quaternion.Euler(0f, _time * BubbleSpinDegPerS, 0f);
+            _bubble.localPosition = heroWorld + (rot * new Vector3(0f, BubbleCenterM, 0f));
+            _bubble.localRotation = rot * Quaternion.Euler(0f, _time * BubbleSpinDegPerS, 0f);
 
             // GDD 10: the bubble does not glow over a chasm (the shield does not save from falling).
             TrackSimulation track = _world?.Track;
@@ -402,7 +418,7 @@ namespace JungleBooze.Gameplay.Views
             return ring;
         }
 
-        private void RenderMagnet(PowerUpSystem powerUps, Vector3 hero, bool dead)
+        private void RenderMagnet(PowerUpSystem powerUps, Vector3 heroWorld, Quaternion rot, bool dead)
         {
             bool on = powerUps != null && !dead && powerUps.IsActive(PowerUpType.Magnet);
             if (on && powerUps.IsEnding(PowerUpType.Magnet))
@@ -410,11 +426,11 @@ namespace JungleBooze.Gameplay.Views
                 on = ((int)(_time * FlickerHz) & 1) == 0;
             }
 
-            PlaceRing(_magnetRingA, on, hero, 0f);
-            PlaceRing(_magnetRingB, on, hero, 0.5f);
+            PlaceRing(_magnetRingA, on, heroWorld, rot, 0f);
+            PlaceRing(_magnetRingB, on, heroWorld, rot, 0.5f);
         }
 
-        private void PlaceRing(Transform ring, bool on, Vector3 hero, float phaseOffset)
+        private void PlaceRing(Transform ring, bool on, Vector3 heroWorld, Quaternion rot, float phaseOffset)
         {
             if (ring.gameObject.activeSelf != on)
             {
@@ -428,7 +444,8 @@ namespace JungleBooze.Gameplay.Views
 
             float phase = (_time / MagnetPulseS + phaseOffset) % 1f;
             float radius = Mathf.Lerp(MagnetMinRadiusM, MagnetMaxRadiusM, phase);
-            ring.localPosition = hero + new Vector3(0f, 0.06f + phase * 0.5f, 0f);
+            ring.localPosition = heroWorld + (rot * new Vector3(0f, 0.06f + phase * 0.5f, 0f));
+            ring.localRotation = rot;
             ring.localScale = new Vector3(radius, 1f, radius);
         }
 
@@ -448,7 +465,7 @@ namespace JungleBooze.Gameplay.Views
             _speedLines.gameObject.SetActive(false);
         }
 
-        private void RenderSpeedLines(PowerUpSystem powerUps, Vector3 hero, bool dead)
+        private void RenderSpeedLines(PowerUpSystem powerUps, Vector3 heroWorld, Quaternion rot, bool dead)
         {
             bool on = !_reduceMotion && powerUps != null && !dead && powerUps.BoostPhase != SpeedBoostPhase.None;
             if (_speedLines.gameObject.activeSelf != on)
@@ -462,7 +479,8 @@ namespace JungleBooze.Gameplay.Views
             }
 
             bool slowing = powerUps.BoostPhase == SpeedBoostPhase.Slowdown;
-            _speedLines.localPosition = hero;
+            _speedLines.localPosition = heroWorld;
+            _speedLines.localRotation = rot;
             for (int i = 0; i < SpeedLineCount; i++)
             {
                 // Fixed lanes of streaks around Pista (golden-angle spread), each rushing back on its own phase.
@@ -505,7 +523,7 @@ namespace JungleBooze.Gameplay.Views
             _shardShieldMaterial = kit.GetMaterial(StylePalette.ShieldGlow, _shardHazardMaterial);
         }
 
-        private void SpawnPendingShards(Vector3 hero)
+        private void SpawnPendingShards(Vector3 heroWorld, Quaternion rot, double heroZ)
         {
             if (_reduceMotion)
             {
@@ -516,15 +534,23 @@ namespace JungleBooze.Gameplay.Views
             for (int p = 0; p < _pendingCount; p++)
             {
                 bool shield = _pendingShield[p];
-                Vector3 origin = shield
-                    ? hero + new Vector3(0f, BubbleCenterM, 0.6f)
-                    : new Vector3(_runnerConfig.LaneCenterX(_pendingLane[p]), 1.0f, hero.z + 1.2f);
+                Vector3 origin;
+                if (shield)
+                {
+                    origin = heroWorld + (rot * new Vector3(0f, BubbleCenterM, 0.6f));
+                }
+                else
+                {
+                    _frame.Sample(heroZ + 1.2, out PathPose strikePose);
+                    origin = PathPlacement.Point(strikePose, _runnerConfig.LaneCenterX(_pendingLane[p]), 1.0f);
+                }
+
                 for (int k = 0; k < ShardsPerBurst; k++)
                 {
                     int i = _nextShard;
                     _nextShard = (_nextShard + 1) % ShardCapacity;
                     float a = 2f * Mathf.PI * (k + 0.5f * p) / ShardsPerBurst;
-                    _shardVelocity[i] = new Vector3(Mathf.Cos(a) * 3.5f, 3f + Mathf.Sin(a) * 2.5f, 4f + (k % 3));
+                    _shardVelocity[i] = rot * new Vector3(Mathf.Cos(a) * 3.5f, 3f + Mathf.Sin(a) * 2.5f, 4f + (k % 3));
                     _shardLife[i] = ShardLifeS;
                     _shards[i].localPosition = origin;
                     _shards[i].localRotation = Quaternion.Euler(k * 37f, k * 53f, 0f);

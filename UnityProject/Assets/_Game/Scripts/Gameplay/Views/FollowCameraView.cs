@@ -1,3 +1,4 @@
+using JungleBooze.Gameplay.Path;
 using JungleBooze.Gameplay.Runner;
 using JungleBooze.Gameplay.Session;
 using UnityEngine;
@@ -6,7 +7,10 @@ namespace JungleBooze.Gameplay.Views
 {
     /// <summary>
     /// Portrait follow camera (spec 001 section 10): position (camX, camY + up, Z − behind), looking at
-    /// (camX, lookAtHeight + camY, Z + lookAhead). camX smooth-damps toward lateralFollow × X, camY toward
+    /// (camX, lookAtHeight + camY, Z + lookAhead), both expressed in route space (spec 003 T3: the position is mapped
+    /// through the <see cref="PathFrame"/> at s = Z − behind and the look point at s = Z + lookAhead, so on a curved
+    /// route the camera sits behind HERO on the route and looks along it; on the straight route this is exactly the
+    /// old placement; the look-ahead lead, bank and FOV work is T4). camX smooth-damps toward lateralFollow × X, camY toward
     /// verticalFollow × Y, in real frame time. Slides do not move it; it follows interpolated state; stumble shake
     /// (off with Reduce Motion). Vine swing (GDD 7.3 step 3): while on a vine and in the launch after it, the FOV
     /// eases to the swing FOV and the view tilts up (both off with Reduce Motion).
@@ -26,6 +30,7 @@ namespace JungleBooze.Gameplay.Views
         private float _shakeLeft;
         private float _shakeClock;
         private float _swingBlend;
+        private PathFrame _frame;
 
         public Camera Camera => _camera;
 
@@ -38,8 +43,15 @@ namespace JungleBooze.Gameplay.Views
         /// <summary>Smoothed lateral follow value (tests: AC-56).</summary>
         public float FollowX => _camX;
 
+        /// <summary>The route the camera follows (spec 003). Call before <see cref="Init"/>; default is the straight route.</summary>
+        public void SetFrame(PathFrame frame)
+        {
+            _frame = frame;
+        }
+
         public void Init(Camera targetCamera, RunnerPresentationConfig config)
         {
+            _frame = PathPlacement.OrIdentity(_frame);
             _camera = targetCamera;
             _config = config;
             ReduceMotion = config.ReduceMotion;
@@ -115,10 +127,11 @@ namespace JungleBooze.Gameplay.Views
             float ease = _swingBlend * _swingBlend * (3f - 2f * _swingBlend);
             _camera.fieldOfView = Mathf.Lerp(_config.CameraFovDeg, _config.SwingCameraFovDeg, ease);
 
-            float zf = (float)z;
             Transform t = _camera.transform;
-            t.position = new Vector3(_camX + shakeX, _camY + _config.CameraOffsetUpM, zf - _config.CameraOffsetBehindM);
-            t.LookAt(new Vector3(_camX + shakeX, _config.CameraLookAtHeightM + _camY, zf + _config.CameraLookAheadM));
+            _frame.Sample(z - _config.CameraOffsetBehindM, out PathPose behindPose);
+            _frame.Sample(z + _config.CameraLookAheadM, out PathPose aheadPose);
+            t.position = PathPlacement.Point(behindPose, _camX + shakeX, _camY + _config.CameraOffsetUpM);
+            t.LookAt(PathPlacement.Point(aheadPose, _camX + shakeX, _config.CameraLookAtHeightM + _camY));
             if (ease > 0f)
             {
                 t.rotation = t.rotation * Quaternion.Euler(-_config.SwingCameraTiltDeg * ease, 0f, 0f);

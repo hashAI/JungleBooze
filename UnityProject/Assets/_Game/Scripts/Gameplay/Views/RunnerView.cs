@@ -1,3 +1,4 @@
+using JungleBooze.Gameplay.Path;
 using JungleBooze.Gameplay.Runner;
 using JungleBooze.Gameplay.Session;
 using UnityEngine;
@@ -79,15 +80,23 @@ namespace JungleBooze.Gameplay.Views
         private float _wobbleDir;
         private bool _dead;
         private float _stumbleLeft;
+        private PathFrame _frame;
 
-        /// <summary>Rendered position of HERO's feet (after interpolation, before wobble and bob).</summary>
+        /// <summary>Rendered position of HERO's feet in world space (after interpolation and the route mapping, before wobble and bob).</summary>
         public Vector3 RenderedFeetPosition { get; private set; }
 
         /// <summary>Current vertical scale of the model (1 standing, &lt; 1 sliding).</summary>
         public float CurrentSquash => _squash;
 
+        /// <summary>The route things are placed on (spec 003). Call before <see cref="Init"/>; default is the straight route.</summary>
+        public void SetFrame(PathFrame frame)
+        {
+            _frame = frame;
+        }
+
         public void Init(GrayBoxKit kit, RunnerConfig runnerConfig, RunnerPresentationConfig presentation)
         {
+            _frame = PathPlacement.OrIdentity(_frame);
             _runnerConfig = runnerConfig;
             _presentation = presentation;
 
@@ -449,7 +458,8 @@ namespace JungleBooze.Gameplay.Views
             RunnerSimulation runner = session.Runner;
             RunnerState current = runner.Current;
             RunnerInterpolation.Evaluate(runner.Previous, current, alpha, out float x, out float y, out double z);
-            RenderedFeetPosition = new Vector3(x, y, (float)z);
+            _frame.Sample(z, out PathPose pose);
+            RenderedFeetPosition = PathPlacement.Point(pose, x, y);
 
             // Slide squash: hitbox ratio, smoothed a little in real time.
             float targetSquash = current.Locomotion == Locomotion.Sliding
@@ -502,7 +512,9 @@ namespace JungleBooze.Gameplay.Views
                 }
             }
 
-            transform.localPosition = new Vector3(x, 0f, (float)z);
+            // Feet on the route surface at her lateral position; the model's own local axes are the route frame.
+            transform.localPosition = PathPlacement.Point(pose, x, 0f);
+            transform.localRotation = PathPlacement.Orientation(pose);
             // On a vine, or held by the wrists during the companion's Lift (no swing angle then).
             bool carried = current.Locomotion == Locomotion.Carried || current.Locomotion == Locomotion.Lifted;
             if (_arms != null && _arms.activeSelf != carried)

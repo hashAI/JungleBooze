@@ -1,3 +1,4 @@
+using JungleBooze.Gameplay.Path;
 using JungleBooze.Gameplay.Runner;
 using JungleBooze.Gameplay.Session;
 using JungleBooze.Gameplay.Track;
@@ -50,6 +51,7 @@ namespace JungleBooze.Gameplay.Views
         private int _shown;
         private int _frame;
         private TrackSimulation _track;
+        private PathFrame _frame;
         private Material _bodyMaterial;
         private Material _moverMaterial;
 
@@ -83,8 +85,15 @@ namespace JungleBooze.Gameplay.Views
             return false;
         }
 
+        /// <summary>The route things are placed on (spec 003). Call before <see cref="Init"/>; default is the straight route.</summary>
+        public void SetFrame(PathFrame frame)
+        {
+            _frame = frame;
+        }
+
         public void Init(GrayBoxKit kit, RunnerConfig runnerConfig, float viewDistanceM)
         {
+            _frame = PathPlacement.OrIdentity(_frame);
             _runnerConfig = runnerConfig;
             _viewDistanceM = viewDistanceM;
             _pieces = new Piece[PieceCapacity];
@@ -367,13 +376,13 @@ namespace JungleBooze.Gameplay.Views
             Place(target, o, shape, x);
         }
 
-        private static void Place(Piece piece, in ObstacleInstance o, ObstacleShape shape, float x)
+        private void Place(Piece piece, in ObstacleInstance o, ObstacleShape shape, float x)
         {
             float width = shape.WidthM;
             float depth = o.DepthM > 0f ? o.DepthM : shape.DepthM;
             float height = shape.TopM - shape.BottomM;
             piece.ObstacleId = o.Id;
-            piece.Root.transform.localPosition = new Vector3(x, 0f, (float)o.Z + depth * 0.5f);
+            PathPlacement.Place(_frame, piece.Root.transform, o.Z + depth * 0.5f, x, 0f);
             if (!piece.Root.activeSelf)
             {
                 piece.Root.SetActive(true);

@@ -1,4 +1,5 @@
 using JungleBooze.Gameplay.Hazards;
+using JungleBooze.Gameplay.Path;
 using JungleBooze.Gameplay.Runner;
 using JungleBooze.Gameplay.Session;
 using JungleBooze.Gameplay.Track;
@@ -66,6 +67,7 @@ namespace JungleBooze.Gameplay.Views
         private int _thornsShown;
         private int _strikesShown;
         private TrackSimulation _track;
+        private PathFrame _frame;
 
         /// <summary>Thorn pieces and strike pieces shown last frame (tests).</summary>
         public int ShownThornCount => _thornsShown;
@@ -114,8 +116,15 @@ namespace JungleBooze.Gameplay.Views
             return false;
         }
 
+        /// <summary>The route things are placed on (spec 003). Call before <see cref="Init"/>; default is the straight route.</summary>
+        public void SetFrame(PathFrame frame)
+        {
+            _frame = frame;
+        }
+
         public void Init(GrayBoxKit kit, RunnerConfig runnerConfig, float viewDistanceM)
         {
+            _frame = PathPlacement.OrIdentity(_frame);
             _runnerConfig = runnerConfig;
             _viewDistanceM = viewDistanceM;
             _thorns = new ThornPiece[ThornCapacity];
@@ -284,13 +293,13 @@ namespace JungleBooze.Gameplay.Views
             return piece;
         }
 
-        private static void PlaceThorn(ThornPiece piece, in ObstacleInstance o, ObstacleShape shape, float x)
+        private void PlaceThorn(ThornPiece piece, in ObstacleInstance o, ObstacleShape shape, float x)
         {
             float width = shape.WidthM;
             float depth = o.DepthM > 0f ? o.DepthM : shape.DepthM;
             float height = shape.TopM - shape.BottomM;
             piece.ObstacleId = o.Id;
-            piece.Root.transform.localPosition = new Vector3(x, 0f, (float)o.Z + depth * 0.5f);
+            PathPlacement.Place(_frame, piece.Root.transform, o.Z + depth * 0.5f, x, 0f);
             if (!piece.Root.activeSelf)
             {
                 piece.Root.SetActive(true);
@@ -321,7 +330,7 @@ namespace JungleBooze.Gameplay.Views
             float depth = o.DepthM > 0f ? o.DepthM : shape.DepthM;
             float width = shape.WidthM;
             piece.ObstacleId = o.Id;
-            piece.Root.transform.localPosition = new Vector3(_runnerConfig.LaneCenterX(o.FromLane), 0f, (float)o.Z + depth * 0.5f);
+            PathPlacement.Place(_frame, piece.Root.transform, o.Z + depth * 0.5f, _runnerConfig.LaneCenterX(o.FromLane), 0f);
             if (!piece.Root.activeSelf)
             {
                 piece.Root.SetActive(true);
