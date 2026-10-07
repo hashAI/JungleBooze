@@ -57,6 +57,12 @@ namespace JungleBooze.Gameplay.Views
             _linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
 
             Material ui = Canvas.GetDefaultCanvasMaterial();
+            if (ui == null)
+            {
+                // No UI material (should not happen): the camera's solid fog-colored background stays.
+                return;
+            }
+
             _domeMaterial = CreateMaterial(ui, "Sky_Dome", DomeQueue);
             _ringMaterial = CreateMaterial(ui, "Sky_FarCanopy", RingQueue);
 
