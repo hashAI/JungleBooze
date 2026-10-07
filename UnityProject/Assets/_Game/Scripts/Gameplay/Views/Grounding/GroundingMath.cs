@@ -26,8 +26,8 @@ namespace JungleBooze.Gameplay.Views
             unchecked
             {
                 ulong h = runSeed ^ (streamId * 0x9E3779B97F4A7C15UL);
-                h = Finalize(h + ((ulong)(uint)obstacleId * 0xBF58476D1CE4E5B9UL) + 0x632BE59BD9B4E019UL);
-                return Finalize(h ^ (((ulong)salt + 1UL) * 0x94D049BB133111EBUL));
+                h = Scramble(h + ((ulong)(uint)obstacleId * 0xBF58476D1CE4E5B9UL) + 0x632BE59BD9B4E019UL);
+                return Scramble(h ^ (((ulong)salt + 1UL) * 0x94D049BB133111EBUL));
             }
         }
 
@@ -43,7 +43,7 @@ namespace JungleBooze.Gameplay.Views
             return Unit(Mix(runSeed, VariantStream, obstacleId, salt));
         }
 
-        private static ulong Finalize(ulong x)
+        private static ulong Scramble(ulong x)
         {
             unchecked
             {
