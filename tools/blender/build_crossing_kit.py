@@ -1,13 +1,15 @@
 """Headless (pip bpy): procedural FIRST jungle-crossing kit. Zero API credits, deterministic (fixed seeds).
 Pieces: Tree_Trunk, Tree_Branch, Vine_Liana, Vine_Tuft (the four slots EnvironmentArt.cs fills), plus
-Foliage_FernCluster (optional extra).
+Foliage_FernCluster, and (v2) Prop_Rock, Prop_Root, Vine_Creeper (scenery slots; Vine_Creeper is not wired yet).
 Usage: python3 build_crossing_kit.py <EnvironmentArt dir> [--glb-dir <dir>]
 Writes <Name>.fbx + <Name>_basecolor.png (512 px palette atlas, flat colour + 3 hard bands, no painted outlines)
 into <EnvironmentArt dir>. FBX is Y up, -Z forward, 1 unit = 1 m, transforms applied (same exporter flags as glb_to_fbx.py).
 --glb-dir also writes <Name>.glb for the software contact sheet (tools/assetgen/env_preview.py).
 Geometry is authored directly in Unity space (x right, y up, z forward; metres) and rotated into Blender space on build.
 Conventions: Tree_Trunk origin = base centre; Tree_Branch local +X runs trunk -> path, origin at the trunk end;
-Vine_Liana hangs along -Y from the origin at its top; Vine_Tuft origin = centre, flower faces -Z."""
+Vine_Liana hangs along -Y from the origin at its top; Vine_Tuft origin = centre, flower faces -Z.
+v2: Prop_Rock origin = base centre (about 1.3 x 0.7 x 1.1 m); Prop_Root origin = base centre, long axis X (2.0 x 0.5 x 0.5 m);
+Vine_Creeper hangs along -Y from its top (5 m, 4 cm thick, dark green, no gold/orange)."""
 import math, os, random, sys
 import bpy, bmesh
 from mathutils import Vector
@@ -21,9 +23,12 @@ PAL = {  # name: (base, shadow). Palette from tools/assetgen/jungle_crossing_pro
     "liana":    ("#3A8C3F", "#1B4D4A"),
     "gold":     ("#FFC43D", "#C98A1E"),
     "orange":   ("#F28C28", "#B5651D"),
+    "stone":    ("#8A7B68", "#4E463C"),   # v2 (same family as the gray-box rock colour)
+    "creeper":  ("#2B6B3A", "#143D2A"),   # v2: thin dark-green creeper, darker than the live liana
 }
 ROWS = list(PAL)
-CELL, GRID = 64, 8  # 512 px atlas: row = colour, column = shade (0 shadow band, 1 base, 2 light band)
+CW, CH, NCOL, NROW = 64, 32, 8, 16  # 512 px atlas: row (32 px) = colour, column (64 px) = shade (0 shadow band, 1 base, 2 light band)
+W_ATLAS = CW * NCOL
 
 def hexc(h): return tuple(int(h[i:i + 2], 16) / 255 for i in (1, 3, 5))
 def lerp(a, b, t): return tuple(x + (y - x) * t for x, y in zip(a, b))
@@ -35,11 +40,10 @@ def shade_color(name, s):
     return lerp(base, hexc("#FFE9A0"), 0.22)
 
 def atlas_pixels():
-    px = [0.0] * (CELL * GRID * CELL * GRID * 4)
-    W = CELL * GRID
+    W = W_ATLAS; px = [0.0] * (W * CH * NROW * 4)
     for y in range(W):
         for x in range(W):
-            r, s = y // CELL, x // CELL
+            r, s = y // CH, x // CW
             c = shade_color(ROWS[r], s) if r < len(ROWS) and s < 3 else (0.5, 0.5, 0.5)
             i = (y * W + x) * 4; px[i:i + 4] = [c[0], c[1], c[2], 1.0]
     return px
@@ -116,7 +120,7 @@ class Builder:
             f.normal_update(); n = f.normal
             dp = n.dot(LIGHT); s = 2 if dp > 0.38 else (1 if dp > -0.12 else 0)
             row = f[self.col]
-            u, v = (s + 0.5) / GRID, (row + 0.5) / GRID
+            u, v = (s + 0.5) / NCOL, (row + 0.5) / NROW
             for lp in f.loops: lp[uv].uv = (u, v)
         tris = len(bm.faces)
         rot = Vector  # Unity (x,y,z) -> Blender (x,-z,y): same convention as glTF import, so FBX axes land Y up / -Z forward
@@ -125,7 +129,7 @@ class Builder:
         ob = bpy.data.objects.new(self.name, mesh); bpy.context.scene.collection.objects.link(ob)
         for p in mesh.polygons: p.use_smooth = False
         png = os.path.join(d, self.name + "_basecolor.png")
-        img = bpy.data.images.new(self.name + "_basecolor", CELL * GRID, CELL * GRID)
+        img = bpy.data.images.new(self.name + "_basecolor", W_ATLAS, W_ATLAS)
         img.pixels = atlas_pixels(); img.filepath_raw = png; img.file_format = "PNG"; img.save()
         mat = bpy.data.materials.new(self.name); mat.use_nodes = True
         nt = mat.node_tree; bsdf = nt.nodes["Principled BSDF"]; tex = nt.nodes.new("ShaderNodeTexImage")
@@ -230,10 +234,58 @@ def build_fern():
         b.leaf((0, 0.05, 0), (math.cos(a), 0.7 + 0.5 * (j % 3) / 2, math.sin(a)), rng.uniform(1.0, 1.4), 0.4, 0.45, ["leaf", "leaf_lt", "moss"][j % 3])
     return b
 
+def build_rock():
+    """Mossy boulder cluster: three squashed icospheres (one big, two small) sunk flat at y=0, moss on the upward faces."""
+    b = Builder("Prop_Rock", 606); rng = b.rng
+    for c, sc, jit in (((0.0, 0.0, 0.0), (0.62, 0.62, 0.52), 0.14), ((0.5, 0.0, -0.32), (0.4, 0.38, 0.36), 0.16),
+                       ((-0.42, 0.0, 0.38), (0.3, 0.28, 0.3), 0.16)):
+        res = bmesh.ops.create_icosphere(b.bm, subdivisions=2, radius=1.0)
+        for v in res["verts"]:
+            v.co = Vector((v.co.x * sc[0], v.co.y * sc[1], v.co.z * sc[2])) * (1 + rng.uniform(-jit, jit))
+            v.co += Vector(c); v.co.y = max(v.co.y, 0.0)  # flat base on the ground; origin = base centre
+        faces = list({f for v in res["verts"] for f in v.link_faces})
+        for f in faces:
+            f.normal_update(); f[b.col] = ROWS.index("moss" if f.normal.y > 0.72 else "stone")
+    for j, (x, z, a) in enumerate(((0.05, 0.05, 0.4), (0.5, -0.3, 2.0), (-0.4, 0.4, 3.6), (0.55, -0.1, 5.2))):
+        y = 0.52 if j == 0 else (0.36 if j in (1, 3) else 0.26)
+        b.leaf((x, y, z), (math.cos(a), 0.5, math.sin(a)), 0.28, 0.16, 0.08, ["leaf", "leaf_lt", "leaf", "moss"][j])
+    return b
+
+def build_root():
+    """Arching tree root along X (2.0 m long, 0.5 m high): flared feet on the ground, moss on top, leaf tufts, one side rootlet."""
+    b = Builder("Prop_Root", 707); rng = b.rng
+    n = 11; pts, rad = [], []
+    for i in range(n):
+        t = i / (n - 1); e = abs(2 * t - 1)  # 1 at the feet, 0 at the crown
+        r = 0.105 + 0.1 * e ** 2.2
+        pts.append((-1.0 + 2.0 * t, r + (0.5 - 0.105 - 0.105 - 0.0) * math.sin(math.pi * t) ** 0.8 * 0.95 - 0.0, 0.05 * math.sin(2 * math.pi * t)))
+        rad.append(r)
+    b.tube(pts, rad, 6, lambda i, k, nn: "moss" if nn.y > 0.7 else ("bark_alt" if nn.y < 0.0 or k % 3 == 0 else "bark"), cap_start=True, cap_end=True)
+    rp = [(-0.88, 0.1, 0.1), (-0.95, 0.09, 0.3), (-1.0, 0.07, 0.5)]  # side rootlet on the left foot
+    b.tube(rp, [0.07, 0.05, 0.035], 5, lambda i, k, nn: "bark_alt", cap_end=True)
+    for j, (t, side) in enumerate(((0.2, 1), (0.38, -1), (0.55, 1), (0.74, -1), (0.9, 1), (0.5, -1))):
+        p = pts[int(t * (n - 1))]; a = math.pi / 2 * side + rng.uniform(-0.5, 0.5)
+        b.leaf((p[0], p[1] + 0.06, p[2]), (math.cos(a) * 0.5, 0.9, math.sin(a)), 0.3, 0.18, 0.1, ["leaf", "leaf_lt", "moss"][j % 3])
+    return b
+
+def build_creeper():
+    """Thin non-grabbable creeper: 5 m, 4 cm thick, dark green, five small sparse leaves, no tuft, no gold/orange."""
+    b = Builder("Vine_Creeper", 808); rng = b.rng
+    n, L = 18, 5.0; pts, rad = [], []
+    for i in range(n):
+        t = i / (n - 1)
+        pts.append((0.12 * math.sin(5 * math.pi * t), -L * t, 0.08 * math.sin(3 * math.pi * t + 1)))
+        rad.append(0.028 - 0.01 * t)
+    b.tube(pts, rad, 4, lambda i, k, nn: "creeper", cap_end=True)
+    for j, t in enumerate((0.18, 0.4, 0.58, 0.76, 0.92)):
+        p = pts[int(t * (n - 1))]; a = j * 2.4 + 1.0
+        b.leaf(p, (math.cos(a), 0.15, math.sin(a)), 0.26, 0.14, 0.07, "creeper" if j % 2 else "leaf")
+    return b
+
 def main():
     d = sys.argv[1]; glb = sys.argv[sys.argv.index("--glb-dir") + 1] if "--glb-dir" in sys.argv else None
     os.makedirs(d, exist_ok=True); total = {}
-    for fn in (build_trunk, build_branch, build_liana, build_tuft, build_fern):
+    for fn in (build_trunk, build_branch, build_liana, build_tuft, build_fern, build_rock, build_root, build_creeper):
         bpy.ops.wm.read_factory_settings(use_empty=True)
         b = fn(); total[b.name] = b.finish(d, glb)
     print(total)

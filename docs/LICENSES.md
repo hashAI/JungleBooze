@@ -15,3 +15,4 @@ Every generated or imported asset, tool, and SDK, with its license. Required by 
 | Pickup_Boost `.../Models/Pickup_Boost.glb` | Procedural mesh (own work, no AI) | `tools/assetgen/make_boost.py` | Project-owned | Yes | 2026-10-07 |
 
 | Jungle crossing kit (Tree_Trunk, Tree_Branch, Vine_Liana, Vine_Tuft, Foliage_FernCluster) | Procedural Blender (bpy), `tools/blender/build_crossing_kit.py`, 2026-10-07 | Original work, no third-party licence | Art/Environment/Resources/EnvironmentArt |
+| Jungle crossing kit v2 (Prop_Rock, Prop_Root, Vine_Creeper; palette atlas re-laid to 16 rows, so the v1 pieces were rebuilt too) | Procedural Blender (bpy), `tools/blender/build_crossing_kit.py`, 2026-10-07, zero credits, no prompt file (geometry is code) | Original work, no third-party licence | Art/Environment/Resources/EnvironmentArt |
