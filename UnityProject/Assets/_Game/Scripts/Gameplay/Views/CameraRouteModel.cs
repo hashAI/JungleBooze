@@ -236,25 +236,46 @@ namespace JungleBooze.Gameplay.Views
 
         /// <summary>
         /// Screen-edge safety (spec 003 6.1 on-screen rule). <paramref name="points"/> holds <paramref name="count"/>
-        /// world (x, z) pairs of the probed path points (10, 25 and 40 m ahead, outer lane centers); the camera is at
-        /// (<paramref name="camWorldX"/>, <paramref name="camWorldZ"/>). When a point would come closer to the screen
-        /// edge than the margin, the yaw lead grows by the smallest amount that fixes it; if the points are further
-        /// apart than the viewport allows, the lead centers them and the FOV grows (not with Reduce Motion).
+        /// world (x, y, z) triples of the probed path points (10, 25 and 40 m ahead, outer lane centers); the camera is
+        /// at (<paramref name="camWorldX"/>, <paramref name="camWorldY"/>, <paramref name="camWorldZ"/>). Each point's
+        /// bearing is measured in the camera frame (yaw, pitch and roll included). When a point would come closer to
+        /// the screen edge than the margin, the yaw lead grows by the smallest amount that fixes it; if the points are
+        /// further apart than the viewport allows, the lead centers them and the FOV grows (not with Reduce Motion).
         /// </summary>
-        public void ApplySafety(float camWorldX, float camWorldZ, float[] points, int count)
+        public void ApplySafety(float camWorldX, float camWorldY, float camWorldZ, float[] points, int count)
         {
+            float sy = Mathf.Sin(_aimYaw);
+            float cy = Mathf.Cos(_aimYaw);
+            float pitchUp = PitchDeg * Mathf.Deg2Rad;
+            float sp = Mathf.Sin(pitchUp);
+            float cp = Mathf.Cos(pitchUp);
+            float rollRad = RollDeg * Mathf.Deg2Rad;
+            float sr = Mathf.Sin(rollRad);
+            float cr = Mathf.Cos(rollRad);
+            float fx = sy * cp;
+            float fy = sp;
+            float fz = cy * cp;
+            float ux = -sy * sp;
+            float uy = cp;
+            float uz = -cy * sp;
+            float rx = (cy * cr) - (ux * sr);
+            float ry = -uy * sr;
+            float rz = (-sy * cr) - (uz * sr);
+
             float minRel = float.MaxValue;
             float maxRel = float.MinValue;
             for (int i = 0; i < count; i++)
             {
-                float dx = points[2 * i] - camWorldX;
-                float dz = points[(2 * i) + 1] - camWorldZ;
-                if ((dx * dx) + (dz * dz) < 1e-4f)
+                float dx = points[3 * i] - camWorldX;
+                float dy = points[(3 * i) + 1] - camWorldY;
+                float dz = points[(3 * i) + 2] - camWorldZ;
+                float depth = (dx * fx) + (dy * fy) + (dz * fz);
+                if (depth < 0.5f)
                 {
                     continue;
                 }
 
-                float rel = WrapPi(Mathf.Atan2(dx, dz) - _aimYaw);
+                float rel = Mathf.Atan2((dx * rx) + (dy * ry) + (dz * rz), depth);
                 if (rel < minRel)
                 {
                     minRel = rel;

@@ -17,7 +17,7 @@ namespace JungleBooze.Gameplay.Views
         private readonly RunnerPresentationConfig _config;
         private readonly CameraRouteTuning _tuning;
         private readonly CameraRouteModel _model;
-        private readonly float[] _points = new float[12];
+        private readonly float[] _points = new float[18];
 
         public CameraRouteRig(RunnerPresentationConfig config, CameraRouteTuning tuning)
         {
@@ -57,11 +57,11 @@ namespace JungleBooze.Gameplay.Views
             _model.Advance(dt, work);
             Place(frame, work, shakeX);
             FillProbePoints(frame, input.HeroS);
-            _model.ApplySafety(Position.x, Position.z, _points, 6);
+            _model.ApplySafety(Position.x, Position.y, Position.z, _points, 6);
             FovDeg = _model.FovDeg;
         }
 
-        /// <summary>The probed points (world x, z pairs; 10, 25 and 40 m ahead, outer lane centers) of the last update. Tests only.</summary>
+        /// <summary>The probed points (world x, y, z triples; 10, 25 and 40 m ahead, outer lane centers) of the last update. Tests only.</summary>
         public float[] ProbePoints => _points;
 
         private CameraRouteInput Sample(PathFrame frame, in CameraRouteInput input)
@@ -97,8 +97,10 @@ namespace JungleBooze.Gameplay.Views
                 Vector3 left = pose.Center - (pose.Right * _tuning.SafetyLaneOffsetM);
                 Vector3 right = pose.Center + (pose.Right * _tuning.SafetyLaneOffsetM);
                 _points[n++] = left.x;
+                _points[n++] = left.y;
                 _points[n++] = left.z;
                 _points[n++] = right.x;
+                _points[n++] = right.y;
                 _points[n++] = right.z;
             }
         }
