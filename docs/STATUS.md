@@ -59,7 +59,7 @@ and commit after every agent report.
 | audio-director | waiting | — | — | Week 5. Note: the macaw speaks a few words, so voice lines and localization are needed |
 | qa-engineer | waiting | — | — | FP1 stage F: test plan + owner play-test script |
 | performance-engineer | waiting | — | — | Benchmark scene (week 2+) |
-| code-reviewer | **working** | FP0 compile-correctness review of the presentation slice (Core, App, Session, Views, Controls, UI, Editor/Setup, presentation tests) | review report | Review Runner/ and Track/ when B1/B2 finish |
+| code-reviewer | stopped by owner (token cost) | FP0 compile review was stopped before reporting; nothing written | — | Rerun after the owner's review, if the owner wants it |
 | monetization-engineer | waiting | — | — | Week 4–5 |
 | appstore-compliance | done | Name check (Pista: low caution, Duko: clear; not legal clearance), 8 ranked app names, 17 early risks, checklist refreshed for current Apple rules (Xcode 26 / iOS 26 SDK) | `docs/compliance/2026-10-name-and-early-review.md`, `docs/APP_STORE_CHECKLIST.md` | Privacy manifest when SDKs are chosen; follow-ups: "report an ad" option, Declared Age Range API, CI check for the word "booze" |
 | release-engineer | paused (owner: build the game first) | Partial: build script, fastlane lanes, one-command build, setup guide (stopped mid-verification) | `fastlane/`, `tools/build/`, `docs/RELEASE.md`, `.github/workflows/build-ios.yml` | Resume later: finish and verify the Fastfile lanes |
@@ -107,6 +107,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Log
 Newest first. One line per event.
+- 2026-10-07: Owner stopped the code-reviewer to save tokens. Track agent (B2) continues to finish its tests.
 - 2026-10-07: Stage B1 done (gameplay-engineer): collisions + tests. Not compiled.
 - 2026-10-07: Owner asked to review the code before any more changes. Running agents finish; nothing new is launched; resume watchdog disabled.
 - 2026-10-07: Stage C1 done (ui-engineer). Launched code-reviewer on the presentation slice for the FP0 preview. Known issue: Track/ files lack .meta files (B2 still running).
