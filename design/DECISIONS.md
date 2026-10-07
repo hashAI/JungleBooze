@@ -5,6 +5,8 @@ Newest first.
 
 | Date | Gate | Decision | Options considered | Decided by |
 |---|---|---|---|---|
+| 2026-10-07 | — | **Autonomous until the first playable version.** No questions to the owner; agents use their recommended defaults (marked `[ASSUMED]`, reviewed later). Don't stop until the owner can play a first version. Sessions may hand off and resume after usage limits on their own | — | Owner |
+| 2026-10-07 | — | Don't install toolchains in the cloud container. Write the code; it runs on the owner's M4 MacBook (24 GB), where installing Unity and dependencies is fine | — | Owner |
 | 2026-10-06 | — | **Focus on building and testing the game now.** Release pipeline, store and other shipping work are paused until later | — | Owner |
 | 2026-10-06 | — | Add the `JungleBooze.App` assembly (composition root) to the project's assembly list | Add / Don't add | Owner |
 | 2026-10-06 | G5 | No tracking for anyone: contextual ads only, no ATT prompt | No tracking / Adults-only ATT / Decide week 4 | Owner |

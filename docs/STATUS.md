@@ -4,26 +4,48 @@
 The coordinating session updates it whenever it launches an agent, receives an agent's report, or records an owner decision.
 Decisions themselves live in `design/DECISIONS.md`; the plan lives in `docs/AGENT_PLAN.md`.
 
-_Last updated: 2026-10-06_
+_Last updated: 2026-10-07_
 
 ## Current milestone
-**Owner focus: build and test the game. Release/store work is paused.**
-**Week 1: movement, deterministic core, bot player, style guide.** Week 0 is done.
+**Goal: First Playable (FP1). Autonomous mandate: no owner questions until it's done.** Release/store work is paused.
+
+**FP1 is done when** the owner, on their M4 MacBook, can:
+1. Follow `docs/PLAY_FIRST_BUILD.md`: install Unity Hub + Unity 6 LTS (with iOS Build Support), open `UnityProject/`.
+2. Press Play and run an endless gray-box track (primitives in the style-guide palette): Pista (stand-in shape) switches
+   3 lanes, jumps, slides; obstacles of the shared kit; coins; speed ramps up; collisions end the run (stumble rule).
+3. Control with arrow keys / WASD / space in the editor, mouse-drag swipes, and touch swipes on iPhone.
+4. See a HUD (distance, coins) and a Game Over panel with Restart.
+5. Run the EditMode tests in Unity's Test Runner and see them pass.
+6. Optionally build to their iPhone via Xcode with a free Apple ID (steps in the same doc).
+Not in FP1 (comes right after): vine swinging, Duko, power-ups, menus/shop, real art, audio.
+
+**FP1 plan (stages; tick as they land):**
+- [ ] A1 gameplay-engineer: movement simulation (spec 001 minus collisions) + EditMode tests
+- [ ] A2 game-designer: spec 002 (track, obstacles, coins)
+- [ ] A3 balance-simulator: Python reference model of spec 001 + golden traces (the only code we can execute here)
+- [ ] B gameplay-engineer: collisions + track/obstacles/coins simulation (specs 001 + 002) + tests
+- [ ] C gameplay/ui-engineer: Unity presentation layer: auto-built scene, gray-box views, camera, input adapter, HUD, game over/restart, default config assets
+- [ ] D tech-architect: minimal ProjectSettings + `docs/PLAY_FIRST_BUILD.md` (Mac setup, play, run tests, build to iPhone)
+- [ ] E code-reviewer: compile-correctness and logic review of everything; fixes applied
+- [ ] F qa-engineer: test plan + owner play-test script
+
+Lesson from the 2026-10-07 worker restart: uncommitted agent work is lost on restart. Keep agent tasks small,
+and commit after every agent report.
 
 ## Agents: who is doing what
 
 | Agent | State | Current / last task | Output | Next for this agent |
 |---|---|---|---|---|
 | producer | not used yet | (the coordinating session does this role for now) | this file | — |
-| game-designer | **working** | Spec 002: endless track, obstacles, coins, fairness rules | `docs/specs/002-track-obstacles-coins.md` | Spec 003: vine swinging (week 3) |
-| balance-simulator | **working** | Python reference model of spec 001 + seeded test course; checks targets S1–S9 offline | `tools/sim/` | Cross-check the C# simulation once it lands |
+| game-designer | interrupted (restart 2026-10-07) | Spec 002: endless track, obstacles, coins, fairness rules | `docs/specs/002-track-obstacles-coins.md` | Spec 003: vine swinging (week 3) |
+| balance-simulator | interrupted (restart 2026-10-07) | Python reference model of spec 001 + seeded test course; checks targets S1–S9 offline | `tools/sim/` | Cross-check the C# simulation once it lands |
 | tech-architect | done (week 0) | Architecture, ADRs 0001–0002, Unity skeleton, deterministic core + tests, CI test workflow | `docs/ARCHITECTURE.md`, `docs/adr/`, `UnityProject/`, `.github/workflows/test.yml` | Week 1: Roslyn analyzers; add the `JungleBooze.App` assembly to the rules file once the owner agrees |
-| gameplay-engineer | **working** | Implementing spec 001 (player movement), bot input provider, tests named by AC id | `UnityProject/Assets/_Game/Scripts/Gameplay`, `Tests/` | Spec 002 |
+| gameplay-engineer | interrupted (restart 2026-10-07) | Implementing spec 001 (player movement), bot input provider, tests named by AC id | `UnityProject/Assets/_Game/Scripts/Gameplay`, `Tests/` | Spec 002 |
 | ui-engineer | waiting | — | — | Week 4: menus, shop |
 | art-director | done | Style guide and prompts updated with names Pista/Duko and the chest-band sash | `design/STYLE_GUIDE.md`, `design/prompts/` | Generate concept images once an image API key exists |
 | asset-pipeline | waiting | — | — | Needs an image/3D generation API key from the owner |
 | audio-director | waiting | — | — | Week 5. Note: the macaw speaks a few words, so voice lines and localization are needed |
-| qa-engineer | **working** | Test plan and acceptance-criteria coverage table for spec 001 (and 002 as it lands) | `docs/qa/TEST_PLAN.md` | Review the gameplay-engineer's tests against the plan |
+| qa-engineer | interrupted (restart 2026-10-07) | Test plan and acceptance-criteria coverage table for spec 001 (and 002 as it lands) | `docs/qa/TEST_PLAN.md` | Review the gameplay-engineer's tests against the plan |
 | performance-engineer | waiting | — | — | Benchmark scene (week 2+) |
 | code-reviewer | waiting | — | — | Review the spec 001 implementation |
 | monetization-engineer | waiting | — | — | Week 4–5 |
@@ -67,6 +89,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Log
 Newest first. One line per event.
+- 2026-10-07: Worker restart wiped uncommitted work; gameplay-engineer, game-designer (spec 002), balance-simulator and qa-engineer were interrupted with nothing saved. Owner set the autonomous First Playable mandate. Restarting in smaller stages.
 - 2026-10-06: Owner set focus on building and testing. Stopped release-engineer (work so far committed). Launched balance-simulator (reference model) and qa-engineer (test plan).
 - 2026-10-06: Owner decided: app name candidate "Pista & Duko: Jungle Swing", lawyer check in week 7, no tracking, add the App assembly.
 - 2026-10-06: appstore-compliance finished the name check and early risk review. Top risks: "JungleBooze" leaking into bundle/product IDs (permanent), and kid hero + ads counting as directed to children.

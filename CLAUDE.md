@@ -17,6 +17,11 @@ defined in `.claude/agents/`. Read `docs/AGENT_PLAN.md` for the full plan.
    (e) sends the owner the new session's link, and stops working in the old session.
    Never hand off while an agent is running or while a question to the owner is unanswered.
 
+4. **Current mandate (owner, 2026-10-07): autonomous until the first playable version.** Don't ask the owner
+   questions. Take the recommended option, mark it `[ASSUMED]`, and log it in `docs/STATUS.md` for later review.
+   Keep going (handing off and resuming after limits as needed) until the owner can play a first version
+   (definition in `docs/STATUS.md`). Don't install toolchains in the cloud container; code runs on the owner's Mac.
+
 ## Ground rules for every agent
 1. **The owner decides identity and taste.** Hero, companion, art style, name, icon, prices, and "is it fun" are
    the owner's calls. Prepare options, but never decide these yourself. Check `design/DECISIONS.md` first.
