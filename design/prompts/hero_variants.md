@@ -204,4 +204,8 @@ Extra negative: `pith helmet, feathered cap, Peter Pan, green tunic, flying`
 
 | Date | Variant | Format | Seed | Settings | Image path | Kept? | Notes |
 |---|---|---|---|---|---|---|---|
-| | | | | | | | |
+| 2026-10-07 | H2 final | Turnaround 3 views (take 1 Classic) | n/a (API has no seed) | gpt-image-2, high, 2400x1200 | design/concepts/2026-10-07/hero_take1_turnaround.png | Candidate | v3 prompt; exact text in the concepts README |
+| 2026-10-07 | H2 final | Turnaround 3 views (take 2 Feral) | n/a | gpt-image-2, high, 2400x1200 | design/concepts/2026-10-07/hero_take2_turnaround.png | Candidate | |
+| 2026-10-07 | H2 final | Turnaround 3 views (take 3 Toy-simple) | n/a | gpt-image-2, high, 2400x1200 | design/concepts/2026-10-07/hero_take3_turnaround.png | Candidate | Thin diagonal strap on the back |
+| 2026-10-07 | H2 final | Key art, vine swing (edit from take 1) | n/a | gpt-image-2 edits, high, 1216x1824 | design/concepts/2026-10-07/hero_take1_keyart.jpg | Candidate | Vine broken in two |
+| 2026-10-07 | H2 final | v1/v2 turnarounds | n/a | gpt-image-2, high | design/concepts/2026-10-07/rejected/ | No | v1 painterly and sash at the waist; v2 bare midriff with the X on skin. Lesson: always state top coverage and the satchel side in image terms |

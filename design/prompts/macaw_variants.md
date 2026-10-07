@@ -179,4 +179,6 @@ Extra negative: `rainbow plumage, tall flightless bird, Kevin, blue body, hyacin
 
 | Date | Variant | Format | Seed | Settings | Image path | Kept? | Notes |
 |---|---|---|---|---|---|---|---|
-| | | | | | | | |
+| 2026-10-07 | M3 final | Turnaround: 3 perched views + flying top (take 1 Classic sleek) | n/a (API has no seed) | gpt-image-2, high, 2800x1200 | design/concepts/2026-10-07/macaw_take1_turnaround.png | Candidate | Iris gold instead of ink with a gold ring |
+| 2026-10-07 | M3 final | Same (take 2 Rogue angular) | n/a | gpt-image-2, high, 2800x1200 | design/concepts/2026-10-07/macaw_take2_turnaround.png | Candidate | Needle-thin tail |
+| 2026-10-07 | M3 final | Same (take 3 Plush chunky) | n/a | gpt-image-2, high, 2800x1200 | design/concepts/2026-10-07/macaw_take3_turnaround.jpg | Candidate | Less sleek than the locked block |
