@@ -159,8 +159,8 @@ namespace JungleBooze.Gameplay.Views
             _cutFar = new Transform[GapCapacity];
             for (int i = 0; i < GapCapacity; i++)
             {
-                _cutNear[i] = kit.Create(PrimitiveType.Cube, "CutNear" + i, transform, CutColor);
-                _cutFar[i] = kit.Create(PrimitiveType.Cube, "CutFar" + i, transform, CutColor);
+                _cutNear[i] = kit.Create(PrimitiveType.Cube, "CutNear" + i, transform, CutColor).transform;
+                _cutFar[i] = kit.Create(PrimitiveType.Cube, "CutFar" + i, transform, CutColor).transform;
                 _cutNear[i].gameObject.SetActive(false);
                 _cutFar[i].gameObject.SetActive(false);
             }
