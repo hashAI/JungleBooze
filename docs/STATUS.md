@@ -7,6 +7,8 @@ Decisions themselves live in `design/DECISIONS.md`; the plan lives in `docs/AGEN
 _Last updated: 2026-10-07_
 
 ## Current milestone
+**⏸ PAUSED FOR OWNER CODE REVIEW (2026-10-07).** After the running agents finish and their output is committed, make no code changes and start no new agents until the owner says to continue. Code-reviewer findings are reported, not applied.
+
 **Goal: First Playable (FP1). Autonomous mandate: no owner questions until it's done.** Release/store work is paused.
 
 **FP1 is done when** the owner, on their M4 MacBook, can:
@@ -66,6 +68,7 @@ States: **working** (launched, report not received) · waiting · blocked · don
 If a new session finds an agent marked **working** but no matching output or commit, assume that agent was interrupted. Check the listed output files and relaunch the task.
 
 ## Resume watchdog
+- **Disabled 2026-10-07 for the owner review pause.** Re-enable when the owner says to continue.
 - Routine `trig_01KrbEoPcZMAR8K2x73kVcUn` wakes the coordinating session every 4 hours (minute 23 UTC).
 - It resumes stalled work (usage limit, interruption). It does nothing while agents run or while waiting on the owner.
 - Stall started: _none_ (set this to the date/time of the first watchdog check that finds no progress; clear it when work resumes).
@@ -103,6 +106,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Log
 Newest first. One line per event.
+- 2026-10-07: Owner asked to review the code before any more changes. Running agents finish; nothing new is launched; resume watchdog disabled.
 - 2026-10-07: Stage C1 done (ui-engineer). Launched code-reviewer on the presentation slice for the FP0 preview. Known issue: Track/ files lack .meta files (B2 still running).
 - 2026-10-07: Stage A3 done (balance-simulator): reference model, 64 unit tests green, targets report with S4/S5 failing on bot profiles.
 - 2026-10-07: Owner wants to play progress ASAP. Added early preview FP0 (flat world) right after C1.
