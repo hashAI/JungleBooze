@@ -231,6 +231,7 @@ def _two_jump_scan(course):
         b = a.clone()
         if _clear(b, course.end_z):
             single = True
+            continue  # this j1 needs no second jump; only count real jump-then-jump below
         # clear row 1 first
         b = a.clone()
         while not (b.dead or b.stumbles) and b.z - hd <= g1.z1 + 0.01:

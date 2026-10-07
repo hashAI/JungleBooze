@@ -584,4 +584,356 @@ coins between lanes are collected while HERO is moving (the expanded pickup box 
 
 ---
 
-<!-- SECTIONS 11+ -->
+## 11. Fairness rules and the chunk validator
+
+### 11.1 Rules every chunk must satisfy
+
+"Validated at its band" means: at every quick validation speed of its band (7.4), with every `phaseOffset`, from
+every entry lane, in both mirror orientations.
+
+| # | Rule | How it is checked |
+|---|---|---|
+| **F1** | **Solvable:** from N(l) at the chunk start, for each lane l, at least one input sequence reaches the chunk end with no death and **no stumble**, validated at its band. | Validator search (11.3) |
+| **F2** | **Exit flexibility:** from N(l), for each lane l and each lane l', some no-stumble path is in N(l') on the first tick HERO's center reaches the chunk end. | Validator search |
+| **F3** | **Row spacing:** consecutive row fronts are ≥ `minRowSpacingM` of every tier in the chunk's tier range apart (tier 1 chunks: 10.08 m; tier 2+ chunks: 9.50 m). | Static |
+| **F4** | **Lead zones:** first row front ≥ `leadInM` (6 m); last row front ≤ `lengthM − leadOutM`; every box and gap lies inside `[0, lengthM]`. Across a seam this gives ≥ 12 m between rows, more than any tier's spacing. | Static |
+| **F5** | **A lane is always open:** at every `z`, at least one lane has no `FullBlock` box and no mover (start or end position). Full blocks span at most 2 lanes. | Static |
+| **F6** | **Gap bounds:** `(coyoteTicks + 1)·vMax/60 + 0.5 + gapRunAcrossMarginM ≤ gapLengthM ≤ 0.35·vMin + 0.5` over the band (5.4). Nothing but coins (arcs) above a gap; no obstacle within 1.0 m after a gap's far edge. | Static |
+| **F7** | **Visible answer (readability):** at the moment HERO's front is `telegraphMinS × v` before an obstacle's front, the obstacle's answer feature is not hidden behind another obstacle, as seen from the camera of every lane HERO can be in on a surviving path at that moment. Method below. | Validator geometry, within the chunk and across seams (seam table) |
+| **F8** | **Movers:** exactly one lane of movement; end lane open at the mover's row in at least one other lane (F5); with `moverTriggerLeadS` and `moverLateralSpeedMps`, the mover settles ≥ `moverMinSettleS` before HERO can reach it at `vMax`: `moverTriggerLeadS − laneWidth/moverLateralSpeed ≥ moverMinSettleS` (1.4 − 0.5 = 0.9 ≥ 0.5). | Static |
+| **F9** | **No ceiling trap (GDD 5.3.7):** a high barrier is never placed where a jump is the only escape. Covered by F1, because the validator uses the real collision rules (jumping into a barrier from below is lethal); fixture AC-230 proves it. | Validator search |
+| **C1** | Coins never overlap a hitbox (coin radius + `coinClearanceM`), including mover start and end positions. | Static |
+| **C2** | **No unreachable coins:** every coin is collected by at least one path that also satisfies F1 and F2. | Validator search |
+| **C3** | **No lures:** the last coin of a `Line`, and the end of a `Trail`, in lane L lies ≥ `coinBlockClearS × vMax` (7.35 m at 21 m/s) before the front of the next full block or mover end position in lane L. | Static |
+| **C4** | Coins above a gap only as an `Arc`. | Static |
+| **G1** | Format: grid alignment (0.5 m, 5 m lengths), sorted lists, contiguous lane masks, kind rules (start and breathers have no obstacles), allowed gap lengths, `formatVersion`. | Static |
+
+**F7 method.** Camera of a grounded HERO in lane l, settled (spec 001 section 10): position
+`(0.7 × laneCenter(l), 3.2, heroZ − 6.0)`. Answer feature sample points on the obstacle's visual box (hitbox +
+0.08 m), per occupied lane box, at `x = center − 0.7, center, center + 0.7`:
+low barrier = top front edge; high barrier = bottom front edge; full block = front face at `y = 1.0`
+(the red band); mover = end circle on the ground in its end lane and the boulder's front at `y = 1.0`; gap = near
+edge on the ground. Occluders: visual boxes of every other obstacle, movers at their position on that tick. The
+obstacle passes if, for the lane box nearest to the camera's lane, at least 2 of 3 points have a clear line of sight.
+Lanes checked: every lane in which a surviving state (11.3) is settled at that tick. When the check point lies in
+the previous chunk (seams), the previous chunk's surviving-lane table is used; the seam table (8.5) stores the
+result per ordered pair and mirror combination.
+
+### 11.2 Why seams are safe
+
+1. The start chunk has no obstacles and is validated for F2 at the run-start speeds (5 to 10 m/s), so HERO can be in
+   N(l) for any l when the first generated chunk begins.
+2. If HERO is in N(l) at the start of a chunk, F1 says the chunk can be survived, and F2 says HERO can be in N(l')
+   for any l' at its end, which is the start of the next chunk.
+3. So for every sequence the generator can produce, a perfect player can survive forever (no impossible seams),
+   without validating pairs. F7 is the only seam-dependent rule, and the seam table covers it.
+4. Honest limits: the validator checks a grid of constant speeds and three tick phases; real runs have continuous
+   speeds (rising at most 0.16 m/s within a 40 m chunk) and continuous phases. The full sweep (S-202, 0.25 m/s
+   steps) and the oracle bot over 100,000 generated chunks at real speeds (S-201) cover the space between grid
+   points. A failure in either is a bug in a chunk, never "acceptable".
+
+### 11.3 Validator search (F1, F2, C2, F7)
+
+`ChunkValidator` lives in `JungleBooze.Gameplay.Track` (plain C#), driven by an EditMode test and an editor menu
+item `JungleBooze/Validate Chunk Library`, which writes a report and rebuilds the seam table.
+
+1. **Setup** per (chunk, mirror, speed `v`, phase `φ`, entry lane l): a production `RunnerSimulation` with the
+   start-value `RunnerConfig`, a constant speed `v` (ramp off, through a speed-source hook; section 16), and a
+   `ChunkTrackQuery` holding only this chunk at `startZ = 0`, with flat ground before and after it. HERO center
+   starts at `z = −φ × v/60` in N(l).
+2. **Layered search:** layer `t` is the set of distinct states on tick `t`. For each state and each command in
+   `{none, MoveLeft, MoveRight, Jump, Slide}`, copy the state, step once, and discard the copy if it emitted `Died` or
+   `Stumbled`. Insert survivors into layer `t + 1`, deduplicated by a key of everything that affects the future:
+   `TargetLane`, lane-move elapsed ticks, start `X`, queued direction, locomotion state, jump tick, fast-fall speed,
+   slide ticks left, slide-on-landing flag, coyote counter, `X` and `Y` (quantized to 1 mm). `z` is the same for all
+   states in a layer. On a key collision the first inserted state wins, in command order (none, left, right, jump,
+   slide), so results are deterministic. Parent links are kept for failure traces.
+3. **End:** the search stops on the first tick HERO's center reaches `lengthM`. F1 passes if the last layer is
+   non-empty; F2 passes if it contains N(l') for every l'.
+4. **Surviving states:** a backward pass marks every state that can reach an N exit state. Only these are used for
+   C2 and F7 and for the surviving-lane table (sampled every 0.5 m, stored for the seam table).
+5. **Coins:** a coin is reachable (C2) if some surviving transition collects it (pickup test of 10.4). Best-path
+   coins = maximum over surviving paths (dynamic programming over the layers; a coin counts on the tick a path
+   first touches it). Re-touching the same coin after leaving it is ignored; it needs a lane reversal within 1 m of
+   the coin, so the error is negligible for a designer metric.
+6. **Limits:** more than `maxStatesPerTick` states in a layer is a validator error (reported, never a pass).
+7. **Report:** per chunk and case: pass or fail per rule, the failing rule id, a shortest failure trace (ticks and
+   commands), unreachable coin ids, best-path coins and coins per second, and the seam table.
+
+The generator never solves anything at runtime; it relies on this offline proof plus the seam table (GDD 11.2's
+"never picks a chunk that fails the solver" is met by never shipping one).
+
+---
+
+## 12. Run lifecycle (FP1)
+
+### 12.1 States
+
+| State | Entered when | What happens | Leaves when |
+|---|---|---|---|
+| `Ready` | App start, after scene build | Run is set up with a seed: track generated 150 m ahead, HERO idle at `z = 0` in lane 1, HUD shows 0 m and 0 coins, prompt "Swipe or press a key to run" | First tap, swipe or key. That input only starts the run; it is not passed to the simulation as a command [ASSUMED] |
+| `Running` | From `Ready` or a restart | Simulation steps (spec 001 run driver); HUD reads the snapshot. Pause works as in spec 001 section 8 | `Died` event |
+| `Dying` | `Died` | Simulation stops stepping after the death tick (state frozen). Hit-pause 350 ms, then the camera holds on the cause 800 ms (spec 001 10.6). All input ignored; pause button hidden | 1,150 ms of real time |
+| `GameOver` | End of `Dying` | Panel: cause text (12.4), distance, coins, score, session best distance, seed (dev builds only). Buttons: **Run again** (primary; Space/Enter) and **Same track** [ASSUMED]. Buttons ignore input for `gameOverInputLockMs` (400 ms) | A button |
+
+App sent to background during `Dying`: on return, show `GameOver` directly. There is no pause in `Ready` or
+`GameOver`.
+
+### 12.2 Restart
+
+- **Run again** uses a new seed: the App takes it from a non-simulation seed source (for example the system clock
+  mixed with a counter through a hash; allowed in App, never in simulation). `devFixedSeed ≠ 0` overrides it.
+- **Same track** reuses the last seed: same chunks, same mirrors, same coins.
+- Restart goes straight to `Running` (the button press is the "tap to run"), with no scene reload: the run scope is
+  disposed and rebuilt in place, and all views go back to their pools. Budget: ≤ 1,000 ms from press to the first
+  running tick (GDD 19 allows 2 s).
+
+### 12.3 What resets and what stays
+
+| Resets on every restart | Stays for the session (memory only; no save in FP1) |
+|---|---|
+| Tick counter and time-source accumulator; runner state (spec 001); root `IRandom` re-seeded and all forks; generator state (tier, breather timer, no-repeat history, seam state); chunk, obstacle and coin rings; obstacle and coin ids (back to 1); distance, coins, score, bonus score, streak; event ring buffer; input queue and gesture recognizer; replay recording (new recording with the new seed); all views returned to pools; camera snapped to the start pose (no smoothing from the death pose); HUD values | Session best distance and best score; last seed (for Same track); settings |
+
+### 12.4 Cause text (Game Over)
+
+Uses `WorldSkin.displayName` of the archetype (3.8): `Hit` → "Hit: Giant tree trunk"; `Hit` with
+`afterStumble` → "Tripped twice: Fallen log"; `Fell` → "Fell into a ravine" [ASSUMED wording]. The run summary also
+records the chunk id and distance of the death (for sim reports and later analytics).
+
+---
+
+## 13. Events and view state
+
+### 13.1 New events (appended to spec 001's `RunnerEventType`; append-only)
+
+| Event | Payload (fields of `RunnerEvent`) | Typical use |
+|---|---|---|
+| `ChunkEntered` | `Value` = chunk library index, `Flags` = mirrored, kind | Debug overlay; music later |
+| `TierChanged` | `Value` = tier | Debug overlay; music intensity later |
+| `MoverStarted` | `ObstacleId`, `Lane` = from, `Value` = to | Rumble SFX, roll animation, haptic later |
+| `MoverSettled` | `ObstacleId`, `Lane` = end lane | Thud, dust |
+| `CoinCollected` | `ObstacleId` field carries the coin id, `Lane`, `Value` = coin value | Pickup VFX, chime, HUD tick |
+| `CoinStreak` | `Value` = streak length | Light haptic (GDD 5.4), "+50" popup |
+| `ScoreBonus` | `Value` = points, `Flags` = source (`NearMiss`, `Streak`) | Score popup |
+
+`ChunkEntered` and `TierChanged` fire when HERO's center crosses the chunk start (not when the chunk is generated).
+`Died` (spec 001) ends the run; the run summary is read from state, not from an event.
+
+### 13.2 Read-only state for views and HUD
+
+- `TrackSnapshot`: active chunks (id, mirrored, start z, tier), obstacle ring (read-only span of `ObstacleInstance`),
+  coin ring (span of `CoinInstance`), gaps per lane in range.
+- `RunTotals`: `distanceM`, `coins`, `score`, `bonusScore`, `streak`, `tier`, current chunk id.
+- `DeathInfo`: cause, archetype, obstacle id, `afterStumble`, chunk id, distance.
+- HUD text updates only when a value changes, with non-allocating formatting (ARCHITECTURE 10.3).
+
+### 13.3 Step order (amends spec 001 rule I8)
+
+(1)–(7) as spec 001; **(7a) track update:** generate ahead, despawn behind, mover triggers and motion,
+`ChunkEntered`/`TierChanged`; (8)–(10) as spec 001; (11) collisions against `GetBoxes`; **(11a) coin pickups and
+streak** (skipped if HERO died this tick); **(11b) score** (distance, bonuses from this tick's `NearMiss` and
+streak); (12) events.
+
+---
+
+## 14. Acceptance criteria
+
+Test locations as in spec 001: **EditMode** = plain C# driven tick by tick; **PlayMode** = scene, frame loop, views.
+Values assume the start values in section 3 and spec 001 section 3.
+
+### Config and format
+- **AC-201 [EditMode]** Every asset in section 3 and every chunk asset loads and passes validation; out-of-range
+  values are rejected (for example `breatherIntervalMaxS < breatherIntervalMinS`, unsorted tier `fromM`, a weight
+  for a chunk outside its tier range, a stale seam table hash, `fogStartM` not equal to the runner presentation
+  value, an empty pool).
+- **AC-202 [EditMode]** `DifficultyTiers.ToConfig()` gives `vMaxMps` / `minRowSpacingM` of 11.20/10.08,
+  12.25/9.19, 14.17/9.21, 16.58/9.12, 19.00/9.50, 21.00/9.45 (± 0.01).
+- **AC-203 [EditMode]** Every library chunk passes the static rules G1, F3–F6, F8, C1, C3, C4.
+- **AC-204 [EditMode]** Mirroring a fixture chunk maps lanes `l → 2 − l` and `x → −x` for obstacles, movers and
+  coins; mirroring twice gives the original.
+- **AC-205 [EditMode]** Coin generation: a `Line(1, 4→12)` gives 5 coins at `x = 0`, `y = 0.75`; an `Arc` at
+  10 m/s has outer coins at `zCenter ± 2.25` and `y = 1.406`, and its middle coin at `y = 2.25` (± 0.001); a
+  `Trail(0→2, 10→18)` has its middle coin at `x = 0`.
+
+### Obstacle kit and ground
+- **AC-206 [EditMode]** Boxes built from `ObstacleKit` match table 5.1, and spec 001's collision tests (AC-34 to
+  AC-44) pass unchanged against them.
+- **AC-207 [EditMode]** A 2-lane full block produces two boxes with the same id, centered on their lane centers,
+  0.36 m apart.
+- **AC-208 [EditMode]** A mover at 10 m/s starts on the first tick its front is ≤ 14.0 m ahead of HERO's front,
+  moves 0.08 m per tick, settles on its end lane center exactly 30 ticks later, and emits `MoverStarted` and
+  `MoverSettled` once each.
+- **AC-209 [EditMode]** A mover sliding sideways into HERO (fixture with z overlap) causes `Stumbled(side)`, not
+  `Died`.
+- **AC-210 [EditMode]** One test per cell of table 5.2: front contact is lethal for low barrier, high barrier
+  (standing), full block and mover; top contact on a low barrier and side contact on each archetype are stumbles.
+- **AC-211 [EditMode]** `HasGround` is true everywhere outside gaps; false when the footprint is fully inside a gap;
+  true when the footprint partly overlaps ground (z at an edge, or `X` on the boundary between a gap lane and a
+  ground lane).
+- **AC-212 [EditMode]** Running into a 3.0 m full-width gap at 21 m/s with no input: HERO leaves the ground, gets
+  exactly 5 coyote ticks, does not reach the far side, and dies with `Fell`.
+- **AC-213 [EditMode]** Over a 4.0 m full-width gap at 10 m/s, a ground jump (no coyote) succeeds for exactly
+  15 ± 1 consecutive command ticks; with coyote jumps included the window grows by 5 ticks.
+- **AC-214 [EditMode]** A grounded lane move from a ground lane into a lane over a gap: HERO leaves the ground when
+  the footprint has no ground, gets coyote time, and falls if no jump follows.
+
+### Generator, despawn and pooling
+- **AC-215 [EditMode]** Same seed → identical sequence of (chunk id, mirrored, `startZ`) for the first 200 chunks,
+  10 runs out of 10.
+- **AC-216 [EditMode]** Tier selection by chunk `startZ`: a chunk starting at 299.5 m uses the tier-1 pool, at
+  300.0 m the tier-2 pool. Over 100,000 tier-1 picks (no-repeat off), each chunk's share is within ± 1 percentage
+  point of its weight share.
+- **AC-217 [EditMode]** No chunk id appears twice within any 4 consecutive normal chunks while its pool has more than
+  3 chunks.
+- **AC-218 [EditMode]** Planned normal-chunk time between breathers lies in [25 s, 35 s + one chunk's planned
+  time]; breathers total ≥ 2.0 s × `SpeedCurve(startZ)` (one at 10 m/s, two at 21 m/s); the start chunk does not
+  count.
+- **AC-219 [EditMode]** With a fixture library and seam table that forbids a pair, the generator never emits that
+  pair; when all attempts fail it emits `B-01` and increments the seam-fallback counter.
+- **AC-220 [EditMode]** In a 20,000 m bot run: generated track always reaches ≥ `heroZ + 150 m`; nothing older than
+  15 m behind HERO stays in the rings; no ring exceeds its capacity.
+- **AC-221 [EditMode]** The generator draws only from the `TrackGeneration` stream: extra draws on other streams do
+  not change the chunk sequence. It makes exactly 2 draws per pick attempt, 1 per breather interval and 2 per
+  breather pick.
+- **AC-222 [PlayMode]** In a 120 s bot run reaching 21 m/s, no pool grows and no `Instantiate`/`Destroy` happens
+  after scene load (pool counters).
+
+### Coins and score
+- **AC-223 [EditMode]** A coin at `y = 0.75` in HERO's lane is collected while running and while sliding; during a
+  jump it is collected when HERO's `Y ≤ 1.35` and not when `Y ≥ 1.36`. A coin in the next lane is collected when
+  `|X − coin.x| ≤ 0.95` and not at 0.96.
+- **AC-224 [EditMode]** At 40 m/s (0.67 m per tick) every coin of a 2 m-spaced line in HERO's lane is collected
+  (swept pickup).
+- **AC-225 [EditMode]** On the tick HERO dies no coin is collected.
+- **AC-226 [EditMode]** 25 coins in a row → `CoinStreak`, +50 bonus, streak back to 0; a missed coin in HERO's lane
+  or a `Stumbled` resets the streak; an uncollected coin in another lane does not.
+- **AC-227 [EditMode]** Distance 1,234.9 m, 2 near-misses and 1 streak → score 1,324.
+
+### Fairness and validator
+- **AC-228 [EditMode]** For each static rule (G1, F3, F4, F5, F6, F8, C1, C3, C4) a fixture chunk breaking only that
+  rule is rejected with that rule id in the report.
+- **AC-229 [EditMode]** With static checks off, a fixture `Low[0,1,2]@10` + `High[0,1,2]@12` at 21 m/s fails F1;
+  the report contains a failure trace.
+- **AC-230 [EditMode]** Ceiling-trap fixture (static checks off): `Gap[0,1,2]@10 len 4.0` + `High[0,1,2]@14` at
+  10 m/s fails F1 (F9 is covered by the real collision rules).
+- **AC-231 [EditMode]** Fixture (static checks off) `Full[0,1]@37` in a 40 m chunk at 10 m/s passes F1 but fails F2
+  (N(0) is not reachable by the chunk end from lane 2).
+- **AC-232 [EditMode]** **Library gate:** every library chunk, both mirrors, every quick speed of its band, all 3
+  phases and all 3 entry lanes pass F1, F2, F7 and C2. The validator steps the production `RunnerSimulation` (no
+  copy of movement rules). The test finishes in ≤ 60 s in the editor, or is split per chunk.
+- **AC-233 [EditMode]** The seam table stored in the library equals a fresh computation, and covers every ordered
+  pair and mirror combination.
+- **AC-234 [EditMode]** Best-path coins: a fixture with `Line(0, 4→20)` (9 coins) and `Line(2, 4→12)` (5 coins)
+  reports 9 at 21 m/s and 14 at 10 m/s (the switch between z 12 and 20 is only possible... see note below).
+- **AC-235 [EditMode]** The validator is deterministic: two runs give byte-identical reports.
+
+### Telegraph and presentation
+- **AC-236 [PlayMode]** No pop-in: every obstacle and coin view is first activated while ≥ 90 m ahead of HERO, at
+  10 and 21 m/s.
+- **AC-237 [PlayMode]** At 21 m/s, for one scripted chunk per archetype, when the obstacle's front is 25.2 m ahead of
+  HERO's front its view is active, inside the camera frustum and nearer than the fog start.
+- **AC-238 [PlayMode]** Gray-box visuals are each hitbox grown by 0.08 m (± 0.005) on every side except the ground.
+
+### Run lifecycle
+- **AC-239 [EditMode]** `RunSession` (fake clock): `Ready` → first input → `Running`; the first simulation tick
+  receives no command from that input.
+- **AC-240 [EditMode]** `Died` → `Dying`; `GameOver` exactly 1,150 ms later; input during `Dying` is ignored;
+  `GameOver` buttons ignore input for 400 ms.
+- **AC-241 [EditMode]** Run again uses a new seed (1,000 restarts with a deterministic test seed source: no repeats);
+  Same track reuses the seed, and a scripted bot's first 600 ticks give identical state hashes.
+- **AC-242 [EditMode]** After a restart, every item in the "resets" column of 12.3 equals its value in a freshly
+  built run with the same seed (including generator state and id counters); session best values are kept and only
+  rise.
+- **AC-243 [EditMode]** Cause text: `Hit(FullBlock)` → "Hit: Giant tree trunk"; `Hit(LowBarrier, afterStumble)` →
+  "Tripped twice: Fallen log"; `Fell` → "Fell into a ravine".
+- **AC-244 [PlayMode]** Restart press to first running tick ≤ 1,000 ms, with no scene reload.
+- **AC-245 [PlayMode]** HUD distance equals `floor(distanceM)` and coins equal the run total on every frame; HUD
+  text is not rebuilt on frames where neither changes (0 allocations).
+
+### Events, determinism, performance
+- **AC-246 [EditMode]** In a scripted run, each event of 13.1 fires exactly once per occurrence; `ChunkEntered` and
+  `TierChanged` fire on the tick HERO's center crosses the chunk start.
+- **AC-247 [EditMode]** Same seed + same command stream → identical state hash (runner and track rings) on every
+  tick, across 30, 60, 120 fps and jittery pacing (extends spec 001 AC-62).
+- **AC-248 [EditMode]** No `UnityEngine.Random`, `System.Random`, `UnityEngine.Time`, `DateTime` or physics calls in
+  `JungleBooze.Gameplay.Track` (extends spec 001 AC-63).
+- **AC-249 [PlayMode]** A 120 s bot run allocates 0 bytes per frame after warm-up.
+- **AC-250 [PlayMode]** Simulation step with track update, 30 obstacles in range and coin pickups ≤ 0.5 ms on the
+  editor benchmark; generating one chunk ≤ 0.1 ms.
+
+Note on AC-234: at 21 m/s a path can take only one of the two lines if they overlap in z; the fixture is laid out so
+the lines do not overlap (`Line(2, 4→12)` then `Line(0, 14→30)`), giving 5 + 9 = 14 at both speeds. Use that layout.
+
+---
+
+## 15. Simulation targets (balance-simulator)
+
+Report per run: seed, config hash (including the library), chunk sequence, tier per chunk, deaths by cause,
+archetype and chunk id, coins, best-path coins, seam fallbacks.
+
+| # | Target | Value |
+|---|---|---|
+| S-201 | **Oracle bot** over 100,000 generated chunks at real speeds (runs to 10,000 m) | **0 deaths, 0 stumbles** (GDD 11.3 "0 impossible segments") |
+| S-202 | **Full validator sweep:** every chunk, both mirrors, every 0.25 m/s of its band, 3 phases, 3 entry lanes | 100% pass F1, F2, F7, C2 |
+| S-203 | **Action windows:** for each row, the oracle's success window for its answer from a neutral approach | ≥ 6 ticks (100 ms) at every band speed; report the 10 tightest rows |
+| S-204 | Density (rows per 100 m, normal chunks), 10,000 seeds | Tiers 1–3 within ± 15% of 4 / 6 / 7 |
+| S-205 | Coin rate (best-path coins per second of running, normal chunks and breathers) | Tier 1: 3.15–3.85; tier 2: 3.4–4.2; tier 3: 3.7–4.5 (GDD 14.1 line from 3.5 to 5.0, ± 10%). Tiers 4–6: report only in FP1 |
+| S-206 | Bot coin collection (share of best-path coins) | Average bot 55–80%; new bot ≥ 35% |
+| S-207 | Run length medians (GDD 11.3) | New 25–45 s, average 90–150 s, expert ≥ 300 s. In FP1 (no vines, power-ups or tutorial) report them and flag any miss > 25% to the designer |
+| S-208 | Death causes per bot level | No single archetype > 35% of deaths; "Tripped twice" ≤ 15%; deaths from an old-lane obstacle while ≥ 60% into a new lane = 0 |
+| S-209 | Spikes | No 200 m window with average-bot death rate > 2× the fitted trend |
+| S-210 | Chunk lethality | No chunk's average-bot death rate > 2.5× the median of its tier (flag for redesign) |
+| S-211 | Variety | No chunk > 30% of picks within a tier; ≥ 6 distinct chunk ids per 1,000 m in tiers 2–3 |
+| S-212 | Breathers | Planned dense time between breathers 25–35 s (+ one chunk); breathers 6–10% of run time |
+| S-213 | Seam fallbacks | ≤ 1% of picks (more means the library needs seam-friendlier chunks) |
+| S-214 | Determinism | 1,000 seeded runs recorded and replayed: identical final hashes; once the Python reference model includes the generator, identical chunk sequences for 100 seeds |
+| S-215 | Cost | Mean step ≤ 0.5 ms headless; generation ≤ 0.1 ms per chunk; 0 allocations |
+
+---
+
+## 16. Changes needed elsewhere (not edited by this spec)
+
+### 16.1 Spec 001 (player movement)
+1. **9.2:** the reference boxes become final here with the same numbers; add the mover box (1.90 × 1.6 × 0–1.9 m).
+   No test changes.
+2. **9.1:** the swept test must use relative motion when the obstacle moves (movers move in `x`), so the entry
+   axis is right and a mover pushing into HERO is a side stumble.
+3. **I8 (step order):** insert 7a (track update), 11a (coin pickups), 11b (score), as in 13.3.
+4. **6.5 (`ITrackQuery`):** add `GetBoxes` and `TryGetNextGapEdge`; `HasGround` takes the footprint half-width from
+   `RunnerConfig` (section 6).
+5. **11 (events):** append the events of 13.1. Rename the `ObstacleId` field to `EntityId` (it carries coin ids
+   too), or add a field; tech-architect decides.
+6. **Validator support:** the runner state must be cheap to copy (a value-type snapshot or `CopyFrom`), and the
+   simulation needs a speed-source hook (curve, constant speed for the validator, tutorial later).
+7. **15:** the movement gauntlet (S1–S3) can now use the real chunk library.
+
+### 16.2 GDD and style guide
+1. **GDD 5.2** "obstacle hitboxes 85% of visual" conflicts with style guide 7.4 ("within 10 cm"). Proposed: "obstacle
+   hitboxes are 85% of the lane width (2.04 m); visuals are never smaller than the hitbox and at most 10 cm larger
+   on the side the player interacts with."
+2. **Style guide 7.4** says "never visually bigger than the hitbox on that side, so a pass that looks safe is safe".
+   The reason given needs the opposite: a visual smaller than its hitbox makes safe-looking passes lethal. Proposed
+   "never visually smaller" (art-director).
+3. **GDD 8.2** Jungle mover "Rolling boulder down a lane" → "boulder that rolls across into the next lane and stops;
+   an ink ground path shows where". **GDD 8.1** mover telegraph: marker visible from spawn, motion starts 1.4 s
+   ahead, sound cue on `MoverStarted`.
+4. **GDD 11.2:** normal chunks 40 m, breathers 30 m (repeated to ≥ 2 s), start chunk 50 m; density counted over
+   normal chunks; the solver requirement is met offline (F1, F2, F7 and the seam table); add the note that metre
+   spacing is nearly constant across tiers (3.3).
+5. **GDD 13.1:** define a missed coin as in 10.5.
+6. **GDD 14.1:** with one shared library, tier 1–3 chunks at tier 4–6 speeds give about 5.3–6.9 coins/s, above the
+   4.4–5.0 target; tier 4–6 chunks must carry fewer coins per metre.
+7. **GDD 16:** add `TrackTuning`, `ObstacleKit`, `CoinTuning`, `ScoreTuning`, `TrackPresentationTuning`,
+   `RunFlowTuning`, `ChunkLibrary_Main`, `ChunkValidatorTuning`.
+8. **GDD 22:** the week-2 specs `track-generation.md`, `obstacles.md` (archetypes part) and `difficulty.md` are this
+   spec for FP1; `obstacles.md` keeps the signature hazards (week 3).
+
+### 16.3 Follow-up content (needed before launch, not FP1)
+- Tier 4–6 chunks (jump-then-slide combos, mixed movers) so densities reach 8–10 rows per 100 m and coin rates fit.
+- Thorn patch skin on the 2-lane full block, lane-strike hazard, vine and gateway chunk kinds, onboarding's
+  "first appearance teaches" rule, per-world chunk tags.
+
+### 16.4 Architecture
+- The shared `RandomStreamIds` constants file (8.1) and the validator's editor menu and seam-table storage in the
+  library asset.
+
