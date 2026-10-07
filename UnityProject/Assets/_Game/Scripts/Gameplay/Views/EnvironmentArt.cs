@@ -409,7 +409,7 @@ namespace JungleBooze.Gameplay.Views
         }
 
         /// <summary>
-        /// A new lit material (clone of the active pipeline's primitive material; no shader lookup by name) with
+        /// A new lit material (clone of the URP Lit template asset in Resources; no shader lookup by name) with
         /// <paramref name="texture"/> (may be null) and <paramref name="color"/>, matte, GPU instancing on.
         /// The caller owns and destroys it. Setup-time only.
         /// </summary>
@@ -443,9 +443,7 @@ namespace JungleBooze.Gameplay.Views
         {
             if (_template == null)
             {
-                GameObject probe = GameObject.CreatePrimitive(PrimitiveType.Quad);
-                _template = probe.GetComponent<MeshRenderer>().sharedMaterial;
-                Object.Destroy(probe);
+                _template = RuntimeMaterialTemplates.GetOpaqueTemplate();
             }
 
             return _template;
@@ -453,8 +451,8 @@ namespace JungleBooze.Gameplay.Views
 
         /// <summary>
         /// Safety net for models whose imported material lost its texture (or the editor remap has not run): builds one
-        /// shared material per model from <c>&lt;name&gt;_basecolor.png</c>, cloned from the active pipeline's primitive
-        /// material (no shader lookup by name). Models that already carry a textured material are left alone.
+        /// shared material per model from <c>&lt;name&gt;_basecolor.png</c>, cloned from the URP Lit template asset
+        /// (no shader lookup by name). Models that already carry a textured material are left alone.
         /// </summary>
         public static void EnsureTexturedMaterials(GameObject instance, string textureResourcePath, string materialKey)
         {

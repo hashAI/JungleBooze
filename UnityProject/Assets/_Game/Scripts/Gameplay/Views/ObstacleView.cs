@@ -120,8 +120,8 @@ namespace JungleBooze.Gameplay.Views
             }
 
             // Own body materials, so a world theme can tint the obstacles without touching other views' shared colors.
-            _bodyMaterial = new Material(_pieces[0].CubeRenderer.sharedMaterial) { name = "World_ObstacleBody" };
-            _moverMaterial = new Material(_pieces[0].SphereRenderer.sharedMaterial) { name = "World_MoverBody" };
+            _bodyMaterial = new Material(RuntimeMaterialTemplates.GetOpaqueTemplate()) { name = "World_ObstacleBody" };
+            _moverMaterial = new Material(RuntimeMaterialTemplates.GetOpaqueTemplate()) { name = "World_MoverBody" };
             for (int i = 0; i < PieceCapacity; i++)
             {
                 _pieces[i].CubeRenderer.sharedMaterial = _bodyMaterial;

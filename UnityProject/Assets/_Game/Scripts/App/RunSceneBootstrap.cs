@@ -371,6 +371,7 @@ namespace JungleBooze.App
             if (Debug.isDebugBuild)
             {
                 LogAssetReport();
+                RuntimeMaterialTemplates.LogShaderReport(root.transform);
             }
 
             return driver;

@@ -131,7 +131,7 @@ namespace JungleBooze.Gameplay.Views
                 new Vector3(2f * halfWidth, BoardHeightM, 0.15f));
 
             // The three frame pieces share one material so the accent can change per world without touching the kit's colors.
-            Material template = left.GetComponent<MeshRenderer>().sharedMaterial;
+            Material template = RuntimeMaterialTemplates.GetOpaqueTemplate();
             _accentMaterial = new Material(template) { name = "World_GateAccent", color = StylePalette.DeepCanopyTeal };
             left.GetComponent<MeshRenderer>().sharedMaterial = _accentMaterial;
             right.GetComponent<MeshRenderer>().sharedMaterial = _accentMaterial;

@@ -7,9 +7,10 @@ using Object = UnityEngine.Object;
 namespace JungleBooze.Gameplay.Views
 {
     /// <summary>
-    /// Builds gray-box primitives with one shared material per color. Materials are clones of the material
-    /// <see cref="GameObject.CreatePrimitive"/> assigns (so they match the active render pipeline; no shader lookup
-    /// by name). Setup-time only (allocates). <see cref="Dispose"/> destroys the materials it made.
+    /// Builds gray-box primitives with one shared material per color. Materials are clones of
+    /// <see cref="RuntimeMaterialTemplates.GetOpaqueTemplate"/> (a URP Lit asset in Resources, so the shader is in every
+    /// player build; the material CreatePrimitive assigns is magenta on device). Setup-time only (allocates).
+    /// <see cref="Dispose"/> destroys the materials it made.
     /// </summary>
     public sealed class GrayBoxKit : IDisposable
     {
@@ -31,7 +32,7 @@ namespace JungleBooze.Gameplay.Views
             }
 
             MeshRenderer meshRenderer = go.GetComponent<MeshRenderer>();
-            meshRenderer.sharedMaterial = GetMaterial(color, meshRenderer.sharedMaterial);
+            meshRenderer.sharedMaterial = GetMaterial(color, RuntimeMaterialTemplates.GetOpaqueTemplate());
             meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
             meshRenderer.receiveShadows = false;
             meshRenderer.lightProbeUsage = LightProbeUsage.Off;
@@ -62,7 +63,7 @@ namespace JungleBooze.Gameplay.Views
 
             if (template == null)
             {
-                throw new InvalidOperationException("No template material: create a primitive first.");
+                throw new InvalidOperationException("No template material.");
             }
 
             var material = new Material(template)

@@ -13,7 +13,7 @@ namespace JungleBooze.App
     /// font texture at the size and style it is drawn with, and (2) every hidden piece of the pooled views is drawn
     /// once into a tiny off-screen texture, so meshes, textures and shader variants are uploaded now instead of the
     /// first time a coin, obstacle, vine or power-up appears. Nothing is visible on screen and the hidden pieces are
-    /// hidden again right away. Setup-time only (it allocates); a no-op once a run has started. [UNVERIFIED: not
+    /// hidden again right away (editor only for now: skipped in player builds). Setup-time only (it allocates); a no-op once a run has started. [UNVERIFIED: not
     /// compiled or measured, see docs/PLAY_FIRST_BUILD.md.]
     /// </summary>
     public sealed class RunPrewarm : MonoBehaviour
@@ -100,6 +100,13 @@ namespace JungleBooze.App
         private void WarmPools()
         {
             if (_runCamera == null || _poolRoots == null)
+            {
+                return;
+            }
+
+            // [ASSUMED] The off-screen Camera.Render is editor-only until it is verified on a device under URP: it is the one
+            // piece that could render pink or warn there. Glyph prewarm (WarmFonts) still runs on device.
+            if (!Application.isEditor)
             {
                 return;
             }

@@ -98,8 +98,8 @@ namespace JungleBooze.Gameplay.Views
                 box.SetActive(false);
             }
 
-            // Clone the kit's primitive material (matches the active pipeline) and make each clone see-through.
-            Material template = _renderers[0].sharedMaterial;
+            // Clone the transparent template asset (URP Unlit, alpha blend) once per category and tint each clone.
+            Material template = RuntimeMaterialTemplates.GetTransparentTemplate();
             _materials = new Material[CatCount];
             for (int c = 0; c < CatCount; c++)
             {

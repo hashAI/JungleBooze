@@ -455,7 +455,7 @@ namespace JungleBooze.Gameplay.Views
             }
 
             // Own materials, so a world theme can recolor the ground without touching other views' shared colors.
-            Material template = _tileRenderers[0].sharedMaterial;
+            Material template = RuntimeMaterialTemplates.GetOpaqueTemplate();
             _pathMaterial = new Material(template) { name = "World_Path", color = StylePalette.CreamPath };
             _pathAlternateMaterial = new Material(template) { name = "World_PathAlternate", color = StylePalette.PathAlternate };
             _vergeMaterial = new Material(template) { name = "World_Verge", color = StylePalette.JungleFloor };
