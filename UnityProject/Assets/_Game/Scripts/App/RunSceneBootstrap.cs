@@ -2,6 +2,7 @@ using System;
 using JungleBooze.Gameplay.Companion;
 using JungleBooze.Gameplay.Controls;
 using JungleBooze.Gameplay.Hazards;
+using JungleBooze.Gameplay.Path;
 using JungleBooze.Gameplay.PowerUps;
 using JungleBooze.Gameplay.Session;
 using JungleBooze.Gameplay.Track;
@@ -301,9 +302,13 @@ namespace JungleBooze.App
                 hitboxDebug.Init(kit, configs.Runner, obstacles, hazardView);
             }
 
+            // Spec 003 T1: the straight route (identity mapping). Rebuilt from the run seed on every BeginRun; no view reads it yet.
+            var pathFrame = new PathFrame(RouteTuning.CreateDefault(), new StraightRouteSource());
+            var pathFrameView = new PathFrameRunView(pathFrame);
+
             var views = new System.Collections.Generic.List<IRunView>
             {
-                eventCounter, tutorial, audioView, ground, worldView, gaps, obstacles, hazardView, vineView, coinView, powerUpView, runnerView, companionView, cameraView, hud, companionHud, tutorialView, continueView,
+                pathFrameView, eventCounter, tutorial, audioView, ground, worldView, gaps, obstacles, hazardView, vineView, coinView, powerUpView, runnerView, companionView, cameraView, hud, companionHud, tutorialView, continueView,
             };
             if (hitboxDebug != null)
             {

@@ -34,5 +34,14 @@ namespace JungleBooze.Core
         /// in parallel can take 7 onward without a clash.
         /// </summary>
         public const ulong Companion = 16;
+
+        /// <summary>
+        /// Curved-route generation (spec 003 section 4.1, presentation only, reserved in T1). [ASSUMED] The spec
+        /// asked for 6, but 6 is already <see cref="VineSchedule"/> and ids are never reused, so this takes 17.
+        /// </summary>
+        public const ulong Route = 17;
+
+        /// <summary>Scenery placement (spec 003 section 11.2, presentation only, reserved in T1). [ASSUMED] 18 instead of the spec's 7.</summary>
+        public const ulong Scenery = 18;
     }
 }
