@@ -7,6 +7,7 @@ using JungleBooze.Gameplay.Session;
 using JungleBooze.Gameplay.Track;
 using JungleBooze.Gameplay.Views;
 using JungleBooze.Gameplay.Vine;
+using JungleBooze.Services.Audio;
 using JungleBooze.Services.Persistence;
 using JungleBooze.UI.Hud;
 using JungleBooze.UI.Menus;
@@ -228,7 +229,15 @@ namespace JungleBooze.App
             ContinueView continueView = continueObject.AddComponent<ContinueView>();
             continueView.Build(driver, Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"), save);
 
-            driver.Init(session, input, new IRunView[] { ground, gaps, obstacles, hazardView, vineView, coinView, powerUpView, runnerView, companionView, cameraView, hud, companionHud, continueView }, kit);
+            // Audio: pooled playback (Resources/RunAudioCatalog), volumes follow the save's settings.
+            var audioObject = new GameObject("Audio");
+            audioObject.transform.SetParent(root.transform, false);
+            AudioPlayback audio = audioObject.AddComponent<AudioPlayback>();
+            audio.SetCatalog(Resources.Load<AudioCatalog>("RunAudioCatalog"));
+            audio.Bind(save);
+            var audioView = new RunAudioView(audio);
+
+            driver.Init(session, input, new IRunView[] { audioView, ground, gaps, obstacles, hazardView, vineView, coinView, powerUpView, runnerView, companionView, cameraView, hud, companionHud, continueView }, kit);
 
             if (Debug.isDebugBuild)
             {
