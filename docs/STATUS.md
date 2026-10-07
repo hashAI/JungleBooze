@@ -37,15 +37,15 @@ and commit after every agent report.
 | Agent | State | Current / last task | Output | Next for this agent |
 |---|---|---|---|---|
 | producer | not used yet | (the coordinating session does this role for now) | this file | — |
-| game-designer | interrupted (restart 2026-10-07) | Spec 002: endless track, obstacles, coins, fairness rules | `docs/specs/002-track-obstacles-coins.md` | Spec 003: vine swinging (week 3) |
-| balance-simulator | interrupted (restart 2026-10-07) | Python reference model of spec 001 + seeded test course; checks targets S1–S9 offline | `tools/sim/` | Cross-check the C# simulation once it lands |
-| tech-architect | done (week 0) | Architecture, ADRs 0001–0002, Unity skeleton, deterministic core + tests, CI test workflow | `docs/ARCHITECTURE.md`, `docs/adr/`, `UnityProject/`, `.github/workflows/test.yml` | Week 1: Roslyn analyzers; add the `JungleBooze.App` assembly to the rules file once the owner agrees |
-| gameplay-engineer | interrupted (restart 2026-10-07) | Implementing spec 001 (player movement), bot input provider, tests named by AC id | `UnityProject/Assets/_Game/Scripts/Gameplay`, `Tests/` | Spec 002 |
+| game-designer | **working** | FP1 stage A2: spec 002 track, obstacles, coins (Jungle chunk library) | `docs/specs/002-track-obstacles-coins.md` | Spec 003: vine swinging |
+| balance-simulator | **working** | FP1 stage A3: Python reference model of spec 001, unit tests, S1–S9 report, golden traces | `tools/sim/`, `docs/sim-reports/` | Fairness fuzzing for spec 002 |
+| tech-architect | **working** | FP1 stage D: first-open bootstrap (editor setup script, ADR 0003), package check, `docs/PLAY_FIRST_BUILD.md` | `Scripts/Editor/Setup/`, `docs/adr/0003-*`, `docs/PLAY_FIRST_BUILD.md` | Roslyn analyzers |
+| gameplay-engineer | **working** | FP1 stage A1: movement simulation (spec 001 minus collisions) + EditMode tests | `Scripts/Gameplay/Runner/`, `Scripts/Gameplay/Config/`, `Tests/EditMode/Gameplay/` | Stage B: collisions + track/obstacles/coins |
 | ui-engineer | waiting | — | — | Week 4: menus, shop |
 | art-director | done | Style guide and prompts updated with names Pista/Duko and the chest-band sash | `design/STYLE_GUIDE.md`, `design/prompts/` | Generate concept images once an image API key exists |
 | asset-pipeline | waiting | — | — | Needs an image/3D generation API key from the owner |
 | audio-director | waiting | — | — | Week 5. Note: the macaw speaks a few words, so voice lines and localization are needed |
-| qa-engineer | interrupted (restart 2026-10-07) | Test plan and acceptance-criteria coverage table for spec 001 (and 002 as it lands) | `docs/qa/TEST_PLAN.md` | Review the gameplay-engineer's tests against the plan |
+| qa-engineer | waiting | — | — | FP1 stage F: test plan + owner play-test script |
 | performance-engineer | waiting | — | — | Benchmark scene (week 2+) |
 | code-reviewer | waiting | — | — | Review the spec 001 implementation |
 | monetization-engineer | waiting | — | — | Week 4–5 |
@@ -89,6 +89,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Log
 Newest first. One line per event.
+- 2026-10-07: Launched FP1 stages A1, A2, A3 and D in parallel. Background checkpoint commits every 10 minutes.
 - 2026-10-07: Worker restart wiped uncommitted work; gameplay-engineer, game-designer (spec 002), balance-simulator and qa-engineer were interrupted with nothing saved. Owner set the autonomous First Playable mandate. Restarting in smaller stages.
 - 2026-10-06: Owner set focus on building and testing. Stopped release-engineer (work so far committed). Launched balance-simulator (reference model) and qa-engineer (test plan).
 - 2026-10-06: Owner decided: app name candidate "Pista & Duko: Jungle Swing", lawyer check in week 7, no tracking, add the App assembly.
