@@ -286,6 +286,11 @@ per 40 to 60 m, max 3 in view, brighter in Clearings and in the High layer.
 
 ## 8. Natural swings (vine sections)
 
+> **Superseded in part (2026-10-07, owner direction):** the swing is now a true pendulum about a fixed pivot at the branch tip (rope 14 m, pivot 17 m up,
+> 16 m chasm, pivot spacing 18 m). The span plus sliding knot (8.1), the "simulation is unchanged" sentence below, AC-318, AC-319, AC-321 and risk R1 are replaced by
+> `docs/specs/004-fixed-pivot-swing.md`. Layout, per-world dressing, chains and edge cases below still apply except where spec 004 section 8 says otherwise.
+> The text below is kept as written for history.
+
 The simulation is unchanged: grab zone 2.0 m x 1.6 m, y 1.6 to 3.6 m, grab earliness 450 ms, swing 1.40 s over `VineConfig`
 angles, chains up to 3, 18 m chasms (spec 001/GDD 7, `VineDesignValues`). This section only decides how it looks.
 
