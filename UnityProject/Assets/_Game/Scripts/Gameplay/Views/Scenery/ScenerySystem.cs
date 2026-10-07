@@ -644,6 +644,7 @@ namespace JungleBooze.Gameplay.Views
                 }
 
                 Matrix4x4 local = toHolder * renderers[r].transform.localToWorldMatrix;
+                bool added = false;
                 for (int sub = 0; sub < mesh.subMeshCount; sub++)
                 {
                     Material source = materials[Mathf.Min(sub, materials.Length - 1)];
@@ -653,10 +654,14 @@ namespace JungleBooze.Gameplay.Views
                     }
 
                     parts.Add(new SceneryPart(mesh, sub, InstancedCopy(source, dim), local, capacity));
-                    any = true;
+                    added = true;
                 }
 
-                Encapsulate(ref bounds, mesh.bounds, local, !any || parts.Count == 0);
+                if (added)
+                {
+                    Encapsulate(ref bounds, mesh.bounds, local, !any);
+                    any = true;
+                }
             }
 
             Destroy(holder.gameObject);

@@ -28,6 +28,10 @@ The simulation owns collision. Art is scaled by the view to the hitbox, so autho
 | Prop_VineBranch | vine branch | unit cube centered (scaled lane-wide, 0.35 m thick) |
 | Prop_Signpost | vine signpost | real size, base at y=0, about 2 m tall |
 | Foliage_TreeA / TreeB / Bush | verge dressing fallback (only when no Jungle_Wall* exists) | real size, base at y=0, spaced 9 m along each verge |
+| Tree_Trunk (scenery use) | giant trunks in the mid ring and, scaled thin (x/z 0.12 to 0.2, y 0.35 to 0.5), near-ring trunks | as for the swing anchor: base centre, native radius 1.5 m, about 34 m tall |
+| Foliage_TreeA / TreeB (scenery use) | big mid-ring trees of `ScenerySystem` | real size, base at y=0, crown reach about 2.2 m at scale 1 |
+| Foliage_Bush / Foliage_FernCluster / Prop_Rock / Prop_Root | near-ring bushes, ferns, rocks, root arches of `ScenerySystem` (Prop_Rock and Prop_Root are not made yet: a generated gray-box shape shows) | real size, base at y=0; Prop_Root about 1.8 x 0.6 x 0.6 m |
+| Vine_Liana (scenery use) | thin non-gameplay hanging vines (scaled 0.45 to 0.7 wide, dimmed 40 percent) | hangs -Y from y=0 |
 | Jungle_WallA / B / C | verge jungle walls, one 12 m segment per side per slot | x = 0 at the path edge, plants toward +x, ground at y=0, z -6..+6 m; built by `tools/blender/build_jungle_kit.py`; share `Jungle_Atlas_basecolor.png` |
 
 Textures without a model (loaded by name, `<Name>_basecolor.png`):

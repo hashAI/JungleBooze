@@ -157,6 +157,20 @@ namespace JungleBooze.App
             groundObject.transform.SetParent(root.transform, false);
             GroundView ground = groundObject.AddComponent<GroundView>();
             ground.SetFrame(pathFrame);
+
+            // Spec 003 section 11 (T8): the stateless scenery replaces the baked wall dressing when it is on and built
+            // (PlayerPrefs JungleBooze.Scenery = 0 brings the old walls back).
+            ScenerySettings sceneryRules = ScenerySettings.LoadOrDefault();
+            ScenerySystem scenery = null;
+            if (sceneryRules.Enabled)
+            {
+                var sceneryObject = new GameObject("Scenery");
+                sceneryObject.transform.SetParent(root.transform, false);
+                scenery = sceneryObject.AddComponent<ScenerySystem>();
+                scenery.Init(pathFrame, routeChunks, sceneryRules);
+            }
+
+            ground.SkipVergeDressing = scenery != null && scenery.IsActive && sceneryRules.ReplaceGroundDressing;
             ground.Init(kit, configs.Runner, presentation.FogEndM, look);
 
             // Stage C2: ravines, obstacles and coins from the generated track.
@@ -370,6 +384,11 @@ namespace JungleBooze.App
             if (beatLog != null)
             {
                 views.Add(beatLog);
+            }
+
+            if (scenery != null && scenery.IsActive)
+            {
+                views.Add(scenery);
             }
 
             driver.Init(session, input, views.ToArray(), kit);

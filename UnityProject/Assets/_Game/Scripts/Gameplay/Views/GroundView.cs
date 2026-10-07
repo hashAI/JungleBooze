@@ -129,6 +129,12 @@ namespace JungleBooze.Gameplay.Views
             }
         }
 
+        /// <summary>
+        /// True when the stateless <see cref="ScenerySystem"/> dresses the verges: the jungle walls and the single-model
+        /// foliage are not built. Set before <see cref="Init(GrayBoxKit, RunnerConfig, float, EnvironmentLookConfig)"/>.
+        /// </summary>
+        public bool SkipVergeDressing { get; set; }
+
         /// <summary>The route the ground and the verges follow (spec 003). Call before <see cref="Init"/>; default is the straight route.</summary>
         public void SetFrame(PathFrame frame)
         {
@@ -154,7 +160,7 @@ namespace JungleBooze.Gameplay.Views
                 InitTiles(kit, runnerConfig, pathWidth, viewDistanceM);
             }
 
-            if (!InitWalls(viewDistanceM))
+            if (!SkipVergeDressing && !InitWalls(viewDistanceM))
             {
                 InitDressing(viewDistanceM);
             }

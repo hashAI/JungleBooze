@@ -40,6 +40,11 @@ namespace JungleBooze.Gameplay.Views
         public const string VineLiana = "Vine_Liana";
         public const string VineTuft = "Vine_Tuft";
 
+        // Stateless scenery (ScenerySystem, spec 003 section 11). Missing means a generated gray-box shape.
+        public const string FernCluster = "Foliage_FernCluster";
+        public const string Rock = "Prop_Rock";
+        public const string Root = "Prop_Root";
+
         // Jungle wall segments (tools/blender/build_jungle_kit.py): pre-merged 12 m verge dressing, one draw call each.
         public const string WallA = "Jungle_WallA";
         public const string WallB = "Jungle_WallB";
@@ -62,6 +67,7 @@ namespace JungleBooze.Gameplay.Views
         {
             LowBarrier, HighBarrier, FullBlock, Boulder, ThornPatch, StrikeColumn, Coin, Magnet, Shield, Boost,
             PathTile, RavineEdge, VineBranch, Signpost, TreeA, TreeB, Bush, TreeTrunk, TreeBranch, VineLiana, VineTuft, WallA, WallB, WallC,
+            FernCluster, Rock, Root,
         };
 
         /// <summary>Every texture-only name above (the asset report walks it too).</summary>
