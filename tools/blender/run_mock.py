@@ -74,10 +74,10 @@ def lin(c):
 
 THEMES = {
     "jungle": dict(key=hexc("FFD27A"), shadow=hexc("2E5B57"), horizon=hexc("FFE3A3"), top=hexc("FFB347"),
-                   fog=hexc("E9C98A"), path=hexc("F3DFB2"), verge=hexc("2A6636"), lawn=hexc("3A8C3F")),
+                   fog=hexc("E9C98A"), path=hexc("F3DFB2"), verge=hexc("2A6636"), lawn=hexc("3A8C3F"), kp=25.0, ky=-25.0),
     "dusk": dict(key=hexc("FF9A5A"), shadow=hexc("2B3A67"), horizon=hexc("FF8C42"), top=hexc("2B3A67"),
                  fog=hexc("B0607A"), path=lerp(hexc("F3DFB2"), hexc("FF9A5A"), 0.35),
-                 verge=lerp(hexc("2A6636"), hexc("2B3A67"), 0.45), lawn=hexc("3A8C3F")),
+                 verge=lerp(hexc("2A6636"), hexc("2B3A67"), 0.45), lawn=hexc("3A8C3F"), kp=10.0, ky=-25.0),
 }
 TH = THEMES[WORLD]
 INK = hexc("1E1A24")
@@ -112,7 +112,7 @@ if BEFORE:
     flat = lerp(TH["shadow"], TH["horizon"], 0.55)
     AMB = (flat, flat, flat)
 else:
-    KEY = key_dir_unity(KEY_PITCH, KEY_YAW)
+    KEY = key_dir_unity(KEY_PITCH + TH["kp"] - 25.0, KEY_YAW + TH["ky"] + 25.0)  # WorldThemeView.KeyRotation
     KEY_I = KEY_INTENSITY
     AMB = (lerp(TH["shadow"], (1, 1, 1), AMBIENT_SKY_WHITE),
            lerp(TH["shadow"], TH["horizon"], AMBIENT_EQUATOR_MIX),

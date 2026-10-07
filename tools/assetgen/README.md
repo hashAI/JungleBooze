@@ -11,3 +11,13 @@ Spend caps (owner, 2026-10-07): at most 4 concept images and 200 Meshy credits. 
 
 Priority: coin, the three common obstacles, ground tile, then power-ups and foliage. Untested (no keys were available
 when written). Record each result in docs/LICENSES.md.
+
+## Look pass (2026-10-07)
+
+- `make_ground_textures.py <EnvironmentArt dir>`: procedural, seamlessly tiling `Ground_Trail` and `Ground_JungleFloor`
+  textures (no generation service).
+- `meshy_env.py` now records the measured Meshy balance before/after each task in `env_spend_log.jsonl`; the cap is
+  `MESHY_ENV_CAP` (running total over the whole ledger, default 450). Kit sources: `Foliage_FernClump`,
+  `Foliage_BigLeaf`, `Foliage_CanopyTree`, `Prop_RockCluster` (fit with `fit_env.py`, merged by
+  `tools/blender/build_jungle_kit.py` into `Jungle_WallA/B/C` + `Jungle_Atlas`).
+- Preview without Unity: `tools/blender/run_mock.py` (mirrors the run camera and the look config defaults).
