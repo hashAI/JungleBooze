@@ -29,20 +29,35 @@ Items marked `[ASSUMED]` are defaults the team proceeds with until the owner or 
 | Input | Input System package (Enhanced Touch) | Only the touch adapter talks to it (section 5.3). |
 | Content loading | Addressables | For content loaded after boot (worlds, skins, audio banks). Boot scene and first-run content ship in the player. |
 | UI | uGUI for HUD/menus [ASSUMED] | UI Toolkit runtime is an option; ui-engineer may propose an ADR. |
-| Minimum iOS | iOS 15 [ASSUMED] | Confirm against the Unity 6.3 minimum and the floor device decision. |
+| Minimum iOS | iOS 15.0 | ADR 0003. Unity 6000.3 supports iOS 13+; Apple announced iOS 15+ from April 2027; floor device runs iOS 26. |
 
-### 2.1 Project settings to apply on first editor open (not yet committed)
+### 2.1 Project settings applied on first editor open (ADR 0003)
 
-The repository currently contains only `ProjectVersion.txt` under `ProjectSettings/`. The first person to open the project in the Unity editor must apply and commit the following, in one PR:
+The repository does not contain hand-written `ProjectSettings/*.asset` files or scenes. On the first open, the editor
+script `Assets/_Game/Editor/Setup/ProjectBootstrap.cs` applies the settings below once (menu
+`JungleBooze > Setup > Run Project Setup` re-runs it). The files Unity then writes must be committed in one PR.
 
-- Platform: iOS. Target iPhone only, Portrait [ASSUMED, pending GDD].
-- Player: IL2CPP, ARM64, Color Space = Linear, Graphics API = Metal only, Incremental GC on, Managed Stripping Level = Medium (raise to High after link.xml is in place), "Prebake Collision Meshes" on.
-- Graphics: assign a URP asset `Assets/_Game/Config/Rendering/URP-Mobile.asset` with the settings in ADR 0001.
-- Quality: a single "Mobile" quality level; delete the others.
+Applied by the script:
 - Editor: Asset Serialization = Force Text, Version Control = Visible Meta Files.
-- Time: Fixed Timestep is **not** used by gameplay (gameplay uses `FixedStepTimeSource`); leave physics at default and do not rely on `FixedUpdate` for simulation.
-- Frame rate: `Application.targetFrameRate = 60` set by the composition root (ProMotion devices would otherwise render at up to 120 Hz and spend battery and thermal headroom).
-- Enter Play Mode Options: enabled, domain reload off. This forbids static mutable state (good: it is also banned by section 6).
+- Player: Active Input Handling = Both (restart required). Product name `Jungle Runner` and iOS bundle id
+  `com.pistaduko.junglerunner` (placeholders [ASSUMED]; never the word "booze"). Portrait, iPhone only,
+  minimum iOS 15.0, Color Space = Linear.
+- Graphics: creates and assigns `Assets/_Game/Config/Rendering/URP-Mobile.asset` (+ `URP-Mobile-Renderer.asset`)
+  with the ADR 0001 mobile settings (Forward, HDR off, MSAA 2x, no realtime shadows, no extra lights, no
+  depth/opaque textures, SRP Batcher on). Fallback menu: `JungleBooze > Setup > Fallback: Use Built-in Renderer`.
+- Scenes: creates the empty `Assets/_Game/Scenes/Run.unity` and makes it the first enabled build scene.
+
+Unity defaults that already match (not touched): IL2CPP + ARM64 + Metal on iOS, .NET Standard 2.1, Incremental GC.
+
+Still manual / deferred (Week 1, after FP1):
+- Quality: a single "Mobile" quality level; delete the others.
+- Managed Stripping Level = Medium once `link.xml` is in place; "Prebake Collision Meshes" on.
+- Enter Play Mode Options: enabled, domain reload off (forbids static mutable state; enable after code review
+  confirms there is none).
+- Time: Fixed Timestep is **not** used by gameplay (gameplay uses `FixedStepTimeSource`); leave physics at default
+  and do not rely on `FixedUpdate` for simulation.
+- Frame rate: `Application.targetFrameRate = 60` set by the composition root (ProMotion devices would otherwise
+  render at up to 120 Hz and spend battery and thermal headroom).
 
 ---
 
@@ -281,5 +296,6 @@ Hard limits (project rule 6). Measured on the **floor device** (to be confirmed 
 |---|---|---|
 | [0001](adr/0001-engine-and-render-pipeline.md) | Engine and render pipeline: Unity 6 LTS + URP (mobile) | Accepted |
 | [0002](adr/0002-deterministic-simulation-core.md) | Deterministic simulation core | Accepted |
-| 0003 (planned) | Save format, migrations and iCloud | Week 4 |
-| 0004 (planned) | Composition root: hand-rolled vs VContainer (if needed) | When needed |
+| [0003](adr/0003-first-playable-bootstrap.md) | First Playable bootstrap: settings applied by an editor script on first open | Accepted |
+| 0004 (planned) | Save format, migrations and iCloud | Week 4 |
+| 0005 (planned) | Composition root: hand-rolled vs VContainer (if needed) | When needed |

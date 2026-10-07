@@ -6,7 +6,9 @@
         "JungleBooze.Gameplay",
         "JungleBooze.UI",
         "JungleBooze.Services",
-        "JungleBooze.App"
+        "JungleBooze.App",
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.Universal.Runtime"
     ],
     "includePlatforms": [
         "Editor"
