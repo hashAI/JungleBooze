@@ -164,6 +164,13 @@ namespace JungleBooze.Gameplay.Views
             root.SetParent(transform, false);
             piece.Root = root.gameObject;
             piece.Body = kit.Create(PrimitiveType.Cube, "Body", root, StylePalette.HazardThorn).transform;
+            // Real art (fits a unit cube, scaled to the hitbox by PlaceThorn) replaces body, thorns and tips.
+            bool thornArt = EnvironmentArt.Attach(piece.Body, EnvironmentArt.ThornPatch) != null;
+            if (thornArt)
+            {
+                EnvironmentArt.HideRenderer(piece.Body);
+            }
+
             int n = ThornsPerFace * 2;
             piece.Thorns = new Transform[n];
             piece.Tips = new Transform[n];
@@ -175,6 +182,11 @@ namespace JungleBooze.Gameplay.Views
                 piece.Tips[t] = kit.Create(PrimitiveType.Cube, "ThornTip" + t, root, StylePalette.HazardRed).transform;
                 piece.Tips[t].localRotation = Quaternion.Euler(45f, 45f, 0f);
                 piece.Tips[t].localScale = new Vector3(ThornTipSizeM, ThornTipSizeM, ThornTipSizeM);
+                if (thornArt)
+                {
+                    piece.Thorns[t].gameObject.SetActive(false);
+                    piece.Tips[t].gameObject.SetActive(false);
+                }
             }
 
             piece.Root.SetActive(false);
@@ -218,6 +230,14 @@ namespace JungleBooze.Gameplay.Views
             piece.Rocks = kit.Create(PrimitiveType.Cube, "Rocks", column, StylePalette.HazardStone).transform;
             piece.Band = kit.Create(PrimitiveType.Cube, "HazardBand", column, StylePalette.HazardRed).transform;
             piece.Stripe = kit.Create(PrimitiveType.Cube, "InkStripe", column, StylePalette.Ink).transform;
+            // Real art (unit cube, scaled to 90% of the hitbox by PlaceStrike) replaces rocks and marker bands.
+            if (EnvironmentArt.Attach(piece.Rocks, EnvironmentArt.StrikeColumn) != null)
+            {
+                EnvironmentArt.HideRenderer(piece.Rocks);
+                piece.Band.gameObject.SetActive(false);
+                piece.Stripe.gameObject.SetActive(false);
+            }
+
             piece.Root.SetActive(false);
             return piece;
         }

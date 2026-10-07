@@ -45,7 +45,7 @@ namespace JungleBooze.Gameplay.Views
 
         private static readonly string[] ClipNames = { "run", "jump", "slide", "stumble", "idle" };
 
-        private enum Pose
+        private enum CharPose
         {
             Run = 0,
             Jump = 1,
@@ -63,7 +63,7 @@ namespace JungleBooze.Gameplay.Views
         private readonly bool[] _clipLoaded = new bool[5];
         private readonly float[] _clipWeights = new float[5];
         private bool _graphReady;
-        private Pose _pose = Pose.Idle;
+        private CharPose _pose = CharPose.Idle;
         private Transform _model;
         private Transform _shadow;
         private GameObject _arms;
@@ -205,30 +205,30 @@ namespace JungleBooze.Gameplay.Views
             _graphReady = true;
         }
 
-        private Pose ChoosePose(GameSession session, RunnerState current)
+        private CharPose ChoosePose(GameSession session, RunnerState current)
         {
             if (current.IsDead || _dead || _stumbleLeft > 0f)
             {
-                return Pose.Stumble;
+                return CharPose.Stumble;
             }
 
             if (session.Phase == SessionPhase.Ready || session.Phase == SessionPhase.Menu)
             {
-                return Pose.Idle;
+                return CharPose.Idle;
             }
 
             switch (current.Locomotion)
             {
                 case Locomotion.Sliding:
-                    return Pose.Slide;
+                    return CharPose.Slide;
                 case Locomotion.Running:
-                    return Pose.Run;
+                    return CharPose.Run;
                 default:
-                    return Pose.Jump;
+                    return CharPose.Jump;
             }
         }
 
-        private int ResolveClip(Pose pose)
+        private int ResolveClip(CharPose pose)
         {
             int index = (int)pose;
             if (_clipLoaded[index])
@@ -237,9 +237,9 @@ namespace JungleBooze.Gameplay.Views
             }
 
             // Fall back to the run clip, then to any clip that exists.
-            if (_clipLoaded[(int)Pose.Run])
+            if (_clipLoaded[(int)CharPose.Run])
             {
-                return (int)Pose.Run;
+                return (int)CharPose.Run;
             }
 
             for (int i = 0; i < _clipLoaded.Length; i++)
@@ -260,12 +260,12 @@ namespace JungleBooze.Gameplay.Views
                 return;
             }
 
-            Pose wanted = ChoosePose(session, current);
+            CharPose wanted = ChoosePose(session, current);
             if (wanted != _pose)
             {
                 _pose = wanted;
                 int entered = ResolveClip(wanted);
-                if (entered >= 0 && wanted != Pose.Run && wanted != Pose.Idle)
+                if (entered >= 0 && wanted != CharPose.Run && wanted != CharPose.Idle)
                 {
                     // One-shot clips restart on entry.
                     _clipPlayables[entered].SetTime(0.0);
@@ -486,11 +486,13 @@ namespace JungleBooze.Gameplay.Views
             }
             else
             {
-                _model.localPosition = new Vector3(wobble, y + bob + StumbleHopM * stumble, 0f);
+                // The real model plays its own stumble and fall animations; the gray-box tips and hops instead.
+                bool gray = _visual == null;
+                _model.localPosition = new Vector3(wobble, y + bob + (gray ? StumbleHopM * stumble : 0f), 0f);
                 float lean = current.InVineFlight ? FlightLeanDeg : 0f;
-                _model.localRotation = _dead
+                _model.localRotation = gray && _dead
                     ? Quaternion.Euler(DeathTiltDeg, 0f, 0f)
-                    : Quaternion.Euler(StumbleTiltDeg * stumble + lean, 0f, 0f);
+                    : Quaternion.Euler((gray ? StumbleTiltDeg * stumble : 0f) + lean, 0f, 0f);
             }
 
             float apex = _runnerConfig.JumpApexHeightM > 0f ? _runnerConfig.JumpApexHeightM : 1f;

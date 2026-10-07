@@ -37,6 +37,7 @@ namespace JungleBooze.UI.Menus
         private readonly Text _coinsValue;
         private readonly Text _bestValue;
         private readonly Text _seed;
+        private readonly Text _metaLine;
 
         public GameOverPanel(Transform safeArea, Font font, IRunCommands commands)
         {
@@ -66,6 +67,10 @@ namespace JungleBooze.UI.Menus
             _seed = MenuFactory.Label(
                 panel, "Seed", font, SmallFontSize, TextAnchor.MiddleCenter, top, new Vector2(RowWidthPt, 22f), new Vector2(0f, FirstRowYPt - 3f * RowStepPt), string.Empty);
 
+            // What the run earned from missions and the daily challenge (GDD 13); empty most runs.
+            _metaLine = MenuFactory.Label(
+                panel, "MetaLine", font, SmallFontSize, TextAnchor.MiddleCenter, top, new Vector2(RowWidthPt, 40f), new Vector2(0f, FirstRowYPt - 3f * RowStepPt - 24f), string.Empty);
+
             PlayAgainButton = MenuFactory.PrimaryButton(
                 panel, "RunAgainButton", font, HudStrings.RunAgain, PrimaryFontSize, bottom, new Vector2(RowWidthPt, 80f), new Vector2(0f, 104f), commands.Restart);
             SameTrackButton = MenuFactory.SecondaryButton(
@@ -94,6 +99,19 @@ namespace JungleBooze.UI.Menus
         /// <summary>Fills and shows the panel (allocates a few strings; once per Game Over).</summary>
         public void Show(GameSession session, PlayerSave save)
         {
+            Show(session, save, null);
+        }
+
+        /// <summary>
+        /// Like <see cref="Show(GameSession, PlayerSave)"/>; <paramref name="metaLine"/> (one or two lines on missions
+        /// and the daily challenge) is shown under the rows when not empty.
+        /// </summary>
+        public void Show(GameSession session, PlayerSave save, string metaLine)
+        {
+            bool hasMeta = !string.IsNullOrEmpty(metaLine);
+            _metaLine.gameObject.SetActive(hasMeta);
+            _metaLine.text = hasMeta ? metaLine : string.Empty;
+
             long score = session.Score;
             _cause.text = HudView.CauseTextFor(session);
             _score.SetValue(score > int.MaxValue ? int.MaxValue : (int)score);

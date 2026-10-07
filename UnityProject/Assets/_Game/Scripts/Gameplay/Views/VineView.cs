@@ -99,6 +99,12 @@ namespace JungleBooze.Gameplay.Views
                 slot.Root = root.gameObject;
                 slot.Rope = kit.Create(PrimitiveType.Cylinder, "Rope", root, StylePalette.VineRope).transform;
                 slot.Branch = kit.Create(PrimitiveType.Cube, "Branch", root, StylePalette.VineRope).transform;
+                // Real branch (fits a unit cube, scaled lane-wide by the placement code) replaces the cube.
+                if (EnvironmentArt.Attach(slot.Branch, EnvironmentArt.VineBranch) != null)
+                {
+                    EnvironmentArt.HideRenderer(slot.Branch);
+                }
+
                 slot.Core = kit.Create(PrimitiveType.Sphere, "GlowCore", root, StylePalette.VineGlowCore).transform;
                 slot.Core.localScale = new Vector3(CoreSizeM, CoreSizeM, CoreSizeM);
                 slot.Halo = kit.Create(PrimitiveType.Sphere, "GlowHalo", root, StylePalette.SunGold).transform;
@@ -124,6 +130,7 @@ namespace JungleBooze.Gameplay.Views
                 kit.Create(
                     PrimitiveType.Cube, "Board", sign, StylePalette.SunGold,
                     new Vector3(0f, SignpostHeightM, 0f), new Vector3(0.9f, 0.5f, 0.08f));
+                EnvironmentArt.ReplaceGroup(sign, EnvironmentArt.Signpost);
                 slot.Signpost = sign.gameObject;
                 slot.Root.SetActive(false);
                 _slots[i] = slot;

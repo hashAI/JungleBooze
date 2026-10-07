@@ -32,6 +32,17 @@ namespace JungleBooze.Gameplay.Views
         private Material _pathAlternateMaterial;
         private Transform _strips;
 
+        // Foliage dressing along the verges (optional art; recycled like the tiles, deterministic by slot index).
+        private const float DressSpacingM = 9f;
+        private const float DressInsetMinM = 1.5f;
+        private const float DressInsetSpanM = 9f;
+        private static readonly string[] DressNames = { EnvironmentArt.TreeA, EnvironmentArt.TreeB, EnvironmentArt.Bush };
+        private GameObject[][] _dress;
+        private Transform[] _dressRoots;
+        private long[] _dressIndex;
+        private int _dressPerSide;
+        private float _pathHalfWidthM;
+
         /// <summary>Number of recycled path tiles.</summary>
         public int TileCount => _tiles == null ? 0 : _tiles.Length;
 
@@ -74,6 +85,23 @@ namespace JungleBooze.Gameplay.Views
                 _tileIndex[i] = long.MinValue;
             }
 
+            // Real path art (authored 1 m wide by 1 m long, top at y=0, scaled to the tile): replaces the cube.
+            Transform firstArt = EnvironmentArt.Attach(_tiles[0], EnvironmentArt.PathTile);
+            if (firstArt != null)
+            {
+                firstArt.localScale = new Vector3(pathWidth, 1f, TileLengthM);
+                _tileRenderers[0].enabled = false;
+                for (int i = 1; i < tileCount; i++)
+                {
+                    Transform art = EnvironmentArt.Attach(_tiles[i], EnvironmentArt.PathTile);
+                    art.localScale = new Vector3(pathWidth, 1f, TileLengthM);
+                    _tileRenderers[i].enabled = false;
+                }
+            }
+
+            _pathHalfWidthM = pathWidth * 0.5f;
+            InitDressing(tileCount);
+
             _pathMaterial = _tileRenderers[0].sharedMaterial;
             _pathAlternateMaterial = kit.GetMaterial(StylePalette.PathAlternate, _pathMaterial);
 
@@ -102,11 +130,115 @@ namespace JungleBooze.Gameplay.Views
             }
         }
 
+        private void InitDressing(int tileCount)
+        {
+            int variants = 0;
+            for (int v = 0; v < DressNames.Length; v++)
+            {
+                if (EnvironmentArt.Exists(DressNames[v]))
+                {
+                    variants++;
+                }
+            }
+
+            if (variants == 0)
+            {
+                return;
+            }
+
+            _dressPerSide = Mathf.CeilToInt(tileCount * TileLengthM / DressSpacingM) + 1;
+            int total = _dressPerSide * 2;
+            _dress = new GameObject[total][];
+            _dressRoots = new Transform[total];
+            _dressIndex = new long[total];
+            var dressParent = new GameObject("Dressing").transform;
+            dressParent.SetParent(transform, false);
+            for (int i = 0; i < total; i++)
+            {
+                Transform root = new GameObject("Dress" + i).transform;
+                root.SetParent(dressParent, false);
+                _dressRoots[i] = root;
+                _dressIndex[i] = long.MinValue;
+                _dress[i] = new GameObject[DressNames.Length];
+                for (int v = 0; v < DressNames.Length; v++)
+                {
+                    Transform art = EnvironmentArt.Attach(root, DressNames[v]);
+                    if (art != null)
+                    {
+                        art.gameObject.SetActive(false);
+                        _dress[i][v] = art.gameObject;
+                    }
+                }
+            }
+        }
+
+        private void RenderDressing(double z)
+        {
+            if (_dress == null)
+            {
+                return;
+            }
+
+            long first = (long)System.Math.Floor((z - TilesBehindM) / DressSpacingM);
+            for (int side = 0; side < 2; side++)
+            {
+                for (int n = 0; n < _dressPerSide; n++)
+                {
+                    long index = first + n;
+                    int slot = side * _dressPerSide + (int)(((index % _dressPerSide) + _dressPerSide) % _dressPerSide);
+                    long key = index * 2 + side;
+                    if (_dressIndex[slot] == key)
+                    {
+                        continue;
+                    }
+
+                    _dressIndex[slot] = key;
+                    uint h = EnvironmentArt.Hash(key);
+                    int variant = (int)(h % (uint)DressNames.Length);
+                    GameObject[] options = _dress[slot];
+                    for (int v = 0; v < options.Length; v++)
+                    {
+                        if (options[v] != null)
+                        {
+                            options[v].SetActive(v == variant);
+                        }
+                    }
+
+                    // Fall back to the first available variant when the hashed one has no art.
+                    if (options[variant] == null)
+                    {
+                        for (int v = 0; v < options.Length; v++)
+                        {
+                            if (options[v] != null)
+                            {
+                                options[v].SetActive(true);
+                                break;
+                            }
+                        }
+                    }
+
+                    float inset = DressInsetMinM + ((h >> 8) % 1000u) / 1000f * DressInsetSpanM;
+                    float x = (side == 0 ? -1f : 1f) * (_pathHalfWidthM + inset);
+                    float yaw = ((h >> 20) % 360u);
+                    _dressRoots[slot].localPosition = new Vector3(x, 0f, (float)((index + 0.5) * DressSpacingM));
+                    _dressRoots[slot].localRotation = Quaternion.Euler(0f, yaw, 0f);
+                }
+            }
+        }
+
         public void BeginRun(GameSession session)
         {
             for (int i = 0; i < _tileIndex.Length; i++)
             {
                 _tileIndex[i] = long.MinValue;
+            }
+
+            if (_dressIndex != null)
+            {
+                for (int i = 0; i < _dressIndex.Length; i++)
+                {
+                    _dressIndex[i] = long.MinValue;
+                }
             }
 
             Render(session, 1f, 0f);
@@ -143,6 +275,7 @@ namespace JungleBooze.Gameplay.Views
             }
 
             _strips.localPosition = new Vector3(0f, 0f, (float)z);
+            RenderDressing(z);
         }
     }
 }
