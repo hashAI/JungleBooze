@@ -277,7 +277,22 @@ namespace JungleBooze.App
                 Debug.Log("[JungleBooze] Run started. Seed " + session.RunSeed + ". Config: " + configs.Source + ".");
             }
 
+            LogAssetReport();
+
             return driver;
+        }
+
+        /// <summary>One Console line saying which art and audio assets were found, so a silent gray-box fallback is visible.</summary>
+        private static void LogAssetReport()
+        {
+            bool pista = Resources.Load<GameObject>("Characters/Pista/Pista") != null;
+            bool duko = Resources.Load<GameObject>("Characters/Duko/Duko") != null;
+            bool coin = EnvironmentArt.Exists("Pickup_Coin");
+            bool tree = EnvironmentArt.Exists("Foliage_TreeA");
+            bool catalog = Resources.Load<AudioCatalog>("RunAudioCatalog") != null;
+            Debug.Log("[JungleBooze] Assets found: Pista=" + pista + ", Duko=" + duko + ", Pickup_Coin prefab=" + coin
+                + ", Foliage_TreeA prefab=" + tree + ", audio catalog=" + catalog
+                + ". A False means that piece is using its gray-box fallback or is silent.");
         }
 
         /// <summary>
