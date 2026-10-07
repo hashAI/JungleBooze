@@ -16,6 +16,7 @@ def create(name, outdir, poly, imgs):
             "should_texture": True, "enable_pbr": False, "texture_resolution": "2k",
             "pose_mode": "a-pose" if name == "Pista" else "", "image_enhancement": False,
             "target_formats": ["glb"], "multi_view_thumbnails": True, "origin_at": "bottom"}
+    if os.environ.get("MESHY_TEXTURE_PROMPT"): body["texture_prompt"] = os.environ["MESHY_TEXTURE_PROMPT"]
     r = requests.post(BASE + "/multi-image-to-3d", headers=H, json=body, timeout=120)
     print(r.status_code, r.text[:300]); r.raise_for_status()
     return r.json()["result"]
