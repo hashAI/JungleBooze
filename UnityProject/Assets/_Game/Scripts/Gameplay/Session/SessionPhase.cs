@@ -29,5 +29,11 @@ namespace JungleBooze.Gameplay.Session
         /// steps. The Play button (or a confirm key) starts the run straight into <see cref="Running"/>.
         /// </summary>
         Menu = 6,
+
+        /// <summary>
+        /// After the death sequence: the Continue screen (GDD 14.4) is up for a few seconds. Nothing steps. Continue
+        /// revives HERO and runs the 3-2-1 countdown; Skip or the timer runs out goes to <see cref="GameOver"/>.
+        /// </summary>
+        ContinueOffer = 7,
     }
 }

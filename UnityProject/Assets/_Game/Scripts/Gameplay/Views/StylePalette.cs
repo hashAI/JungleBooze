@@ -43,6 +43,17 @@ namespace JungleBooze.Gameplay.Views
         public static readonly Color PistaSkin = Hex(0x6B, 0x40, 0x29);
         public static readonly Color PistaHair = Hex(0x2B, 0x1B, 0x14);
 
+        // 2.4 Duko (macaw, design "Dusk").
+        public static readonly Color MacawViolet = Hex(0x5B, 0x3A, 0x8C);
+        public static readonly Color MacawOrange = Hex(0xF2, 0x8C, 0x28);
+        public static readonly Color MacawUnderwing = Hex(0x8A, 0x63, 0xC2);
+        public static readonly Color MacawTailTip = Hex(0x2E, 0xC4, 0xB6);
+        public static readonly Color MacawBeak = Hex(0x3A, 0x35, 0x40);
+        public static readonly Color MacawFace = Hex(0xF5, 0xEB, 0xDD);
+
+        /// <summary>Lift meter and Lift effects (2.2 "Lift violet", ties to the macaw).</summary>
+        public static readonly Color LiftViolet = Hex(0x8A, 0x63, 0xC2);
+
         // Section 5, Jungle world column.
         public static readonly Color JungleKeyLight = Hex(0xFF, 0xD2, 0x7A);
         public static readonly Color JungleShadowTint = Hex(0x2E, 0x5B, 0x57);

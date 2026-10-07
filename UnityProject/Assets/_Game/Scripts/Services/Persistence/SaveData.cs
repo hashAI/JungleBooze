@@ -25,6 +25,15 @@ namespace JungleBooze.Services.Persistence
         /// <summary>Runs recorded so far (onboarding and session-flow rules use it later, GDD 12 and 19).</summary>
         public int runsPlayed;
 
+        /// <summary>App sessions started (1 = the first session; GDD 14.4 free continue, GDD 19 session flow).</summary>
+        public int sessionsStarted;
+
+        /// <summary>The one free first-session continue from the companion was used (GDD 14.4).</summary>
+        public bool freeContinueUsed;
+
+        /// <summary>Coins spent on continues so far (for balance checks later).</summary>
+        public long coinsSpentOnContinues;
+
         public SettingsData settings = new SettingsData();
 
         public static SaveData CreateDefault()

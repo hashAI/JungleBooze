@@ -10,7 +10,7 @@ namespace JungleBooze.Gameplay.Track
     /// </summary>
     public sealed class WorldSkinConfig
     {
-        private const int ArchetypeSlots = 6;
+        private const int ArchetypeSlots = 8;
 
         private readonly string[] _names = new string[ArchetypeSlots];
         private readonly string[] _hitTexts = new string[ArchetypeSlots];
@@ -24,7 +24,9 @@ namespace JungleBooze.Gameplay.Track
             string mover,
             string gap,
             string fellText,
-            string missedVineText = "Missed vine")
+            string missedVineText = "Missed vine",
+            string laneDenial = "Thorn bush",
+            string laneStrike = "Falling rocks")
         {
             WorldName = worldName ?? string.Empty;
             _names[(int)ObstacleArchetype.None] = "obstacle";
@@ -33,6 +35,8 @@ namespace JungleBooze.Gameplay.Track
             _names[(int)ObstacleArchetype.FullBlock] = Require(fullBlock, nameof(fullBlock));
             _names[(int)ObstacleArchetype.Mover] = Require(mover, nameof(mover));
             _names[(int)ObstacleArchetype.Gap] = Require(gap, nameof(gap));
+            _names[(int)ObstacleArchetype.LaneDenial] = Require(laneDenial, nameof(laneDenial));
+            _names[(int)ObstacleArchetype.LaneStrike] = Require(laneStrike, nameof(laneStrike));
             FellText = Require(fellText, nameof(fellText));
             MissedVineText = Require(missedVineText, nameof(missedVineText));
             for (int i = 0; i < ArchetypeSlots; i++)

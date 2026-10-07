@@ -15,6 +15,15 @@ namespace JungleBooze.Gameplay.Track
         public ObstacleShape FullBlock = new ObstacleShape(2.04f, 1.0f, 0.0f, 3.0f);
         public ObstacleShape Mover = new ObstacleShape(1.90f, 1.6f, 0.0f, 1.9f);
 
+        /// <summary>
+        /// Signature lane denial (GDD 8.3, thorn patch), per covered lane: deeper than a full block and taller than
+        /// the jump apex (1.5 m), so the only answer is the free lane [ASSUMED size].
+        /// </summary>
+        public ObstacleShape LaneDenial = new ObstacleShape(2.04f, 4.0f, 0.0f, 2.2f);
+
+        /// <summary>Signature lane strike (GDD 8.3), box while the strike is active [ASSUMED size].</summary>
+        public ObstacleShape LaneStrike = new ObstacleShape(2.04f, 2.0f, 0.0f, 3.0f);
+
         public float[] GapLengthsM = { 3.0f, 4.0f };
         public float GapMinWindowS = 0.25f;
         public float GapRunAcrossMarginM = 0.25f;
@@ -44,6 +53,8 @@ namespace JungleBooze.Gameplay.Track
             CheckShape(errors, "highBarrier", HighBarrier);
             CheckShape(errors, "fullBlock", FullBlock);
             CheckShape(errors, "mover", Mover);
+            CheckShape(errors, "laneDenial", LaneDenial);
+            CheckShape(errors, "laneStrike", LaneStrike);
 
             if (GapLengthsM == null || GapLengthsM.Length == 0)
             {

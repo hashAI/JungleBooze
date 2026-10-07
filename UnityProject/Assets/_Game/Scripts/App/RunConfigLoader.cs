@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using JungleBooze.Gameplay.Companion;
 using JungleBooze.Gameplay.Config;
 using JungleBooze.Gameplay.Controls;
 using JungleBooze.Gameplay.Runner;
+using JungleBooze.Gameplay.Session;
 using JungleBooze.Gameplay.Vine;
 using JungleBooze.Gameplay.Views;
 using UnityEngine;
@@ -23,6 +25,8 @@ namespace JungleBooze.App
         public const string InputTuningName = "InputTuning";
         public const string PresentationTuningName = "RunnerPresentationTuning";
         public const string VineTuningName = "VineTuning";
+        public const string CompanionTuningName = "CompanionTuning";
+        public const string EconomyConfigName = "EconomyConfig";
 
         public static RunConfigSet Load()
         {
@@ -55,6 +59,34 @@ namespace JungleBooze.App
             }
 
             return vines;
+        }
+
+        /// <summary>Companion tuning (GDD 15.2) from <c>Resources/CompanionTuning.asset</c> if present and valid, else defaults.</summary>
+        public static CompanionConfig LoadCompanion()
+        {
+            var sources = new List<string>(1);
+            CompanionConfig config = LoadOrDefault<CompanionConfigAsset, CompanionConfig>(
+                CompanionTuningName, a => a.ToConfig(), CompanionConfig.CreateDefault, sources);
+            if (Debug.isDebugBuild)
+            {
+                Debug.Log("[JungleBooze] " + sources[0] + ".");
+            }
+
+            return config;
+        }
+
+        /// <summary>Continue rules (GDD 14.4) from <c>Resources/EconomyConfig.asset</c> if present and valid, else defaults.</summary>
+        public static ContinueRules LoadContinueRules()
+        {
+            var sources = new List<string>(1);
+            ContinueRules rules = LoadOrDefault<EconomyConfigAsset, ContinueRules>(
+                EconomyConfigName, a => a.ToContinueRules(), ContinueRules.CreateDefault, sources);
+            if (Debug.isDebugBuild)
+            {
+                Debug.Log("[JungleBooze] " + sources[0] + ".");
+            }
+
+            return rules;
         }
 
         private static TConfig LoadOrDefault<TAsset, TConfig>(

@@ -1,3 +1,4 @@
+using JungleBooze.Gameplay.Hazards;
 using JungleBooze.Gameplay.Runner;
 
 namespace JungleBooze.Gameplay.Track
@@ -44,6 +45,12 @@ namespace JungleBooze.Gameplay.Track
 
         /// <summary>Serial of the chunk that spawned it.</summary>
         public int ChunkSerial;
+
+        /// <summary>Lane strike only: phase of the warning / strike cycle (GDD 8.3).</summary>
+        public LaneStrikePhase StrikePhase;
+
+        /// <summary>Lane strike only: ticks spent in <see cref="StrikePhase"/>.</summary>
+        public int StrikeTicks;
 
         /// <summary>Back end along z (front + depth).</summary>
         public double BackZ => Z + DepthM;

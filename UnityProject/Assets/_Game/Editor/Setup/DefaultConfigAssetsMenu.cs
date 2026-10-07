@@ -33,6 +33,8 @@ namespace JungleBooze.Editor.Setup
             created += CreateIfMissing<InputConfigAsset>("InputTuning");
             created += CreateIfMissing<RunnerPresentationConfigAsset>("RunnerPresentationTuning");
             created += CreateIfMissing<VineConfigAsset>("VineTuning");
+            created += CreateIfMissing<CompanionConfigAsset>("CompanionTuning");
+            created += CreateIfMissing<EconomyConfigAsset>("EconomyConfig");
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();

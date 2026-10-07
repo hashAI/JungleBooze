@@ -57,6 +57,12 @@ namespace JungleBooze.Gameplay.Runner
         /// <summary>HERO grabbed a vine on this tick.</summary>
         public bool VineGrabbedThisTick;
 
+        /// <summary>HERO's locomotion state at the hook point.</summary>
+        public Locomotion Locomotion;
+
+        /// <summary>HERO is in the launch arc after a vine release (GDD 7.4 power-up rules).</summary>
+        public bool InVineFlight;
+
         /// <summary>HERO's front face z (<see cref="Z"/> + <see cref="HalfDepth"/>), used by mover triggers.</summary>
         public double FrontZ => Z + HalfDepth;
     }

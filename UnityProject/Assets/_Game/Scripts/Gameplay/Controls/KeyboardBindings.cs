@@ -13,7 +13,7 @@ namespace JungleBooze.Gameplay.Controls
     /// Pure mapping functions so tests can check them without a keyboard device.
     /// <list type="table">
     /// <item>Left arrow / A: MoveLeft. Right arrow / D: MoveRight.</item>
-    /// <item>Up arrow / W / Space: Jump. Down arrow / S: Slide.</item>
+    /// <item>Up arrow / W / Space: Jump. Down arrow / S: Slide. E / Left Shift: companion Lift (the double tap).</item>
     /// <item>P / Escape: pause toggle. R: Run again (Game Over). T: Same track (Game Over).
     /// K: end run (development builds only).</item>
     /// <item>Confirm keys (Space, Enter, keypad Enter): the primary button on Game Over (Run again).</item>
@@ -30,6 +30,7 @@ namespace JungleBooze.Gameplay.Controls
             Key.RightArrow, Key.D,
             Key.UpArrow, Key.W, Key.Space,
             Key.DownArrow, Key.S,
+            Key.E, Key.LeftShift,
             Key.Enter, Key.NumpadEnter,
             Key.P, Key.Escape,
             Key.R, Key.T,
@@ -54,6 +55,9 @@ namespace JungleBooze.Gameplay.Controls
                 case Key.DownArrow:
                 case Key.S:
                     return InputCommand.Slide;
+                case Key.E:
+                case Key.LeftShift:
+                    return InputCommand.CompanionAssist;
                 default:
                     return InputCommand.None;
             }
@@ -93,6 +97,7 @@ namespace JungleBooze.Gameplay.Controls
             KeyCode.RightArrow, KeyCode.D,
             KeyCode.UpArrow, KeyCode.W, KeyCode.Space,
             KeyCode.DownArrow, KeyCode.S,
+            KeyCode.E, KeyCode.LeftShift,
             KeyCode.Return, KeyCode.KeypadEnter,
             KeyCode.P, KeyCode.Escape,
             KeyCode.R, KeyCode.T,
@@ -117,6 +122,9 @@ namespace JungleBooze.Gameplay.Controls
                 case KeyCode.DownArrow:
                 case KeyCode.S:
                     return InputCommand.Slide;
+                case KeyCode.E:
+                case KeyCode.LeftShift:
+                    return InputCommand.CompanionAssist;
                 default:
                     return InputCommand.None;
             }

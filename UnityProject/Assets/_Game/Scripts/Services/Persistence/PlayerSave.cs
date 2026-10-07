@@ -40,6 +40,59 @@ namespace JungleBooze.Services.Persistence
 
         public int RunsPlayed => _data.runsPlayed;
 
+        /// <summary>Current app session number (1 = first session), after <see cref="BeginSession"/>.</summary>
+        public int SessionNumber => _data.sessionsStarted < 0 ? 0 : _data.sessionsStarted;
+
+        /// <summary>The free first-session continue (GDD 14.4) was already used.</summary>
+        public bool FreeContinueUsed => _data.freeContinueUsed;
+
+        /// <summary>
+        /// Counts a new app session (call once at app start) and writes the save. Returns the new session number.
+        /// </summary>
+        public int BeginSession()
+        {
+            if (_data.sessionsStarted < 0)
+            {
+                _data.sessionsStarted = 0;
+            }
+
+            if (_data.sessionsStarted < int.MaxValue)
+            {
+                _data.sessionsStarted++;
+            }
+
+            _dirty = true;
+            Save();
+            return _data.sessionsStarted;
+        }
+
+        /// <summary>
+        /// Takes <paramref name="amount"/> coins from the wallet for a continue (GDD 14.4). Returns false (and changes
+        /// nothing) if the wallet holds fewer. Does not write; call <see cref="Save"/> after.
+        /// </summary>
+        public bool TrySpendCoinsOnContinue(long amount)
+        {
+            if (amount < 0L || _data.totalCoins < amount)
+            {
+                return false;
+            }
+
+            _data.totalCoins -= amount;
+            _data.coinsSpentOnContinues += amount;
+            _dirty = true;
+            return true;
+        }
+
+        /// <summary>Marks the free first-session continue as used. Does not write; call <see cref="Save"/> after.</summary>
+        public void MarkFreeContinueUsed()
+        {
+            if (!_data.freeContinueUsed)
+            {
+                _data.freeContinueUsed = true;
+                _dirty = true;
+            }
+        }
+
         /// <summary>The last run recorded this session (default value until the first one).</summary>
         public RunRecord LastRun { get; private set; }
 

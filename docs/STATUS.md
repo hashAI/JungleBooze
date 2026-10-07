@@ -18,6 +18,8 @@ The coordinating session compile-checks in Unity batch mode on the owner's Mac (
 - [ ] Batch 4: worlds and transitions (GDD §9) · difficulty ramp check (GDD §11)
 - [ ] Later (owner keys needed): real art, audio. Later (owner): ads/IAP, review, tests, TestFlight.
 
+**Resume note (if a usage limit stops work):** 4 agents were running with uncommitted files on the owner's Mac (files survive on disk): power-ups+hazards (`Gameplay/PowerUps`, `Gameplay/Hazards`), Duko+continue (`Gameplay/Companion`, Session, UI/Menus), art-director (`design/concepts/2026-10-07/`, nearly done), audio-director (`Assets/_Game/Audio`, `Services/Audio`). On resume: check those folders, relaunch unfinished tasks telling the agent to continue from the existing files, then compile-check all 8 assemblies (see coordinator method: Unity rsp files + bundled csc) and commit.
+
 **Goal: First Playable (FP1). Autonomous mandate: no owner questions until it's done.** Release/store work is paused.
 
 **FP1 is done when** the owner, on their M4 MacBook, can:

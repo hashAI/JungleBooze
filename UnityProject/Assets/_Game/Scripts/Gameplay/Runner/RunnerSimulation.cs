@@ -145,6 +145,7 @@ namespace JungleBooze.Gameplay.Runner
         private VineReleaseGrade _releaseThisTick;
         private float _releaseMultiplierThisTick;
         private bool _grabbedThisTick;
+        private bool _autoJumpRequested;
         private double _launchStartY;
         private double _launchVelocityY;
         private double _launchGravity;
@@ -257,6 +258,19 @@ namespace JungleBooze.Gameplay.Runner
 
         /// <summary>Track, coin and score systems called at steps 7a, 11a and 11b (spec 002 13.3). Null = none.</summary>
         public IRunnerStepHooks StepHooks { get; set; }
+
+        /// <summary>Power-up collision hooks (shield absorb, smash while invulnerable) called at step 11. Null = none.</summary>
+        public IRunnerContactHooks ContactHooks { get; set; }
+
+        /// <summary>
+        /// Speed Boost gap auto-jump (GDD 10): the next step jumps as if the player swiped up, if HERO is on the
+        /// ground (running, sliding or in coyote time) and the player gave no vertical command on that tick.
+        /// Call from a step hook; the request is consumed by the next step either way.
+        /// </summary>
+        public void RequestAutoJump()
+        {
+            _autoJumpRequested = true;
+        }
 
         /// <summary>Vine tuning used by this runner.</summary>
         public VineConfig Vines => _vines;
@@ -386,6 +400,17 @@ namespace JungleBooze.Gameplay.Runner
             bool jump = (commands & InputCommand.Jump) != 0;
             bool slide = (commands & InputCommand.Slide) != 0;
             bool resumed = (commands & InputCommand.PauseResumed) != 0;
+
+            // Power-up auto-jump (GDD 10, Speed Boost over gaps): only from the ground and only without a player command.
+            if (_autoJumpRequested)
+            {
+                _autoJumpRequested = false;
+                bool onGround = _locomotion == Locomotion.Running || _locomotion == Locomotion.Sliding || _locomotion == Locomotion.Coyote;
+                if (onGround && !jump && !slide)
+                {
+                    jump = true;
+                }
+            }
 
             if (_locomotion == Locomotion.Dead)
             {
@@ -638,6 +663,7 @@ namespace JungleBooze.Gameplay.Runner
             h = Mix(h, _grabbedRow);
             h = Mix(h, _missedGroup);
             h = Mix(h, _missedRow);
+            h = Mix(h, _autoJumpRequested ? 1L : 0L);
             h = Mix(h, _lift.TotalTicks);
             h = Mix(h, _lift.RiseTicks);
             h = Mix(h, _lift.DescentTicks);
@@ -758,6 +784,7 @@ namespace JungleBooze.Gameplay.Runner
             _lastOutcomes = source._lastOutcomes;
             _counters.CopyFrom(source._counters);
             SpeedMultiplier = source.SpeedMultiplier;
+            _autoJumpRequested = source._autoJumpRequested;
             TutorialActive = source.TutorialActive;
             Current = source.Current;
             Previous = source.Previous;
@@ -2165,12 +2192,21 @@ namespace JungleBooze.Gameplay.Runner
                 if (invulnerable)
                 {
                     // 9.6: no death and no stumble; the obstacle is ignored for the rest of the pass. [ASSUMED]
+                    // GDD 10: a boosting (or just-shielded) HERO smashes what he touches.
+                    ContactHooks?.OnInvulnerableContact(this, tick, in _boxes[boxIndex]);
                     continue;
                 }
 
                 ContactEntry entry = _contactEntry[c];
                 if (CollisionRules.IsLethal(entry))
                 {
+                    if (ContactHooks != null && ContactHooks.TryAbsorbLethalContact(this, tick, in _boxes[boxIndex]))
+                    {
+                        // GDD 10 Shield: the hit is absorbed; the rest of this tick is invulnerable.
+                        invulnerable = true;
+                        continue;
+                    }
+
                     DieOnContact(tick, boxIndex, _contactTime[c], false, xStart, yStart, zStart);
                     return;
                 }
@@ -2185,7 +2221,13 @@ namespace JungleBooze.Gameplay.Runner
 
                 if (_dazeTicksLeft > 0)
                 {
-                    // 9.4.5: a second stumble while dazed is lethal ("Tripped twice").
+                    // 9.4.5: a second stumble while dazed is lethal ("Tripped twice"), unless a shield absorbs it.
+                    if (ContactHooks != null && ContactHooks.TryAbsorbLethalContact(this, tick, in _boxes[boxIndex]))
+                    {
+                        invulnerable = true;
+                        continue;
+                    }
+
                     DieOnContact(tick, boxIndex, _contactTime[c], true, xStart, yStart, zStart);
                     return;
                 }
@@ -2380,6 +2422,8 @@ namespace JungleBooze.Gameplay.Runner
                 VineRelease = _releaseThisTick,
                 VineBonusMultiplier = _releaseMultiplierThisTick,
                 VineGrabbedThisTick = _grabbedThisTick,
+                Locomotion = _locomotion,
+                InVineFlight = _launchedFromVine && _locomotion != Locomotion.Carried && _locomotion != Locomotion.Dead,
             };
         }
 

@@ -1,5 +1,6 @@
 using System;
 using JungleBooze.Core;
+using JungleBooze.Gameplay.Companion;
 using JungleBooze.Gameplay.Runner;
 
 namespace JungleBooze.Gameplay.Session
@@ -30,6 +31,8 @@ namespace JungleBooze.Gameplay.Session
         private double _countdownLeft;
         private double _deathElapsed;
         private double _gameOverElapsed;
+        private double _continueElapsed;
+        private double _bestBeforeRun;
 
         public GameSession(
             RunnerConfig config,
@@ -140,6 +143,95 @@ namespace JungleBooze.Gameplay.Session
         /// </summary>
         public bool VineHangSlowdown { get; set; } = true;
 
+        // ---- Continue (GDD 14.4) and companion (GDD 15) ----
+
+        /// <summary>Decides whether the Continue screen is offered after a death. Null = never (straight to Game Over).</summary>
+        public IContinuePolicy ContinuePolicy { get; set; }
+
+        /// <summary>Continue rules (screen time, invulnerability, clear stretch, prices).</summary>
+        public ContinueRules ContinueRules { get; set; } = ContinueRules.CreateDefault();
+
+        /// <summary>Continues used in the current run.</summary>
+        public int ContinuesUsed { get; private set; }
+
+        /// <summary>Real seconds left on the Continue screen (0 outside <see cref="SessionPhase.ContinueOffer"/>).</summary>
+        public double ContinueSecondsLeft
+        {
+            get
+            {
+                if (Phase != SessionPhase.ContinueOffer)
+                {
+                    return 0.0;
+                }
+
+                double left = ContinueRules.OfferSeconds - _continueElapsed;
+                return left > 0.0 ? left : 0.0;
+            }
+        }
+
+        /// <summary>True while the Continue buttons ignore input (and in every other phase).</summary>
+        public bool ContinueInputLocked =>
+            Phase != SessionPhase.ContinueOffer || _continueElapsed < ContinueRules.InputLockSeconds;
+
+        /// <summary>Companion tuning; null = no companion (set with <see cref="ConfigureCompanion"/>).</summary>
+        public CompanionConfig CompanionConfig { get; private set; }
+
+        /// <summary>The current run's companion (meter, Lift, call-outs); null without a companion config.</summary>
+        public CompanionSimulation Companion { get; private set; }
+
+        /// <summary>Best distance from earlier sessions (save), for the companion's record cheer. 0 = none.</summary>
+        public double RecordDistanceM { get; set; }
+
+        /// <summary>Turns the companion on (from the next run, and for the current run right away). Allocates.</summary>
+        public void ConfigureCompanion(CompanionConfig config)
+        {
+            CompanionConfig = config;
+            SetUpCompanion();
+        }
+
+        /// <summary>
+        /// Continue screen "Continue" (paid or free, the caller settles that first): revives HERO through the world's
+        /// <see cref="IRunWorldRecovery"/> and starts the 3-2-1 countdown. Returns false outside the offer, during its
+        /// input lock, or if the world cannot revive.
+        /// </summary>
+        public bool AcceptContinue()
+        {
+            if (Phase != SessionPhase.ContinueOffer || ContinueInputLocked || !(World is IRunWorldRecovery recovery))
+            {
+                return false;
+            }
+
+            if (!recovery.Revive(Runner, ContinueRules.InvulnerableTicks, ContinueRules.ClearStretchSeconds))
+            {
+                return false;
+            }
+
+            ContinuesUsed++;
+            Companion?.OnRevived();
+            _deathElapsed = 0.0;
+            _continueElapsed = 0.0;
+            _countdownLeft = Timings.ResumeCountdownSeconds;
+            Phase = SessionPhase.Countdown;
+            if (_countdownLeft <= 0.0)
+            {
+                Advance(0.0);
+            }
+
+            return true;
+        }
+
+        /// <summary>Continue screen "Skip": Game Over now. Returns false outside the offer.</summary>
+        public bool DeclineContinue()
+        {
+            if (Phase != SessionPhase.ContinueOffer)
+            {
+                return false;
+            }
+
+            EnterGameOver();
+            return true;
+        }
+
         /// <summary>Commands passed to the last simulation step (tests and debug overlay).</summary>
         public InputCommand LastStepCommands { get; private set; }
 
@@ -183,6 +275,15 @@ namespace JungleBooze.Gameplay.Session
                     _deathElapsed += realDeltaSeconds;
                     if (_deathElapsed >= Timings.HitPauseSeconds + Timings.DeathHoldSeconds)
                     {
+                        EndDying();
+                    }
+
+                    break;
+
+                case SessionPhase.ContinueOffer:
+                    _continueElapsed += realDeltaSeconds;
+                    if (_continueElapsed >= ContinueRules.OfferSeconds)
+                    {
                         EnterGameOver();
                     }
 
@@ -224,7 +325,7 @@ namespace JungleBooze.Gameplay.Session
                 return false;
             }
 
-            EnterGameOver();
+            EndDying();
             return true;
         }
 
@@ -320,8 +421,10 @@ namespace JungleBooze.Gameplay.Session
                 _pendingFlags = InputCommand.None;
                 LastStepCommands = commands;
 
+                Companion?.BeforeStep();
                 Runner.Step(commands);
                 World.AfterRunnerStep(tick, Runner);
+                Companion?.AfterStep(tick, commands);
                 _time.Step();
                 run++;
 
@@ -339,13 +442,50 @@ namespace JungleBooze.Gameplay.Session
         {
             _deathElapsed = 0.0;
             double distance = DistanceM;
-            LastRunWasBest = distance > BestDistanceM;
-            if (LastRunWasBest)
+
+            // Against the best before this run, so a second death after a Continue is judged the same way.
+            LastRunWasBest = distance > _bestBeforeRun;
+            if (distance > BestDistanceM)
             {
                 BestDistanceM = distance;
             }
 
             Phase = SessionPhase.Dying;
+        }
+
+        /// <summary>End of the death sequence: the Continue screen if the policy offers one, else Game Over.</summary>
+        private void EndDying()
+        {
+            if (ContinuePolicy != null
+                && ContinuesUsed < ContinueRules.MaxContinuesPerRun
+                && World is IRunWorldRecovery
+                && ContinuePolicy.CanOfferContinue(this))
+            {
+                _continueElapsed = 0.0;
+                Phase = SessionPhase.ContinueOffer;
+                return;
+            }
+
+            EnterGameOver();
+        }
+
+        private void SetUpCompanion()
+        {
+            if (CompanionConfig == null || Runner == null)
+            {
+                Companion = null;
+                return;
+            }
+
+            Companion = new CompanionSimulation(CompanionConfig, Runner, World as IRunWorldRecovery, RunSeed)
+            {
+                RecordDistanceM = RecordDistanceM > BestDistanceM ? RecordDistanceM : BestDistanceM,
+            };
+
+            if (World is ICompanionWorld companionWorld)
+            {
+                companionWorld.LiftCoinPullAheadM = CompanionConfig.LiftCoinPullM;
+            }
         }
 
         private void EnterGameOver()
@@ -372,11 +512,15 @@ namespace JungleBooze.Gameplay.Session
             _countdownLeft = 0.0;
             _deathElapsed = 0.0;
             _gameOverElapsed = 0.0;
+            _continueElapsed = 0.0;
+            _bestBeforeRun = BestDistanceM;
+            ContinuesUsed = 0;
             LastRunWasBest = false;
             LastStepCommands = InputCommand.None;
             LastFrameSteps = 0;
             RunNumber++;
             Phase = startPhase;
+            SetUpCompanion();
         }
     }
 }

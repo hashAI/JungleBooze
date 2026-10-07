@@ -3,6 +3,7 @@ using JungleBooze.Gameplay.Controls;
 using JungleBooze.Gameplay.Runner;
 using JungleBooze.Gameplay.Session;
 using JungleBooze.Gameplay.Views;
+using JungleBooze.Services.Persistence;
 using JungleBooze.UI.Hud;
 using UnityEngine;
 
@@ -18,9 +19,12 @@ namespace JungleBooze.App
     /// menu, Restart also works from the pause menu. With a <see cref="RunResultRecorder"/> attached, every run is
     /// banked into the save once (at its end, or when left from the pause menu) and the save is flushed when the
     /// app goes to the background.
+    /// Continue (GDD 14.4): the driver is the session's <see cref="IContinuePolicy"/> (offers the screen when a free
+    /// first-session continue or an affordable coin continue exists) and carries out the screen's actions against
+    /// the save's wallet. Space/Enter continues, Escape/P skips.
     /// No allocations per frame (except the development-build error log on event-buffer overflow).
     /// </summary>
-    public sealed class RunDriver : MonoBehaviour, IRunCommands
+    public sealed class RunDriver : MonoBehaviour, IRunCommands, IContinueCommands, IContinuePolicy
     {
         private GameSession _session;
         private PlayerInputAdapter _input;
@@ -103,6 +107,81 @@ namespace JungleBooze.App
             _input.Reset();
             _input.GameplayEnabled = false;
             BeginViews();
+        }
+
+        /// <summary>The free first-session continue from the companion is available (GDD 14.4).</summary>
+        public bool FreeContinueAvailable
+        {
+            get
+            {
+                PlayerSave save = _recorder?.Save;
+                return _session != null && save != null && _session.ContinueRules.FreeContinueInFirstSession
+                    && save.SessionNumber <= 1 && !save.FreeContinueUsed;
+            }
+        }
+
+        /// <summary>Coin price of the next continue in this run.</summary>
+        public int NextContinueCost => _session == null ? 0 : _session.ContinueRules.CostFor(_session.ContinuesUsed);
+
+        /// <summary>The wallet holds enough coins for the next continue.</summary>
+        public bool CanAffordContinue
+        {
+            get
+            {
+                PlayerSave save = _recorder?.Save;
+                return save != null && save.TotalCoins >= NextContinueCost;
+            }
+        }
+
+        public bool CanOfferContinue(GameSession session)
+        {
+            return session == _session
+                && session.ContinuesUsed < session.ContinueRules.MaxContinuesPerRun
+                && (FreeContinueAvailable || CanAffordContinue);
+        }
+
+        /// <summary>Continue screen: free continue if available, otherwise pay coins. Ignored outside the offer.</summary>
+        public bool ContinueRun()
+        {
+            if (_session == null || _session.Phase != SessionPhase.ContinueOffer || _session.ContinueInputLocked)
+            {
+                return false;
+            }
+
+            PlayerSave save = _recorder?.Save;
+            bool free = FreeContinueAvailable;
+            int cost = NextContinueCost;
+            if (!free && !CanAffordContinue)
+            {
+                return false;
+            }
+
+            if (!_session.AcceptContinue())
+            {
+                return false;
+            }
+
+            if (free)
+            {
+                save.MarkFreeContinueUsed();
+            }
+            else
+            {
+                save.TrySpendCoinsOnContinue(cost);
+            }
+
+            save.Save();
+            _input.Reset();
+            return true;
+        }
+
+        /// <summary>Continue screen "Skip": straight to Game Over.</summary>
+        public void SkipContinue()
+        {
+            if (_session != null && _session.Phase == SessionPhase.ContinueOffer && !_session.ContinueInputLocked)
+            {
+                _session.DeclineContinue();
+            }
         }
 
         public void Pause()
@@ -205,6 +284,10 @@ namespace JungleBooze.App
             {
                 TryRestart(false);
             }
+            else if (_session.Phase == SessionPhase.ContinueOffer && confirm)
+            {
+                ContinueRun();
+            }
 
             _session.Advance(realDeltaSeconds);
             _recorder?.RecordIfEnded(_session);
@@ -268,7 +351,11 @@ namespace JungleBooze.App
             switch (action)
             {
                 case RunMetaAction.TogglePause:
-                    if (_session.Phase == SessionPhase.Paused)
+                    if (_session.Phase == SessionPhase.ContinueOffer)
+                    {
+                        SkipContinue();
+                    }
+                    else if (_session.Phase == SessionPhase.Paused)
                     {
                         Resume();
                     }

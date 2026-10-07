@@ -6,7 +6,8 @@ namespace JungleBooze.App
 {
     /// <summary>
     /// Banks each run into the player's save exactly once: score, distance and coins (coins go into the wallet,
-    /// GDD 13.1 and 14). A run is recorded when it ends (Dying or Game Over) or when the player leaves it early
+    /// GDD 13.1 and 14). A run is recorded when it reaches Game Over (not at the death itself, since a Continue
+    /// (GDD 14.4) can bring it back) or when the player leaves it early
     /// from the pause menu (Restart or Home) [ASSUMED: coins collected before quitting are kept]. Each record is
     /// written to disk right away. <see cref="RecordIfEnded"/> is called every frame and does not allocate unless
     /// it records.
@@ -25,8 +26,7 @@ namespace JungleBooze.App
         /// <summary>Records the current run if it has ended and was not recorded yet. Returns true if it recorded.</summary>
         public bool RecordIfEnded(GameSession session)
         {
-            SessionPhase phase = session.Phase;
-            if (phase != SessionPhase.Dying && phase != SessionPhase.GameOver)
+            if (session.Phase != SessionPhase.GameOver)
             {
                 return false;
             }

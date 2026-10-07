@@ -20,6 +20,7 @@ namespace JungleBooze.Gameplay.Controls
         public const float PointDpi = 163f;
 
         private readonly SwipeRecognizer _swipes;
+        private readonly TapRecognizer _taps;
         private readonly CommandQueue _queue;
         private readonly float _pixelsPerPoint;
         private RunMetaAction _pendingMeta;
@@ -35,6 +36,7 @@ namespace JungleBooze.Gameplay.Controls
             }
 
             _swipes = new SwipeRecognizer(config);
+            _taps = new TapRecognizer(config);
             _queue = new CommandQueue(config.GestureQueueCapacity);
             _pixelsPerPoint = pixelsPerPoint > 0f ? pixelsPerPoint : 1f;
         }
@@ -53,6 +55,7 @@ namespace JungleBooze.Gameplay.Controls
                 {
                     // Presses (start, confirm) survive: they belong to the phase that is starting.
                     _swipes.Cancel();
+                    _taps.Cancel();
                     _queue.Clear();
                 }
 
@@ -95,6 +98,7 @@ namespace JungleBooze.Gameplay.Controls
         public void Reset()
         {
             _swipes.Cancel();
+            _taps.Cancel();
             _queue.Clear();
             _confirmPressed = false;
             _startPressed = false;
@@ -171,6 +175,7 @@ namespace JungleBooze.Gameplay.Controls
                     _swipes.Cancel();
                 }
 
+                _taps.Cancel();
                 return;
             }
 
@@ -180,6 +185,7 @@ namespace JungleBooze.Gameplay.Controls
             if (pressedThisFrame)
             {
                 _swipes.Begin(x, y, nowSeconds);
+                _taps.Begin(x, y, nowSeconds);
             }
 
             if (!_swipes.IsTracking)
@@ -193,9 +199,17 @@ namespace JungleBooze.Gameplay.Controls
                 _queue.TryEnqueue(swipe);
             }
 
+            _taps.Move(x, y, swipe != InputCommand.None);
+
             if (!isPressed)
             {
                 _swipes.End();
+
+                // GDD 5.1: double tap = companion Assist (Lift).
+                if (_taps.End(nowSeconds))
+                {
+                    _queue.TryEnqueue(InputCommand.CompanionAssist);
+                }
             }
         }
 

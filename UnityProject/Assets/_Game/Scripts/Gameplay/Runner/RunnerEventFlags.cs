@@ -50,5 +50,8 @@ namespace JungleBooze.Gameplay.Runner
 
         /// <summary>VineReleased: the launch is guided into the next vine of the chain.</summary>
         public const byte VineChained = 1 << 1;
+
+        /// <summary>PowerUpEnded: the power-up was used up (a shield popped by a hit), not timed out.</summary>
+        public const byte PowerUpUsedUp = 1 << 0;
     }
 }

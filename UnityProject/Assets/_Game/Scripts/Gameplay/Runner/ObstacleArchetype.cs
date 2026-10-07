@@ -24,5 +24,17 @@ namespace JungleBooze.Gameplay.Runner
 
         /// <summary>Missing ground. Has no box; answered through <see cref="ITrackQuery.HasGround"/>.</summary>
         Gap = 5,
+
+        /// <summary>
+        /// Signature hazard "lane denial" (GDD 8.3, Jungle thorn patch): a static mass across 2 lanes that forces
+        /// the remaining lane. Cannot be jumped or slid. Box 0 → 2.2 m.
+        /// </summary>
+        LaneDenial = 6,
+
+        /// <summary>
+        /// Signature hazard "telegraphed lane strike" (GDD 8.3: water spout, falling rocks, darts): a warning in one
+        /// lane, then a strike with a box 0 → 3.0 m only while active.
+        /// </summary>
+        LaneStrike = 7,
     }
 }

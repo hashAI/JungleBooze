@@ -96,6 +96,29 @@ namespace JungleBooze.Gameplay.Runner
         /// <summary>Left/right on a vine. Lane = aimed lane, Dir, EntityId = aimed next vine id (0 = landing pad).</summary>
         VineAimChanged = 27,
 
+        // ---- GDD 10 power-ups and GDD 8.3 signature hazards. Append-only; numbered from 40. ----
+
+        /// <summary>A power-up pickup was collected. EntityId = pickup id, Lane, Value = <c>PowerUpType</c>.</summary>
+        PowerUpCollected = 40,
+
+        /// <summary>A power-up ended. Value = <c>PowerUpType</c>; Flags: PowerUpUsedUp (a shield popped by a hit).</summary>
+        PowerUpEnded = 41,
+
+        /// <summary>The Speed Boost dash ended and the slowdown started (the clear stretch ahead was cleared). Lane.</summary>
+        SpeedBoostSlowdown = 42,
+
+        /// <summary>The shield absorbed a hit. EntityId = obstacle id, Lane, Archetype.</summary>
+        ShieldAbsorbed = 43,
+
+        /// <summary>An obstacle was smashed (shield hit or boost). It is gone from the track. EntityId, Lane, Archetype.</summary>
+        ObstacleSmashed = 44,
+
+        /// <summary>A lane strike started its warning. EntityId = obstacle id, Lane, Archetype = LaneStrike.</summary>
+        HazardWarning = 45,
+
+        /// <summary>A lane strike hit its lane (hitbox live). EntityId = obstacle id, Lane, Archetype = LaneStrike.</summary>
+        HazardStrike = 46,
+
         // ---- GDD 15 companion and GDD 14.4 continue. Append-only; numbered from 60 so other features can append
         // below without clashing. ----
 

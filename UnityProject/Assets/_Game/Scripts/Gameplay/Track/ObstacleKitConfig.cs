@@ -15,6 +15,8 @@ namespace JungleBooze.Gameplay.Track
             HighBarrier = v.HighBarrier;
             FullBlock = v.FullBlock;
             Mover = v.Mover;
+            LaneDenial = v.LaneDenial;
+            LaneStrike = v.LaneStrike;
             _gapLengthsM = (float[])v.GapLengthsM.Clone();
             GapMinWindowS = v.GapMinWindowS;
             GapRunAcrossMarginM = v.GapRunAcrossMarginM;
@@ -32,6 +34,12 @@ namespace JungleBooze.Gameplay.Track
         public ObstacleShape FullBlock { get; }
 
         public ObstacleShape Mover { get; }
+
+        /// <summary>Signature lane denial (thorn patch), per covered lane.</summary>
+        public ObstacleShape LaneDenial { get; }
+
+        /// <summary>Signature lane strike, while active.</summary>
+        public ObstacleShape LaneStrike { get; }
 
         public int GapLengthCount => _gapLengthsM.Length;
 
@@ -81,6 +89,10 @@ namespace JungleBooze.Gameplay.Track
                     return FullBlock;
                 case ObstacleArchetype.Mover:
                     return Mover;
+                case ObstacleArchetype.LaneDenial:
+                    return LaneDenial;
+                case ObstacleArchetype.LaneStrike:
+                    return LaneStrike;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(archetype), archetype, "This archetype has no box.");
             }
@@ -128,6 +140,8 @@ namespace JungleBooze.Gameplay.Track
             h = MixShape(h, HighBarrier);
             h = MixShape(h, FullBlock);
             h = MixShape(h, Mover);
+            h = MixShape(h, LaneDenial);
+            h = MixShape(h, LaneStrike);
             for (int i = 0; i < _gapLengthsM.Length; i++)
             {
                 h = StableHash.Mix(h, _gapLengthsM[i]);
