@@ -32,7 +32,7 @@ compiler on the Mac is the fastest way to find remaining errors; fix whatever th
 - [x] A1 gameplay-engineer: movement simulation (spec 001 minus collisions) + EditMode tests (AC-01–14, 16–33, 45–46, 61–63; collisions deferred to B)
 - [x] A2 game-designer: spec 002 (track, obstacles, coins): 16 Jungle chunks, generator, coins/score, fairness rules, run lifecycle, AC-201–250
 - [x] A3 balance-simulator: Python reference model (64 tests pass), 6 golden traces, targets report: S1–S3, S6–S8 pass; S4/S5 fail (bot mistake profiles, low-barrier jump is the tightest timing)
-- [ ] B1 gameplay-engineer: collisions in the runner (spec 001 §9 + spec 002 changes), extended ITrackQuery, stumble/daze/near-miss + tests
+- [x] B1 gameplay-engineer: collisions (swept AABB, lethal vs stumble, daze, edge forgiveness, near-miss, step hooks) + tests for AC-34–45
 - [ ] B2 gameplay-engineer: track simulation (chunk data, 16-chunk library, seeded generator, coins, score, run lifecycle) + tests
 - [ ] B3 gameplay-engineer: chunk fairness validator (spec 002 §11) as an EditMode test + editor menu
 - [x] C1 ui-engineer: presentation (bootstrap, session with Ready/Dying/GameOver, Run again/Same track, input, gray-box views, HUD, PlayMode tests). Swap point for C2: `RunSceneBootstrap.CreateWorldFactory`.
@@ -88,6 +88,7 @@ If a new session finds an agent marked **working** but no matching output or com
 1. Ads and prices: deferred to week 4 (tracking already decided: none).
 
 ## Assumptions waiting for owner review (`[ASSUMED]`)
+- Collisions: a second obstacle clipped on the same tick as a stumble is ignored; obstacles touched while invulnerable are ignored for that pass; a box already overlapping at tick start is a stumble, never a death; sliding under a standard high barrier counts as a near-miss.
 - Possible feel change for the owner later: jump airtime 600 ms → 650 ms (same 1.5 m height) makes low barriers easier; the simulation shows average-player survival 87% → 90%. Not applied.
 - Movement interpretations for the game-designer to confirm: pending inputs counted while pending; the swipe that cancels a queued lane move counts as Executed; 0 ms means "off" for coyote and run-start ramp.
 - Placeholder app name "Jungle Runner" and bundle id `com.pistaduko.junglerunner`; minimum iOS 15.0; portrait, iPhone only; URP for FP1 with a built-in fallback menu.
@@ -106,6 +107,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Log
 Newest first. One line per event.
+- 2026-10-07: Stage B1 done (gameplay-engineer): collisions + tests. Not compiled.
 - 2026-10-07: Owner asked to review the code before any more changes. Running agents finish; nothing new is launched; resume watchdog disabled.
 - 2026-10-07: Stage C1 done (ui-engineer). Launched code-reviewer on the presentation slice for the FP0 preview. Known issue: Track/ files lack .meta files (B2 still running).
 - 2026-10-07: Stage A3 done (balance-simulator): reference model, 64 unit tests green, targets report with S4/S5 failing on bot profiles.
