@@ -30,12 +30,15 @@ namespace JungleBooze.Gameplay.Views
         {
             EnvironmentArt.TreeA, EnvironmentArt.TreeB, EnvironmentArt.TreeTrunk, EnvironmentArt.Bush, EnvironmentArt.FernCluster,
             EnvironmentArt.Rock, EnvironmentArt.Root, EnvironmentArt.VineCreeper, null,
+            null, null, null, null, null, null, null,
         };
 
         private static readonly SceneryShape[] Shapes =
         {
             SceneryShape.Tree, SceneryShape.Tree, SceneryShape.Trunk, SceneryShape.Blob, SceneryShape.Blob,
             SceneryShape.Blob, SceneryShape.Root, SceneryShape.Vine, SceneryShape.Shaft,
+            SceneryShape.WallTrunk, SceneryShape.LeafClump, SceneryShape.LeafClump, SceneryShape.LeafClump, SceneryShape.Stub,
+            SceneryShape.FarTree, SceneryShape.Litter,
         };
 
         // Nominal bounds (centre, size) of the gray-box stand-ins; they match the sizes the placer assumes at scale 1.
@@ -50,6 +53,13 @@ namespace JungleBooze.Gameplay.Views
             new Bounds(new Vector3(0f, 0.3f, 0f), new Vector3(1.8f, 0.6f, 0.6f)),
             new Bounds(new Vector3(0f, -3f, 0f), new Vector3(0.5f, 6f, 0.5f)),
             new Bounds(new Vector3(0f, 0.5f, 0f), new Vector3(1f, 1f, 0f)),
+            new Bounds(new Vector3(0f, 15f, 0f), new Vector3(1.9f, 30f, 1.9f)),
+            new Bounds(new Vector3(0f, 1.2f, 0f), new Vector3(3.4f, 2.4f, 3.4f)),
+            new Bounds(new Vector3(0f, 1.2f, 0f), new Vector3(3.4f, 2.4f, 3.4f)),
+            new Bounds(new Vector3(0f, 1.2f, 0f), new Vector3(3.4f, 2.4f, 3.4f)),
+            new Bounds(new Vector3(0f, 0.5f, 0f), new Vector3(0.3f, 1f, 0.3f)),
+            new Bounds(new Vector3(0f, 12f, 0f), new Vector3(8f, 24f, 8f)),
+            new Bounds(new Vector3(0f, 0f, 0f), new Vector3(2f, 0f, 2f)),
         };
 
         // Flat colours of the generated meshes (no hazard red; the style guide's bark, leaf and stone family).
@@ -58,8 +68,19 @@ namespace JungleBooze.Gameplay.Views
         private static readonly Color FernLeaf = new Color32(0x5F, 0xA8, 0x45, 0xFF);
         private static readonly Color Stone = new Color32(0x8A, 0x7B, 0x68, 0xFF);
 
+        // Leaf mass variants: a deep teal-green and a yellowish green around the style guide's jungle green, so the wall
+        // does not read as one flat tint. The bark of wall trunks is slightly darker than the tree bark.
+        private static readonly Color LeafB = new Color32(0x2E, 0x6E, 0x48, 0xFF);
+        private static readonly Color LeafC = new Color32(0x6E, 0x9E, 0x3A, 0xFF);
+        private static readonly Color WallBark = new Color32(0x5A, 0x3F, 0x2C, 0xFF);
+        private static readonly Color FarLeaf = new Color32(0x2A, 0x5E, 0x42, 0xFF);
+        private static readonly Color Litter = new Color32(0x6A, 0x55, 0x30, 0xFF);
+
         /// <summary>The scenery vines are dimmed so the one live grab vine stays the brightest strand (art plan section 1).</summary>
         private static readonly Color VineDim = new Color(0.95f, 0.97f, 0.95f, 1f);
+
+        private const double SwingFrameAheadM = 50.0;
+        private const double SwingFrameBehindM = 40.0;
 
         private static readonly Vector3 DrawBoundsSize = new Vector3(600f, 600f, 600f);
 
@@ -74,6 +95,8 @@ namespace JungleBooze.Gameplay.Views
         private SceneryModelSet[] _sets;
         private SceneryPart[] _allParts;
         private Texture2D _shaftTexture;
+        private Texture2D _rampTexture;
+        private int _rebuilds;
 
         // Placed cells, a ring indexed by cell index modulo its size.
         private int _ringSize;
@@ -223,6 +246,11 @@ namespace JungleBooze.Gameplay.Views
             {
                 Destroy(_shaftTexture);
             }
+
+            if (_rampTexture != null)
+            {
+                Destroy(_rampTexture);
+            }
         }
 
         // ---- Cells ----
@@ -272,6 +300,7 @@ namespace JungleBooze.Gameplay.Views
                 Beat = pose.Beat,
                 Layer = pose.Layer,
                 WorldIndex = _worlds != null ? (int)_worlds.WorldKindAt(mid) : 0,
+                SwingFrame = InSwingFrame(start, length),
             };
 
             SceneryPiece[] pieces = _cellPieces[slot];
@@ -285,6 +314,43 @@ namespace JungleBooze.Gameplay.Views
             _cellCount[slot] = count;
             _cellIndex[slot] = cell;
             return true;
+        }
+
+        /// <summary>
+        /// True when a vine section's chunk starts within 50 m after the cell or ended within 40 m before it. The route
+        /// source reports only committed chunks (the track generates well beyond the 95 m window), so this is stable.
+        /// </summary>
+        private bool InSwingFrame(double start, float length)
+        {
+            if (_worlds == null)
+            {
+                return false;
+            }
+
+            double from = start - SwingFrameBehindM;
+            double look = length + SwingFrameBehindM + SwingFrameAheadM;
+            for (int attempt = 0; attempt < 2; attempt++)
+            {
+                if (!_worlds.TryFindZone(from, look, out RouteZone zone))
+                {
+                    return false;
+                }
+
+                if (zone.Kind == RouteBeatKind.SwingZone)
+                {
+                    return true;
+                }
+
+                // A gateway came first: look again past it.
+                from = zone.EndS;
+                look = (start + length + SwingFrameAheadM) - from;
+                if (look <= 0.0)
+                {
+                    return false;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>Signed curvature with the largest magnitude at five points from 5 m before the cell to 5 m after it.</summary>
@@ -357,6 +423,12 @@ namespace JungleBooze.Gameplay.Views
             {
                 AddCell(c, reference);
             }
+
+            _rebuilds++;
+            if (Debug.isDebugBuild && (_rebuilds == 3 || _rebuilds % 60 == 0))
+            {
+                LogLive();
+            }
         }
 
         private void AddCell(long cell, double reference)
@@ -379,7 +451,7 @@ namespace JungleBooze.Gameplay.Views
                     continue;
                 }
 
-                bool near = System.Math.Abs(pieces[i].S - reference) <= _settings.LodNearM;
+                bool near = System.Math.Abs(pieces[i].S - reference) <= _settings.LodNearOf(model);
                 if (!_budget.TryTake(model, near ? set.NearTriangles : set.FarTriangles, _settings))
                 {
                     continue;
@@ -422,6 +494,7 @@ namespace JungleBooze.Gameplay.Views
         private bool BuildSets()
         {
             _sets = new SceneryModelSet[ScenerySettings.ModelCount];
+            _rampTexture = SceneryMeshes.GradientTexture();
             var all = new List<SceneryPart>();
             for (int m = 0; m < ScenerySettings.ModelCount; m++)
             {
@@ -436,6 +509,7 @@ namespace JungleBooze.Gameplay.Views
         {
             SceneryShape shape = Shapes[model];
             Bounds bounds = NominalBounds[model];
+            int variant = model >= (int)SceneryModel.LeafMassA && model <= (int)SceneryModel.LeafMassC ? model - (int)SceneryModel.LeafMassA : 0;
             int capacity = _settings.MaxActivePieces;
             var near = new List<SceneryPart>();
             bool art = ArtNames[model] != null
@@ -453,7 +527,8 @@ namespace JungleBooze.Gameplay.Views
 
             if (!art)
             {
-                Mesh stand = SceneryMeshes.Build(shape, bounds, shape == SceneryShape.Shaft ? SceneryMeshes.DetailFar : SceneryMeshes.DetailNear);
+                bool single = SingleLod(shape);
+                Mesh stand = SceneryMeshes.Build(shape, bounds, single ? SceneryMeshes.DetailFar : SceneryMeshes.DetailNear, variant);
                 _meshes.Add(stand);
                 for (int sub = 0; sub < stand.subMeshCount; sub++)
                 {
@@ -463,12 +538,12 @@ namespace JungleBooze.Gameplay.Views
 
             SceneryPart[] nearParts = near.ToArray();
             all.AddRange(nearParts);
-            if (shape == SceneryShape.Shaft)
+            if (SingleLod(shape))
             {
                 return new SceneryModelSet(nearParts, nearParts);
             }
 
-            Mesh far = SceneryMeshes.Build(shape, bounds, SceneryMeshes.DetailFar);
+            Mesh far = SceneryMeshes.Build(shape, bounds, SceneryMeshes.DetailFar, variant);
             _meshes.Add(far);
             var farParts = new SceneryPart[far.subMeshCount];
             for (int sub = 0; sub < farParts.Length; sub++)
@@ -478,6 +553,12 @@ namespace JungleBooze.Gameplay.Views
 
             all.AddRange(farParts);
             return new SceneryModelSet(nearParts, farParts);
+        }
+
+        /// <summary>Shapes that are already as cheap as they get (a quad, a fan, a thin far silhouette): one mesh for every distance.</summary>
+        private static bool SingleLod(SceneryShape shape)
+        {
+            return shape == SceneryShape.Shaft || shape == SceneryShape.Litter || shape == SceneryShape.FarTree;
         }
 
         private Material[] FlatMaterials(int model)
@@ -505,6 +586,27 @@ namespace JungleBooze.Gameplay.Views
                 case SceneryModel.HangingVine:
                     result = new[] { Flat(StylePalette.VineRope) };
                     break;
+                case SceneryModel.WallTrunk:
+                    result = new[] { Flat(WallBark) };
+                    break;
+                case SceneryModel.LeafMassA:
+                    result = new[] { Flat(Leaf) };
+                    break;
+                case SceneryModel.LeafMassB:
+                    result = new[] { Flat(LeafB) };
+                    break;
+                case SceneryModel.LeafMassC:
+                    result = new[] { Flat(LeafC) };
+                    break;
+                case SceneryModel.BranchStub:
+                    result = new[] { Flat(Bark) };
+                    break;
+                case SceneryModel.FarTree:
+                    result = new[] { Flat(FarLeaf) };
+                    break;
+                case SceneryModel.LeafLitter:
+                    result = new[] { Flat(Litter) };
+                    break;
                 default:
                     result = new[] { ShaftMaterial() };
                     break;
@@ -528,7 +630,8 @@ namespace JungleBooze.Gameplay.Views
                 return cached;
             }
 
-            Material material = EnvironmentArt.CreateLitMaterial("Scenery_" + ColorUtility.ToHtmlStringRGB(color), null, color);
+            // The shared contact ramp (dark at the foot, light higher up) is the baked ground-contact shading of every generated mesh.
+            Material material = EnvironmentArt.CreateLitMaterial("Scenery_" + ColorUtility.ToHtmlStringRGB(color), _rampTexture, color);
             if (material != null)
             {
                 _materials.Add(material);
@@ -743,7 +846,27 @@ namespace JungleBooze.Gameplay.Views
                 report.Append(m < ScenerySettings.ModelCount - 1 ? ", " : ".");
             }
 
+            report.Append(" Parts (draw call ceiling) ").Append(_allParts.Length).Append(", target ").Append(_settings.TargetDrawCalls)
+                .Append("; caps ").Append(_settings.MaxTriangles).Append(" tris, ").Append(_settings.MaxActivePieces)
+                .Append(" pieces, ").Append(_settings.MaxLightShaftsInView).Append(" shafts.");
             Debug.Log(report.ToString());
+        }
+
+        /// <summary>Dev builds: what the last rebuild really drew (pieces, triangles, draw calls, refused by the caps).</summary>
+        private void LogLive()
+        {
+            int draws = 0;
+            for (int i = 0; i < _allParts.Length; i++)
+            {
+                if (_allParts[i].Count > 0)
+                {
+                    draws++;
+                }
+            }
+
+            Debug.Log("[JungleBooze] Scenery on (live): " + _budget.Pieces + " pieces, " + _budget.Triangles + " triangles (cap "
+                + _settings.MaxTriangles + "), " + draws + " draw calls (target " + _settings.TargetDrawCalls + "), "
+                + _budget.Shafts + " shafts, " + _budget.Dropped + " refused by the caps.");
         }
     }
 }

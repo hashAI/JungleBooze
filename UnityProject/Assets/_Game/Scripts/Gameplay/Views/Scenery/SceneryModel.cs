@@ -32,5 +32,26 @@ namespace JungleBooze.Gameplay.Views
 
         /// <summary>Soft light-shaft card (no art slot; a generated quad).</summary>
         LightShaft = 8,
+
+        /// <summary>Wall-ring trunk (generated, flared dark foot), 30 m tall at scale 1.</summary>
+        WallTrunk = 9,
+
+        /// <summary>Opaque leaf mass, variant A (generated clump, wall ring, canopy, stub tufts).</summary>
+        LeafMassA = 10,
+
+        /// <summary>Leaf mass variant B (darker teal-green).</summary>
+        LeafMassB = 11,
+
+        /// <summary>Leaf mass variant C (yellower green).</summary>
+        LeafMassC = 12,
+
+        /// <summary>Branch stub growing from a wall trunk over the corridor edge (generated, along +Y, rolled by the placer).</summary>
+        BranchStub = 13,
+
+        /// <summary>Far-ring silhouette tree (generated, one material, one mesh for every distance).</summary>
+        FarTree = 14,
+
+        /// <summary>Leaf litter decal on the ground (generated flat fan).</summary>
+        LeafLitter = 15,
     }
 }

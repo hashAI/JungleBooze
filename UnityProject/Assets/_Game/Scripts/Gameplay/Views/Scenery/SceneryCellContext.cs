@@ -17,5 +17,12 @@ namespace JungleBooze.Gameplay.Views
 
         /// <summary>World index (Jungle 0, River 1, Mountains 2, Ruins 3).</summary>
         public int WorldIndex;
+
+        /// <summary>
+        /// True within 50 m before and 40 m after a vine section's chunk: the anchor tree and its limb must stay visible,
+        /// so everything keeps 11 m from the centerline and nothing hangs over the corridor. The beat itself is not
+        /// changed. The swing beat (<see cref="RouteBeatKind.SwingZone"/>) always counts as framed.
+        /// </summary>
+        public bool SwingFrame;
     }
 }

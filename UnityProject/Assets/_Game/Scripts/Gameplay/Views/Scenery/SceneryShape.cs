@@ -20,5 +20,20 @@ namespace JungleBooze.Gameplay.Views
 
         /// <summary>A one-metre quad standing on y = 0 with a soft vertical gradient.</summary>
         Shaft = 5,
+
+        /// <summary>Tall wall-ring trunk with a flared, dark-based foot (no crown).</summary>
+        WallTrunk = 6,
+
+        /// <summary>Opaque clump of three overlapping blobs (leaf mass, bottom at y = 0). Three variants.</summary>
+        LeafClump = 7,
+
+        /// <summary>A unit-long tapered branch along +Y (the placer rolls it to horizontal).</summary>
+        Stub = 8,
+
+        /// <summary>Single-material silhouette: thin trunk with two crown blobs (far ring, sits in the fog).</summary>
+        FarTree = 9,
+
+        /// <summary>A flat irregular fan lying on the ground (leaf litter decal).</summary>
+        Litter = 10,
     }
 }
