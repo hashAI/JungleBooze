@@ -81,7 +81,7 @@ class Builder:
 
     def blob(self, centre, scale, colour, jitter=0.12):
         """Low-poly leaf mass: icosphere (80 tris), squashed and seeded-jittered."""
-        res = bmesh.ops.create_icosphere(self.bm, subdivisions=1, radius=1.0)
+        res = bmesh.ops.create_icosphere(self.bm, subdivisions=2, radius=1.0)
         for v in res["verts"]:
             v.co = Vector((v.co.x * scale[0], v.co.y * scale[1], v.co.z * scale[2]))
             v.co *= 1 + self.rng.uniform(-jitter, jitter)
@@ -89,13 +89,13 @@ class Builder:
         faces = list({f for v in res["verts"] for f in v.link_faces})
         self.tag(faces, colour)
 
-    def leaf(self, base, direction, length, width, droop, colour):
+    def leaf(self, base, direction, length, width, droop, colour, midf=0.45):
         """Double-sided bent leaf (8 tris): base, two side verts, ridge-mid, tip."""
         bm = self.bm; d = Vector(direction).normalized()
         side = d.cross(Vector((0, 1, 0)))
         if side.length < 1e-3: side = Vector((1, 0, 0))
         side.normalize(); nrm = side.cross(d).normalized()
-        b = Vector(base); mid = b + d * length * 0.45 + nrm * 0.02
+        b = Vector(base); mid = b + d * length * midf + nrm * 0.02
         tip = b + d * length + Vector((0, -droop, 0)); l = mid + side * width * 0.5; r = mid - side * width * 0.5
         mid_hi = mid + nrm * width * 0.12
         pp = (b, l, mid_hi, r, tip)
@@ -163,8 +163,8 @@ def build_trunk():
         a = 2 * math.pi * j / 6 + rng.uniform(-0.2, 0.2); dx, dz = math.cos(a), math.sin(a)
         rp, rr, n = [], [], 5
         for i in range(n):
-            t = i / (n - 1); rd = 0.8 + 2.8 * t; y = 4.6 * (1 - t) ** 2 - 0.2 * t
-            rp.append((dx * rd, y, dz * rd)); rr.append(0.55 - 0.27 * t)
+            t = i / (n - 1); rd = 0.8 + 2.8 * t; y = 5.5 * (1 - t) ** 2 - 0.3 * t
+            rp.append((dx * rd, y, dz * rd)); rr.append(0.8 - 0.4 * t)
         b.tube(rp, rr, 5, lambda i, k, nn: "bark_alt" if nn.y < 0.2 else "bark", phase=a)
     # leaf canopy cluster on top (the trunk top is hidden inside it)
     top = pts[-1]
@@ -207,14 +207,15 @@ def build_tuft():
     b = Builder("Vine_Tuft", 404); rng = b.rng
     for j in range(7):  # gold leaves splay behind and around the flower (the flower faces -Z)
         a = 2 * math.pi * j / 7
-        b.leaf((0, 0.02, 0.04), (math.cos(a) * 0.9, math.sin(a) * 0.9, 0.55), 0.3, 0.17, 0.05, "gold")
+        b.leaf((0, 0.02, 0.04), (math.cos(a) * 0.9, math.sin(a) * 0.9, 0.55), 0.27, 0.24, 0.05, "gold", midf=0.6)
     for j in range(8):  # orange flower, petals face -Z
         a = 2 * math.pi * j / 8; a2 = 2 * math.pi * (j + 1) / 8; am = (a + a2) / 2
         c = Vector((0, 0, -0.1))
-        p0 = c + Vector((math.cos(a), math.sin(a), 0)) * 0.05; p1 = c + Vector((math.cos(a2), math.sin(a2), 0)) * 0.05
-        tip = c + Vector((math.cos(am), math.sin(am), -0.04)) * 0.2
+        p0 = c + Vector((math.cos(a), math.sin(a), 0)) * 0.07; p1 = c + Vector((math.cos(a2), math.sin(a2), 0)) * 0.07
+        tip = c + Vector((math.cos(am), math.sin(am), -0.04)) * 0.17
         v = [b.bm.verts.new(p) for p in (p0, tip, p1)]
-        fs = [b.bm.faces.new(v), b.bm.faces.new(v[::-1])]
+        v2 = [b.bm.verts.new(p + Vector((0, 0, 0.01))) for p in (p0, tip, p1)]
+        fs = [b.bm.faces.new(v), b.bm.faces.new(v2[::-1])]
         for f in fs: f.normal_update()
         b.tag(fs, "orange")
     res = bmesh.ops.create_cone(b.bm, cap_ends=True, segments=6, radius1=0.07, radius2=0.0, depth=0.07,
