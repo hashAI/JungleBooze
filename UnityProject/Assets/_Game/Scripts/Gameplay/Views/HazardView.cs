@@ -11,8 +11,10 @@ namespace JungleBooze.Gameplay.Views
     /// Gray-box signature hazards (GDD 8.3, style guide 4.1), polled from the <see cref="TrackSimulation"/> obstacle
     /// ring each frame:
     /// <list type="bullet">
-    /// <item>Lane denial (thorn patch): per covered lane a dark thorny block the size of the hitbox, with ink thorns
-    /// on the face and top and red-tinted thorn tips (red always next to ink).</item>
+    /// <item>Lane denial (thorn patch, spec 005 A5): one grounded <see cref="ObstacleRig"/> per row: a root cage and
+    /// cane wall that fills each covered lane's hitbox (embedded in the ground), ink thorn hooks, ochre stripes on three
+    /// front posts (red always flanked by ink, never on the thorns), a woody root crown beside the path it grows
+    /// from, a contact pad and debris. Built once at the spawn distance; canes tremble 1 degree at the top.</item>
     /// <item>Lane strike: an ink-framed plate marks the lane at all times; during the warning red-and-ink chevrons
     /// pulse on it (faster as the strike nears); when the strike is active a stone column drops into the lane (the
     /// box); in the rest phase only the plate stays.</item>
@@ -21,31 +23,17 @@ namespace JungleBooze.Gameplay.Views
     /// </summary>
     public sealed class HazardView : MonoBehaviour, IRunView
     {
-        private const int ThornCapacity = 16;
+        private const int ThornRigCapacity = 6;
+        private const int ThornPartCapacity = 96;
         private const int StrikeCapacity = 8;
         private const float BehindM = 10f;
-        private const int ThornsPerFace = 3;
-        private const float ThornSizeM = 0.32f;
-        private const float ThornTipSizeM = 0.14f;
         private const float PlateHeightM = 0.02f;
         private const float FrameM = 0.15f;
         private const float ChevronBarM = 0.9f;
         private const float ChevronThicknessM = 0.16f;
-        // The strike box is lethal from its first active tick, so the column starts almost on the hitbox (it used to
-        // fall from 5 m over 6 ticks, i.e. the box was live while the rock was still above it).
-        private const float DropHeightM = 1f;
-        private const int DropTicks = 3;
         private const float BandHeightM = 0.2f;
         private const float StripeHeightM = 0.1f;
-
-        private sealed class ThornPiece
-        {
-            public GameObject Root;
-            public Transform Body;
-            public Transform[] Thorns;
-            public Transform[] Tips;
-            public int ObstacleId;
-        }
+        private const float MaxClockStepS = 0.1f;
 
         private sealed class StrikePiece
         {
@@ -62,15 +50,47 @@ namespace JungleBooze.Gameplay.Views
 
         private RunnerConfig _runnerConfig;
         private float _viewDistanceM;
-        private ThornPiece[] _thorns;
+        private ObstacleRig[] _thornRigs;
         private StrikePiece[] _strikes;
-        private int _thornsShown;
+        private int _thornRigsShown;
+        private int _renderStamp;
+        private ObstacleGroundingTuning _tuning;
+        private RigMaterials _materials;
+        private ObstacleArtPool _art;
+        private ObstacleRigBuilder _builder;
+        private ObstacleRigAnimator _animator;
+        private RigBuildInfo _info;
+        private ulong _runSeed;
+        private float _clockS;
+        private bool _primed;
         private int _strikesShown;
         private TrackSimulation _track;
         private PathFrame _frame;
 
         /// <summary>Thorn pieces and strike pieces shown last frame (tests).</summary>
-        public int ShownThornCount => _thornsShown;
+        public int ShownThornCount => _thornRigsShown;
+
+        /// <summary>Number of pooled thorn rigs (the F7 audit walks them).</summary>
+        public int RigCount => _thornRigs != null ? _thornRigs.Length : 0;
+
+        /// <summary>The pooled thorn rig at <paramref name="index"/> (live or not).</summary>
+        public ObstacleRig GetRig(int index)
+        {
+            return _thornRigs[index];
+        }
+
+        /// <summary>Reduce Motion: quieter cane tremble.</summary>
+        public bool ReduceMotion
+        {
+            get => _animator != null && _animator.ReduceMotion;
+            set
+            {
+                if (_animator != null)
+                {
+                    _animator.ReduceMotion = value;
+                }
+            }
+        }
 
         public int ShownStrikeCount => _strikesShown;
 
@@ -80,10 +100,10 @@ namespace JungleBooze.Gameplay.Views
         /// </summary>
         public bool IsDrawn(int obstacleId)
         {
-            for (int i = 0; _thorns != null && i < _thornsShown; i++)
+            for (int i = 0; _thornRigs != null && i < _thornRigs.Length; i++)
             {
-                if (_thorns[i].ObstacleId == obstacleId && _thorns[i].Root.activeInHierarchy
-                    && HasEnabledRenderer(_thorns[i].Root.transform))
+                if (_thornRigs[i].Live && _thornRigs[i].ObstacleId == obstacleId && _thornRigs[i].Root.activeInHierarchy
+                    && HasEnabledRenderer(_thornRigs[i].Root.transform))
                 {
                     return true;
                 }
@@ -127,10 +147,25 @@ namespace JungleBooze.Gameplay.Views
             _frame = PathPlacement.OrIdentity(_frame);
             _runnerConfig = runnerConfig;
             _viewDistanceM = viewDistanceM;
-            _thorns = new ThornPiece[ThornCapacity];
-            for (int i = 0; i < ThornCapacity; i++)
+            _tuning = new ObstacleGroundingTuning();
+            _materials = new RigMaterials(kit);
+            _info = new RigBuildInfo();
+            Transform holder = new GameObject("ArtPool").transform;
+            holder.SetParent(transform, false);
+            _art = new ObstacleArtPool(
+                holder,
+                _tuning.UseLegacyArt
+                    ? new[] { ObstacleArtSlot.ThornCage, ObstacleArtSlot.CaneWall, ObstacleArtSlot.RootCrown, ObstacleArtSlot.ThornLitter, ObstacleArtSlot.LegacyThorn }
+                    : new[] { ObstacleArtSlot.ThornCage, ObstacleArtSlot.CaneWall, ObstacleArtSlot.RootCrown, ObstacleArtSlot.ThornLitter },
+                3);
+            _builder = new ObstacleRigBuilder(_materials, _art, _tuning);
+            _animator = new ObstacleRigAnimator(_tuning);
+
+            Material placeholder = _materials.Opaque(GroundingPalette.Thorn);
+            _thornRigs = new ObstacleRig[ThornRigCapacity];
+            for (int i = 0; i < ThornRigCapacity; i++)
             {
-                _thorns[i] = CreateThorn(kit, i);
+                _thornRigs[i] = new ObstacleRig(transform, "Thorns" + i, ThornPartCapacity, 0, placeholder, _materials.Dust);
             }
 
             _strikes = new StrikePiece[StrikeCapacity];
@@ -140,10 +175,30 @@ namespace JungleBooze.Gameplay.Views
             }
         }
 
+        private void OnDestroy()
+        {
+            if (_materials != null)
+            {
+                _materials.Dispose();
+            }
+        }
+
         public void BeginRun(GameSession session)
         {
             _track = (session.World as TrackRunWorld)?.Track;
+            _runSeed = session.RunSeed;
+            _primed = false;
+            for (int i = 0; _thornRigs != null && i < _thornRigs.Length; i++)
+            {
+                if (_thornRigs[i].Live)
+                {
+                    _art.Release(_thornRigs[i]);
+                    _thornRigs[i].Release();
+                }
+            }
+
             Render(session, 1f, 0f);
+            _primed = true;
         }
 
         public void OnRunnerEvent(in RunnerEvent e)
@@ -152,19 +207,21 @@ namespace JungleBooze.Gameplay.Views
 
         public void Render(GameSession session, float alpha, float realDeltaSeconds)
         {
-            if (_thorns == null)
+            if (_thornRigs == null)
             {
                 return;
             }
 
-            int thorns = 0;
+            float dt = Mathf.Clamp(realDeltaSeconds, 0f, MaxClockStepS);
+            _clockS += dt;
+            _renderStamp++;
             int strikes = 0;
             if (_track != null)
             {
                 RunnerSimulation runner = session.Runner;
                 RunnerInterpolation.Evaluate(runner.Previous, runner.Current, alpha, out _, out _, out double heroZ);
                 double minZ = heroZ - BehindM;
-                double maxZ = heroZ + _viewDistanceM;
+                double maxZ = heroZ + Mathf.Max(_viewDistanceM, _tuning.SpawnAheadM);
                 HazardConfig hazards = _track.Hazards;
                 int count = _track.ObstacleCount;
                 for (int i = 0; i < count; i++)
@@ -182,14 +239,7 @@ namespace JungleBooze.Gameplay.Views
 
                     if (o.Archetype == ObstacleArchetype.LaneDenial)
                     {
-                        ObstacleShape shape = _track.Kit.LaneDenial;
-                        for (int lane = 0; lane < LaneMasks.LaneCount && thorns < ThornCapacity; lane++)
-                        {
-                            if (LaneMasks.Contains(o.LaneMask, lane))
-                            {
-                                PlaceThorn(_thorns[thorns++], o, shape, _runnerConfig.LaneCenterX(lane));
-                            }
-                        }
+                        PlaceThorn(o, heroZ);
                     }
                     else if (o.Archetype == ObstacleArchetype.LaneStrike && strikes < StrikeCapacity)
                     {
@@ -198,9 +248,23 @@ namespace JungleBooze.Gameplay.Views
                 }
             }
 
-            for (int i = thorns; i < _thornsShown; i++)
+            int liveRigs = 0;
+            for (int i = 0; i < _thornRigs.Length; i++)
             {
-                _thorns[i].Root.SetActive(false);
+                ObstacleRig rig = _thornRigs[i];
+                if (!rig.Live)
+                {
+                    continue;
+                }
+
+                if (rig.Stamp != _renderStamp)
+                {
+                    _art.Release(rig);
+                    rig.Release();
+                    continue;
+                }
+
+                liveRigs++;
             }
 
             for (int i = strikes; i < _strikesShown; i++)
@@ -208,41 +272,83 @@ namespace JungleBooze.Gameplay.Views
                 _strikes[i].Root.SetActive(false);
             }
 
-            _thornsShown = thorns;
+            _thornRigsShown = liveRigs;
             _strikesShown = strikes;
         }
 
-        private ThornPiece CreateThorn(GrayBoxKit kit, int index)
+        /// <summary>Finds or builds the rig of a thorn row (built once, at the spawn distance) and moves it.</summary>
+        private void PlaceThorn(in ObstacleInstance o, double heroZ)
         {
-            var piece = new ThornPiece();
-            Transform root = new GameObject("Thorns" + index).transform;
-            root.SetParent(transform, false);
-            piece.Root = root.gameObject;
-            piece.Body = kit.Create(PrimitiveType.Cube, "Body", root, StylePalette.HazardThorn).transform;
-            // Real art (fits a unit cube, scaled to the hitbox by PlaceThorn) replaces body, thorns and tips.
-            // The gray-box body is only hidden once the art is verified visible (EnvironmentArt.AttachAndHide).
-            bool thornArt = EnvironmentArt.AttachAndHide(piece.Body, EnvironmentArt.ThornPatch);
-
-            int n = ThornsPerFace * 2;
-            piece.Thorns = new Transform[n];
-            piece.Tips = new Transform[n];
-            for (int t = 0; t < n; t++)
+            ObstacleShape shape = _track.Kit.LaneDenial;
+            float depth = o.DepthM > 0f ? o.DepthM : shape.DepthM;
+            ObstacleRig rig = null;
+            ObstacleRig free = null;
+            for (int i = 0; i < _thornRigs.Length; i++)
             {
-                piece.Thorns[t] = kit.Create(PrimitiveType.Cube, "Thorn" + t, root, StylePalette.Ink).transform;
-                piece.Thorns[t].localRotation = Quaternion.Euler(45f, 45f, 0f);
-                piece.Thorns[t].localScale = new Vector3(ThornSizeM, ThornSizeM, ThornSizeM);
-                piece.Tips[t] = kit.Create(PrimitiveType.Cube, "ThornTip" + t, root, StylePalette.HazardRed).transform;
-                piece.Tips[t].localRotation = Quaternion.Euler(45f, 45f, 0f);
-                piece.Tips[t].localScale = new Vector3(ThornTipSizeM, ThornTipSizeM, ThornTipSizeM);
-                if (thornArt)
+                if (_thornRigs[i].Live && _thornRigs[i].ObstacleId == o.Id)
                 {
-                    piece.Thorns[t].gameObject.SetActive(false);
-                    piece.Tips[t].gameObject.SetActive(false);
+                    rig = _thornRigs[i];
+                    break;
+                }
+
+                if (!_thornRigs[i].Live && free == null)
+                {
+                    free = _thornRigs[i];
                 }
             }
 
-            piece.Root.SetActive(false);
-            return piece;
+            float distanceAhead = (float)(o.Z - heroZ);
+            if (rig == null)
+            {
+                if (free == null)
+                {
+                    return;
+                }
+
+                rig = free;
+                double sampleS = o.Z + (o.DepthM * 0.5);
+                _frame.Sample(sampleS, out PathPose pose);
+                _info.Kind = o.Archetype;
+                _info.ObstacleId = o.Id;
+                _info.RunSeed = _runSeed;
+                _info.LaneMask = o.LaneMask;
+                _info.FromLane = o.FromLane;
+                _info.ToLane = o.ToLane;
+                _info.Shape = shape;
+                _info.DepthM = depth;
+                _info.LaneWidthM = _runnerConfig.LaneWidthM;
+                _info.EmbedM = GroundingMath.EmbedDepth(pose.Surface, GroundingMath.Roll(_runSeed, o.Id, 6u), pose.GradePct, depth);
+                _info.AnchorCount = ContextLayout.ForObstacle(
+                    _runSeed,
+                    o.Id,
+                    o.Archetype,
+                    o.LaneMask,
+                    o.FromLane,
+                    o.ToLane,
+                    pose.Curvature,
+                    _info.LaneWidthM,
+                    _tuning.BendCurvature,
+                    out _info.Variant,
+                    out _info.Skin,
+                    _info.Anchors);
+                _builder.Build(rig, _info);
+                rig.Live = true;
+                if (_primed && Debug.isDebugBuild && GroundingMath.IsInsidePopInLimit(distanceAhead, _tuning.PopInMinDistM))
+                {
+                    Debug.LogWarning("[JungleBooze] Late pop-in: thorn patch " + o.Id + " built " + distanceAhead.ToString("F1")
+                        + " m ahead, inside the " + _tuning.PopInMinDistM.ToString("F0") + " m limit.");
+                }
+            }
+
+            rig.Stamp = _renderStamp;
+            rig.CenterS = o.Z + (depth * 0.5);
+            PathPlacement.Place(_frame, rig.Root.transform, rig.CenterS, 0f, 0f);
+            if (!rig.Root.activeSelf)
+            {
+                rig.Root.SetActive(true);
+            }
+
+            _animator.AnimateSway(rig, _clockS, distanceAhead, true);
         }
 
         private StrikePiece CreateStrike(GrayBoxKit kit, int index)
@@ -293,38 +399,6 @@ namespace JungleBooze.Gameplay.Views
             return piece;
         }
 
-        private void PlaceThorn(ThornPiece piece, in ObstacleInstance o, ObstacleShape shape, float x)
-        {
-            float width = shape.WidthM;
-            float depth = o.DepthM > 0f ? o.DepthM : shape.DepthM;
-            float height = shape.TopM - shape.BottomM;
-            piece.ObstacleId = o.Id;
-            PathPlacement.Place(_frame, piece.Root.transform, o.Z + depth * 0.5f, x, 0f);
-            if (!piece.Root.activeSelf)
-            {
-                piece.Root.SetActive(true);
-            }
-
-            piece.Body.localPosition = new Vector3(0f, shape.BottomM + height * 0.5f, 0f);
-            piece.Body.localScale = new Vector3(width, height, depth);
-
-            // Thorns: a row on the front face (toward the player) and a row along the top front edge.
-            float step = width / (ThornsPerFace + 1);
-            for (int t = 0; t < ThornsPerFace; t++)
-            {
-                float tx = -width * 0.5f + step * (t + 1);
-                float faceY = shape.BottomM + height * (0.35f + 0.2f * (t % 2));
-                SetThorn(piece, t, new Vector3(tx, faceY, -depth * 0.5f));
-                SetThorn(piece, ThornsPerFace + t, new Vector3(tx, shape.TopM, -depth * 0.5f + 0.3f));
-            }
-        }
-
-        private static void SetThorn(ThornPiece piece, int index, Vector3 position)
-        {
-            piece.Thorns[index].localPosition = position;
-            piece.Tips[index].localPosition = position + new Vector3(0f, 0.08f, -ThornSizeM * 0.45f);
-        }
-
         private void PlaceStrike(StrikePiece piece, in ObstacleInstance o, ObstacleShape shape, HazardConfig hazards, float alpha)
         {
             float depth = o.DepthM > 0f ? o.DepthM : shape.DepthM;
@@ -342,7 +416,7 @@ namespace JungleBooze.Gameplay.Views
             piece.Inner.localScale = new Vector3(width - 2f * FrameM, PlateHeightM, depth - 2f * FrameM);
 
             bool warning = o.StrikePhase == LaneStrikePhase.Warning;
-            bool active = o.StrikePhase == LaneStrikePhase.Active;
+            StrikePose.Evaluate(o.StrikePhase, o.StrikeTicks, alpha, out bool active, out float columnBottomM);
 
             // Warning: chevrons pulse 3 Hz, then 6 Hz in the last third (the strike is near).
             bool chevronsOn = false;
@@ -367,9 +441,7 @@ namespace JungleBooze.Gameplay.Views
             if (active)
             {
                 float height = shape.TopM - shape.BottomM;
-                float drop = Mathf.Clamp01((o.StrikeTicks + alpha) / DropTicks);
-                float y = (1f - drop) * DropHeightM;
-                piece.Column.localPosition = new Vector3(0f, y, 0f);
+                piece.Column.localPosition = new Vector3(0f, columnBottomM, 0f);
                 piece.Rocks.localPosition = new Vector3(0f, shape.BottomM + height * 0.5f, 0f);
                 piece.Rocks.localScale = new Vector3(width, height, depth);
                 piece.Band.localPosition = new Vector3(0f, 1f, 0f);

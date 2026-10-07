@@ -324,6 +324,8 @@ namespace JungleBooze.App
                 session.VineHangSlowdown = !reduce;
                 cameraView.ReduceMotion = reduce;
                 powerUpView.ReduceMotion = reduce;
+                obstacles.ReduceMotion = reduce;
+                hazardView.ReduceMotion = reduce;
                 tutorialView.SetReduceMotion(reduce);
                 worldBanner.SetReduceMotion(reduce);
             };
@@ -354,6 +356,16 @@ namespace JungleBooze.App
                 hitboxDebug.Init(kit, configs.Runner, obstacles, hazardView);
             }
 
+            // Dev aid: F7 prints the grounding audit (hitbox vs visible bounds, embed, ghost distance) for the obstacles in view.
+            ObstacleGroundingAuditView groundingAudit = null;
+            if (Debug.isDebugBuild)
+            {
+                var auditObject = new GameObject("GroundingAudit");
+                auditObject.transform.SetParent(root.transform, false);
+                groundingAudit = auditObject.AddComponent<ObstacleGroundingAuditView>();
+                groundingAudit.Init(obstacles, hazardView, configs.Runner);
+            }
+
             // Dev aid: small label showing the route mode (F4) and the hitbox key (F3). Not created in release builds.
             DevRouteLabelView routeLabel = null;
             if (Debug.isDebugBuild)
@@ -374,6 +386,11 @@ namespace JungleBooze.App
             if (hitboxDebug != null)
             {
                 views.Add(hitboxDebug);
+            }
+
+            if (groundingAudit != null)
+            {
+                views.Add(groundingAudit);
             }
 
             if (routeLabel != null)

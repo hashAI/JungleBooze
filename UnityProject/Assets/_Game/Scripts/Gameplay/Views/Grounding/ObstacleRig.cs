@@ -25,6 +25,7 @@ namespace JungleBooze.Gameplay.Views
         public bool Live;
         public int Stamp;
         public int ObstacleId = -1;
+        public ulong RunSeed;
         public ObstacleArchetype Kind;
         public byte LaneMask;
         public int Skin;

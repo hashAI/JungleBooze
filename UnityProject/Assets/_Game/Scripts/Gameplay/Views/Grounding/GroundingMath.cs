@@ -159,12 +159,13 @@ namespace JungleBooze.Gameplay.Views
         }
 
         /// <summary>
-        /// No-slip roll angle in degrees about the barrel axis for a center that has moved <paramref name="xFromStartM"/>
-        /// sideways: <c>x / R</c>. A function of the simulated position, so the spin can never lead or trail the box.
+        /// No-slip roll angle in degrees about the barrel axis (+z, Unity convention: a positive angle turns x toward y)
+        /// for a center that has moved <paramref name="xFromStartM"/> sideways: <c>-x / R</c>, so the top of the barrel
+        /// moves with the travel. A function of the simulated position, so the spin can never lead or trail the box.
         /// </summary>
         public static float RollAngleDeg(float xFromStartM, float radiusM)
         {
-            return (xFromStartM / radiusM) * Mathf.Rad2Deg;
+            return -(xFromStartM / radiusM) * Mathf.Rad2Deg;
         }
 
         /// <summary>Angular speed of a no-slip roll: <c>v / R</c> (5.05 rad/s at 4.8 m/s on the 0.95 m barrel).</summary>
@@ -193,9 +194,10 @@ namespace JungleBooze.Gameplay.Views
         }
 
         /// <summary>
-        /// Settle pose (spec 005 8.4 rule 5) <paramref name="tS"/> seconds after the barrel stops: a sink of
-        /// <paramref name="sinkM"/> over <paramref name="sinkTicks"/> ticks (60 Hz), a 3 percent squash for the first
-        /// half of it, then a damped rock of 3 degrees that has died out 0.4 s after the stop.
+        /// Settle pose (spec 005 8.4 rule 5) <paramref name="tS"/> seconds after the barrel stops: a sink that reaches
+        /// <paramref name="sinkTotalM"/> over <paramref name="sinkTicks"/> ticks (60 Hz) and then relaxes by 30 percent
+        /// over 0.1 s (it rests 0.07 m low), a 3 percent squash for the first half of the sink, then a damped rock of
+        /// 3 degrees that has died out 0.4 s after the stop.
         /// </summary>
         public static void SettlePose(float tS, float sinkTotalM, int sinkTicks, out float sinkM, out float squash, out float rockDeg)
         {
@@ -203,7 +205,8 @@ namespace JungleBooze.Gameplay.Views
             float t = tS < 0f ? 0f : tS;
             float s = sinkS > 0f ? Mathf.Clamp01(t / sinkS) : 1f;
             float smooth = s * s * (3f - (2f * s));
-            sinkM = sinkTotalM * smooth;
+            float relax = Mathf.Clamp01((t - sinkS) / 0.1f);
+            sinkM = sinkTotalM * (smooth - (0.3f * relax * relax * (3f - (2f * relax))));
             float squashT = sinkS > 0f ? Mathf.Clamp01(t / (sinkS * 0.5f)) : 1f;
             squash = 0.03f * Mathf.Sin(Mathf.PI * squashT);
             if (t <= sinkS || t >= 0.4f)
