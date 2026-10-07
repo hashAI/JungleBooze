@@ -15,7 +15,7 @@ The coordinating session compile-checks in Unity batch mode on the owner's Mac (
 - [x] Batch 1 (parallel): gameplay-engineer vine swinging (GDD §7) · ui-engineer main menu, pause, game over, settings, save of coins/best (GDD §19, §13.1)
 - [x] Batch 2: power-ups and lane-strike hazards (GDD §10, §8.3) · Duko companion + continue (GDD §15, §14.4) · audio files + playback code (not yet hooked into the Run scene)
 - [x] Batch 3a: missions, daily reward, shop/unlocks (GDD §13), uncompiled
-- [ ] Batch 3b: onboarding (GDD §12)
+- [x] Batch 3b: onboarding (GDD §12), uncompiled
 - [ ] Batch 4: worlds and transitions (GDD §9) · difficulty ramp check (GDD §11)
 - [ ] Later: 3D from locked concepts, wire audio into the run, ads/IAP, review, tests, TestFlight.
 
@@ -126,6 +126,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Log
 Newest first. One line per event.
+- 2026-10-07: Batch 3b done (ui-engineer): onboarding via `TutorialDirector` (contextual lessons on the real tier-1 run, 30% speed until first swipe, revive-with-hint instead of death, 75 s cap), `TutorialView`, Replay tutorial in Settings, tutorial flags in the save. Uncompiled. [ASSUMED] contextual not the fixed 45 s script; Skip only after first completion; tutorial run counts as run 1. Existing PlayMode tests are stale (view count 17; restart on a fresh save starts the tutorial). Batch 4 (worlds) still running.
 - 2026-10-07: Batch 3a done (ui-engineer): missions (sets of 3, score multiplier), daily challenge, 7-day calendar (IDayClock), coin shop (upgrades, Head Start, Shield start), run loadout, panels on the main menu. Uncompiled. [ASSUMED] Boosts armed in the shop; calendar pauses, never resets; multiplier permanent +1/set (cap 30); mission targets and daily goals are guesses; characters/outfits not for sale; no ad doubling, no Restore Purchases, no haptics yet. Existing PlayMode tests may be stale (view count +1).
 - 2026-10-07: Art agents finished but generated NOTHING: the cloud container has no Meshy/OpenAI keys (`~/.config/junglebooze/secrets.env` lives on the owner's Mac), no Blender, and the proxy blocks Meshy. Code is in: `EnvironmentArt` prefab loader in all environment views (Resources/EnvironmentArt, gray-box fallback), editor menu `JungleBooze > Art > Build Environment Prefabs`, character loading in RunnerView/CompanionView (Resources/Characters), import postprocessor, scripts `tools/assetgen/gen_env_assets.py` and `meshy_characters.py` (caps: 250 / 200 Meshy credits, 4 images; Meshy endpoints written from memory, verify on first run). Spent 0 credits. [ASSUMED] Duko flight stays procedural (no wing rig); whole model incl. hair fit to hitbox; animation ids chosen by the pipeline agent. Next: run the scripts on the Mac.
 - 2026-10-07: Wired audio into the Run scene: `RunAudioView` (events, menu/Jungle music, Game Over sting), catalog moved to `Audio/Resources` and loaded by name. Fixed a compile error in `RunAudioCues`. [ASSUMED] Jungle theme A. Not compiled (cloud); compile-check on the Mac next.

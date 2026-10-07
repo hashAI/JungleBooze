@@ -43,6 +43,8 @@ namespace JungleBooze.UI.Menus
         public const string On = "On";
         public const string Off = "Off";
         public const string Back = "Back";
+        public const string ReplayTutorial = "Replay tutorial";
+        public const string TutorialQueued = "Tutorial: next run";
         public const string PercentSuffix = "%";
     }
 }

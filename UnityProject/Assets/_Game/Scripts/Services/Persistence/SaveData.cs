@@ -76,6 +76,17 @@ namespace JungleBooze.Services.Persistence
         /// <summary>Coins spent in the shop so far (for balance checks later).</summary>
         public long coinsSpentInShop;
 
+        // ---- Onboarding (GDD 12). Added without a version bump: old saves get false for both. ----
+
+        /// <summary>The first-run tutorial was finished or skipped once.</summary>
+        public bool tutorialCompleted;
+
+        /// <summary>The tutorial began at least once (so a quit halfway repeats it even after the run was recorded).</summary>
+        public bool tutorialStarted;
+
+        /// <summary>Settings asked to play the tutorial again on the next run.</summary>
+        public bool tutorialReplay;
+
         public static SaveData CreateDefault()
         {
             return new SaveData

@@ -67,6 +67,70 @@ namespace JungleBooze.Gameplay.Track
                 "Fell into a ravine");
         }
 
+        /// <summary>River display names from GDD 8.2 (gap, fall and strike wording [ASSUMED]).</summary>
+        public static WorldSkinConfig CreateRiver()
+        {
+            return new WorldSkinConfig(
+                "River",
+                "Floating driftwood",
+                "Hanging net",
+                "River rock",
+                "Drifting raft",
+                "Whirlpool",
+                "Swept into a whirlpool",
+                "Missed creeper",
+                "Thorn bush",
+                "Water spout");
+        }
+
+        /// <summary>Mountains display names from GDD 8.2 (gap, fall and strike wording [ASSUMED]).</summary>
+        public static WorldSkinConfig CreateMountains()
+        {
+            return new WorldSkinConfig(
+                "Mountains",
+                "Snow drift",
+                "Ice ledge",
+                "Rock pillar",
+                "Rolling snowball",
+                "Crevasse",
+                "Fell into a crevasse",
+                "Missed rope",
+                "Thorn bush",
+                "Falling rocks");
+        }
+
+        /// <summary>Ancient Ruins display names from GDD 8.2 (gap, fall and strike wording [ASSUMED]).</summary>
+        public static WorldSkinConfig CreateRuins()
+        {
+            return new WorldSkinConfig(
+                "Ancient Ruins",
+                "Broken column",
+                "Stone beam",
+                "Statue",
+                "Rolling stone disc",
+                "Sinkhole",
+                "Fell into a sinkhole",
+                "Missed chain",
+                "Thorn bush",
+                "Dart trap");
+        }
+
+        /// <summary>The skin of <paramref name="kind"/>. Setup time only (allocates).</summary>
+        public static WorldSkinConfig CreateFor(WorldKind kind)
+        {
+            switch (kind)
+            {
+                case WorldKind.River:
+                    return CreateRiver();
+                case WorldKind.Mountains:
+                    return CreateMountains();
+                case WorldKind.Ruins:
+                    return CreateRuins();
+                default:
+                    return CreateJungle();
+            }
+        }
+
         public string GetDisplayName(ObstacleArchetype archetype)
         {
             return _names[Slot(archetype)];

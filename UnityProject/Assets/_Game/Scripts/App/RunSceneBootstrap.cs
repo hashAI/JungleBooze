@@ -5,6 +5,7 @@ using JungleBooze.Gameplay.Hazards;
 using JungleBooze.Gameplay.PowerUps;
 using JungleBooze.Gameplay.Session;
 using JungleBooze.Gameplay.Track;
+using JungleBooze.Gameplay.Tutorial;
 using JungleBooze.Gameplay.Views;
 using JungleBooze.Gameplay.Vine;
 using JungleBooze.Services.Audio;
@@ -12,6 +13,7 @@ using JungleBooze.Services.Meta;
 using JungleBooze.Services.Persistence;
 using JungleBooze.UI.Hud;
 using JungleBooze.UI.Menus;
+using JungleBooze.UI.Tutorial;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
@@ -236,6 +238,15 @@ namespace JungleBooze.App
             ContinueView continueView = continueObject.AddComponent<ContinueView>();
             continueView.Build(driver, Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"), save);
 
+            // GDD 12: first-run tutorial (hints, ghost hand, Skip once completed); the driver starts it on Play.
+            var tutorial = new TutorialDirector();
+            var tutorialObject = new GameObject("TutorialHud", typeof(RectTransform));
+            tutorialObject.transform.SetParent(root.transform, false);
+            TutorialView tutorialView = tutorialObject.AddComponent<TutorialView>();
+            tutorialView.Build(tutorial, Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"), save.ReduceMotion);
+            save.SettingsChanged += () => tutorialView.SetReduceMotion(save.ReduceMotion);
+            driver.AttachTutorial(tutorial);
+
             // Audio: pooled playback (Resources/RunAudioCatalog), volumes follow the save's settings.
             var audioObject = new GameObject("Audio");
             audioObject.transform.SetParent(root.transform, false);
@@ -244,7 +255,7 @@ namespace JungleBooze.App
             audio.Bind(save);
             var audioView = new RunAudioView(audio);
 
-            driver.Init(session, input, new IRunView[] { eventCounter, audioView, ground, gaps, obstacles, hazardView, vineView, coinView, powerUpView, runnerView, companionView, cameraView, hud, companionHud, continueView }, kit);
+            driver.Init(session, input, new IRunView[] { eventCounter, tutorial, audioView, ground, gaps, obstacles, hazardView, vineView, coinView, powerUpView, runnerView, companionView, cameraView, hud, companionHud, tutorialView, continueView }, kit);
 
             if (Debug.isDebugBuild)
             {
