@@ -13,12 +13,12 @@ The coordinating session compile-checks in Unity batch mode on the owner's Mac (
 
 **Build plan (tick as they land):**
 - [x] Batch 1 (parallel): gameplay-engineer vine swinging (GDD §7) · ui-engineer main menu, pause, game over, settings, save of coins/best (GDD §19, §13.1)
-- [ ] Batch 2: power-ups (GDD §10) · Duko companion behavior (GDD §15)
+- [x] Batch 2: power-ups and lane-strike hazards (GDD §10, §8.3) · Duko companion + continue (GDD §15, §14.4) · audio files + playback code (not yet hooked into the Run scene)
 - [ ] Batch 3: missions, daily reward, shop/unlocks (GDD §13) · onboarding (GDD §12)
 - [ ] Batch 4: worlds and transitions (GDD §9) · difficulty ramp check (GDD §11)
-- [ ] Later (owner keys needed): real art, audio. Later (owner): ads/IAP, review, tests, TestFlight.
+- [ ] Later: 3D from locked concepts, wire audio into the run, ads/IAP, review, tests, TestFlight.
 
-**Resume note (if a usage limit stops work):** 4 agents were running with uncommitted files on the owner's Mac (files survive on disk): power-ups+hazards (`Gameplay/PowerUps`, `Gameplay/Hazards`), Duko+continue (`Gameplay/Companion`, Session, UI/Menus), art-director (`design/concepts/2026-10-07/`, nearly done), audio-director (`Assets/_Game/Audio`, `Services/Audio`). On resume: check those folders, relaunch unfinished tasks telling the agent to continue from the existing files, then compile-check all 8 assemblies (see coordinator method: Unity rsp files + bundled csc) and commit.
+**Resume note:** Batch 2 is on disk and being committed. Next: hook `AudioPlayback` into `RunSceneBootstrap` / `GameSession` (clips are in `Assets/_Game/Audio`, mapping is `RunAudioCues`). Then Batch 3. Mesh generation waits on Meshy after this commit. If interrupted: compile-check with Unity 6000.3.25f1 rsp + bundled csc, then commit.
 
 **Goal: First Playable (FP1). Autonomous mandate: no owner questions until it's done.** Release/store work is paused.
 
@@ -63,11 +63,11 @@ and commit after every agent report.
 | game-designer | done (stage A2) | Spec 002: track, obstacles, coins, generator, fairness, lifecycle | `docs/specs/002-track-obstacles-coins.md` | Apply spec 002's listed changes to spec 001 and the GDD; spec 003 vine swinging |
 | balance-simulator | done (A3) | Python reference model, golden traces, S1–S9 report (`docs/sim-reports/2026-10-07-spec001.md`) | `tools/sim/`, `docs/sim-reports/` | Fairness fuzzing for spec 002; recommendations R1–R6 go to game-designer |
 | tech-architect | done (stage D) | First-open bootstrap: URP mobile asset, input set to Both, iOS basics (placeholder bundle id `com.pistaduko.junglerunner`, iOS 15, portrait), empty Run scene in build list; Mac play guide | `Assets/_Game/Editor/Setup/`, `docs/adr/0003-first-playable-bootstrap.md`, `docs/PLAY_FIRST_BUILD.md` | Add EditMode tests for `ProjectSetupRules`; Roslyn analyzers |
-| gameplay-engineer | done (B1, B2) | Collisions and track code finished; not compiled | `Scripts/Gameplay/Runner/`, `Scripts/Gameplay/Track/`, `Config/Track/` | Deferred tests (track AC-208–248), B3 validator — after owner review |
+| gameplay-engineer | done (batch 2) | Power-ups, lane strikes, Duko, continue; compile-checked | `Scripts/Gameplay/PowerUps`, `Hazards`, `Companion`, `Views`, `App/RunSceneBootstrap.cs` | Wire audio events; then Batch 3 |
 | ui-engineer | done (C2) | Track wired into the Run scene with gray-box views and HUD | `Scripts/Gameplay/Views`, `Scripts/App`, `Scripts/UI/Hud` | Fix errors the owner sends from Unity |
-| art-director | done | Style guide and prompts updated with names Pista/Duko and the chest-band sash | `design/STYLE_GUIDE.md`, `design/prompts/` | Generate concept images once an image API key exists |
-| asset-pipeline | waiting | — | — | Keys ready (OpenAI, Meshy). Starts after the owner picks hero/macaw concepts |
-| audio-director | working | SFX set, Duko call-outs, menu + Jungle music, AudioService | `Assets/_Game/Audio`, `Scripts/Services/Audio` | Wire cues to gameplay events after batch 2 |
+| art-director | done (concepts) | Hero take 1 and macaw take 1 locked; four unused recolors on disk | `design/concepts/2026-10-07/` | Store art later |
+| asset-pipeline | waiting | — | — | Keys ready. Starts from locked sheets: `hero_take1_turnaround.png`, `macaw_take1_turnaround.png` |
+| audio-director | done (files) | SFX, Duko voice (from history), Jungle/menu music, `AudioPlayback` | `Assets/_Game/Audio`, `Scripts/Services/Audio` | Wire playback into the Run scene |
 | qa-engineer | waiting | — | — | FP1 stage F: test plan + owner play-test script |
 | performance-engineer | waiting | — | — | Benchmark scene (week 2+) |
 | code-reviewer | stopped by owner (token cost) | FP0 compile review was stopped before reporting; nothing written | — | Rerun after the owner's review, if the owner wants it |
@@ -91,12 +91,13 @@ If a new session finds an agent marked **working** but no matching output or com
 |---|---|
 | G0 Accounts & setup | Partly done. Decided: builds on owner's Mac, iPhone 11 / SE 2 is the lowest device, Unity Personal for CI. **Owner to do:** add `UNITY_LICENSE`, `UNITY_EMAIL`, `UNITY_PASSWORD` GitHub secrets; open the project once in Unity 6 on the Mac; Apple Developer account; image/3D/audio API keys |
 | G1 Creative brief | Done: wild jungle kid, macaw, pulpy adventure, all 4 worlds, macaw speaks a few words |
-| G2 Art direction | Done: Inkbound Pulp, hero H2 Mapcloth, macaw M3 Dusk |
+| G2 Art direction | Done: Inkbound Pulp, hero H2 Mapcloth take 1, macaw M3 Dusk original take 1 (violet/orange locked 2026-10-07) |
 | G3 Feel check #1 | Not started (end of week 2, needs a TestFlight build) |
 | G4–G8 | Not started |
 
 ## Open questions for the owner
 1. Ads and prices: deferred to week 4 (tracking already decided: none).
+2. Jungle music variation: three loops on disk (A/B/C). Playback is not wired yet; default to A until the owner listens.
 
 ## Assumptions waiting for owner review (`[ASSUMED]`)
 - Track: seam-fallback breather doesn't reset the breather timer; each breather gets its own pick; mover moves for 30 ticks after its trigger tick; random stream ids TrackGeneration=1…Cosmetic=5.
@@ -108,19 +109,28 @@ If a new session finds an agent marked **working** but no matching output or com
 - Macaw cheer call-out word is "Shiny!" / "Wow!".
 - Portrait only; daily calendar pauses instead of resetting; Assist ("Lift") by double tap; shield doesn't save from chasms.
 - Coins are gold with a turquoise gem center so they read against gold scenery.
+- Power-ups: coyote time counts as air so a Speed Boost does not end during it; obstacles touched during the boost slowdown are still smashed.
+- Companion voice volume has no settings slider yet; spoken lines use SFX volume, and 0 switches Duko to squawks.
 
 ## Not yet verified
 - Track code (B2): compile risks flagged by the agent: a property named `Track` inside namespace `JungleBooze.Gameplay.Track`; properties named like their types; `ref readonly` returns. Runner↔track integration never exercised. No `.asset` config files yet (code defaults are used).
 - Overlap: `RunSession` (track) and `GameSession` (presentation) both implement the run lifecycle; C2 must pick one.
 - Stage D bootstrap script: APIs checked by hand against Unity/URP source, not compiled. `-warnaserror+` is on, so any warning breaks the build.
 - Style guide draw-call and triangle estimates (78/120 draws, ~137k/150k tris) need the benchmark scene.
-- Image prompts are untested (no image API key).
-- **Nothing has been compiled.** The cloud container has no Unity or .NET. First real check: opening the project on the owner's Mac, or the GitHub test workflow once the secrets exist.
+- Image prompts were used (OpenAI `gpt-image-2`); macaw recolors exist but the locked 3D input is original take 1.
+- Core, Services, Gameplay, UI, App, and Editor compiled clean on the owner's Mac with Unity 6000.3.25f1 csc and warnings as errors (2026-10-07). Test assemblies were not judged in that headless pass (nunit/mscorlib mismatch).
+- AudioPlayback is not spawned in the Run scene yet, so Play is still silent.
 - Unity editor version `6000.3.0f1` and package versions weren't checked against Unity's registry.
 - Hand-made `.meta` files and asmdefs are unconfirmed until Unity opens the project.
 
 ## Log
 Newest first. One line per event.
+- 2026-10-07: **Owner: finish up; use original macaw (take 1 violet/orange).** Recolors color1–4 are on disk unused. Audio files generated (SFX regenerated; Duko voice recovered from ElevenLabs history; 3 Jungle loops + menu + sting). Playback code exists, not wired into the Run scene. Updating STATUS, committing Batch 2 (power-ups, Duko/continue, audio, concepts), pushing.
+- 2026-10-07: Power-ups compile-check clean (Core, Services, Gameplay, UI, App, Editor; warnings as errors). Test assemblies were not judged: the headless nunit reference wants mscorlib, which is a compiler-setup mismatch, not a game-code error. [ASSUMED] coyote counts as air; slowdown still smashes obstacles. Macaw recolors and audio still running. Not committed yet.
+- 2026-10-07: Power-ups agent finished. Views spawned in RunSceneBootstrap; Speed Boost holds its ending and vine sections until the boost is over. RunSceneBootstrapTests view count was already stale (expects 4).
+- 2026-10-07: Macaw recolor agent hit a resource error before any image. Relaunched. Power-ups relaunch still running. Audio still running.
+- 2026-10-07: Power-ups agent hit a resource error before any edit. Relaunched the same task. Audio and macaw recolors still running.
+- 2026-10-07: **Owner: resume.** Checked disk. Duko + Continue is in the tree (companion, continue UI, bootstrap). Power-ups/hazards code exists (`PowerUpSystem`, lane strikes, `PowerUpView`, `HazardView`) but those two views are not spawned in `RunSceneBootstrap`. Audio folder is only `.gitkeep`; the generated SFX are not on disk (credits already spent). No `macaw_take1_color*` files. Launching gameplay-engineer (finish and wire power-ups), audio-director (recover SFX from ElevenLabs history if possible, then voice, music, playback), art-director (4 macaw recolors).
 - 2026-10-07: **Owner: "stop all".** Stopped all agents. State: Duko + Continue FINISHED (compiled clean, uncommitted). Power-ups + hazards STOPPED MID-EDIT in RunnerSimulation (incomplete; may not compile). Audio STOPPED: SFX generated (755 credits), Duko voice and music not done, AudioService unknown. Macaw recolors STOPPED (check design/concepts/2026-10-07 for macaw_take1_color*). Some WIP got into status commits 73c4619/ae0cef7 (used commit -a; from now on commit status with an explicit path). Nothing new launches until the owner says so. On resume: finish power-ups (agent was re-reading RunnerSimulation), finish audio (voice, music, AudioService, wiring), finish macaw recolors, then compile-check and commit.
 - 2026-10-07: Concept art done (12 of 30 generations). Owner picked hero take 1; macaw take 1 shape but new colors: art-director making 4 recolors. (asset-pipeline was NOT launched.)
 - 2026-10-07: Owner added Meshy (1,100 credits) and ElevenLabs (Starter, 90k chars) keys to ~/.config/junglebooze/secrets.env; both verified. Launched audio-director (SFX, Duko voice, music, AudioService; wiring after batch 2). Meshy waits for the owner's concept pick.

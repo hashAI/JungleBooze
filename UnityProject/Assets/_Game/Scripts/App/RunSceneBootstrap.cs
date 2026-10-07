@@ -1,6 +1,8 @@
 using System;
 using JungleBooze.Gameplay.Companion;
 using JungleBooze.Gameplay.Controls;
+using JungleBooze.Gameplay.Hazards;
+using JungleBooze.Gameplay.PowerUps;
 using JungleBooze.Gameplay.Session;
 using JungleBooze.Gameplay.Track;
 using JungleBooze.Gameplay.Views;
@@ -146,6 +148,12 @@ namespace JungleBooze.App
             ObstacleView obstacles = obstacleObject.AddComponent<ObstacleView>();
             obstacles.Init(kit, configs.Runner, presentation.FogEndM);
 
+            // GDD 8.3: thorn patches and telegraphed lane strikes (ObstacleView skips those archetypes).
+            var hazardObject = new GameObject("Hazards");
+            hazardObject.transform.SetParent(root.transform, false);
+            HazardView hazardView = hazardObject.AddComponent<HazardView>();
+            hazardView.Init(kit, configs.Runner, presentation.FogEndM);
+
             // GDD 7: vines (rope, glow, release ring, Perfect feedback).
             var vineObject = new GameObject("Vines");
             vineObject.transform.SetParent(root.transform, false);
@@ -161,6 +169,12 @@ namespace JungleBooze.App
             coinObject.transform.SetParent(root.transform, false);
             CoinView coinView = coinObject.AddComponent<CoinView>();
             coinView.Init(kit, trackSetup != null ? trackSetup.Track.MaxActiveCoins : CoinViewFallbackPool, presentation.FogEndM);
+
+            // GDD 10: pickup icons, shield bubble, magnet rings and speed lines.
+            var powerUpObject = new GameObject("PowerUps");
+            powerUpObject.transform.SetParent(root.transform, false);
+            PowerUpView powerUpView = powerUpObject.AddComponent<PowerUpView>();
+            powerUpView.Init(kit, configs.Runner, presentation, presentation.FogEndM);
 
             var runnerObject = new GameObject("Pista");
             runnerObject.transform.SetParent(root.transform, false);
@@ -214,7 +228,7 @@ namespace JungleBooze.App
             ContinueView continueView = continueObject.AddComponent<ContinueView>();
             continueView.Build(driver, Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"), save);
 
-            driver.Init(session, input, new IRunView[] { ground, gaps, obstacles, vineView, coinView, runnerView, companionView, cameraView, hud, companionHud, continueView }, kit);
+            driver.Init(session, input, new IRunView[] { ground, gaps, obstacles, hazardView, vineView, coinView, powerUpView, runnerView, companionView, cameraView, hud, companionHud, continueView }, kit);
 
             if (Debug.isDebugBuild)
             {
@@ -226,12 +240,16 @@ namespace JungleBooze.App
 
         /// <summary>
         /// THE SWAP POINT for the run world: the generated track world (spec 002) built from the default track
-        /// configs plus the vine sections (GDD 7), with the VineTuning asset if there is one. [ASSUMED] The track
-        /// config assets are not loaded yet; the in-code start values are used.
+        /// configs plus vine sections (GDD 7), power-ups (GDD 10) and signature hazards (GDD 8.3). Vine, power-up
+        /// and hazard tuning come from their Resources assets when those exist. [ASSUMED] The other track config
+        /// assets are not loaded yet; the in-code start values are used.
         /// </summary>
         private static IRunWorldFactory CreateWorldFactory(RunConfigSet configs)
         {
-            return new TrackRunWorldFactory(TrackRunSetup.CreateDefault(RunConfigLoader.LoadVines()));
+            VineConfig vines = RunConfigLoader.LoadVines();
+            PowerUpConfig powerUps = RunConfigLoader.LoadPowerUps();
+            HazardConfig hazards = RunConfigLoader.LoadHazards();
+            return new TrackRunWorldFactory(TrackRunSetup.CreateDefault(vines, powerUps, hazards));
         }
 
         private static bool IsRunScene(Scene scene)

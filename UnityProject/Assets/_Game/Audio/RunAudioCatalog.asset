@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c4e8a1b27d6f4a0e9c3b5d7f1a2e4c60, type: 3}
+  m_Name: RunAudioCatalog
+  m_EditorClassIdentifier: JungleBooze.Services::JungleBooze.Services.Audio.AudioCatalog
+  _jump: {fileID: 8300000, guid: f389b334db364fd2a1422ae66813219f, type: 3}
+  _slide: {fileID: 8300000, guid: 66898ead5dbc4784b5b3225e9df2cddf, type: 3}
+  _laneSwitch: {fileID: 8300000, guid: 59acd926901d4f929705183ba4ae2873, type: 3}
+  _coin: {fileID: 8300000, guid: 410fb7eb64e5414785a629639954bbb4, type: 3}
+  _stumble: {fileID: 8300000, guid: 23938b81c4924eed88d7541d25506932, type: 3}
+  _death: {fileID: 8300000, guid: cd9760ae8d414d2abbcc02b9054dd64d, type: 3}
+  _nearMiss: {fileID: 8300000, guid: beae993c0bbe447ebf47267ab3b90df3, type: 3}
+  _vineGrab: {fileID: 8300000, guid: 59e7010e66904eaeb2b72481f7c8585b, type: 3}
+  _powerUp: {fileID: 8300000, guid: a71bddef1a4145e2835fd16728d37c25, type: 3}
+  _shieldPop: {fileID: 8300000, guid: 41644b574c414a33943eaf1c72a853a8, type: 3}
+  _speedBoost: {fileID: 8300000, guid: 24636c768ff94cebb1377e09611ecf20, type: 3}
+  _uiTap: {fileID: 8300000, guid: 55157e6337104b73befdb92d23900b36, type: 3}
+  _callVine: {fileID: 8300000, guid: 21187b52f805458e834f14d0251c9f4c, type: 3}
+  _callDanger: {fileID: 8300000, guid: e151c931b2744f7ea4f38ecc9085b0b1, type: 3}
+  _callCheerShiny: {fileID: 8300000, guid: 1f34211e6fb34270b020682136de2663, type: 3}
+  _callCheerWow: {fileID: 8300000, guid: 1b93cc33dc7f4d1da2886457fb4a228e, type: 3}
+  _callCheerWoohoo: {fileID: 8300000, guid: e1827af8e3304658b8018f2663f2d3ec, type: 3}
+  _squawkVine: {fileID: 8300000, guid: b7351fdaf79d430cbf50f076ca651ea3, type: 3}
+  _squawkDanger: {fileID: 8300000, guid: 3a47daf108cf497e91b89347d88fc509, type: 3}
+  _squawkCheer: {fileID: 8300000, guid: 4649e1f3da644a50a21d7f84c0982816, type: 3}
+  _chatterPretty: {fileID: 8300000, guid: d0451d5ffdf742eba9032634568952eb, type: 3}
+  _chatterMine: {fileID: 8300000, guid: b7a35fdeb1234cbcbbe414f2453ba500, type: 3}
+  _chatterGiggle: {fileID: 8300000, guid: 8868dad719e74e3a8b045f2de08dfcc4, type: 3}
+  _jungleThemeA: {fileID: 8300000, guid: 1aabc9b089254dc6b121657bdc96ab1b, type: 3}
+  _jungleThemeB: {fileID: 8300000, guid: 756aac9e4dfe46c1ac720db374cdd77b, type: 3}
+  _jungleThemeC: {fileID: 8300000, guid: 463fe55a0a114e6595a178683004fc7b, type: 3}
+  _menuLoop: {fileID: 8300000, guid: e7a758b661db42cfa94a531f7c966060, type: 3}
+  _gameOverSting: {fileID: 8300000, guid: d383f756cd724052998a12ab992e43df, type: 3}

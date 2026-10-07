@@ -5,6 +5,7 @@ Newest first.
 
 | Date | Gate | Decision | Options considered | Decided by |
 |---|---|---|---|---|
+| 2026-10-07 | G2 | Macaw for 3D: original take 1 "Classic sleek" (`design/concepts/2026-10-07/macaw_take1_turnaround.png`), including the violet body and orange head. Recolor sheets (`macaw_take1_color1`–`color4`) are unused | Original take 1 / four recolors | Owner |
 | 2026-10-07 | G2 | Hero concept for 3D: take 1 "Classic" (`design/concepts/2026-10-07/hero_take1_turnaround.png`). Macaw: take 1 shape, but the owner rejected the violet/orange colors; recolor options requested | Takes 1–3 / mixes | Owner |
 | 2026-10-07 | — | Pause lifted. Single focus: deliver a playable version. Reviewers apply fixes | — | Owner |
 | 2026-10-07 | — | Tests are deferred: focus on making the code correct now; add the remaining tests later | — | Owner |

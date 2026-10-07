@@ -147,6 +147,8 @@ namespace JungleBooze.Gameplay.Track
 
         public void OnTrackUpdate(RunnerSimulation runner, in RunnerTickInfo info)
         {
+            // Before generation, so a live Speed Boost can hold the next vine section (GDD 7.2 / 10).
+            PowerUps.HoldVineSections();
             Track.Update(info, runner);
         }
 
