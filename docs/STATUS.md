@@ -43,10 +43,10 @@ and commit after every agent report.
 |---|---|---|---|---|
 | producer | not used yet | (the coordinating session does this role for now) | this file | — |
 | game-designer | done (stage A2) | Spec 002: track, obstacles, coins, generator, fairness, lifecycle | `docs/specs/002-track-obstacles-coins.md` | Apply spec 002's listed changes to spec 001 and the GDD; spec 003 vine swinging |
-| balance-simulator | **working** | FP1 stage A3: Python reference model of spec 001, unit tests, S1–S9 report, golden traces | `tools/sim/`, `docs/sim-reports/` | Fairness fuzzing for spec 002 |
+| balance-simulator | **working** (resumed) | A3: finish unit tests, remaining targets, report | `tools/sim/`, `docs/sim-reports/` | Fairness fuzzing for spec 002 |
 | tech-architect | done (stage D) | First-open bootstrap: URP mobile asset, input set to Both, iOS basics (placeholder bundle id `com.pistaduko.junglerunner`, iOS 15, portrait), empty Run scene in build list; Mac play guide | `Assets/_Game/Editor/Setup/`, `docs/adr/0003-first-playable-bootstrap.md`, `docs/PLAY_FIRST_BUILD.md` | Add EditMode tests for `ProjectSetupRules`; Roslyn analyzers |
-| gameplay-engineer | **working** (2 instances) | B1: runner collisions + ITrackQuery contract (owns `Runner/`). B2: track/chunks/generator/coins/score/RunSession lifecycle (owns `Track/`) | `Scripts/Gameplay/Runner/`, `Scripts/Gameplay/Track/`, `Tests/EditMode/` | B3: chunk fairness validator |
-| ui-engineer | **working** | FP1 stage C1: runtime bootstrap, game session driver, keyboard/mouse/touch input, gray-box views, camera, HUD, game over/restart, PlayMode tests | presentation scripts (assembly per ARCHITECTURE), `Tests/PlayMode/`, `docs/PLAY_FIRST_BUILD.md` controls | Stage C2: track/obstacle/coin views after stage B |
+| gameplay-engineer | **working** (2 instances, resumed) | B1: collisions in `Runner/`. B2: generator, track world, coins, score, lifecycle in `Track/` | `Scripts/Gameplay/Runner/`, `Scripts/Gameplay/Track/`, `Tests/EditMode/` | B3: chunk fairness validator |
+| ui-engineer | **working** (resumed) | C1: finish presentation (Session, Views, Controls, App bootstrap, HUD), PlayMode tests, Run again / Same track, controls table | `Scripts/Gameplay/{Session,Views,Controls}`, `Scripts/App`, `Scripts/UI/Hud`, `Tests/` | C2: track/obstacle/coin views |
 | art-director | done | Style guide and prompts updated with names Pista/Duko and the chest-band sash | `design/STYLE_GUIDE.md`, `design/prompts/` | Generate concept images once an image API key exists |
 | asset-pipeline | waiting | — | — | Needs an image/3D generation API key from the owner |
 | audio-director | waiting | — | — | Week 5. Note: the macaw speaks a few words, so voice lines and localization are needed |
@@ -97,6 +97,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Log
 Newest first. One line per event.
+- 2026-10-07 06:30 UTC: Usage limit hit ~01:10 and stopped all four agents; checkpoints had saved work up to 01:05. Resumed B1, B2, C1 and A3 from their saved files after the limit reset.
 - 2026-10-07: Launched B1 (collisions) and B2 (track, coins, score, run lifecycle) in parallel.
 - 2026-10-07: Stage A2 done (game-designer): spec 002. Launching B1 (collisions) and B2 (track) in parallel.
 - 2026-10-07: Launched stage C1 (ui-engineer) in parallel with A2/A3, since it only needs the movement simulation.
