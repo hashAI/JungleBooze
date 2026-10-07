@@ -6,7 +6,7 @@ namespace JungleBooze.Gameplay.Runner
     /// <summary>
     /// Deterministic runner movement simulation, spec 001 sections 4 to 8 (collisions come with the obstacle stage).
     /// One call to <see cref="Step(InputCommand)"/> = one 60 Hz tick, processed in the order of rule I8.
-    /// Plain C#: no UnityEngine time, randomness or physics; no allocations per step.
+    /// Plain C#: no engine time, engine randomness or physics; no allocations per step.
     /// </summary>
     public sealed class RunnerSimulation
     {

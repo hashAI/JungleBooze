@@ -1,0 +1,680 @@
+{
+ "schema": "junglebooze.golden-trace.v1",
+ "name": "06_pause_resume",
+ "spec": "docs/specs/001-player-movement.md",
+ "description": "From lane 0: Jump on tick 0; MoveRight on 25 starts a move to lane 1, MoveRight on 26 is queued (would start on tick 29); Jump on 28 is buffered. The game pauses after tick 28. The first tick after resume (29) carries PauseResumed: the buffered jump (Invalidated) and the queued move are cleared; the jump arc and the active lane move continue unchanged. HERO lands on tick 36 without jumping, in lane 1.",
+ "seed": 1006,
+ "generator": "tools/sim/golden.py (runner_model.py)",
+ "config": {
+  "laneCount": 3,
+  "laneWidthM": 2.4,
+  "startLane": 0,
+  "laneSwitchMs": 120.0,
+  "laneSwitchEaseExponent": 2.0,
+  "laneQueueStartFraction": 0.5,
+  "edgeForgivenessFraction": 0.6,
+  "jumpApexHeightM": 1.5,
+  "jumpAirtimeMs": 600.0,
+  "fastFallMinSpeedMps": 15.0,
+  "fastFallMaxMs": 100.0,
+  "slideMs": 650.0,
+  "inputBufferMs": 150.0,
+  "coyoteMs": 80.0,
+  "playerHitboxWidthM": 0.7,
+  "playerHitboxDepthM": 0.5,
+  "standingHeightM": 1.8,
+  "slidingHeightM": 0.8,
+  "fallDeathDepthM": 1.0,
+  "stumbleBounceMs": 150.0,
+  "stumbleDazeMs": 3000.0
+ },
+ "derived": {
+  "laneSwitchTicks": 7,
+  "laneQueueStartTick": 4,
+  "jumpAirtimeTicks": 36,
+  "fastFallMaxTicks": 6,
+  "slideTicks": 39,
+  "inputBufferTicks": 9,
+  "coyoteTicks": 5,
+  "stumbleBounceTicks": 9,
+  "stumbleDazeTicks": 180,
+  "gravityMps2": 33.333333,
+  "jumpVelocityMps": 10.0
+ },
+ "speed": {
+  "fixedSpeedMps": 10.0,
+  "useStartRamp": false,
+  "speedMultiplier": 1.0
+ },
+ "track": {
+  "kind": "flat",
+  "gaps": []
+ },
+ "obstacles": [],
+ "pauses": [
+  {
+   "before_tick": 29,
+   "note": "pause after tick 28; countdown; resume"
+  }
+ ],
+ "tolerance": {
+  "x": 0.0001,
+  "y": 0.0001,
+  "z": 0.0001
+ },
+ "outcomes": {
+  "Executed": 2,
+  "Queued": 1,
+  "Invalidated": 1
+ },
+ "ticks": [
+  {
+   "t": 0,
+   "cmd": [
+    "Jump"
+   ],
+   "cmd_bits": 4,
+   "lane": 0,
+   "occupied_lane": 0,
+   "x": -2.4,
+   "y": 0.0,
+   "z": 0.166667,
+   "state": "Airborne",
+   "hitbox_h": 1.8,
+   "events": [
+    {
+     "type": "JumpStarted",
+     "fromSlide": false,
+     "coyote": false,
+     "buffered": false
+    }
+   ]
+  },
+  {
+   "t": 1,
+   "cmd": [],
+   "cmd_bits": 0,
+   "lane": 0,
+   "occupied_lane": 0,
+   "x": -2.4,
+   "y": 0.162037,
+   "z": 0.333333,
+   "state": "Airborne",
+   "hitbox_h": 1.8,
+   "events": []
+  },
+  {
+   "t": 2,
+   "cmd": [],
+   "cmd_bits": 0,
+   "lane": 0,
+   "occupied_lane": 0,
+   "x": -2.4,
+   "y": 0.314815,
+   "z": 0.5,
+   "state": "Airborne",
+   "hitbox_h": 1.8,
+   "events": []
+  },
+  {
+   "t": 3,
+   "cmd": [],
+   "cmd_bits": 0,
+   "lane": 0,
+   "occupied_lane": 0,
+   "x": -2.4,
+   "y": 0.458333,
+   "z": 0.666667,
+   "state": "Airborne",
+   "hitbox_h": 1.8,
+   "events": []
+  },
+  {
+   "t": 4,
+   "cmd": [],
+   "cmd_bits": 0,
+   "lane": 0,
+   "occupied_lane": 0,
+   "x": -2.4,
+   "y": 0.592593,
+   "z": 0.833333,
+   "state": "Airborne",
+   "hitbox_h": 1.8,
+   "events": []
+  },
+  {
+   "t": 5,
+   "cmd": [],
+   "cmd_bits": 0,
+   "lane": 0,
+   "occupied_lane": 0,
+   "x": -2.4,
+   "y": 0.717593,
+   "z": 1.0,
+   "state": "Airborne",
+   "hitbox_h": 1.8,
+   "events": []
+  },
+  {
+   "t": 6,
+   "cmd": [],
+   "cmd_bits": 0,
+   "lane": 0,
+   "occupied_lane": 0,
+   "x": -2.4,
+   "y": 0.833333,
+   "z": 1.166667,
+   "state": "Airborne",
+   "hitbox_h": 1.8,
+   "events": []
+  },
+  {
+   "t": 7,
+   "cmd": [],
+   "cmd_bits": 0,
+   "lane": 0,
+   "occupied_lane": 0,
+   "x": -2.4,
+   "y": 0.939815,
+   "z": 1.333333,
+   "state": "Airborne",
+   "hitbox_h": 1.8,
+   "events": []
+  },
+  {
+   "t": 8,
+   "cmd": [],
+   "cmd_bits": 0,
+   "lane": 0,
+   "occupied_lane": 0,
+   "x": -2.4,
+   "y": 1.037037,
+   "z": 1.5,
+   "state": "Airborne",
+   "hitbox_h": 1.8,
+   "events": []
+  },
+  {
+   "t": 9,
+   "cmd": [],
+   "cmd_bits": 0,
+   "lane": 0,
+   "occupied_lane": 0,
+   "x": -2.4,
+   "y": 1.125,
+   "z": 1.666667,
+   "state": "Airborne",
+   "hitbox_h": 1.8,
+   "events": []
+  },
+  {
+   "t": 10,
+   "cmd": [],
+   "cmd_bits": 0,
+   "lane": 0,
+   "occupied_lane": 0,
+   "x": -2.4,
+   "y": 1.203704,
+   "z": 1.833333,
+   "state": "Airborne",
+   "hitbox_h": 1.8,
+   "events": []
+  },
+  {
+   "t": 11,
+   "cmd": [],
+   "cmd_bits": 0,
+   "lane": 0,
+   "occupied_lane": 0,
+   "x": -2.4,
+   "y": 1.273148,
+   "z": 2.0,
+   "state": "Airborne",
+   "hitbox_h": 1.8,
+   "events": []
+  },
+  {
+   "t": 12,
+   "cmd": [],
+   "cmd_bits": 0,
+   "lane": 0,
+   "occupied_lane": 0,
+   "x": -2.4,
+   "y": 1.333333,
+   "z": 2.166667,
+   "state": "Airborne",
+   "hitbox_h": 1.8,
+   "events": []
+  },
+  {
+   "t": 13,
+   "cmd": [],
+   "cmd_bits": 0,
+   "lane": 0,
+   "occupied_lane": 0,
+   "x": -2.4,
+   "y": 1.384259,
+   "z": 2.333333,
+   "state": "Airborne",
+   "hitbox_h": 1.8,
+   "events": []
+  },
+  {
+   "t": 14,
+   "cmd": [],
+   "cmd_bits": 0,
+   "lane": 0,
+   "occupied_lane": 0,
+   "x": -2.4,
+   "y": 1.425926,
+   "z": 2.5,
+   "state": "Airborne",
+   "hitbox_h": 1.8,
+   "events": []
+  },
+  {
+   "t": 15,
+   "cmd": [],
+   "cmd_bits": 0,
+   "lane": 0,
+   "occupied_lane": 0,
+   "x": -2.4,
+   "y": 1.458333,
+   "z": 2.666667,
+   "state": "Airborne",
+   "hitbox_h": 1.8,
+   "events": []
+  },
+  {
+   "t": 16,
+   "cmd": [],
+   "cmd_bits": 0,
+   "lane": 0,
+   "occupied_lane": 0,
+   "x": -2.4,
+   "y": 1.481481,
+   "z": 2.833333,
+   "state": "Airborne",
+   "hitbox_h": 1.8,
+   "events": []
+  },
+  {
+   "t": 17,
+   "cmd": [],
+   "cmd_bits": 0,
+   "lane": 0,
+   "occupied_lane": 0,
+   "x": -2.4,
+   "y": 1.49537,
+   "z": 3.0,
+   "state": "Airborne",
+   "hitbox_h": 1.8,
+   "events": []
+  },
+  {
+   "t": 18,
+   "cmd": [],
+   "cmd_bits": 0,
+   "lane": 0,
+   "occupied_lane": 0,
+   "x": -2.4,
+   "y": 1.5,
+   "z": 3.166667,
+   "state": "Airborne",
+   "hitbox_h": 1.8,
+   "events": [
+    {
+     "type": "JumpApex"
+    }
+   ]
+  },
+  {
+   "t": 19,
+   "cmd": [],
+   "cmd_bits": 0,
+   "lane": 0,
+   "occupied_lane": 0,
+   "x": -2.4,
+   "y": 1.49537,
+   "z": 3.333333,
+   "state": "Airborne",
+   "hitbox_h": 1.8,
+   "events": []
+  },
+  {
+   "t": 20,
+   "cmd": [],
+   "cmd_bits": 0,
+   "lane": 0,
+   "occupied_lane": 0,
+   "x": -2.4,
+   "y": 1.481481,
+   "z": 3.5,
+   "state": "Airborne",
+   "hitbox_h": 1.8,
+   "events": []
+  },
+  {
+   "t": 21,
+   "cmd": [],
+   "cmd_bits": 0,
+   "lane": 0,
+   "occupied_lane": 0,
+   "x": -2.4,
+   "y": 1.458333,
+   "z": 3.666667,
+   "state": "Airborne",
+   "hitbox_h": 1.8,
+   "events": []
+  },
+  {
+   "t": 22,
+   "cmd": [],
+   "cmd_bits": 0,
+   "lane": 0,
+   "occupied_lane": 0,
+   "x": -2.4,
+   "y": 1.425926,
+   "z": 3.833333,
+   "state": "Airborne",
+   "hitbox_h": 1.8,
+   "events": []
+  },
+  {
+   "t": 23,
+   "cmd": [],
+   "cmd_bits": 0,
+   "lane": 0,
+   "occupied_lane": 0,
+   "x": -2.4,
+   "y": 1.384259,
+   "z": 4.0,
+   "state": "Airborne",
+   "hitbox_h": 1.8,
+   "events": []
+  },
+  {
+   "t": 24,
+   "cmd": [],
+   "cmd_bits": 0,
+   "lane": 0,
+   "occupied_lane": 0,
+   "x": -2.4,
+   "y": 1.333333,
+   "z": 4.166667,
+   "state": "Airborne",
+   "hitbox_h": 1.8,
+   "events": []
+  },
+  {
+   "t": 25,
+   "cmd": [
+    "MoveRight"
+   ],
+   "cmd_bits": 2,
+   "lane": 1,
+   "occupied_lane": 0,
+   "x": -1.763265,
+   "y": 1.273148,
+   "z": 4.333333,
+   "state": "Airborne",
+   "hitbox_h": 1.8,
+   "events": [
+    {
+     "type": "LaneChangeStarted",
+     "from": 0,
+     "to": 1,
+     "dir": 1,
+     "reversal": false,
+     "queued": false
+    }
+   ]
+  },
+  {
+   "t": 26,
+   "cmd": [
+    "MoveRight"
+   ],
+   "cmd_bits": 2,
+   "lane": 1,
+   "occupied_lane": 0,
+   "x": -1.22449,
+   "y": 1.203704,
+   "z": 4.5,
+   "state": "Airborne",
+   "hitbox_h": 1.8,
+   "events": []
+  },
+  {
+   "t": 27,
+   "cmd": [],
+   "cmd_bits": 0,
+   "lane": 1,
+   "occupied_lane": 1,
+   "x": -0.783673,
+   "y": 1.125,
+   "z": 4.666667,
+   "state": "Airborne",
+   "hitbox_h": 1.8,
+   "events": []
+  },
+  {
+   "t": 28,
+   "cmd": [
+    "Jump"
+   ],
+   "cmd_bits": 4,
+   "lane": 1,
+   "occupied_lane": 1,
+   "x": -0.440816,
+   "y": 1.037037,
+   "z": 4.833333,
+   "state": "Airborne",
+   "hitbox_h": 1.8,
+   "events": []
+  },
+  {
+   "t": 29,
+   "cmd": [
+    "PauseResumed"
+   ],
+   "cmd_bits": 32,
+   "lane": 1,
+   "occupied_lane": 1,
+   "x": -0.195918,
+   "y": 0.939815,
+   "z": 5.0,
+   "state": "Airborne",
+   "hitbox_h": 1.8,
+   "events": []
+  },
+  {
+   "t": 30,
+   "cmd": [],
+   "cmd_bits": 0,
+   "lane": 1,
+   "occupied_lane": 1,
+   "x": -0.04898,
+   "y": 0.833333,
+   "z": 5.166667,
+   "state": "Airborne",
+   "hitbox_h": 1.8,
+   "events": []
+  },
+  {
+   "t": 31,
+   "cmd": [],
+   "cmd_bits": 0,
+   "lane": 1,
+   "occupied_lane": 1,
+   "x": 0.0,
+   "y": 0.717593,
+   "z": 5.333333,
+   "state": "Airborne",
+   "hitbox_h": 1.8,
+   "events": []
+  },
+  {
+   "t": 32,
+   "cmd": [],
+   "cmd_bits": 0,
+   "lane": 1,
+   "occupied_lane": 1,
+   "x": 0.0,
+   "y": 0.592593,
+   "z": 5.5,
+   "state": "Airborne",
+   "hitbox_h": 1.8,
+   "events": []
+  },
+  {
+   "t": 33,
+   "cmd": [],
+   "cmd_bits": 0,
+   "lane": 1,
+   "occupied_lane": 1,
+   "x": 0.0,
+   "y": 0.458333,
+   "z": 5.666667,
+   "state": "Airborne",
+   "hitbox_h": 1.8,
+   "events": []
+  },
+  {
+   "t": 34,
+   "cmd": [],
+   "cmd_bits": 0,
+   "lane": 1,
+   "occupied_lane": 1,
+   "x": 0.0,
+   "y": 0.314815,
+   "z": 5.833333,
+   "state": "Airborne",
+   "hitbox_h": 1.8,
+   "events": []
+  },
+  {
+   "t": 35,
+   "cmd": [],
+   "cmd_bits": 0,
+   "lane": 1,
+   "occupied_lane": 1,
+   "x": 0.0,
+   "y": 0.162037,
+   "z": 6.0,
+   "state": "Airborne",
+   "hitbox_h": 1.8,
+   "events": []
+  },
+  {
+   "t": 36,
+   "cmd": [],
+   "cmd_bits": 0,
+   "lane": 1,
+   "occupied_lane": 1,
+   "x": 0.0,
+   "y": 0.0,
+   "z": 6.166667,
+   "state": "Running",
+   "hitbox_h": 1.8,
+   "events": [
+    {
+     "type": "Landed",
+     "airTicks": 36,
+     "wasFastFall": false
+    }
+   ]
+  },
+  {
+   "t": 37,
+   "cmd": [],
+   "cmd_bits": 0,
+   "lane": 1,
+   "occupied_lane": 1,
+   "x": 0.0,
+   "y": 0.0,
+   "z": 6.333333,
+   "state": "Running",
+   "hitbox_h": 1.8,
+   "events": []
+  },
+  {
+   "t": 38,
+   "cmd": [],
+   "cmd_bits": 0,
+   "lane": 1,
+   "occupied_lane": 1,
+   "x": 0.0,
+   "y": 0.0,
+   "z": 6.5,
+   "state": "Running",
+   "hitbox_h": 1.8,
+   "events": []
+  },
+  {
+   "t": 39,
+   "cmd": [],
+   "cmd_bits": 0,
+   "lane": 1,
+   "occupied_lane": 1,
+   "x": 0.0,
+   "y": 0.0,
+   "z": 6.666667,
+   "state": "Running",
+   "hitbox_h": 1.8,
+   "events": []
+  },
+  {
+   "t": 40,
+   "cmd": [],
+   "cmd_bits": 0,
+   "lane": 1,
+   "occupied_lane": 1,
+   "x": 0.0,
+   "y": 0.0,
+   "z": 6.833333,
+   "state": "Running",
+   "hitbox_h": 1.8,
+   "events": []
+  },
+  {
+   "t": 41,
+   "cmd": [],
+   "cmd_bits": 0,
+   "lane": 1,
+   "occupied_lane": 1,
+   "x": 0.0,
+   "y": 0.0,
+   "z": 7.0,
+   "state": "Running",
+   "hitbox_h": 1.8,
+   "events": []
+  },
+  {
+   "t": 42,
+   "cmd": [],
+   "cmd_bits": 0,
+   "lane": 1,
+   "occupied_lane": 1,
+   "x": 0.0,
+   "y": 0.0,
+   "z": 7.166667,
+   "state": "Running",
+   "hitbox_h": 1.8,
+   "events": []
+  },
+  {
+   "t": 43,
+   "cmd": [],
+   "cmd_bits": 0,
+   "lane": 1,
+   "occupied_lane": 1,
+   "x": 0.0,
+   "y": 0.0,
+   "z": 7.333333,
+   "state": "Running",
+   "hitbox_h": 1.8,
+   "events": []
+  }
+ ]
+}

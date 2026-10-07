@@ -22,7 +22,7 @@ Not in FP1 (comes right after): vine swinging, Duko, power-ups, menus/shop, real
 **Notes for stage C:** the Run scene is empty, so the runtime bootstrap creates the portrait camera and a directional light and only acts in the scene named "Run". Don't use `Shader.Find`; clone the material from `GameObject.CreatePrimitive` and set `.color`. Prefer `InputSystemUIInputModule`. Warnings are errors. Replace the placeholder controls table in `docs/PLAY_FIRST_BUILD.md`.
 
 **FP1 plan (stages; tick as they land):**
-- [ ] A1 gameplay-engineer: movement simulation (spec 001 minus collisions) + EditMode tests
+- [x] A1 gameplay-engineer: movement simulation (spec 001 minus collisions) + EditMode tests (AC-01–14, 16–33, 45–46, 61–63; collisions deferred to B)
 - [ ] A2 game-designer: spec 002 (track, obstacles, coins)
 - [ ] A3 balance-simulator: Python reference model of spec 001 + golden traces (the only code we can execute here)
 - [ ] B gameplay-engineer: collisions + track/obstacles/coins simulation (specs 001 + 002) + tests
@@ -42,7 +42,7 @@ and commit after every agent report.
 | game-designer | **working** | FP1 stage A2: spec 002 track, obstacles, coins (Jungle chunk library) | `docs/specs/002-track-obstacles-coins.md` | Spec 003: vine swinging |
 | balance-simulator | **working** | FP1 stage A3: Python reference model of spec 001, unit tests, S1–S9 report, golden traces | `tools/sim/`, `docs/sim-reports/` | Fairness fuzzing for spec 002 |
 | tech-architect | done (stage D) | First-open bootstrap: URP mobile asset, input set to Both, iOS basics (placeholder bundle id `com.pistaduko.junglerunner`, iOS 15, portrait), empty Run scene in build list; Mac play guide | `Assets/_Game/Editor/Setup/`, `docs/adr/0003-first-playable-bootstrap.md`, `docs/PLAY_FIRST_BUILD.md` | Add EditMode tests for `ProjectSetupRules`; Roslyn analyzers |
-| gameplay-engineer | **working** | FP1 stage A1: movement simulation (spec 001 minus collisions) + EditMode tests | `Scripts/Gameplay/Runner/`, `Scripts/Gameplay/Config/`, `Tests/EditMode/Gameplay/` | Stage B: collisions + track/obstacles/coins |
+| gameplay-engineer | done (stage A1) | Movement simulation, config assets, bot input provider, EditMode tests; logic cross-checked in Python | `Scripts/Gameplay/Runner/`, `Config/`, `Bots/`, `Tests/EditMode/Gameplay/` | Stage B: collisions + track (needs spec 002) |
 | ui-engineer | waiting | — | — | Week 4: menus, shop |
 | art-director | done | Style guide and prompts updated with names Pista/Duko and the chest-band sash | `design/STYLE_GUIDE.md`, `design/prompts/` | Generate concept images once an image API key exists |
 | asset-pipeline | waiting | — | — | Needs an image/3D generation API key from the owner |
@@ -77,6 +77,7 @@ If a new session finds an agent marked **working** but no matching output or com
 1. Ads and prices: deferred to week 4 (tracking already decided: none).
 
 ## Assumptions waiting for owner review (`[ASSUMED]`)
+- Movement interpretations for the game-designer to confirm: pending inputs counted while pending; the swipe that cancels a queued lane move counts as Executed; 0 ms means "off" for coyote and run-start ramp.
 - Placeholder app name "Jungle Runner" and bundle id `com.pistaduko.junglerunner`; minimum iOS 15.0; portrait, iPhone only; URP for FP1 with a built-in fallback menu.
 - Stumble rule: clipping an obstacle's side is a stumble, the second stumble ends the run (spec 001). Judge at G3.
 - Macaw cheer call-out word is "Shiny!" / "Wow!".
@@ -93,6 +94,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Log
 Newest first. One line per event.
+- 2026-10-07: Stage A1 done (gameplay-engineer): movement simulation + tests, not compiled.
 - 2026-10-07: Stage D done (tech-architect): bootstrap script, ADR 0003, Mac play guide.
 - 2026-10-07: Launched FP1 stages A1, A2, A3 and D in parallel. Background checkpoint commits every 10 minutes.
 - 2026-10-07: Worker restart wiped uncommitted work; gameplay-engineer, game-designer (spec 002), balance-simulator and qa-engineer were interrupted with nothing saved. Owner set the autonomous First Playable mandate. Restarting in smaller stages.

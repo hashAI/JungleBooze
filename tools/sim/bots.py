@@ -41,37 +41,84 @@ def signature(r):
 
 
 class OracleSolver(object):
+    """Phase 1 searches a pruned alphabet (fast); if that finds nothing, phase 2 repeats the search
+    with the full alphabet on every tick. Pruning rules of phase 1 (each only removes inputs a
+    perfect player would never need, or inputs equivalent to one that is kept):
+      - Jump in the air only when the buffer is empty and it would still be valid at landing.
+      - Jump / Slide only when the next un-passed group is within one slide + one jump of distance.
+      - No lane reversals (opposite swipe during a move).
+    """
     ALPHABET = (NONE, JUMP, SLIDE, MOVE_LEFT, MOVE_RIGHT)
 
-    def __init__(self, node_budget=400000):
+    def __init__(self, node_budget=400000, full_budget=400000):
         self.node_budget = node_budget
+        self.full_budget = full_budget
 
     def goal(self, r, course):
         hd = course.cfg.player_hitbox_depth_m / 2.0
         return (r.z - hd > course.end_z + 0.05) and r.state in (RUNNING, SLIDING)
 
+    def _allowed(self, r, cmd, course, reach):
+        if cmd == NONE:
+            return True
+        cfg = r.cfg
+        if cmd in (JUMP, SLIDE):
+            nxt = None
+            for g in course.groups:
+                if g.z1 > r.z - 0.25:
+                    nxt = g
+                    break
+            if nxt is None or nxt.z0 - r.z > reach:
+                return False
+            if cmd == JUMP:
+                if r.state == AIRBORNE:
+                    left = cfg.jump_airtime_ticks - (r.tick - r.jump_start)
+                    return r.buffered_jump_tick is None and left <= cfg.input_buffer_ticks
+                if r.state == FAST_FALLING:
+                    return r.buffered_jump_tick is None
+                if r.state == FALLING:
+                    return False
+            return True
+        d = -1 if cmd == MOVE_LEFT else 1
+        m = r.move
+        if m is not None and m.dir == -d:
+            return False
+        lane = r.target_lane + d
+        return 0 <= lane < cfg.lane_count
+
     def solve(self, course):
         """Returns (status, commands, nodes). status in {'solved', 'impossible', 'unresolved'}.
 
-        'impossible' means the search space (one command per tick, alphabet above, exact duplicate
-        pruning) was exhausted; 'unresolved' means the node budget ran out first.
+        'impossible': the full-alphabet search space (one command per tick, exact duplicate
+        pruning) was exhausted. 'unresolved': a node budget ran out first.
         """
+        reach = course.speed * (course.cfg.slide_ticks + course.cfg.jump_airtime_ticks + 12) / 60.0 + 2.0
+        st, cmds, n1 = self._dfs(course, self.node_budget, True, reach)
+        if st == "solved":
+            return st, cmds, n1
+        st, cmds, n2 = self._dfs(course, self.full_budget, False, reach)
+        return st, cmds, n1 + n2
+
+    def _dfs(self, course, budget, pruned, reach):
         root = make_runner(course)
         visited = set()
         stack = [[root, 0, NONE]]
         nodes = 0
+        alpha = self.ALPHABET
         while stack:
             frame = stack[-1]
             r, i = frame[0], frame[1]
-            if i >= len(self.ALPHABET):
+            if i >= len(alpha):
                 stack.pop()
                 continue
             frame[1] = i + 1
-            cmd = self.ALPHABET[i]
+            cmd = alpha[i]
+            if pruned and not self._allowed(r, cmd, course, reach):
+                continue
             r2 = r.clone()
             r2.step(cmd)
             nodes += 1
-            if nodes > self.node_budget:
+            if nodes > budget:
                 return "unresolved", None, nodes
             if r2.dead or r2.stumbles:
                 continue
