@@ -8,6 +8,7 @@ using JungleBooze.Gameplay.Track;
 using JungleBooze.Gameplay.Views;
 using JungleBooze.Gameplay.Vine;
 using JungleBooze.Services.Audio;
+using JungleBooze.Services.Meta;
 using JungleBooze.Services.Persistence;
 using JungleBooze.UI.Hud;
 using JungleBooze.UI.Menus;
@@ -214,8 +215,14 @@ namespace JungleBooze.App
             var hudObject = new GameObject("Hud", typeof(RectTransform));
             hudObject.transform.SetParent(root.transform, false);
             HudView hud = hudObject.AddComponent<HudView>();
-            hud.Build(driver, Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"), save);
-            driver.AttachMeta(new RunResultRecorder(save), hud);
+            // GDD 13: missions, daily reward and shop on the same save.
+            var progress = new MetaProgress(save, RunConfigLoader.LoadMeta(), new SystemDayClock());
+            var eventCounter = new RunEventCounter();
+            hud.Build(driver, Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"), save, progress);
+            var recorder = new RunResultRecorder(save);
+            recorder.AttachMeta(progress, eventCounter);
+            driver.AttachMeta(recorder, hud);
+            driver.AttachProgress(progress);
             session.ContinuePolicy = driver;
 
             // Companion HUD (Lift meter, call-out bubble) and the Continue screen, each on its own canvas.
@@ -237,7 +244,7 @@ namespace JungleBooze.App
             audio.Bind(save);
             var audioView = new RunAudioView(audio);
 
-            driver.Init(session, input, new IRunView[] { audioView, ground, gaps, obstacles, hazardView, vineView, coinView, powerUpView, runnerView, companionView, cameraView, hud, companionHud, continueView }, kit);
+            driver.Init(session, input, new IRunView[] { eventCounter, audioView, ground, gaps, obstacles, hazardView, vineView, coinView, powerUpView, runnerView, companionView, cameraView, hud, companionHud, continueView }, kit);
 
             if (Debug.isDebugBuild)
             {

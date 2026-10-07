@@ -2,7 +2,9 @@ using System;
 using JungleBooze.Gameplay.Controls;
 using JungleBooze.Gameplay.Runner;
 using JungleBooze.Gameplay.Session;
+using JungleBooze.Gameplay.Track;
 using JungleBooze.Gameplay.Views;
+using JungleBooze.Services.Meta;
 using JungleBooze.Services.Persistence;
 using JungleBooze.UI.Hud;
 using UnityEngine;
@@ -34,6 +36,7 @@ namespace JungleBooze.App
         private int _reportedOverflow;
         private RunResultRecorder _recorder;
         private HudView _hud;
+        private MetaProgress _progress;
 
         public GameSession Session => _session;
 
@@ -69,6 +72,15 @@ namespace JungleBooze.App
             _hud = hud;
         }
 
+        /// <summary>
+        /// Missions, daily reward and shop (GDD 13). With this attached, every run start brings in the shop upgrades,
+        /// armed start boosts and the score multiplier. May be left out (then runs start plain).
+        /// </summary>
+        public void AttachProgress(MetaProgress progress)
+        {
+            _progress = progress;
+        }
+
         /// <summary>Main menu "Play": the run set up behind the menu starts running. Ignored outside the menu.</summary>
         public void Play()
         {
@@ -77,11 +89,25 @@ namespace JungleBooze.App
                 return;
             }
 
+            ApplyLoadout();
             if (_session.Begin())
             {
                 _input.Reset();
                 _input.GameplayEnabled = true;
             }
+        }
+
+        /// <summary>Brings the shop upgrades, armed start boosts and score multiplier into the run about to start.</summary>
+        private void ApplyLoadout()
+        {
+            if (_progress == null || !(_session.World is TrackRunWorld world))
+            {
+                return;
+            }
+
+            RunLoadout loadout = RunLoadoutBuilder.Build(_progress);
+            world.ApplyLoadout(loadout);
+            _progress.Save.SaveIfDirty();
         }
 
         /// <summary>
@@ -244,6 +270,7 @@ namespace JungleBooze.App
                 _session.Restart();
             }
 
+            ApplyLoadout();
             _input.Reset();
             _input.GameplayEnabled = true;
             BeginViews();

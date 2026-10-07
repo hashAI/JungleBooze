@@ -43,6 +43,14 @@ namespace JungleBooze.Gameplay.Views
                 Transform root = new GameObject("Coin" + i).transform;
                 root.SetParent(transform, false);
 
+                // Real art (0.5 m across, face toward the camera) replaces the three primitives.
+                if (EnvironmentArt.Attach(root, EnvironmentArt.Coin) != null)
+                {
+                    root.gameObject.SetActive(false);
+                    _coins[i] = root;
+                    continue;
+                }
+
                 // Cylinders are 2 m tall at scale 1, so half the thickness goes into the Y scale.
                 Transform rim = kit.Create(
                     PrimitiveType.Cylinder, "Rim", root, StylePalette.CoinRim, Vector3.zero,

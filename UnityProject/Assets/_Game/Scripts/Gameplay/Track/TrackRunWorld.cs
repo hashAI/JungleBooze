@@ -140,6 +140,51 @@ namespace JungleBooze.Gameplay.Track
             return Runner;
         }
 
+        /// <summary>
+        /// Applies what the player brings into the run (GDD 13): upgrade levels, Shield start, Head Start and the score
+        /// multiplier. Only before the first tick; later calls are ignored. Call right after the world is created
+        /// (or the menu's Play), before any step.
+        /// </summary>
+        public void ApplyLoadout(in RunLoadout loadout)
+        {
+            if (Track == null || Runner == null || Runner.NextTick != 0L)
+            {
+                return;
+            }
+
+            PowerUps.SetLevel(PowerUpType.Magnet, loadout.MagnetLevel);
+            PowerUps.SetLevel(PowerUpType.Shield, loadout.ShieldLevel);
+            PowerUps.SetLevel(PowerUpType.SpeedBoost, loadout.SpeedBoostLevel);
+            Scoring.ScoreMultiplier = loadout.ScoreMultiplier;
+            if (loadout.StartShield)
+            {
+                PowerUps.GrantStartShield();
+            }
+
+            if (loadout.HeadStartMeters > 0)
+            {
+                PowerUps.GrantStartBoost(TicksToCover(loadout.HeadStartMeters));
+            }
+        }
+
+        /// <summary>Boosted-dash ticks needed to cover <paramref name="meters"/> from the start along the speed curve.</summary>
+        private int TicksToCover(double meters)
+        {
+            const double StepS = 0.25;
+            const int MaxSteps = 4096;
+            double multiplier = _setup.PowerUps.SpeedBoostMultiplier;
+            double z = 0.0;
+            double t = 0.0;
+            for (int i = 0; i < MaxSteps && z < meters; i++)
+            {
+                double v = SpeedAt(z) * multiplier;
+                z += (v > 0.1 ? v : 0.1) * StepS;
+                t += StepS;
+            }
+
+            return Math.Max(1, (int)Math.Ceiling(t / RunnerConfig.TickSeconds));
+        }
+
         public void AfterRunnerStep(long tick, RunnerSimulation runner)
         {
             // Track, coins and score run inside the step through IRunnerStepHooks (spec 13.3 order).

@@ -9,6 +9,7 @@ using JungleBooze.Gameplay.Runner;
 using JungleBooze.Gameplay.Session;
 using JungleBooze.Gameplay.Vine;
 using JungleBooze.Gameplay.Views;
+using JungleBooze.Services.Meta;
 using UnityEngine;
 
 namespace JungleBooze.App
@@ -31,6 +32,7 @@ namespace JungleBooze.App
         public const string HazardTuningName = "HazardTuning";
         public const string CompanionTuningName = "CompanionTuning";
         public const string EconomyConfigName = "EconomyConfig";
+        public const string MetaConfigName = "MetaConfig";
 
         public static RunConfigSet Load()
         {
@@ -119,6 +121,20 @@ namespace JungleBooze.App
             }
 
             return rules;
+        }
+
+        /// <summary>Missions, daily reward and shop tuning (GDD 13) from <c>Resources/MetaConfig.asset</c> if present and valid, else defaults.</summary>
+        public static MetaConfig LoadMeta()
+        {
+            var sources = new List<string>(1);
+            MetaConfig config = LoadOrDefault<MetaConfigAsset, MetaConfig>(
+                MetaConfigName, a => a.ToConfig(), MetaConfig.CreateDefault, sources);
+            if (Debug.isDebugBuild)
+            {
+                Debug.Log("[JungleBooze] " + sources[0] + ".");
+            }
+
+            return config;
         }
 
         private static TConfig LoadOrDefault<TAsset, TConfig>(

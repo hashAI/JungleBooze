@@ -33,6 +33,7 @@ namespace JungleBooze.Gameplay.Track
         private RunTotals _totals;
         private DeathInfo _death;
         private int _pendingStreakBonuses;
+        private int _multiplierOverride;
 
         public RunScoring(CoinConfig coins, ScoreConfig score, RunnerConfig runner, VineConfig vines = null)
         {
@@ -52,6 +53,16 @@ namespace JungleBooze.Gameplay.Track
         public CoinConfig CoinConfig => _coins;
 
         public ScoreConfig ScoreConfig => _score;
+
+        /// <summary>
+        /// The score multiplier in use: the player's (GDD 13.1, set by <c>TrackRunWorld.ApplyLoadout</c>), or
+        /// the config's when none was set. Stays across <see cref="Reset"/>.
+        /// </summary>
+        public int ScoreMultiplier
+        {
+            get => _multiplierOverride > 0 ? _multiplierOverride : _score.ScoreMultiplier;
+            set => _multiplierOverride = value > 0 ? value : 0;
+        }
 
         /// <summary>Distance, coins, score, bonus, streak, tier, current chunk (spec 13.2 <c>RunTotals</c>).</summary>
         public RunTotals Totals => _totals;
@@ -193,7 +204,7 @@ namespace JungleBooze.Gameplay.Track
             }
 
             _totals.DistanceM = info.Z > 0.0 ? info.Z : 0.0;
-            _totals.Score = _score.ComputeScore(_totals.DistanceM, _totals.BonusScore);
+            _totals.Score = _score.ComputeScore(_totals.DistanceM, _totals.BonusScore, ScoreMultiplier);
             if (track != null)
             {
                 _totals.Tier = track.CurrentTier;
