@@ -139,11 +139,8 @@ namespace JungleBooze.Gameplay.Views
             instance.transform.localPosition = Vector3.zero;
             instance.transform.localRotation = Quaternion.identity;
 
-            Collider[] colliders = instance.GetComponentsInChildren<Collider>(true);
-            for (int i = 0; i < colliders.Length; i++)
-            {
-                Object.Destroy(colliders[i]);
-            }
+            // No collider cleanup: the physics module is stripped from the player and the FBX importer is set to
+            // addCollider = false (EnvironmentImportPostprocessor), so the models carry none.
 
             Camera[] cameras = instance.GetComponentsInChildren<Camera>(true);
             for (int i = 0; i < cameras.Length; i++)

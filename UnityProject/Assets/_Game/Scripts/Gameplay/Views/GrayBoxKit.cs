@@ -9,7 +9,8 @@ namespace JungleBooze.Gameplay.Views
     /// <summary>
     /// Builds gray-box primitives with one shared material per color. Materials are clones of
     /// <see cref="RuntimeMaterialTemplates.GetOpaqueTemplate"/> (a URP Lit asset in Resources, so the shader is in every
-    /// player build; the material CreatePrimitive assigns is magenta on device). Setup-time only (allocates).
+    /// player build; the material CreatePrimitive assigns is magenta on device, and CreatePrimitive itself fails there, so
+    /// meshes come from <see cref="PrimitiveMeshes"/>). Setup-time only (allocates).
     /// <see cref="Dispose"/> destroys the materials it made.
     /// </summary>
     public sealed class GrayBoxKit : IDisposable
@@ -20,19 +21,10 @@ namespace JungleBooze.Gameplay.Views
         /// <summary>Creates a primitive under <paramref name="parent"/> with no collider and no shadows.</summary>
         public GameObject Create(PrimitiveType type, string name, Transform parent, Color color)
         {
-            GameObject go = GameObject.CreatePrimitive(type);
-            go.name = name;
-            go.transform.SetParent(parent, false);
-
-            Collider collider = go.GetComponent<Collider>();
-            if (collider != null)
-            {
-                // Gameplay never uses physics (spec 001 section 2); drop the primitive's collider.
-                Object.Destroy(collider);
-            }
-
+            // Procedural mesh, no collider (gameplay never uses physics, spec 001 section 2; the physics module is
+            // stripped from the player build, so GameObject.CreatePrimitive cannot be used).
+            GameObject go = PrimitiveMeshes.Create(type, name, parent, GetMaterial(color, RuntimeMaterialTemplates.GetOpaqueTemplate()));
             MeshRenderer meshRenderer = go.GetComponent<MeshRenderer>();
-            meshRenderer.sharedMaterial = GetMaterial(color, RuntimeMaterialTemplates.GetOpaqueTemplate());
             meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
             meshRenderer.receiveShadows = false;
             meshRenderer.lightProbeUsage = LightProbeUsage.Off;

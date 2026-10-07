@@ -1,17 +1,17 @@
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
-using Object = UnityEngine.Object;
+using UnityEngine.Rendering;
 
 namespace JungleBooze.Gameplay.Views
 {
     /// <summary>
     /// The two template materials every runtime-built gray-box material is cloned from. They are real assets in
     /// <c>Assets/_Game/Resources/RuntimeMaterials</c> (URP Lit, opaque; URP Unlit, alpha blended), so their shaders are
-    /// part of every player build. The material <see cref="GameObject.CreatePrimitive"/> assigns is NOT a safe template:
+    /// part of every player build. The material <c>GameObject.CreatePrimitive</c> assigns is NOT a safe template:
     /// in the editor it is the URP Lit material, but in a player <c>UniversalRenderPipelineAsset.defaultMaterial</c> is
     /// null, so the primitive gets the built-in Standard material, which a URP build does not contain (magenta).
-    /// The primitive fallback below exists only so a missing asset degrades loudly instead of throwing.
+    /// The fallback below exists only so a missing asset degrades loudly instead of throwing.
     /// Setup-time only; no shader lookup by name.
     /// </summary>
     public static class RuntimeMaterialTemplates
@@ -62,21 +62,19 @@ namespace JungleBooze.Gameplay.Views
             if (!_fallbackLogged)
             {
                 _fallbackLogged = true;
-                Debug.LogError("[JungleBooze] Missing Resources/" + missingPath + ".mat. Falling back to the primitive material, "
-                    + "which renders PINK in a device build. Run JungleBooze > Setup > Create Runtime Materials and commit the assets.");
+                Debug.LogError("[JungleBooze] Missing Resources/" + missingPath + ".mat. Falling back to a default material, "
+                    + "which may render flat or PINK in a device build. Run JungleBooze > Setup > Create Runtime Materials and commit the assets.");
             }
 
             if (_primitiveFallback == null)
             {
-                GameObject probe = GameObject.CreatePrimitive(PrimitiveType.Quad);
-                _primitiveFallback = probe.GetComponent<MeshRenderer>().sharedMaterial;
-                if (Application.isPlaying)
+                // The pipeline's own default material when it has one (editor), else the built-in UI material (a flat
+                // tint through Material.color; always in a build). Never GameObject.CreatePrimitive (no physics module).
+                RenderPipelineAsset pipeline = GraphicsSettings.currentRenderPipeline;
+                _primitiveFallback = pipeline != null ? pipeline.defaultMaterial : null;
+                if (_primitiveFallback == null)
                 {
-                    Object.Destroy(probe);
-                }
-                else
-                {
-                    Object.DestroyImmediate(probe);
+                    _primitiveFallback = Canvas.GetDefaultCanvasMaterial();
                 }
             }
 
@@ -91,8 +89,8 @@ namespace JungleBooze.Gameplay.Views
         public static void LogShaderReport(Transform root)
         {
             var report = new StringBuilder("[JungleBooze] Shader report. Pipeline: ");
-            report.Append(UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline != null
-                ? UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline.name
+            report.Append(GraphicsSettings.currentRenderPipeline != null
+                ? GraphicsSettings.currentRenderPipeline.name
                 : "NONE (built-in)");
             report.Append(", device: ").Append(SystemInfo.graphicsDeviceType);
             report.Append(", color space: ").Append(QualitySettings.activeColorSpace);

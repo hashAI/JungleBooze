@@ -280,6 +280,26 @@ Compile first (warnings are errors), then check these by hand and report what fa
    riskiest new piece.
 9. Console (Development build): no per-gateway "World segment" lines in a release build; no "event buffer overflow" errors.
 
+### Pink screen on the iPhone (works in the Editor)
+Cause found 2026-10-07 (from the first device log): the gray-box materials were cloned from the material that
+`GameObject.CreatePrimitive` assigns. In the Editor that is URP Lit; in a player URP has no default material, so it is the
+built-in Standard material, which a URP build does not contain (magenta). `CreatePrimitive` also failed there
+("Can't add component SphereCollider ... doesn't exist": the physics module is stripped). Fixed: meshes are built in code
+(`PrimitiveMeshes`) and materials clone `Assets/_Game/Resources/RuntimeMaterials/GrayBoxLit.mat` / `GrayBoxTransparent.mat`
+(`RuntimeMaterialTemplates`). `JungleBooze > Setup > Create Runtime Materials` re-checks them. Graphics settings now keep
+the linear-fog shader variants (the scene itself has fog off; the game turns it on in code).
+How to read the device log: build a **Development Build**, run it from Xcode (Product > Run), and look at the console at the
+bottom (Debug area; View > Debug Area > Activate Console). Filter on `JungleBooze`. Check these lines:
+1. `[JungleBooze] Shader report. Pipeline: URP-Mobile ...` must name the pipeline. `NONE` means the Graphics setting is lost.
+2. Under it, every shader line must say `isSupported=True` and nothing may say `SUSPECT (draws magenta)`. A suspect line
+   names the shader that is missing from the build; send the whole block.
+3. `Missing Resources/RuntimeMaterials/...` (red) means the two `.mat` files are not in the build: run **JungleBooze >
+   Setup > Create Runtime Materials**, then commit the new files.
+4. `Environment art ... would not be visible (... unsupported or error shader)` means a model material lost its shader.
+5. "Requesting to set overscan compensation" is harmless iOS noise; ignore it.
+No "Can't add component ... Collider" lines should remain. Off-screen prewarm of the pooled pieces is skipped on device
+(editor only) until it is verified.
+
 ## Optional: play on your iPhone (free Apple ID)
 
 You need **Xcode 26** (free in the Mac App Store; about 15 GB; it may ask you to update macOS first) and your
