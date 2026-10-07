@@ -34,6 +34,12 @@ namespace JungleBooze.Gameplay.Views
         public const string TreeB = "Foliage_TreeB";
         public const string Bush = "Foliage_Bush";
 
+        // Natural swing rig (spec 003 section 8, art plan section 2). Swap-in points of VineView; missing means gray-box.
+        public const string TreeTrunk = "Tree_Trunk";
+        public const string TreeBranch = "Tree_Branch";
+        public const string VineLiana = "Vine_Liana";
+        public const string VineTuft = "Vine_Tuft";
+
         // Jungle wall segments (tools/blender/build_jungle_kit.py): pre-merged 12 m verge dressing, one draw call each.
         public const string WallA = "Jungle_WallA";
         public const string WallB = "Jungle_WallB";
@@ -55,7 +61,7 @@ namespace JungleBooze.Gameplay.Views
         public static readonly string[] AllNames =
         {
             LowBarrier, HighBarrier, FullBlock, Boulder, ThornPatch, StrikeColumn, Coin, Magnet, Shield, Boost,
-            PathTile, RavineEdge, VineBranch, Signpost, TreeA, TreeB, Bush, WallA, WallB, WallC,
+            PathTile, RavineEdge, VineBranch, Signpost, TreeA, TreeB, Bush, TreeTrunk, TreeBranch, VineLiana, VineTuft, WallA, WallB, WallC,
         };
 
         /// <summary>Every texture-only name above (the asset report walks it too).</summary>

@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using JungleBooze.Core;
 using JungleBooze.Gameplay.Path;
 using JungleBooze.Gameplay.Runner;
 using JungleBooze.Gameplay.Session;
@@ -22,7 +24,6 @@ namespace JungleBooze.Gameplay.Views
         private const int Capacity = 12;
         private const float BehindM = 6f;
         private const float RopeDiameterM = 0.08f;
-        private const float BranchThicknessM = 0.35f;
         private const float CoreSizeM = 0.32f;
         private const float HaloSizeM = 0.6f;
         private const float AimedHaloScale = 1.5f;
@@ -33,6 +34,27 @@ namespace JungleBooze.Gameplay.Views
         private const float SignpostLeadM = 25f;
         private const float SignpostHeightM = 2.2f;
         private const float PathMarginM = 0.6f;
+
+        // Natural swing rig (spec 003 section 8): span, anchor tree, tuft cue, landing glade. All gray-box primitives.
+        private const int SpanSegments = 4;
+        private const float SpanThicknessM = 0.6f;
+        private const float LimbThicknessM = 0.7f;
+        private const float RigTrailM = 40f;
+        private const float DimFactor = 0.75f;
+        private const float TuftBelowGrabM = 0.4f;
+        private const int TuftLeaves = 5;
+        private const float TuftRadiusM = 0.2f;
+        private const float KnotLeafM = 0.55f;
+        private const float KnotGoldM = 0.22f;
+        private const float GladeLiftM = 0.04f;
+        private const int GladeBushes = 4;
+        private const float GladeBushLateralM = 6f;
+        private const float GladeBushSizeM = 1.3f;
+
+        private static readonly Color BarkColor = new Color(0.369f, 0.275f, 0.188f, 1f);
+        private static readonly Color GladeGrass = new Color(0.498f, 0.761f, 0.353f, 1f);
+        private static readonly Quaternion LimbArtAxis = Quaternion.Euler(0f, -90f, 0f);
+        private static readonly Quaternion CylinderAlongZ = Quaternion.Euler(90f, 0f, 0f);
 
         private const int RingSegments = 20;
         private const float RingRadiusM = 0.6f;
@@ -52,12 +74,35 @@ namespace JungleBooze.Gameplay.Views
         private sealed class Slot
         {
             public GameObject Root;
-            public Transform Rope;
-            public Transform Branch;
+            public GameObject Cues;
             public Transform Core;
             public Transform Halo;
             public Transform Icon;
             public GameObject Signpost;
+
+            // Rig (children of the view, route-space coordinates).
+            public GameObject Rig;
+            public Transform[] Span;
+            public Transform Trunk;
+            public Transform TrunkCylinder;
+            public Transform Canopy;
+            public Transform Limb;
+            public Transform LimbCube;
+            public Transform RopeHolder;
+            public Transform RopeCylinder;
+            public Transform Knot;
+            public Transform Glade;
+
+            // Dimming of the cue pieces (about 25 percent) without per-frame allocation.
+            public MeshRenderer[] Dimmable;
+            public Material[] Normal;
+            public Material[] Dim;
+            public bool Dimmed;
+
+            public int AssignedId;
+            public int VineId;
+            public SwingTree Tree;
+            public float SwayPhase;
         }
 
         private RunnerConfig _runnerConfig;
@@ -69,6 +114,8 @@ namespace JungleBooze.Gameplay.Views
         private VineConfig _vines;
         private PathFrame _frame;
 
+        private float _spanLengthM;
+        private Transform _swingKnot;
         private Transform _activeRope;
         private Transform _ringRoot;
         private Transform[] _ringFill;
@@ -100,26 +147,37 @@ namespace JungleBooze.Gameplay.Views
             _viewDistanceM = viewDistanceM;
             _signpostX = runnerConfig.LaneCount * runnerConfig.LaneWidthM * 0.5f + PathMarginM;
             _slots = new Slot[Capacity];
+            float grabY = vineConfig.GrabPointHeightM;
+            float ropeLength = vineConfig.SwingRadiusM;
+            float pivotAhead = SwingRigMath.RestPivotAheadM(ropeLength, vineConfig.SwingStartAngleRad);
+            _spanLengthM = SwingRigMath.SpanLeadM + SwingRigMath.SpanLengthM(
+                pivotAhead, SwingRigMath.DefaultMaxSpeedMps, vineConfig.SwingTicks * (float)RunnerConfig.TickSeconds);
+            float padWidth = runnerConfig.LaneCount * runnerConfig.LaneWidthM;
             for (int i = 0; i < Capacity; i++)
             {
                 var slot = new Slot();
+                var dim = new List<MeshRenderer>();
                 Transform root = new GameObject("Vine" + i).transform;
                 root.SetParent(transform, false);
                 slot.Root = root.gameObject;
-                slot.Rope = kit.Create(PrimitiveType.Cylinder, "Rope", root, StylePalette.VineRope).transform;
-                slot.Branch = kit.Create(PrimitiveType.Cube, "Branch", root, StylePalette.VineRope).transform;
-                // Real branch (fits a unit cube, scaled lane-wide by the placement code) replaces the cube.
-                EnvironmentArt.AttachAndHide(slot.Branch, EnvironmentArt.VineBranch);
 
-                slot.Core = kit.Create(PrimitiveType.Sphere, "GlowCore", root, StylePalette.VineGlowCore).transform;
-                slot.Core.localScale = new Vector3(CoreSizeM, CoreSizeM, CoreSizeM);
-                slot.Halo = kit.Create(PrimitiveType.Sphere, "GlowHalo", root, StylePalette.SunGold).transform;
+                // Cues at the grab point: glow core, halo, ring icon and the gold tuft with a flower ("grab me").
+                Transform cues = new GameObject("Cues").transform;
+                cues.SetParent(root, false);
+                slot.Cues = cues.gameObject;
+                slot.Core = MakeDimmable(
+                    kit, dim, PrimitiveType.Sphere, "GlowCore", cues, StylePalette.VineGlowCore,
+                    Vector3.zero, new Vector3(CoreSizeM, CoreSizeM, CoreSizeM));
+                slot.Halo = MakeDimmable(
+                    kit, dim, PrimitiveType.Sphere, "GlowHalo", cues, StylePalette.SunGold, Vector3.zero, Vector3.one);
                 slot.Icon = new GameObject("RingIcon").transform;
-                slot.Icon.SetParent(root, false);
+                slot.Icon.SetParent(cues, false);
                 for (int k = 0; k < IconSegments; k++)
                 {
                     float a = 2f * Mathf.PI * k / IconSegments;
-                    kit.Create(
+                    MakeDimmable(
+                        kit,
+                        dim,
                         PrimitiveType.Cube,
                         "IconSegment",
                         slot.Icon,
@@ -127,6 +185,28 @@ namespace JungleBooze.Gameplay.Views
                         new Vector3(Mathf.Cos(a) * IconRadiusM, Mathf.Sin(a) * IconRadiusM, 0f),
                         new Vector3(IconSegmentM, IconSegmentM, IconSegmentM * 0.5f));
                 }
+
+                Transform tuft = new GameObject("Tuft").transform;
+                tuft.SetParent(cues, false);
+                tuft.localPosition = new Vector3(0f, grabY - TuftBelowGrabM, 0f);
+                for (int k = 0; k < TuftLeaves; k++)
+                {
+                    float a = 2f * Mathf.PI * k / TuftLeaves;
+                    MakeDimmable(
+                        kit,
+                        dim,
+                        PrimitiveType.Sphere,
+                        "TuftLeaf",
+                        tuft,
+                        StylePalette.SunGold,
+                        new Vector3(Mathf.Sin(a) * TuftRadiusM * 0.8f, Mathf.Cos(a) * TuftRadiusM * 0.8f, 0f),
+                        new Vector3(TuftRadiusM, TuftRadiusM, TuftRadiusM * 0.5f));
+                }
+
+                MakeDimmable(
+                    kit, dim, PrimitiveType.Sphere, "TuftFlower", tuft, StylePalette.PulpOrange,
+                    new Vector3(0f, 0f, -0.08f), new Vector3(TuftRadiusM, TuftRadiusM, TuftRadiusM));
+                EnvironmentArt.ReplaceGroup(tuft, EnvironmentArt.VineTuft);
 
                 Transform sign = new GameObject("Signpost").transform;
                 sign.SetParent(root, false);
@@ -138,9 +218,86 @@ namespace JungleBooze.Gameplay.Views
                     new Vector3(0f, SignpostHeightM, 0f), new Vector3(0.9f, 0.5f, 0.08f));
                 EnvironmentArt.ReplaceGroup(sign, EnvironmentArt.Signpost);
                 slot.Signpost = sign.gameObject;
+
+                // The rig: overhead span, anchor tree with its limb, the hanging rope and its hidden knot, the landing glade.
+                Transform rig = new GameObject("SwingRig" + i).transform;
+                rig.SetParent(transform, false);
+                slot.Rig = rig.gameObject;
+                slot.Span = new Transform[SpanSegments];
+                for (int k = 0; k < SpanSegments; k++)
+                {
+                    slot.Span[k] = kit.Create(PrimitiveType.Cylinder, "Span", rig, BarkColor).transform;
+                }
+
+                slot.Trunk = new GameObject("AnchorTrunk").transform;
+                slot.Trunk.SetParent(rig, false);
+                slot.TrunkCylinder = kit.Create(PrimitiveType.Cylinder, "Trunk", slot.Trunk, BarkColor).transform;
+                slot.Canopy = kit.Create(PrimitiveType.Sphere, "Canopy", slot.Trunk, StylePalette.DeepCanopyTeal).transform;
+                EnvironmentArt.ReplaceGroup(slot.Trunk, EnvironmentArt.TreeTrunk);
+
+                // The limb's local +X runs from the trunk toward the path (the art convention of Tree_Branch).
+                slot.Limb = new GameObject("AnchorLimb").transform;
+                slot.Limb.SetParent(rig, false);
+                slot.LimbCube = kit.Create(PrimitiveType.Cube, "LimbCube", slot.Limb, BarkColor).transform;
+                if (EnvironmentArt.ReplaceGroup(slot.Limb, EnvironmentArt.TreeBranch) == null)
+                {
+                    // The older lane-wide branch art (fits a unit cube) still works on the limb when it exists.
+                    EnvironmentArt.AttachAndHide(slot.LimbCube, EnvironmentArt.VineBranch);
+                }
+
+                // The rope hangs from the hidden knot (holder origin) down to the grab point (art convention: hangs -Y).
+                slot.RopeHolder = new GameObject("RopeHolder").transform;
+                slot.RopeHolder.SetParent(rig, false);
+                slot.RopeCylinder = MakeDimmable(
+                    kit,
+                    dim,
+                    PrimitiveType.Cylinder,
+                    "Rope",
+                    slot.RopeHolder,
+                    StylePalette.VineRope,
+                    new Vector3(0f, -ropeLength * 0.5f, 0f),
+                    new Vector3(RopeDiameterM, ropeLength * 0.5f, RopeDiameterM));
+                EnvironmentArt.ReplaceGroup(slot.RopeHolder, EnvironmentArt.VineLiana);
+
+                slot.Knot = CreateKnot(kit, dim, rig);
+
+                slot.Glade = new GameObject("LandingGlade").transform;
+                slot.Glade.SetParent(rig, false);
+                kit.Create(
+                    PrimitiveType.Cube, "Cushion", slot.Glade, GladeGrass,
+                    Vector3.zero, new Vector3(padWidth, 0.02f, SwingRigMath.GladeLengthM));
+                for (int k = 0; k < GladeBushes; k++)
+                {
+                    float sx = (k & 1) == 0 ? -1f : 1f;
+                    float sz = k < 2 ? -1f : 1f;
+                    kit.Create(
+                        PrimitiveType.Sphere,
+                        "GladeBush",
+                        slot.Glade,
+                        StylePalette.JungleGreen,
+                        new Vector3(sx * GladeBushLateralM, GladeBushSizeM * 0.3f, sz * SwingRigMath.GladeLengthM * 0.35f),
+                        new Vector3(GladeBushSizeM, GladeBushSizeM * 0.6f, GladeBushSizeM));
+                }
+
+                slot.Dimmable = dim.ToArray();
+                slot.Normal = new Material[slot.Dimmable.Length];
+                slot.Dim = new Material[slot.Dimmable.Length];
+                for (int k = 0; k < slot.Dimmable.Length; k++)
+                {
+                    Material normal = slot.Dimmable[k].sharedMaterial;
+                    Color c = normal.color;
+                    slot.Normal[k] = normal;
+                    slot.Dim[k] = kit.GetMaterial(new Color(c.r * DimFactor, c.g * DimFactor, c.b * DimFactor, c.a), normal);
+                }
+
+                slot.AssignedId = -1;
                 slot.Root.SetActive(false);
+                slot.Rig.SetActive(false);
                 _slots[i] = slot;
             }
+
+            _swingKnot = CreateKnot(kit, null, transform);
+            _swingKnot.gameObject.SetActive(false);
 
             _activeRope = kit.Create(PrimitiveType.Cylinder, "ActiveRope", transform, StylePalette.VineRope).transform;
             _activeRope.gameObject.SetActive(false);
@@ -209,6 +366,43 @@ namespace JungleBooze.Gameplay.Views
             }
         }
 
+        private static Transform MakeDimmable(
+            GrayBoxKit kit,
+            List<MeshRenderer> dim,
+            PrimitiveType type,
+            string name,
+            Transform parent,
+            Color color,
+            Vector3 localPosition,
+            Vector3 localScale)
+        {
+            Transform t = kit.Create(type, name, parent, color, localPosition, localScale);
+            dim.Add(t.GetComponent<MeshRenderer>());
+            return t;
+        }
+
+        /// <summary>A leafy knot with a small sun-gold glow-lit knot hanging from it (hides where the liana loops over the span).</summary>
+        private static Transform CreateKnot(GrayBoxKit kit, List<MeshRenderer> dim, Transform parent)
+        {
+            Transform knot = new GameObject("Knot").transform;
+            knot.SetParent(parent, false);
+            Vector3 leafScale = new Vector3(KnotLeafM, KnotLeafM * 0.8f, KnotLeafM);
+            Vector3 goldScale = new Vector3(KnotGoldM, KnotGoldM, KnotGoldM);
+            Vector3 goldPosition = new Vector3(0f, -0.3f, 0f);
+            if (dim != null)
+            {
+                MakeDimmable(kit, dim, PrimitiveType.Sphere, "KnotLeaves", knot, StylePalette.JungleGreen, Vector3.zero, leafScale);
+                MakeDimmable(kit, dim, PrimitiveType.Sphere, "KnotGlow", knot, StylePalette.SunGold, goldPosition, goldScale);
+            }
+            else
+            {
+                kit.Create(PrimitiveType.Sphere, "KnotLeaves", knot, StylePalette.JungleGreen, Vector3.zero, leafScale);
+                kit.Create(PrimitiveType.Sphere, "KnotGlow", knot, StylePalette.SunGold, goldPosition, goldScale);
+            }
+
+            return knot;
+        }
+
         /// <summary>
         /// Puts the glyphs of the release stamps ("PERFECT", "GOOD", ...) into the font texture now (setup time), so the
         /// first release does not stall. Same size and style as the stamp text.
@@ -234,6 +428,15 @@ namespace JungleBooze.Gameplay.Views
             _speedLinesLeft = 0f;
             _trailCount = 0;
             _trailClock = 0f;
+            if (_slots != null)
+            {
+                // A new run restarts vine ids and may use a new seed: recompute every slot's tree and sway.
+                for (int i = 0; i < _slots.Length; i++)
+                {
+                    _slots[i].AssignedId = -1;
+                }
+            }
+
             if (_stamp != null)
             {
                 _stamp.gameObject.SetActive(false);
@@ -288,12 +491,14 @@ namespace JungleBooze.Gameplay.Views
         private void RenderIdleVines(in RunnerState state, double heroZ, bool carried, float pulse)
         {
             int used = 0;
+            int targetId = carried ? state.AimVineId : 0;
             if (_track != null && _vines != null)
             {
-                double minZ = heroZ - BehindM;
+                double minZ = heroZ - RigTrailM;
                 double maxZ = heroZ + _viewDistanceM + SignpostLeadM;
                 float grabY = _vines.GrabPointHeightM;
                 float ropeLength = _vines.SwingRadiusM;
+                float pivotY = SwingRigMath.RestPivotHeightM(grabY, ropeLength, _vines.SwingStartAngleRad);
                 int count = _track.VineCount;
                 for (int i = 0; i < count && used < Capacity; i++)
                 {
@@ -303,12 +508,25 @@ namespace JungleBooze.Gameplay.Views
                         break;
                     }
 
-                    if (v.Z < minZ || (carried && v.Id == state.VineId))
+                    if (v.Z < minZ)
                     {
                         continue;
                     }
 
                     Slot slot = _slots[used++];
+                    if (slot.AssignedId != v.Id)
+                    {
+                        AssignVine(slot, v.Id, v.ChunkSerial, v.Row);
+                    }
+
+                    // The vine the runner is holding keeps its span and tree; only its rest rope and cues go away.
+                    bool held = carried && v.Id == state.VineId;
+                    bool behind = v.Z < heroZ - BehindM;
+                    if (targetId == 0 && !carried && !behind && v.Z >= heroZ - _vines.GrabZoneLengthM * 0.5f)
+                    {
+                        targetId = v.Id;
+                    }
+
                     float laneX = _runnerConfig.LaneCenterX(v.Lane);
                     _frame.Sample(v.Z, out PathPose vinePose);
                     Vector3 rootPosition = PathPlacement.Point(vinePose, laneX, 0f);
@@ -320,22 +538,30 @@ namespace JungleBooze.Gameplay.Views
                         slot.Root.SetActive(true);
                     }
 
-                    // Cylinders are 2 m tall at scale 1.
-                    slot.Rope.localPosition = new Vector3(0f, grabY + ropeLength * 0.5f, 0f);
-                    slot.Rope.localScale = new Vector3(RopeDiameterM, ropeLength * 0.5f, RopeDiameterM);
-                    slot.Branch.localPosition = new Vector3(0f, grabY + ropeLength, 0f);
-                    slot.Branch.localScale = new Vector3(_runnerConfig.LaneWidthM, BranchThicknessM, BranchThicknessM);
+                    if (!slot.Rig.activeSelf)
+                    {
+                        slot.Rig.SetActive(true);
+                    }
 
-                    bool aimed = carried && v.Id == state.AimVineId;
-                    float halo = HaloSizeM * (0.85f + 0.3f * pulse) * (aimed ? AimedHaloScale : 1f);
-                    slot.Halo.localPosition = new Vector3(0f, grabY, 0.05f);
-                    slot.Halo.localScale = new Vector3(halo, halo, halo * 0.3f);
-                    slot.Core.localPosition = new Vector3(0f, grabY, -0.05f);
-                    float icon = 0.9f + 0.2f * pulse;
-                    slot.Icon.localPosition = new Vector3(0f, grabY, -0.1f);
-                    slot.Icon.localScale = new Vector3(icon, icon, 1f);
+                    bool cues = !held && !behind;
+                    if (slot.Cues.activeSelf != cues)
+                    {
+                        slot.Cues.SetActive(cues);
+                    }
 
-                    bool sign = v.Row == 0;
+                    if (cues)
+                    {
+                        bool aimed = carried && v.Id == state.AimVineId;
+                        float halo = HaloSizeM * (0.85f + 0.3f * pulse) * (aimed ? AimedHaloScale : 1f);
+                        slot.Halo.localPosition = new Vector3(0f, grabY, 0.05f);
+                        slot.Halo.localScale = new Vector3(halo, halo, halo * 0.3f);
+                        slot.Core.localPosition = new Vector3(0f, grabY, -0.05f);
+                        float icon = 0.9f + 0.2f * pulse;
+                        slot.Icon.localPosition = new Vector3(0f, grabY, -0.1f);
+                        slot.Icon.localScale = new Vector3(icon, icon, 1f);
+                    }
+
+                    bool sign = v.Row == 0 && !behind;
                     if (slot.Signpost.activeSelf != sign)
                     {
                         slot.Signpost.SetActive(sign);
@@ -351,15 +577,137 @@ namespace JungleBooze.Gameplay.Views
                         slot.Signpost.transform.localPosition = inverseRoot * (PathPlacement.Point(signPose, side * _signpostX, 0f) - rootPosition);
                         slot.Signpost.transform.localRotation = inverseRoot * PathPlacement.Orientation(signPose);
                     }
+
+                    bool rope = cues;
+                    if (slot.RopeHolder.gameObject.activeSelf != rope)
+                    {
+                        slot.RopeHolder.gameObject.SetActive(rope);
+                        slot.Knot.gameObject.SetActive(rope);
+                    }
+
+                    if (rope)
+                    {
+                        // Hangs from the knot (parked ahead of the grab point at the span height), swaying about the
+                        // grab point so the glow stays put (spec 8.2 "already swaying", fades near the grab zone).
+                        float amplitude = SwingRigMath.SwayAmplitudeForDistance((float)(v.Z - heroZ));
+                        float sway = SwingRigMath.SwayAngleRad(_clock, slot.SwayPhase, amplitude);
+                        double angle = _vines.SwingStartAngleRad + sway;
+                        var localUp = new Vector3(0f, (float)System.Math.Cos(angle), -(float)System.Math.Sin(angle));
+                        Vector3 knot = rootPosition + (rootRotation * new Vector3(0f, grabY + (localUp.y * ropeLength), localUp.z * ropeLength));
+                        slot.RopeHolder.localPosition = knot;
+                        slot.RopeHolder.localRotation = rootRotation * Quaternion.FromToRotation(Vector3.down, -localUp);
+                        slot.Knot.localPosition = knot;
+                        slot.Knot.localRotation = rootRotation;
+                    }
+
+                    bool last = i + 1 >= count || _track.GetVine(i + 1).ChunkSerial != v.ChunkSerial;
+                    RenderRig(slot, v.Z, laneX, pivotY, last, behind);
+                }
+            }
+
+            for (int i = 0; i < used; i++)
+            {
+                Slot slot = _slots[i];
+                bool dimmed = targetId != 0 && slot.VineId != targetId;
+                if (slot.Dimmed != dimmed)
+                {
+                    ApplyDim(slot, dimmed);
                 }
             }
 
             for (int i = used; i < _shown; i++)
             {
                 _slots[i].Root.SetActive(false);
+                _slots[i].Rig.SetActive(false);
             }
 
             _shown = used;
+        }
+
+        /// <summary>Per-vine stateless data: anchor tree and sway phase from the run seed and the Scenery stream id.</summary>
+        private void AssignVine(Slot slot, int vineId, int chunkSerial, int row)
+        {
+            slot.AssignedId = vineId;
+            slot.VineId = vineId;
+            ulong seed = _frame.RunSeed;
+            SwingTree tree = SwingRigMath.PlaceTree(seed, RandomStreamIds.Scenery, chunkSerial, row);
+            slot.Tree = tree;
+            slot.SwayPhase = SwingRigMath.SwayPhaseRad(seed, RandomStreamIds.Scenery, chunkSerial, row);
+            slot.TrunkCylinder.localPosition = new Vector3(0f, tree.HeightM * 0.5f, 0f);
+            slot.TrunkCylinder.localScale = new Vector3(tree.TrunkRadiusM * 2f, tree.HeightM * 0.5f, tree.TrunkRadiusM * 2f);
+            slot.Canopy.localPosition = new Vector3(0f, tree.HeightM - 3f, 0f);
+            slot.Canopy.localScale = new Vector3(tree.TrunkRadiusM * 6f, 5f, tree.TrunkRadiusM * 6f);
+        }
+
+        private void RenderRig(Slot slot, double grabS, float laneX, float pivotY, bool lastOfSection, bool behind)
+        {
+            // Anchor tree and limb: beside the path, visible long before the grab; gone once behind the runner.
+            bool tree = !behind;
+            if (slot.Trunk.gameObject.activeSelf != tree)
+            {
+                slot.Trunk.gameObject.SetActive(tree);
+                slot.Limb.gameObject.SetActive(tree);
+            }
+
+            double spanStart = grabS - SwingRigMath.SpanLeadM;
+            _frame.Sample(spanStart, out PathPose startPose);
+            if (tree)
+            {
+                slot.Trunk.localPosition = PathPlacement.Point(startPose, slot.Tree.TrunkX, 0f);
+                slot.Trunk.localRotation = PathPlacement.Orientation(startPose);
+                Vector3 limbStart = PathPlacement.Point(startPose, slot.Tree.TrunkX, pivotY);
+                Vector3 limbVector = PathPlacement.Point(startPose, laneX, pivotY) - limbStart;
+                float limbLength = limbVector.magnitude;
+                if (limbLength > 0.01f)
+                {
+                    slot.Limb.localPosition = limbStart;
+                    slot.Limb.localRotation = Quaternion.LookRotation(limbVector / limbLength, startPose.Up) * LimbArtAxis;
+                    slot.LimbCube.localPosition = new Vector3(limbLength * 0.5f, 0f, 0f);
+                    slot.LimbCube.localScale = new Vector3(limbLength, LimbThicknessM, LimbThicknessM);
+                }
+            }
+
+            // The span at the pivot height, from the limb along the route over the vine's lane, in short pieces so it bends with the route.
+            Vector3 previous = PathPlacement.Point(startPose, laneX, pivotY);
+            for (int k = 0; k < SpanSegments; k++)
+            {
+                _frame.Sample(spanStart + (_spanLengthM * (k + 1) / SpanSegments), out PathPose segPose);
+                Vector3 next = PathPlacement.Point(segPose, laneX, pivotY);
+                Vector3 d = next - previous;
+                float length = d.magnitude;
+                Transform seg = slot.Span[k];
+                if (length > 0.01f)
+                {
+                    seg.localPosition = (previous + next) * 0.5f;
+                    seg.localRotation = Quaternion.LookRotation(d / length, segPose.Up) * CylinderAlongZ;
+                    seg.localScale = new Vector3(SpanThicknessM, length * 0.5f * 1.02f, SpanThicknessM);
+                }
+
+                previous = next;
+            }
+
+            // Landing glade: a cushion and bushes on the far rim of the last vine of a section.
+            if (slot.Glade.gameObject.activeSelf != lastOfSection)
+            {
+                slot.Glade.gameObject.SetActive(lastOfSection);
+            }
+
+            if (lastOfSection)
+            {
+                _frame.Sample(grabS + SwingRigMath.GladeStartAfterGrabM + (SwingRigMath.GladeLengthM * 0.5f), out PathPose gladePose);
+                slot.Glade.localPosition = PathPlacement.Point(gladePose, 0f, GladeLiftM);
+                slot.Glade.localRotation = PathPlacement.Orientation(gladePose);
+            }
+        }
+
+        private static void ApplyDim(Slot slot, bool dimmed)
+        {
+            slot.Dimmed = dimmed;
+            Material[] source = dimmed ? slot.Dim : slot.Normal;
+            for (int k = 0; k < slot.Dimmable.Length; k++)
+            {
+                slot.Dimmable[k].sharedMaterial = source[k];
+            }
         }
 
         private void RenderSwing(RunnerSimulation runner, float alpha, float heroX, float heroY, double heroZ, bool carried)
@@ -372,6 +720,11 @@ namespace JungleBooze.Gameplay.Views
             if (_ringRoot.gameObject.activeSelf != carried)
             {
                 _ringRoot.gameObject.SetActive(carried);
+            }
+
+            if (_swingKnot.gameObject.activeSelf != carried)
+            {
+                _swingKnot.gameObject.SetActive(carried);
             }
 
             if (!carried || _vines == null)
@@ -395,6 +748,10 @@ namespace JungleBooze.Gameplay.Views
             _activeRope.localPosition = hand + up * (length * 0.5f);
             _activeRope.localRotation = rot * Quaternion.FromToRotation(Vector3.up, localUp);
             _activeRope.localScale = new Vector3(RopeDiameterM, length * 0.5f, RopeDiameterM);
+
+            // The hidden knot rides the span with the runner: it is the rope's top end (rope end = hand, AC-318).
+            _swingKnot.localPosition = hand + (up * length);
+            _swingKnot.localRotation = rot;
 
             bool inPerfect = phase >= _vines.PerfectStartPhase && phase < _vines.PerfectEndPhase;
             float flash = inPerfect ? 1f + 0.25f * Mathf.Abs(Mathf.Sin(_clock * RingFlashHz * Mathf.PI)) : 1f;
