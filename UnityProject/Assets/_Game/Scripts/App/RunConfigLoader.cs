@@ -104,10 +104,11 @@ namespace JungleBooze.App
             var sources = new List<string>(1);
             WorldScheduleConfig config = LoadOrDefault<WorldScheduleConfigAsset, WorldScheduleConfig>(
                 WorldScheduleName, a => a.ToConfig(), WorldScheduleConfig.CreateDefault, sources);
-            if (Debug.isDebugBuild)
-            {
-                Debug.Log("[JungleBooze] " + sources[0] + ".");
-            }
+            Debug.Log("[JungleBooze] " + sources[0] + ". " + config.Count + " worlds, first lap "
+                + config.PeriodM.ToString("F0", System.Globalization.CultureInfo.InvariantCulture) + " m; world starts: "
+                + config.SegmentStartZ(1).ToString("F0", System.Globalization.CultureInfo.InvariantCulture) + ", "
+                + config.SegmentStartZ(2).ToString("F0", System.Globalization.CultureInfo.InvariantCulture) + ", "
+                + config.SegmentStartZ(3).ToString("F0", System.Globalization.CultureInfo.InvariantCulture) + " m.");
 
             return config;
         }

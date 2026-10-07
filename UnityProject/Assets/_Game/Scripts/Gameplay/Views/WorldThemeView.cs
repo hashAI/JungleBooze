@@ -219,6 +219,9 @@ namespace JungleBooze.Gameplay.Views
                 _segment = segment;
                 if (wasInRun)
                 {
+                    Debug.Log("[JungleBooze] World segment " + segment + " (" + worlds.KindOfSegment(segment)
+                        + (worlds.IsDuskSegment(segment) ? ", dusk" : string.Empty) + ") at "
+                        + z.ToString("F0", System.Globalization.CultureInfo.InvariantCulture) + " m.");
                     SegmentChanged?.Invoke(segment);
                 }
             }
