@@ -170,6 +170,6 @@ namespace JungleBooze.Gameplay.Track
             return errors.Count == before;
         }
 
-        private const float MinWorldLengthM = 200f;
+        private const float MinWorldLengthM = 100f;
     }
 }
