@@ -26,6 +26,7 @@ Not in FP1 (comes right after): vine swinging, Duko, power-ups, menus/shop, real
 - [ ] A2 game-designer: spec 002 (track, obstacles, coins)
 - [ ] A3 balance-simulator: Python reference model of spec 001 + golden traces (the only code we can execute here)
 - [ ] B gameplay-engineer: collisions + track/obstacles/coins simulation (specs 001 + 002) + tests
+- [ ] C1 ui-engineer (running): presentation for movement; C2 later adds track/obstacle/coin views.
 - [ ] C gameplay/ui-engineer: Unity presentation layer: auto-built scene, gray-box views, camera, input adapter, HUD, game over/restart, default config assets
 - [x] D tech-architect: first-open bootstrap (`Assets/_Game/Editor/Setup/ProjectBootstrap.cs`, ADR 0003) + `docs/PLAY_FIRST_BUILD.md`
 - [ ] E code-reviewer: compile-correctness and logic review of everything; fixes applied
@@ -43,7 +44,7 @@ and commit after every agent report.
 | balance-simulator | **working** | FP1 stage A3: Python reference model of spec 001, unit tests, S1–S9 report, golden traces | `tools/sim/`, `docs/sim-reports/` | Fairness fuzzing for spec 002 |
 | tech-architect | done (stage D) | First-open bootstrap: URP mobile asset, input set to Both, iOS basics (placeholder bundle id `com.pistaduko.junglerunner`, iOS 15, portrait), empty Run scene in build list; Mac play guide | `Assets/_Game/Editor/Setup/`, `docs/adr/0003-first-playable-bootstrap.md`, `docs/PLAY_FIRST_BUILD.md` | Add EditMode tests for `ProjectSetupRules`; Roslyn analyzers |
 | gameplay-engineer | done (stage A1) | Movement simulation, config assets, bot input provider, EditMode tests; logic cross-checked in Python | `Scripts/Gameplay/Runner/`, `Config/`, `Bots/`, `Tests/EditMode/Gameplay/` | Stage B: collisions + track (needs spec 002) |
-| ui-engineer | waiting | — | — | Week 4: menus, shop |
+| ui-engineer | **working** | FP1 stage C1: runtime bootstrap, game session driver, keyboard/mouse/touch input, gray-box views, camera, HUD, game over/restart, PlayMode tests | presentation scripts (assembly per ARCHITECTURE), `Tests/PlayMode/`, `docs/PLAY_FIRST_BUILD.md` controls | Stage C2: track/obstacle/coin views after stage B |
 | art-director | done | Style guide and prompts updated with names Pista/Duko and the chest-band sash | `design/STYLE_GUIDE.md`, `design/prompts/` | Generate concept images once an image API key exists |
 | asset-pipeline | waiting | — | — | Needs an image/3D generation API key from the owner |
 | audio-director | waiting | — | — | Week 5. Note: the macaw speaks a few words, so voice lines and localization are needed |
@@ -94,6 +95,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Log
 Newest first. One line per event.
+- 2026-10-07: Launched stage C1 (ui-engineer) in parallel with A2/A3, since it only needs the movement simulation.
 - 2026-10-07: Stage A1 done (gameplay-engineer): movement simulation + tests, not compiled.
 - 2026-10-07: Stage D done (tech-architect): bootstrap script, ADR 0003, Mac play guide.
 - 2026-10-07: Launched FP1 stages A1, A2, A3 and D in parallel. Background checkpoint commits every 10 minutes.
