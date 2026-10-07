@@ -1,13 +1,14 @@
 # Environment art
 
-Real low-poly art for the run views. Each view looks for a prefab by name in `Resources/EnvironmentArt/`
-(`EnvironmentArt.cs`). If the prefab is missing the view keeps its gray-box primitive, so art can land one piece at a time.
-Workflow: put models (`.fbx`) in `Models/` named exactly as below, with a sibling `<Name>.png` base color texture. The
-prefabs are built automatically when the models import or when the editor opens and a prefab is missing
-(`Editor/Art/EnvironmentAutoBuild.cs`); the menu `JungleBooze > Art > Build Environment Prefabs` does the same by hand.
-The builder checks triangle budgets, strips colliders, and gives each model its own URP Simple Lit material
-(`Materials/<Name>_Mat.mat`, created from the PNG). A shared `Materials/EnvAtlas.mat` is only used for models that have no PNG.
-Missing prefabs leave the gray-box in place.
+Real low-poly art for the run views. Each view loads a model by name from `Resources/EnvironmentArt/`
+(`EnvironmentArt.cs`). If the model is missing the view keeps its gray-box primitive, so art can land one piece at a time.
+Workflow: put the model (`<Name>.fbx`) and its base color texture (`<Name>_basecolor.png`) in `Resources/EnvironmentArt/`,
+named exactly as below. There is no prefab build step: the FBX is instantiated directly. On import,
+`Art/Environment/Editor/EnvironmentImportPostprocessor.cs` remaps each FBX to a URP Simple Lit material
+(`Materials/<Name>_Mat.mat`) made from the PNG; if that ever did not run, `EnvironmentArt.cs` builds a textured
+material at runtime from the same PNG. Colliders, cameras and lights are stripped at runtime. The menu
+`JungleBooze > Art > Check Environment Models` logs which models load and their triangle counts. The `.glb` sources
+stay in `Models/` (not in Resources). The run start logs which of the 17 names loaded (`[JungleBooze] Environment art`).
 
 The simulation owns collision. Art is scaled by the view to the hitbox, so author it to the fit rule below
 (pivot and size matter; export with Y up, meters, 1 unit = 1 m).

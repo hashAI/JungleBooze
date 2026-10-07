@@ -290,9 +290,22 @@ namespace JungleBooze.App
             bool coin = EnvironmentArt.Exists("Pickup_Coin");
             bool tree = EnvironmentArt.Exists("Foliage_TreeA");
             bool catalog = Resources.Load<AudioCatalog>("RunAudioCatalog") != null;
-            Debug.Log("[JungleBooze] Assets found: Pista=" + pista + ", Duko=" + duko + ", Pickup_Coin prefab=" + coin
-                + ", Foliage_TreeA prefab=" + tree + ", audio catalog=" + catalog
+            Debug.Log("[JungleBooze] Assets found: Pista=" + pista + ", Duko=" + duko + ", Pickup_Coin=" + coin
+                + ", Foliage_TreeA=" + tree + ", audio catalog=" + catalog
                 + ". A False means that piece is using its gray-box fallback or is silent.");
+
+            var report = new System.Text.StringBuilder("[JungleBooze] Environment art: ");
+            for (int i = 0; i < EnvironmentArt.AllNames.Length; i++)
+            {
+                if (i > 0)
+                {
+                    report.Append(", ");
+                }
+
+                report.Append(EnvironmentArt.AllNames[i]).Append('=').Append(EnvironmentArt.Exists(EnvironmentArt.AllNames[i]));
+            }
+
+            Debug.Log(report.Append('.').ToString());
         }
 
         /// <summary>

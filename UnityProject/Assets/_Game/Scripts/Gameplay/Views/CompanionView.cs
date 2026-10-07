@@ -31,7 +31,13 @@ namespace JungleBooze.Gameplay.Views
 
         // Real model (optional): a static mesh without a wing rig, so flight is procedural (pitch, roll, bob).
         private const string ModelResourcePath = "Characters/Duko/Duko";
-        private const float ModelHeightM = 0.55f;
+        private const float ModelHeightM = 0.85f;
+
+        // Where the real model hovers: beside HERO's right shoulder, so he is visible and large on a phone screen
+        // (the gray-box macaw keeps the GDD home of 2.0 m ahead and 4.2 m up). [ASSUMED] owner request.
+        private const float ModelHomeSideM = 0.9f;
+        private const float ModelHomeAboveGroundM = 1.7f;
+        private const float ModelHomeAheadM = 0.3f;
         private const float ModelFlightPitchDeg = 70f;
         private const float ModelFlapRollDeg = 14f;
         private const float ModelFlapBobM = 0.04f;
@@ -96,6 +102,7 @@ namespace JungleBooze.Gameplay.Views
                 visual.name = "DukoVisual";
                 visual.transform.localPosition = Vector3.zero;
                 visual.transform.localRotation = Quaternion.Euler(0f, ModelYawFixDeg, 0f);
+                EnvironmentArt.EnsureTexturedMaterials(visual, "Characters/Duko/Duko_basecolor", "Duko");
                 RunnerView.FitToHeight(visual, ModelHeightM);
                 // Pivot at the body center: the fitted model stands on y = 0, so lift it into a holder.
                 Transform holder = new GameObject("DukoHolder").transform;
@@ -308,13 +315,17 @@ namespace JungleBooze.Gameplay.Views
             }
             else
             {
-                target = new Vector3(_followX, _config.HomeHeightM, z + _config.HomeAheadM);
+                bool shoulder = _visualHolder != null;
+                float homeX = shoulder ? _followX + ModelHomeSideM : _followX;
+                float homeY = shoulder ? y + ModelHomeAboveGroundM : _config.HomeHeightM;
+                float homeZ = z + (shoulder ? ModelHomeAheadM : _config.HomeAheadM);
+                target = new Vector3(homeX, homeY, homeZ);
                 if (_swoopLeft > 0f && _config.SwoopSeconds > 0f)
                 {
                     float u = 1f - _swoopLeft / _config.SwoopSeconds;
                     float s = Mathf.Sin(u * Mathf.PI);
-                    target.x = Mathf.Lerp(_followX, _swoopLaneX, s);
-                    target.y = Mathf.Lerp(_config.HomeHeightM, Mathf.Max(_config.SwoopHeightM, 0f), s);
+                    target.x = Mathf.Lerp(homeX, _swoopLaneX, s);
+                    target.y = Mathf.Lerp(homeY, Mathf.Max(_config.SwoopHeightM, homeY), s);
                 }
             }
 

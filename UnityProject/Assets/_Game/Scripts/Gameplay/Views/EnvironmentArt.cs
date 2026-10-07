@@ -33,15 +33,31 @@ namespace JungleBooze.Gameplay.Views
         public const string TreeB = "Foliage_TreeB";
         public const string Bush = "Foliage_Bush";
 
+        /// <summary>Every prefab name above, in one list (the start-of-run asset report walks it).</summary>
+        public static readonly string[] AllNames =
+        {
+            LowBarrier, HighBarrier, FullBlock, Boulder, ThornPatch, StrikeColumn, Coin, Magnet, Shield, Boost,
+            PathTile, RavineEdge, VineBranch, Signpost, TreeA, TreeB, Bush,
+        };
+
+        private const string BaseColorSuffix = "_basecolor";
+
         private static readonly Dictionary<string, GameObject> Cache = new Dictionary<string, GameObject>();
+        private static readonly Dictionary<string, Material> MaterialCache = new Dictionary<string, Material>();
+        private static Material _template;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStatics()
         {
             Cache.Clear();
+            MaterialCache.Clear();
+            _template = null;
         }
 
-        /// <summary>The prefab named <paramref name="prefabName"/>, or null when it has not been imported yet.</summary>
+        /// <summary>
+        /// The model named <paramref name="prefabName"/> (the FBX in <c>Resources/EnvironmentArt</c>, or a prefab of the
+        /// same name), or null when it is not in the project.
+        /// </summary>
         public static GameObject Load(string prefabName)
         {
             if (Cache.TryGetValue(prefabName, out GameObject cached) && cached != null)
@@ -87,7 +103,101 @@ namespace JungleBooze.Gameplay.Views
                 Object.Destroy(colliders[i]);
             }
 
+            Camera[] cameras = instance.GetComponentsInChildren<Camera>(true);
+            for (int i = 0; i < cameras.Length; i++)
+            {
+                Object.Destroy(cameras[i].gameObject);
+            }
+
+            Light[] lights = instance.GetComponentsInChildren<Light>(true);
+            for (int i = 0; i < lights.Length; i++)
+            {
+                Object.Destroy(lights[i].gameObject);
+            }
+
+            EnsureTexturedMaterials(instance, ResourcesFolder + prefabName + BaseColorSuffix, prefabName);
             return instance.transform;
+        }
+
+        /// <summary>
+        /// Safety net for models whose imported material lost its texture (or the editor remap has not run): builds one
+        /// shared material per model from <c>&lt;name&gt;_basecolor.png</c>, cloned from the active pipeline's primitive
+        /// material (no shader lookup by name). Models that already carry a textured material are left alone.
+        /// </summary>
+        public static void EnsureTexturedMaterials(GameObject instance, string textureResourcePath, string materialKey)
+        {
+            Renderer[] renderers = instance.GetComponentsInChildren<Renderer>(true);
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                Renderer r = renderers[i];
+                r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                r.receiveShadows = false;
+                Material current = r.sharedMaterial;
+                if (current != null && current.mainTexture != null)
+                {
+                    continue;
+                }
+
+                Material fixedMaterial = GetRuntimeMaterial(materialKey, textureResourcePath);
+                if (fixedMaterial == null)
+                {
+                    continue;
+                }
+
+                int count = Mathf.Max(1, r.sharedMaterials.Length);
+                var materials = new Material[count];
+                for (int m = 0; m < count; m++)
+                {
+                    materials[m] = fixedMaterial;
+                }
+
+                r.sharedMaterials = materials;
+            }
+        }
+
+        private static Material GetRuntimeMaterial(string materialKey, string textureResourcePath)
+        {
+            if (MaterialCache.TryGetValue(materialKey, out Material cached) && cached != null)
+            {
+                return cached;
+            }
+
+            var texture = Resources.Load<Texture2D>(textureResourcePath);
+            if (texture == null)
+            {
+                return null;
+            }
+
+            if (_template == null)
+            {
+                GameObject probe = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                _template = probe.GetComponent<MeshRenderer>().sharedMaterial;
+                Object.Destroy(probe);
+            }
+
+            if (_template == null)
+            {
+                return null;
+            }
+
+            var material = new Material(_template) { name = "EnvArt_" + materialKey, mainTexture = texture };
+            if (material.HasProperty("_BaseMap"))
+            {
+                material.SetTexture("_BaseMap", texture);
+            }
+
+            if (material.HasProperty("_BaseColor"))
+            {
+                material.SetColor("_BaseColor", Color.white);
+            }
+
+            if (material.HasProperty("_Smoothness"))
+            {
+                material.SetFloat("_Smoothness", 0f);
+            }
+
+            MaterialCache[materialKey] = material;
+            return material;
         }
 
         /// <summary>Turns off the renderer of a gray-box primitive (its transform keeps driving the attached art).</summary>
