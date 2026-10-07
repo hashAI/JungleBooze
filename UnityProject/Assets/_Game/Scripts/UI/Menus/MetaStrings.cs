@@ -66,6 +66,11 @@ namespace JungleBooze.UI.Menus
             return string.Format(CultureInfo.InvariantCulture, format, a);
         }
 
+        public static string Format(string format, string a)
+        {
+            return string.Format(CultureInfo.InvariantCulture, format, a);
+        }
+
         public static string Format(string format, int a, int b)
         {
             return string.Format(CultureInfo.InvariantCulture, format, a, b);
