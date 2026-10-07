@@ -102,6 +102,8 @@ namespace JungleBooze.Services.Persistence
                 data.runsPlayed = 0;
             }
 
+            RepairMeta(data);
+
             if (data.settings == null)
             {
                 data.settings = SettingsData.CreateDefault();
@@ -109,6 +111,88 @@ namespace JungleBooze.Services.Persistence
 
             data.settings.musicVolume = RepairVolume(data.settings.musicVolume, SettingsData.DefaultMusicVolume);
             data.settings.sfxVolume = RepairVolume(data.settings.sfxVolume, SettingsData.DefaultSfxVolume);
+        }
+
+        /// <summary>Missions, daily reward and shop fields (GDD 13.2 to 13.4): missing or out-of-range values are fixed.</summary>
+        private static void RepairMeta(SaveData data)
+        {
+            if (data.completedMissionSets < 0)
+            {
+                data.completedMissionSets = 0;
+            }
+
+            if (data.lastDailyClaimDay < 0)
+            {
+                data.lastDailyClaimDay = 0;
+            }
+
+            if (data.dailyChallengeDay < 0)
+            {
+                data.dailyChallengeDay = 0;
+            }
+
+            data.dailyCalendarIndex = data.dailyCalendarIndex < 0 ? 0 : data.dailyCalendarIndex % 7;
+            if (data.headStarts < 0)
+            {
+                data.headStarts = 0;
+            }
+
+            if (data.shieldStarts < 0)
+            {
+                data.shieldStarts = 0;
+            }
+
+            if (data.outfitPieces < 0)
+            {
+                data.outfitPieces = 0;
+            }
+
+            if (data.coinsSpentInShop < 0L)
+            {
+                data.coinsSpentInShop = 0L;
+            }
+
+            if (data.powerUpLevels == null || data.powerUpLevels.Length != 3)
+            {
+                data.powerUpLevels = new[] { 1, 1, 1 };
+            }
+
+            for (int i = 0; i < data.powerUpLevels.Length; i++)
+            {
+                data.powerUpLevels[i] = Mathf.Clamp(data.powerUpLevels[i], 1, 5);
+            }
+
+            // A damaged mission set is dropped; the mission service makes a new one.
+            if (data.missions == null || data.missions.Length != 3)
+            {
+                data.missions = new MissionSlotData[0];
+                return;
+            }
+
+            for (int i = 0; i < data.missions.Length; i++)
+            {
+                MissionSlotData slot = data.missions[i];
+                if (slot == null)
+                {
+                    data.missions = new MissionSlotData[0];
+                    return;
+                }
+
+                if (slot.target < 1)
+                {
+                    slot.target = 1;
+                }
+
+                if (slot.progress < 0)
+                {
+                    slot.progress = 0;
+                }
+
+                if (slot.reward < 0)
+                {
+                    slot.reward = 0;
+                }
+            }
         }
 
         private static float RepairVolume(float value, float fallback)

@@ -93,6 +93,44 @@ namespace JungleBooze.Services.Persistence
             }
         }
 
+        /// <summary>The save's data, for the missions, daily reward and shop services of this assembly.</summary>
+        internal SaveData Data => _data;
+
+        /// <summary>Marks the data as changed; the services call it after every change.</summary>
+        internal void MarkDirty()
+        {
+            _dirty = true;
+        }
+
+        /// <summary>Adds coins to the wallet (mission, set and daily rewards). Does not write.</summary>
+        internal void AddCoins(long amount)
+        {
+            if (amount <= 0L)
+            {
+                return;
+            }
+
+            _data.totalCoins = _data.totalCoins > long.MaxValue - amount ? long.MaxValue : _data.totalCoins + amount;
+            _dirty = true;
+        }
+
+        /// <summary>
+        /// Takes <paramref name="amount"/> coins from the wallet for a shop purchase. Returns false (and changes
+        /// nothing) if the wallet holds fewer. Does not write.
+        /// </summary>
+        internal bool TrySpendCoinsInShop(long amount)
+        {
+            if (amount < 0L || _data.totalCoins < amount)
+            {
+                return false;
+            }
+
+            _data.totalCoins -= amount;
+            _data.coinsSpentInShop += amount;
+            _dirty = true;
+            return true;
+        }
+
         /// <summary>The last run recorded this session (default value until the first one).</summary>
         public RunRecord LastRun { get; private set; }
 
