@@ -1,5 +1,7 @@
 """Headless (pip bpy): convert fitted environment GLBs to FBX + base color PNG for Unity (no glTFast needed).
-Usage: python3 glb_to_fbx.py <models_dir> [Name ...]   Writes <Name>.fbx (Y up, -Z forward, 1 unit = 1 m) and <Name>.png beside the GLB."""
+Usage: python3 glb_to_fbx.py <models_dir> [Name ...]   Writes <Name>.fbx (Y up, -Z forward, 1 unit = 1 m) and <Name>.png beside the GLB.
+The axis change is baked into the vertices (bake_space_transform) so the root node has no rotation: the game
+resets each model's local rotation, and an unbaked -90 X root rotation would leave every model lying on its side."""
 import os, sys, bpy
 
 def convert(d, name):
@@ -20,7 +22,7 @@ def convert(d, name):
         mat.name = name
     bpy.ops.export_scene.fbx(filepath=os.path.join(d, name + ".fbx"), use_selection=True, object_types={"MESH"}, path_mode="COPY",
         embed_textures=True, add_leaf_bones=False, apply_scale_options="FBX_SCALE_ALL", global_scale=1.0, apply_unit_scale=True,
-        axis_forward="-Z", axis_up="Y", mesh_smooth_type="FACE")
+        axis_forward="-Z", axis_up="Y", bake_space_transform=True, mesh_smooth_type="FACE")
     print("ok", name, len(ob.data.polygons))
 
 if __name__ == "__main__":

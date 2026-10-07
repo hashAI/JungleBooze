@@ -69,6 +69,14 @@ namespace JungleBooze.Gameplay.Views
             if (prefab != null)
             {
                 Cache[prefabName] = prefab;
+
+                // Attach resets the root rotation, so a model that relies on one (an FBX exported without baked axes)
+                // would end up lying on its side. tools/blender/glb_to_fbx.py bakes the axes; this flags any that don't.
+                if (prefab.transform.localRotation != Quaternion.identity)
+                {
+                    Debug.LogWarning("[JungleBooze] Environment art '" + prefabName + "' has a root rotation of "
+                        + prefab.transform.localEulerAngles + "; re-export it with baked axes or it will lie on its side.");
+                }
             }
 
             return prefab;
