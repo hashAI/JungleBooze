@@ -4,7 +4,8 @@
     "references": [
         "JungleBooze.Core",
         "JungleBooze.Gameplay",
-        "Unity.InputSystem"
+        "Unity.InputSystem",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -35,8 +35,11 @@ namespace JungleBooze.Gameplay.Runner
 
         public int SlideTicksLeft { get; internal set; }
 
-        /// <summary>Collision stage hook; always 0 until stumbles exist.</summary>
+        /// <summary>Ticks left in the daze window after a stumble; 0 when not dazed.</summary>
         public int DazeTicksLeft { get; internal set; }
+
+        /// <summary>A side-stumble bounce back to the origin lane is running.</summary>
+        public bool StumbleBounceActive { get; internal set; }
 
         public int InvulnerableTicks { get; internal set; }
 

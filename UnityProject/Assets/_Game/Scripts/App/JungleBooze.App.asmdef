@@ -5,7 +5,9 @@
         "JungleBooze.Core",
         "JungleBooze.Gameplay",
         "JungleBooze.UI",
-        "JungleBooze.Services"
+        "JungleBooze.Services",
+        "UnityEngine.UI",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

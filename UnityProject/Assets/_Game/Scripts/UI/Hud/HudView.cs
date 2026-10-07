@@ -218,6 +218,13 @@ namespace JungleBooze.UI.Hud
                 return;
             }
 
+            // Buttons keep no selection, so keyboard Submit/Space never re-clicks the last pressed button.
+            EventSystem eventSystem = EventSystem.current;
+            if (eventSystem != null && eventSystem.currentSelectedGameObject != null)
+            {
+                eventSystem.SetSelectedGameObject(null);
+            }
+
             int meters = MetersOf(session.DistanceM);
             _distance.SetValue(meters);
             _coins.SetValue(session.Coins);

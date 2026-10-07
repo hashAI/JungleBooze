@@ -4,8 +4,11 @@ using JungleBooze.Core;
 namespace JungleBooze.Gameplay.Runner
 {
     /// <summary>
-    /// Deterministic runner movement simulation, spec 001 sections 4 to 8 (collisions come with the obstacle stage).
-    /// One call to <see cref="Step(InputCommand)"/> = one 60 Hz tick, processed in the order of rule I8.
+    /// Deterministic runner simulation: movement (spec 001 sections 4 to 8) and collisions (spec 001 section 9 with
+    /// the spec 002 changes: final boxes from <see cref="ITrackQuery.GetBoxes"/>, relative-motion sweep for movers,
+    /// stumble, daze, edge forgiveness, near-miss, invulnerability).
+    /// One call to <see cref="Step(InputCommand)"/> = one 60 Hz tick, processed in the order of rule I8 as amended by
+    /// spec 002 section 13.3 (hook points 7a, 11a, 11b in <see cref="IRunnerStepHooks"/>).
     /// Plain C#: no engine time, engine randomness or physics; no allocations per step.
     /// </summary>
     public sealed class RunnerSimulation
@@ -13,12 +16,40 @@ namespace JungleBooze.Gameplay.Runner
         /// <summary>Tolerance for "Y reached the surface" so float rounding never adds a tick to a fast-fall.</summary>
         private const double SurfaceEpsilonM = 1e-6;
 
+        /// <summary>Boxes read from the track per query. HERO's swept window holds a handful; overflow is counted.</summary>
+        private const int BoxBufferCapacity = 64;
+
+        /// <summary>Obstacles tracked during HERO's pass (stumble ignore list and near-miss); overflow is counted.</summary>
+        private const int EngagedCapacity = 32;
+
+        /// <summary>Float tolerance for the edge-forgiveness threshold (1.44 m is not exact in float).</summary>
+        private const double EdgeForgivenessToleranceM = 1e-5;
+
+        /// <summary>Float tolerance for the near-miss threshold.</summary>
+        private const double NearMissToleranceM = 1e-6;
+
+        private const byte EngagedContact = 1;
+        private const byte EngagedInvulnerable = 2;
+
         private readonly RunnerConfig _config;
         private readonly SpeedCurve _curve;
         private readonly ITrackQuery _track;
         private readonly IHeadroomQuery _headroom;
         private readonly RunnerEventBuffer _events;
         private readonly CommandOutcomeCounters _counters = new CommandOutcomeCounters();
+
+        private readonly ObstacleBox[] _boxes = new ObstacleBox[BoxBufferCapacity];
+        private readonly int[] _contactBox = new int[BoxBufferCapacity];
+        private readonly double[] _contactTime = new double[BoxBufferCapacity];
+        private readonly ContactEntry[] _contactEntry = new ContactEntry[BoxBufferCapacity];
+        private readonly bool[] _contactLateral = new bool[BoxBufferCapacity];
+
+        private readonly int[] _engagedId = new int[EngagedCapacity];
+        private readonly double[] _engagedMaxZ = new double[EngagedCapacity];
+        private readonly double[] _engagedMinGap = new double[EngagedCapacity];
+        private readonly byte[] _engagedFlags = new byte[EngagedCapacity];
+        private readonly ObstacleArchetype[] _engagedArchetype = new ObstacleArchetype[EngagedCapacity];
+        private int _engagedCount;
 
         private long _tick;
         private float _x;
@@ -55,6 +86,18 @@ namespace JungleBooze.Gameplay.Runner
         private int _invulnerableTicks;
         private int _nextSpeedRow;
         private DeathCause _deathCause;
+        private ObstacleArchetype _deathArchetype;
+        private int _deathEntityId;
+        private bool _deathAfterStumble;
+
+        private bool _bounceActive;
+        private float _bounceStartX;
+        private int _bounceEndLane;
+        private int _bounceElapsed;
+        private int _dazeTicksLeft;
+
+        private bool _stumbledThisTick;
+        private int _nearMissesThisTick;
 
         private TickOutcomes _lastOutcomes;
 
@@ -67,7 +110,9 @@ namespace JungleBooze.Gameplay.Runner
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _curve = speedCurve ?? throw new ArgumentNullException(nameof(speedCurve));
             _track = track ?? FlatTrackQuery.Instance;
-            _headroom = headroom ?? OpenHeadroomQuery.Instance;
+
+            // Null = derive headroom from the track's obstacle boxes (spec 001 6.4.5). Tests may override it.
+            _headroom = headroom;
             _events = new RunnerEventBuffer(config.EventBufferCapacity);
 
             _targetLane = config.StartLane;
@@ -111,7 +156,37 @@ namespace JungleBooze.Gameplay.Runner
         /// <summary>While true, the tutorial speed replaces the speed curve (spec 4.1.2). Set by onboarding.</summary>
         public bool TutorialActive { get; set; }
 
+        /// <summary>
+        /// Speed-source hook (spec 002 16.1.6). Null (default) = the speed curve, or its tutorial speed while
+        /// <see cref="TutorialActive"/>. The run-start ramp and <see cref="SpeedMultiplier"/> still apply.
+        /// </summary>
+        public ISpeedSource SpeedSource { get; set; }
+
+        /// <summary>Track, coin and score systems called at steps 7a, 11a and 11b (spec 002 13.3). Null = none.</summary>
+        public IRunnerStepHooks StepHooks { get; set; }
+
         public DeathCause DeathCause => _deathCause;
+
+        /// <summary>Archetype that killed HERO (<see cref="ObstacleArchetype.Gap"/> for a fall; None while alive).</summary>
+        public ObstacleArchetype DeathArchetype => _deathArchetype;
+
+        /// <summary>Obstacle id that killed HERO; 0 for a fall or while alive.</summary>
+        public int DeathEntityId => _deathEntityId;
+
+        /// <summary>The death was a second stumble while dazed ("Tripped twice", spec 001 9.4.5).</summary>
+        public bool DeathAfterStumble => _deathAfterStumble;
+
+        /// <summary>Ticks left in the daze window after a stumble (spec 001 9.4.4).</summary>
+        public int DazeTicksLeft => _dazeTicksLeft;
+
+        /// <summary>A side-stumble bounce is running (spec 001 9.4.2, rule L2).</summary>
+        public bool IsBouncing => _bounceActive;
+
+        /// <summary>Times a track query filled the whole box buffer. Non-zero is an error in dev builds.</summary>
+        public int BoxBufferOverflowCount { get; private set; }
+
+        /// <summary>Times the pass-tracking table was full. Non-zero is an error in dev builds.</summary>
+        public int EngagedOverflowCount { get; private set; }
 
         public bool HasBufferedJump => _bufferedJump;
 
@@ -125,6 +200,15 @@ namespace JungleBooze.Gameplay.Runner
         public void SetInvulnerableTicks(int ticks)
         {
             _invulnerableTicks = Math.Max(0, ticks);
+        }
+
+        /// <summary>
+        /// Writes an event from a step hook (track, coins, score) into this runner's event buffer, so views read one
+        /// ordered stream. Only call from <see cref="IRunnerStepHooks"/> during a step.
+        /// </summary>
+        public void EmitExternal(in RunnerEvent e)
+        {
+            _events.Add(e);
         }
 
         /// <summary>Reads this tick's commands from <paramref name="input"/> and steps once.</summary>
@@ -144,12 +228,20 @@ namespace JungleBooze.Gameplay.Runner
             Step(frame.Commands);
         }
 
-        /// <summary>Processes one 60 Hz tick (rule I8).</summary>
+        /// <summary>Processes one 60 Hz tick (rule I8, amended by spec 002 section 13.3).</summary>
         public void Step(InputCommand commands)
         {
             long tick = _tick;
             Previous = Current;
             _lastOutcomes = default;
+            _stumbledThisTick = false;
+            _nearMissesThisTick = 0;
+
+            // HERO's box at the start of the tick, for the swept collision test (step 11).
+            float xStart = _x;
+            double yStart = _y;
+            double zStart = _z;
+            float heightStart = CurrentHitboxHeight();
 
             if (tick == 0)
             {
@@ -229,8 +321,24 @@ namespace JungleBooze.Gameplay.Runner
                 _lastOutcomes.Slide = outcome;
             }
 
+            // Hitbox height for this tick's sweep. A command (step 6) changes the box at the start of the tick:
+            // a slide shrinks it for the whole tick, a jump out of a slide grows it during the tick (so rising into a
+            // high barrier is detected as "from below"). Changes in steps 9 and 10 (slide on landing, standing up
+            // after the slide timer) take effect from the next tick's sweep, so standing up just after a barrier's
+            // back face can never be swept into it.
+            float heightCmd = CurrentHitboxHeight();
+            float sweepHeightStart = heightCmd < heightStart ? heightCmd : heightStart;
+
             // (7) Speed and z.
             UpdateSpeedAndDistance(tick);
+
+            // (7a) HOOK: track update (generate ahead, despawn behind, movers, ChunkEntered/TierChanged).
+            IRunnerStepHooks hooks = StepHooks;
+            if (hooks != null)
+            {
+                RunnerTickInfo trackInfo = BuildTickInfo(tick, xStart, yStart, zStart);
+                hooks.OnTrackUpdate(this, in trackInfo);
+            }
 
             // (8) Lane tween and queued-move start.
             UpdateLaneMove(tick);
@@ -244,10 +352,29 @@ namespace JungleBooze.Gameplay.Runner
                 UpdateSlideTimer(tick);
             }
 
-            // (11) Collisions: obstacle stage. Only the invulnerability countdown lives here for now.
+            // (11) Collisions against the track's boxes (section 9). Skipped if HERO fell to death in step 9.
+            if (_locomotion != Locomotion.Dead)
+            {
+                UpdateCollisions(tick, xStart, yStart, zStart, sweepHeightStart, heightCmd);
+            }
+
             if (_invulnerableTicks > 0)
             {
                 _invulnerableTicks--;
+            }
+
+            if (hooks != null)
+            {
+                RunnerTickInfo info = BuildTickInfo(tick, xStart, yStart, zStart);
+
+                // (11a) HOOK: coin pickups and streak, skipped on the death tick.
+                if (_locomotion != Locomotion.Dead)
+                {
+                    hooks.OnCoinPickups(this, in info);
+                }
+
+                // (11b) HOOK: score (distance, bonuses from this tick's near-misses and streaks).
+                hooks.OnScore(this, in info);
             }
 
             // (12) Events were written in place; publish the snapshot.
@@ -316,7 +443,97 @@ namespace JungleBooze.Gameplay.Runner
             h = Mix(h, _invulnerableTicks);
             h = Mix(h, _nextSpeedRow);
             h = Mix(h, (long)_deathCause);
+            h = Mix(h, (long)_deathArchetype);
+            h = Mix(h, _deathEntityId);
+            h = Mix(h, _deathAfterStumble ? 1L : 0L);
+            h = Mix(h, _bounceActive ? 1L : 0L);
+            h = Mix(h, (double)_bounceStartX);
+            h = Mix(h, _bounceEndLane);
+            h = Mix(h, _bounceElapsed);
+            h = Mix(h, _dazeTicksLeft);
+            h = Mix(h, _engagedCount);
+            for (int i = 0; i < _engagedCount; i++)
+            {
+                h = Mix(h, _engagedId[i]);
+                h = Mix(h, _engagedMaxZ[i]);
+                h = Mix(h, _engagedMinGap[i]);
+                h = Mix(h, _engagedFlags[i]);
+                h = Mix(h, (long)_engagedArchetype[i]);
+            }
+
             return h;
+        }
+
+        /// <summary>
+        /// Makes this runner's simulation state an exact copy of <paramref name="source"/>'s (spec 002 16.1.6:
+        /// cheap state copies for the chunk validator's search). Copies every field that affects future steps,
+        /// the outcome counters and the published snapshots. Does not copy the event buffer contents, the track,
+        /// headroom query, speed source or hooks (each runner keeps its own). Both runners must use the same
+        /// <see cref="RunnerConfig"/> instance. No allocations.
+        /// </summary>
+        public void CopyStateFrom(RunnerSimulation source)
+        {
+            if (source == null)
+            {
+                throw new ArgumentNullException(nameof(source));
+            }
+
+            if (!ReferenceEquals(source._config, _config))
+            {
+                throw new ArgumentException("Both runners must share one RunnerConfig.", nameof(source));
+            }
+
+            _tick = source._tick;
+            _x = source._x;
+            _y = source._y;
+            _z = source._z;
+            _speed = source._speed;
+            _locomotion = source._locomotion;
+            _targetLane = source._targetLane;
+            _moveActive = source._moveActive;
+            _moveStartX = source._moveStartX;
+            _moveEndLane = source._moveEndLane;
+            _moveDir = source._moveDir;
+            _moveElapsed = source._moveElapsed;
+            _queuedDir = source._queuedDir;
+            _bufferedJump = source._bufferedJump;
+            _bufferedJumpTick = source._bufferedJumpTick;
+            _jumpStartTick = source._jumpStartTick;
+            _airStartTick = source._airStartTick;
+            _slideOnLanding = source._slideOnLanding;
+            _fastFallStartTick = source._fastFallStartTick;
+            _fastFallStartY = source._fastFallStartY;
+            _fastFallSpeed = source._fastFallSpeed;
+            _fallStartTick = source._fallStartTick;
+            _fallStartY = source._fallStartY;
+            _fallStartVelocity = source._fallStartVelocity;
+            _slideTicksLeft = source._slideTicksLeft;
+            _coyoteTicksLeft = source._coyoteTicksLeft;
+            _invulnerableTicks = source._invulnerableTicks;
+            _nextSpeedRow = source._nextSpeedRow;
+            _deathCause = source._deathCause;
+            _deathArchetype = source._deathArchetype;
+            _deathEntityId = source._deathEntityId;
+            _deathAfterStumble = source._deathAfterStumble;
+            _bounceActive = source._bounceActive;
+            _bounceStartX = source._bounceStartX;
+            _bounceEndLane = source._bounceEndLane;
+            _bounceElapsed = source._bounceElapsed;
+            _dazeTicksLeft = source._dazeTicksLeft;
+            _stumbledThisTick = source._stumbledThisTick;
+            _nearMissesThisTick = source._nearMissesThisTick;
+            _engagedCount = source._engagedCount;
+            Array.Copy(source._engagedId, _engagedId, _engagedCount);
+            Array.Copy(source._engagedMaxZ, _engagedMaxZ, _engagedCount);
+            Array.Copy(source._engagedMinGap, _engagedMinGap, _engagedCount);
+            Array.Copy(source._engagedFlags, _engagedFlags, _engagedCount);
+            Array.Copy(source._engagedArchetype, _engagedArchetype, _engagedCount);
+            _lastOutcomes = source._lastOutcomes;
+            _counters.CopyFrom(source._counters);
+            SpeedMultiplier = source.SpeedMultiplier;
+            TutorialActive = source.TutorialActive;
+            Current = source.Current;
+            Previous = source.Previous;
         }
 
         private static ulong Mix(ulong hash, double value)
@@ -389,7 +606,17 @@ namespace JungleBooze.Gameplay.Runner
                 return CommandOutcome.Ignored;
             }
 
-            // L2 (stumble bounce) arrives with the collision stage.
+            // L2: during a stumble bounce, store the newest lateral command; it starts when the bounce ends.
+            if (_bounceActive)
+            {
+                if (_queuedDir != 0)
+                {
+                    _counters.Resolve(CommandOutcome.Queued, CommandOutcome.Superseded);
+                }
+
+                _queuedDir = dir;
+                return CommandOutcome.Queued;
+            }
 
             // L3.
             if (!_moveActive)
@@ -473,7 +700,9 @@ namespace JungleBooze.Gameplay.Runner
 
         private void UpdateLaneMove(long tick)
         {
-            if (_queuedDir != 0 && (!_moveActive || _moveElapsed >= _config.LaneQueueStartTick))
+            // A queued move waits for a running bounce to finish (rule L2); it starts on the tick after the bounce
+            // arrives, so the bounce always ends exactly on the origin lane center.
+            if (_queuedDir != 0 && !_bounceActive && (!_moveActive || _moveElapsed >= _config.LaneQueueStartTick))
             {
                 int dir = _queuedDir;
                 _queuedDir = 0;
@@ -489,6 +718,12 @@ namespace JungleBooze.Gameplay.Runner
                     EmitLaneBlocked(dir, tick);
                     _counters.Resolve(CommandOutcome.Queued, CommandOutcome.Bumped);
                 }
+            }
+
+            if (_bounceActive)
+            {
+                UpdateBounce();
+                return;
             }
 
             if (!_moveActive)
@@ -508,6 +743,23 @@ namespace JungleBooze.Gameplay.Runner
 
             double p = EaseProgress(_moveElapsed);
             _x = (float)(_moveStartX + (endX - _moveStartX) * p);
+        }
+
+        private void UpdateBounce()
+        {
+            _bounceElapsed++;
+            float endX = _config.LaneCenterX(_bounceEndLane);
+            if (_bounceElapsed >= _config.StumbleBounceTicks)
+            {
+                _x = endX;
+                _bounceActive = false;
+                _bounceElapsed = 0;
+                return;
+            }
+
+            double u = (double)_bounceElapsed / _config.StumbleBounceTicks;
+            double p = 1.0 - Math.Pow(1.0 - u, _config.LaneSwitchEaseExponent);
+            _x = (float)(_bounceStartX + (endX - _bounceStartX) * p);
         }
 
         private double EaseProgress(int elapsedTicks)
@@ -870,9 +1122,7 @@ namespace JungleBooze.Gameplay.Runner
             }
 
             // Timer done: stand up only if the standing box is clear (6.4.5); otherwise keep sliding.
-            float halfWidth = _config.PlayerHitboxWidthM * 0.5f;
-            double halfDepth = _config.PlayerHitboxDepthM * 0.5;
-            if (_headroom.CanStand(_x - halfWidth, _x + halfWidth, _z - halfDepth, _z + halfDepth, _config.StandingHeightM))
+            if (CanStandHere())
             {
                 _locomotion = Locomotion.Running;
                 Emit(RunnerEventType.SlideEnded, tick, 0, (byte)_targetLane, 0, (short)SlideEndReason.Timeout);
@@ -881,17 +1131,74 @@ namespace JungleBooze.Gameplay.Runner
 
         private bool HasGroundUnderHero()
         {
+            double halfDepth = _config.PlayerHitboxDepthM * 0.5;
+            return _track.HasGround(_x, _z - halfDepth, _z + halfDepth);
+        }
+
+        /// <summary>
+        /// Spec 001 6.4.5: may a sliding HERO stand up here? Uses the <see cref="IHeadroomQuery"/> override when one
+        /// was given, otherwise checks the standing box (bottom at the surface) against the track's obstacle boxes.
+        /// </summary>
+        private bool CanStandHere()
+        {
             float halfWidth = _config.PlayerHitboxWidthM * 0.5f;
             double halfDepth = _config.PlayerHitboxDepthM * 0.5;
-            return _track.HasGround(_x - halfWidth, _x + halfWidth, _z - halfDepth, _z + halfDepth);
+            if (_headroom != null)
+            {
+                return _headroom.CanStand(_x - halfWidth, _x + halfWidth, _z - halfDepth, _z + halfDepth, _config.StandingHeightM);
+            }
+
+            double zMin = _z - halfDepth;
+            double zMax = _z + halfDepth;
+            int count = QueryBoxes(zMin, zMax);
+            float xMin = _x - halfWidth;
+            float xMax = _x + halfWidth;
+            float top = (float)_y + _config.StandingHeightM;
+            for (int i = 0; i < count; i++)
+            {
+                if (_boxes[i].XMin < xMax && _boxes[i].XMax > xMin
+                    && _boxes[i].YMin < top && _boxes[i].YMax > (float)_y
+                    && _boxes[i].ZMin < zMax && _boxes[i].ZMax > zMin)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private int QueryBoxes(double zMin, double zMax)
+        {
+            int count = _track.GetBoxes(zMin, zMax, new Span<ObstacleBox>(_boxes));
+            if (count >= _boxes.Length)
+            {
+                BoxBufferOverflowCount++;
+                count = _boxes.Length;
+            }
+
+            return count;
+        }
+
+        private float CurrentHitboxHeight()
+        {
+            return _locomotion == Locomotion.Sliding ? _config.SlidingHeightM : _config.StandingHeightM;
         }
 
         private void Die(long tick, DeathCause cause)
         {
+            Die(tick, cause, cause == DeathCause.Fell ? ObstacleArchetype.Gap : ObstacleArchetype.None, 0, false);
+        }
+
+        private void Die(long tick, DeathCause cause, ObstacleArchetype archetype, int entityId, bool afterStumble)
+        {
             _locomotion = Locomotion.Dead;
             _deathCause = cause;
+            _deathArchetype = archetype;
+            _deathEntityId = entityId;
+            _deathAfterStumble = afterStumble;
             _speed = 0.0;
             _moveActive = false;
+            _bounceActive = false;
             _slideOnLanding = false;
 
             // Rule I5: the buffer and the lateral queue can no longer fire.
@@ -907,14 +1214,332 @@ namespace JungleBooze.Gameplay.Runner
                 _counters.Resolve(CommandOutcome.Queued, CommandOutcome.Invalidated);
             }
 
-            Emit(RunnerEventType.Died, tick, 0, (byte)_targetLane, 0, (short)cause);
+            Emit(
+                RunnerEventType.Died,
+                tick,
+                0,
+                (byte)_targetLane,
+                afterStumble ? RunnerEventFlags.AfterStumble : (byte)0,
+                (short)cause,
+                entityId,
+                archetype);
+        }
+
+        // ---- Collisions (spec 001 section 9, spec 002 section 5) ----
+
+        private void UpdateCollisions(long tick, float xStart, double yStart, double zStart, float heightStart, float heightEnd)
+        {
+            // Daze countdown (9.4.4). A stumble on tick s sets 180; ticks s+1 .. s+179 are still dazed.
+            if (_dazeTicksLeft > 0)
+            {
+                _dazeTicksLeft--;
+                if (_dazeTicksLeft == 0)
+                {
+                    Emit(RunnerEventType.DazeEnded, tick, 0, (byte)_targetLane, 0, 0);
+                }
+            }
+
+            double halfWidth = _config.PlayerHitboxWidthM * 0.5;
+            double halfDepth = _config.PlayerHitboxDepthM * 0.5;
+            HeroSweep sweep = HeroSweep.FromCenters(
+                xStart,
+                yStart,
+                zStart,
+                heightStart,
+                _x,
+                _y,
+                _z,
+                heightEnd,
+                halfWidth,
+                halfDepth);
+
+            double zLo = (zStart < _z ? zStart : _z) - halfDepth;
+            double zHi = (zStart > _z ? zStart : _z) + halfDepth;
+            int count = QueryBoxes(zLo, zHi);
+            bool invulnerable = _invulnerableTicks > 0;
+            int contacts = 0;
+
+            for (int i = 0; i < count; i++)
+            {
+                int engaged = FindOrAddEngaged(in _boxes[i]);
+                if (engaged >= 0)
+                {
+                    if (invulnerable)
+                    {
+                        _engagedFlags[engaged] |= EngagedInvulnerable;
+                    }
+
+                    if ((_engagedFlags[engaged] & EngagedContact) != 0)
+                    {
+                        // Stumbled on (or passed through while invulnerable): ignored for the rest of the pass.
+                        continue;
+                    }
+                }
+
+                bool forgiven = CollisionRules.IsEdgeForgiven(
+                    xStart,
+                    _x,
+                    _boxes[i].CenterX,
+                    _config.LaneWidthM * (double)_config.EdgeForgivenessFraction,
+                    EdgeForgivenessToleranceM);
+
+                if (!forgiven
+                    && SweptAabb.TrySweep(in sweep, in _boxes[i], out double time, out ContactEntry entry, out bool lateral))
+                {
+                    InsertContact(contacts, i, time, entry, lateral);
+                    contacts++;
+                    continue;
+                }
+
+                if (engaged >= 0)
+                {
+                    double gap = SweptAabb.GapXY(in sweep, in _boxes[i]);
+                    if (gap < _engagedMinGap[engaged])
+                    {
+                        _engagedMinGap[engaged] = gap;
+                    }
+                }
+            }
+
+            for (int c = 0; c < contacts; c++)
+            {
+                int boxIndex = _contactBox[c];
+                int engaged = FindEngaged(_boxes[boxIndex].Id);
+                if (engaged >= 0 && (_engagedFlags[engaged] & EngagedContact) != 0)
+                {
+                    // Another box of an obstacle already handled on this tick (multi-lane obstacles).
+                    continue;
+                }
+
+                if (engaged >= 0)
+                {
+                    _engagedFlags[engaged] |= EngagedContact;
+                }
+
+                if (invulnerable)
+                {
+                    // 9.6: no death and no stumble; the obstacle is ignored for the rest of the pass. [ASSUMED]
+                    continue;
+                }
+
+                ContactEntry entry = _contactEntry[c];
+                if (CollisionRules.IsLethal(entry))
+                {
+                    DieOnContact(tick, boxIndex, _contactTime[c], false, xStart, yStart, zStart);
+                    return;
+                }
+
+                if (_dazeTicksLeft > 0)
+                {
+                    // 9.4.5: a second stumble while dazed is lethal ("Tripped twice").
+                    DieOnContact(tick, boxIndex, _contactTime[c], true, xStart, yStart, zStart);
+                    return;
+                }
+
+                Stumble(tick, boxIndex, _contactLateral[c]);
+            }
+
+            UpdatePasses(tick, halfDepth);
+        }
+
+        /// <summary>Inserts a contact keeping the list sorted by entry time (stable: equal times keep box order).</summary>
+        private void InsertContact(int count, int boxIndex, double time, ContactEntry entry, bool lateral)
+        {
+            int at = count;
+            while (at > 0 && _contactTime[at - 1] > time)
+            {
+                _contactBox[at] = _contactBox[at - 1];
+                _contactTime[at] = _contactTime[at - 1];
+                _contactEntry[at] = _contactEntry[at - 1];
+                _contactLateral[at] = _contactLateral[at - 1];
+                at--;
+            }
+
+            _contactBox[at] = boxIndex;
+            _contactTime[at] = time;
+            _contactEntry[at] = entry;
+            _contactLateral[at] = lateral;
+        }
+
+        private void DieOnContact(long tick, int boxIndex, double time, bool afterStumble, float xStart, double yStart, double zStart)
+        {
+            // Freeze HERO at the moment of contact, so the death pose is never drawn inside the obstacle.
+            _x = (float)(xStart + (_x - xStart) * time);
+            _y = yStart + (_y - yStart) * time;
+            _z = zStart + (_z - zStart) * time;
+            Die(tick, DeathCause.Hit, _boxes[boxIndex].Archetype, _boxes[boxIndex].Id, afterStumble);
+        }
+
+        private void Stumble(long tick, int boxIndex, bool lateral)
+        {
+            _stumbledThisTick = true;
+            _dazeTicksLeft = _config.StumbleDazeTicks;
+            sbyte bounceDir = 0;
+            if (lateral)
+            {
+                bounceDir = StartBounce(_boxes[boxIndex].CenterX);
+            }
+
+            Emit(
+                RunnerEventType.Stumbled,
+                tick,
+                bounceDir,
+                (byte)_targetLane,
+                CollisionRules.StumbleFlag(lateral),
+                0,
+                _boxes[boxIndex].Id,
+                _boxes[boxIndex].Archetype);
+        }
+
+        /// <summary>
+        /// 9.4.2 side stumble: if a lane move is heading toward the obstacle, cancel it and its queue and tween back
+        /// to the origin lane center over <c>StumbleBounceTicks</c> with the lane ease-out. Returns the bounce
+        /// direction (0 = no bounce). With no move toward the obstacle (for example a mover rolling into a standing
+        /// HERO) there is no bounce and X is unchanged. [ASSUMED]
+        /// </summary>
+        private sbyte StartBounce(float obstacleCenterX)
+        {
+            if (!_moveActive)
+            {
+                return 0;
+            }
+
+            float side = obstacleCenterX - _x;
+            bool towardObstacle = (side > 0f && _moveDir > 0) || (side < 0f && _moveDir < 0);
+            if (!towardObstacle)
+            {
+                return 0;
+            }
+
+            int origin = _moveEndLane - _moveDir;
+            sbyte dir = (sbyte)(-_moveDir);
+            _moveActive = false;
+            _moveElapsed = 0;
+            _targetLane = origin;
+            if (_queuedDir != 0)
+            {
+                _queuedDir = 0;
+                _counters.Resolve(CommandOutcome.Queued, CommandOutcome.Cancelled);
+            }
+
+            _bounceActive = true;
+            _bounceStartX = _x;
+            _bounceEndLane = origin;
+            _bounceElapsed = 0;
+            return dir;
+        }
+
+        /// <summary>9.7: drops obstacles HERO has fully passed and emits NearMiss for the close, clean ones.</summary>
+        private void UpdatePasses(long tick, double halfDepth)
+        {
+            double heroBack = _z - halfDepth;
+            double threshold = _config.NearMissDistanceM + NearMissToleranceM;
+            int write = 0;
+            for (int i = 0; i < _engagedCount; i++)
+            {
+                if (heroBack > _engagedMaxZ[i])
+                {
+                    if ((_engagedFlags[i] & (EngagedContact | EngagedInvulnerable)) == 0 && _engagedMinGap[i] <= threshold)
+                    {
+                        _nearMissesThisTick++;
+                        Emit(RunnerEventType.NearMiss, tick, 0, (byte)_targetLane, 0, 0, _engagedId[i], _engagedArchetype[i]);
+                    }
+
+                    continue;
+                }
+
+                if (write != i)
+                {
+                    _engagedId[write] = _engagedId[i];
+                    _engagedMaxZ[write] = _engagedMaxZ[i];
+                    _engagedMinGap[write] = _engagedMinGap[i];
+                    _engagedFlags[write] = _engagedFlags[i];
+                    _engagedArchetype[write] = _engagedArchetype[i];
+                }
+
+                write++;
+            }
+
+            _engagedCount = write;
+        }
+
+        private int FindEngaged(int id)
+        {
+            for (int i = 0; i < _engagedCount; i++)
+            {
+                if (_engagedId[i] == id)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        private int FindOrAddEngaged(in ObstacleBox box)
+        {
+            int index = FindEngaged(box.Id);
+            if (index >= 0)
+            {
+                if (box.ZMax > _engagedMaxZ[index])
+                {
+                    _engagedMaxZ[index] = box.ZMax;
+                }
+
+                return index;
+            }
+
+            if (_engagedCount >= EngagedCapacity)
+            {
+                EngagedOverflowCount++;
+                return -1;
+            }
+
+            index = _engagedCount++;
+            _engagedId[index] = box.Id;
+            _engagedMaxZ[index] = box.ZMax;
+            _engagedMinGap[index] = double.PositiveInfinity;
+            _engagedFlags[index] = 0;
+            _engagedArchetype[index] = box.Archetype;
+            return index;
+        }
+
+        private RunnerTickInfo BuildTickInfo(long tick, float xStart, double yStart, double zStart)
+        {
+            return new RunnerTickInfo
+            {
+                Tick = tick,
+                X = _x,
+                XPrev = xStart,
+                Y = (float)_y,
+                YPrev = (float)yStart,
+                Z = _z,
+                ZPrev = zStart,
+                Speed = _speed,
+                HitboxHeight = CurrentHitboxHeight(),
+                HalfWidth = _config.PlayerHitboxWidthM * 0.5f,
+                HalfDepth = _config.PlayerHitboxDepthM * 0.5f,
+                OccupiedLane = ComputeOccupiedLane(),
+                IsDead = _locomotion == Locomotion.Dead,
+                StumbledThisTick = _stumbledThisTick,
+                NearMissesThisTick = _nearMissesThisTick,
+            };
         }
 
         // ---- Speed (section 4) ----
 
         private void UpdateSpeedAndDistance(long tick)
         {
-            double speed = TutorialActive ? _curve.TutorialSpeedMps : _curve.Evaluate(_z);
+            double speed;
+            if (SpeedSource != null)
+            {
+                speed = SpeedSource.GetBaseSpeedMps(_z);
+            }
+            else
+            {
+                speed = TutorialActive ? _curve.TutorialSpeedMps : _curve.Evaluate(_z);
+            }
+
             int ramp = _config.RunStartRampTicks;
             if (tick < ramp)
             {
@@ -962,14 +1587,28 @@ namespace JungleBooze.Gameplay.Runner
                 LaneMoveProgress = _moveActive ? (float)EaseProgress(_moveElapsed) : 1f,
                 JumpPhase = jumpPhase,
                 SlideTicksLeft = _locomotion == Locomotion.Sliding ? _slideTicksLeft : 0,
-                DazeTicksLeft = 0,
+                DazeTicksLeft = _dazeTicksLeft,
+                StumbleBounceActive = _bounceActive,
                 InvulnerableTicks = _invulnerableTicks,
-                HitboxHeight = _locomotion == Locomotion.Sliding ? _config.SlidingHeightM : _config.StandingHeightM,
+                HitboxHeight = CurrentHitboxHeight(),
                 IsDead = _locomotion == Locomotion.Dead,
             };
         }
 
         private void Emit(RunnerEventType type, long tick, sbyte dir, byte lane, byte flags, short value)
+        {
+            Emit(type, tick, dir, lane, flags, value, 0, ObstacleArchetype.None);
+        }
+
+        private void Emit(
+            RunnerEventType type,
+            long tick,
+            sbyte dir,
+            byte lane,
+            byte flags,
+            short value,
+            int entityId,
+            ObstacleArchetype archetype)
         {
             var e = new RunnerEvent
             {
@@ -978,8 +1617,8 @@ namespace JungleBooze.Gameplay.Runner
                 Dir = dir,
                 Lane = lane,
                 Flags = flags,
-                ObstacleId = 0,
-                Archetype = 0,
+                EntityId = entityId,
+                Archetype = (byte)archetype,
                 Value = value,
             };
             _events.Add(e);

@@ -59,6 +59,13 @@ namespace JungleBooze.Gameplay.Runner
             _counts[(int)final]++;
         }
 
+        internal void CopyFrom(CommandOutcomeCounters source)
+        {
+            Array.Copy(source._counts, _counts, _counts.Length);
+            CommandsReceived = source.CommandsReceived;
+            JumpsBufferedTotal = source.JumpsBufferedTotal;
+        }
+
         internal void Reset()
         {
             Array.Clear(_counts, 0, _counts.Length);
