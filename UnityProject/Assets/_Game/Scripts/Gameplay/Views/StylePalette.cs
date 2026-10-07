@@ -70,13 +70,18 @@ namespace JungleBooze.Gameplay.Views
         public static readonly Color JungleShadowTint = Hex(0x2E, 0x5B, 0x57);
         public static readonly Color JungleFog = Hex(0xE9, 0xC9, 0x8A);
         public static readonly Color JungleSkyHorizon = Hex(0xFF, 0xE3, 0xA3);
+        public static readonly Color JungleSkyTop = Hex(0xFF, 0xB3, 0x47);
 
-        // Section 5, other worlds (key light, shadow band tint, sky horizon, fog, path). Rim and sky-top values are
-        // not used by the gray-box (solid-color camera) and come with the real sky.
+        /// <summary>Jungle floor under the foliage walls: deeper and richer than the jungle green mid-tone (look pass).</summary>
+        public static readonly Color JungleFloor = Hex(0x2A, 0x66, 0x36);
+
+        // Section 5, other worlds (key light, shadow band tint, sky top and horizon, fog, path). Rim values come with
+        // the toon character shader.
         public static readonly Color RiverKeyLight = Hex(0xFF, 0xE6, 0xB0);
         public static readonly Color RiverShadowTint = Hex(0x1F, 0x5A, 0x6B);
         public static readonly Color RiverFog = Hex(0xCF, 0xE6, 0xDF);
         public static readonly Color RiverSkyHorizon = Hex(0xFF, 0xE8, 0xB8);
+        public static readonly Color RiverSkyTop = Hex(0x8F, 0xD3, 0xE6);
         public static readonly Color RiverPath = Hex(0xE9, 0xD3, 0xA6);
         public static readonly Color RiverPathAlternate = Hex(0xD9, 0xBF, 0x8E);
         public static readonly Color RiverBank = Hex(0x2F, 0x8F, 0x9D);
@@ -85,6 +90,7 @@ namespace JungleBooze.Gameplay.Views
         public static readonly Color MountainsShadowTint = Hex(0x6B, 0x6A, 0x9A);
         public static readonly Color MountainsFog = Hex(0xE8, 0xDC, 0xEB);
         public static readonly Color MountainsSkyHorizon = Hex(0xFF, 0xE6, 0xC7);
+        public static readonly Color MountainsSkyTop = Hex(0xF6, 0xB2, 0x6B);
         public static readonly Color MountainsPath = Hex(0xF4, 0xF1, 0xF8);
         public static readonly Color MountainsPathAlternate = Hex(0xB9, 0xB6, 0xD3);
         public static readonly Color MountainsSlope = Hex(0xD9, 0xD4, 0xE8);
@@ -93,6 +99,7 @@ namespace JungleBooze.Gameplay.Views
         public static readonly Color RuinsShadowTint = Hex(0x5A, 0x2E, 0x3A);
         public static readonly Color RuinsFog = Hex(0xE7, 0xB5, 0x8A);
         public static readonly Color RuinsSkyHorizon = Hex(0xFF, 0xD0, 0x8A);
+        public static readonly Color RuinsSkyTop = Hex(0xF2, 0x8C, 0x28);
         public static readonly Color RuinsPath = Hex(0xEB, 0xCB, 0x9E);
         public static readonly Color RuinsPathAlternate = Hex(0xD9, 0xB7, 0x85);
 
@@ -103,6 +110,7 @@ namespace JungleBooze.Gameplay.Views
         public static readonly Color DuskShadowTint = Hex(0x2B, 0x3A, 0x67);
         public static readonly Color DuskFog = Hex(0xB0, 0x60, 0x7A);
         public static readonly Color DuskSkyHorizon = Hex(0xFF, 0x8C, 0x42);
+        public static readonly Color DuskSkyTop = Hex(0x2B, 0x3A, 0x67);
 
         /// <summary>Gray-box hazard bodies per world (darker and less saturated than the path, section 4.1).</summary>
         public static readonly Color HazardDriftwood = Hex(0x4E, 0x5A, 0x55);

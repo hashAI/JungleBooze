@@ -4,7 +4,7 @@ using UnityEngine;
 namespace JungleBooze.Gameplay.Views
 {
     /// <summary>
-    /// The five gray-box themes: the four worlds and the Jungle's dusk variant (GDD 9, style guide section 5), all from
+    /// The five world themes: the four worlds and the Jungle's dusk variant (GDD 9, style guide section 5), all from
     /// <see cref="StylePalette"/>. Built once; <see cref="Get"/> does not allocate.
     /// </summary>
     public static class WorldThemes
@@ -34,10 +34,11 @@ namespace JungleBooze.Gameplay.Views
                 KeyPitchDeg = 25f,
                 ShadowTint = StylePalette.JungleShadowTint,
                 SkyHorizon = StylePalette.JungleSkyHorizon,
+                SkyTop = StylePalette.JungleSkyTop,
                 Fog = StylePalette.JungleFog,
                 Path = StylePalette.CreamPath,
                 PathAlternate = StylePalette.PathAlternate,
-                Verge = StylePalette.JungleGreen,
+                Verge = StylePalette.JungleFloor,
                 ObstacleBody = StylePalette.HazardWood,
                 MoverBody = StylePalette.HazardStone,
                 Accent = StylePalette.DeepCanopyTeal,
@@ -50,6 +51,7 @@ namespace JungleBooze.Gameplay.Views
                 KeyPitchDeg = 30f,
                 ShadowTint = StylePalette.RiverShadowTint,
                 SkyHorizon = StylePalette.RiverSkyHorizon,
+                SkyTop = StylePalette.RiverSkyTop,
                 Fog = StylePalette.RiverFog,
                 Path = StylePalette.RiverPath,
                 PathAlternate = StylePalette.RiverPathAlternate,
@@ -66,6 +68,7 @@ namespace JungleBooze.Gameplay.Views
                 KeyPitchDeg = 15f,
                 ShadowTint = StylePalette.MountainsShadowTint,
                 SkyHorizon = StylePalette.MountainsSkyHorizon,
+                SkyTop = StylePalette.MountainsSkyTop,
                 Fog = StylePalette.MountainsFog,
                 Path = StylePalette.MountainsPath,
                 PathAlternate = StylePalette.MountainsPathAlternate,
@@ -82,6 +85,7 @@ namespace JungleBooze.Gameplay.Views
                 KeyPitchDeg = 20f,
                 ShadowTint = StylePalette.RuinsShadowTint,
                 SkyHorizon = StylePalette.RuinsSkyHorizon,
+                SkyTop = StylePalette.RuinsSkyTop,
                 Fog = StylePalette.RuinsFog,
                 Path = StylePalette.RuinsPath,
                 PathAlternate = StylePalette.RuinsPathAlternate,
@@ -98,10 +102,11 @@ namespace JungleBooze.Gameplay.Views
                 KeyPitchDeg = 10f,
                 ShadowTint = StylePalette.DuskShadowTint,
                 SkyHorizon = StylePalette.DuskSkyHorizon,
+                SkyTop = StylePalette.DuskSkyTop,
                 Fog = StylePalette.DuskFog,
                 Path = Color.Lerp(StylePalette.CreamPath, StylePalette.DuskKeyLight, DuskPathKeyMix),
                 PathAlternate = Color.Lerp(StylePalette.PathAlternate, StylePalette.DuskKeyLight, DuskPathKeyMix),
-                Verge = Color.Lerp(StylePalette.JungleGreen, StylePalette.DuskShadowTint, DuskGroundShade),
+                Verge = Color.Lerp(StylePalette.JungleFloor, StylePalette.DuskShadowTint, DuskGroundShade),
                 ObstacleBody = Color.Lerp(StylePalette.HazardWood, StylePalette.DuskShadowTint, 0.25f),
                 MoverBody = Color.Lerp(StylePalette.HazardStone, StylePalette.DuskShadowTint, 0.25f),
                 Accent = StylePalette.DuskShadowTint,

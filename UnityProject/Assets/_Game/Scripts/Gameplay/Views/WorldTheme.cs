@@ -3,7 +3,7 @@ using UnityEngine;
 namespace JungleBooze.Gameplay.Views
 {
     /// <summary>
-    /// The gray-box look of one world (style guide section 5): light, fog, ground and obstacle tints. A plain value,
+    /// The look of one world (style guide section 5): light, sky, fog, ground and obstacle tints. A plain value,
     /// so blending two themes during a gateway never allocates. Built from <see cref="StylePalette"/> by
     /// <see cref="WorldThemes"/>.
     /// </summary>
@@ -18,6 +18,10 @@ namespace JungleBooze.Gameplay.Views
 
         public Color ShadowTint;
         public Color SkyHorizon;
+
+        /// <summary>Sky color overhead (style guide section 5 "Sky top"); <see cref="SkyView"/> grades horizon to top.</summary>
+        public Color SkyTop;
+
         public Color Fog;
         public Color Path;
         public Color PathAlternate;
@@ -41,6 +45,7 @@ namespace JungleBooze.Gameplay.Views
                 KeyPitchDeg = Mathf.Lerp(a.KeyPitchDeg, b.KeyPitchDeg, t),
                 ShadowTint = Color.Lerp(a.ShadowTint, b.ShadowTint, t),
                 SkyHorizon = Color.Lerp(a.SkyHorizon, b.SkyHorizon, t),
+                SkyTop = Color.Lerp(a.SkyTop, b.SkyTop, t),
                 Fog = Color.Lerp(a.Fog, b.Fog, t),
                 Path = Color.Lerp(a.Path, b.Path, t),
                 PathAlternate = Color.Lerp(a.PathAlternate, b.PathAlternate, t),
