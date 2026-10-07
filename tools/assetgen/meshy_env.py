@@ -8,7 +8,7 @@ from pathlib import Path
 BASE = "https://api.meshy.ai/openapi"
 H = {"Authorization": "Bearer " + os.environ.get("MESHY_API_KEY", "")}
 HERE = Path(__file__).parent
-LEDGER = HERE / "env_spend_log.json"
+LEDGER = HERE / "env_spend_log.jsonl"  # append-only; safe for parallel runs
 RAW = Path(os.environ.get("ENV_RAW", HERE / "raw_env"))
 CAP = 450
 STYLE = ("Inkbound Pulp style: stylized low-poly game prop, bold flat colors, two or three hard shading bands, "
@@ -16,8 +16,9 @@ STYLE = ("Inkbound Pulp style: stylized low-poly game prop, bold flat colors, tw
 from env_prompts import ENV_PROMPTS  # noqa: E402
 
 def bal(): return requests.get(BASE + "/v1/balance", headers=H, timeout=60).json()["balance"]
-def led(): return json.loads(LEDGER.read_text()) if LEDGER.exists() else {"start_balance": bal(), "entries": []}
-def save(l): LEDGER.write_text(json.dumps(l, indent=1))
+def led(): return {"entries": [json.loads(x) for x in LEDGER.read_text().splitlines() if x.strip()] if LEDGER.exists() else []}
+def add(e):
+    with open(LEDGER, "a") as f: f.write(json.dumps(e) + "\n")
 
 def wait(path, tid):
     while True:
@@ -34,7 +35,7 @@ def run(name, poly, model):
             "should_remesh": True, "target_polycount": int(poly), "target_formats": ["glb"]}
     r = requests.post(BASE + "/v2/text-to-3d", headers=H, json=body, timeout=120); r.raise_for_status()
     pid = r.json()["result"]; p = wait("/v2/text-to-3d", pid)
-    if p["status"] != "SUCCEEDED": l["entries"].append({"name": name, "preview": pid, "status": p["status"]}); save(l); sys.exit("preview failed")
+    if p["status"] != "SUCCEEDED": add({"name": name, "preview_task": pid, "status": p["status"], "credits_est": 5});  sys.exit("preview failed")
     body = {"mode": "refine", "preview_task_id": pid, "ai_model": model, "enable_pbr": False, "texture_resolution": "2k",
             "texture_prompt": pr["texture"], "target_formats": ["glb"]}
     r = requests.post(BASE + "/v2/text-to-3d", headers=H, json=body, timeout=120); r.raise_for_status()
@@ -42,9 +43,9 @@ def run(name, poly, model):
     RAW.mkdir(parents=True, exist_ok=True)
     if t["status"] == "SUCCEEDED":
         (RAW / f"{name}.glb").write_bytes(requests.get(t["model_urls"]["glb"], timeout=300).content)
-    l["entries"].append({"date": str(date.today()), "name": name, "model": model, "preview_task": pid, "refine_task": rid,
-                         "status": t["status"], "credits_est": 15 if model == "meshy-6-lite" else 30, "balance_delta_noisy": b0 - bal(), "polycount_req": int(poly)})
-    save(l); print(name, t["status"], "est total", sum(e.get("credits_est", 0) for e in l["entries"]))
+    add({"date": str(date.today()), "name": name, "model": model, "preview_task": pid, "refine_task": rid,
+                         "status": t["status"], "credits_est": 15 if model == "meshy-6-lite" else 30, "polycount_req": int(poly)})
+    print(name, t["status"], "est total", sum(e.get("credits_est", 0) for e in led()["entries"]))
 
 if __name__ == "__main__":
     run(sys.argv[1], sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else "meshy-6")
