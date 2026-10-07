@@ -19,17 +19,21 @@ namespace JungleBooze.Editor.Route
         [MenuItem(UseMenu)]
         private static void ToggleUseGeneratedRoute()
         {
-            bool on = PlayerPrefs.GetInt(RouteTuning.UseGeneratedRoutePrefKey, 0) == 1;
-            PlayerPrefs.SetInt(RouteTuning.UseGeneratedRoutePrefKey, on ? 0 : 1);
-            PlayerPrefs.Save();
+            bool on = IsGenerated();
+            RouteModeSettings.Save(on ? RouteMode.Straight : RouteMode.Generated);
             Debug.Log("[JungleBooze] Generated route " + (on ? "OFF (straight route)" : "ON") + " for the next Play.");
         }
 
         [MenuItem(UseMenu, true)]
         private static bool ToggleUseGeneratedRouteValidate()
         {
-            Menu.SetChecked(UseMenu, PlayerPrefs.GetInt(RouteTuning.UseGeneratedRoutePrefKey, 0) == 1);
+            Menu.SetChecked(UseMenu, IsGenerated());
             return true;
+        }
+
+        private static bool IsGenerated()
+        {
+            return RouteModeSettings.LoadInitial(RouteTuning.LoadOrDefault()) == RouteMode.Generated;
         }
 
         [MenuItem(ValidateMenu)]

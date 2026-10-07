@@ -18,9 +18,6 @@ namespace JungleBooze.Gameplay.Path
         /// <summary>Resources name of the optional tuning asset (see <see cref="LoadOrDefault"/>).</summary>
         public const string ResourceName = "RouteTuning";
 
-        /// <summary>PlayerPrefs key (editor and development builds only) that switches the generated route on.</summary>
-        public const string UseGeneratedRoutePrefKey = "JungleBooze.UseGeneratedRoute";
-
         [Header("Storage (spec 003 section 3.1)")]
         [SerializeField] private float _sampleSpacingM = 1f;
         [SerializeField] private float _behindM = 40f;
@@ -78,7 +75,7 @@ namespace JungleBooze.Gameplay.Path
         [Header("Route selection")]
         [SerializeField] private bool _debugRoute = false;
 
-        [Tooltip("Off until the owner has played the debug route: the straight route stays the default.")]
+        [Tooltip("Unused by the run since the generated route became the default; the route mode is chosen by RouteModeSettings.")]
         [SerializeField] private bool _useGeneratedRoute = false;
 
         /// <summary>Distance between stored samples in m.</summary>
@@ -178,21 +175,14 @@ namespace JungleBooze.Gameplay.Path
         }
 
         /// <summary>
-        /// The tuning asset <c>Resources/RouteTuning</c> if there is one, else the defaults. In the editor and in
-        /// development builds the PlayerPrefs key <see cref="UseGeneratedRoutePrefKey"/> = 1 (menu
-        /// <c>JungleBooze > Route > Use generated route</c>) switches the generated route on without an asset.
+        /// The tuning asset <c>Resources/RouteTuning</c> if there is one, else the defaults. The route mode is chosen by
+        /// <see cref="RouteModeSettings"/> (F4 in the editor and development builds), not here.
         /// Works on a copy, so the asset is never modified. Setup time only.
         /// </summary>
         public static RouteTuning LoadOrDefault()
         {
             RouteTuning asset = Resources.Load<RouteTuning>(ResourceName);
             RouteTuning tuning = asset != null ? Instantiate(asset) : CreateDefault();
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            if (PlayerPrefs.GetInt(UseGeneratedRoutePrefKey, 0) == 1)
-            {
-                tuning._useGeneratedRoute = true;
-            }
-#endif
             return tuning;
         }
 

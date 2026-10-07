@@ -27,6 +27,18 @@ Written for: MacBook with Apple M4 chip, 24 GB memory. Owner: tech-architect. Te
    any key or tap to start. Controls are in the table in Step 5. Sound plays from the start (menu music, then the
    jungle music); turn your Mac volume up.
 
+### How to see the winding route
+
+The run now uses the winding (generated) route by default in the editor and development builds. Look for the small
+label at the bottom-left of the Game view: `Route: Generated (F4)  |  F3 hitboxes`.
+
+- Click once inside the Game view first (keys only work while it has focus).
+- Press **F4** to change the route for the **next** run: Generated, Debug curve, Straight, then Generated again. The
+  label adds `(next run)` until you start a new run (die and restart, or start from the menu). Your choice is remembered.
+- On a phone development build, put four fingers on the screen to do the same as F4.
+- Use **Straight** to compare against the old flat route. **Debug curve** is a fixed gentle S-curve for checking the camera.
+- Press **F3** to show the hitboxes.
+
 ### If a model faces the wrong way
 
 Open `UnityProject/Assets/_Game/Scripts/Gameplay/Views/RunnerView.cs` and change `ModelYawFixDeg` (near the top,

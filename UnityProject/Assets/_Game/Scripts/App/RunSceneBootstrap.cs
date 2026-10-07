@@ -110,15 +110,14 @@ namespace JungleBooze.App
             WorldTheme startTheme = WorldThemes.Get(WorldKind.Jungle, false);
             ApplyLightingAndFog(presentation, look, startTheme);
 
-            // Spec 003 T3: the route every view places itself on. Straight (identity) unless RouteTuning.DebugRoute is on
-            // or, in dev builds, F4 switched the next run to the curved debug route. Rebuilt from the run seed on every BeginRun.
-            // Spec 003 T2: RouteTuning.UseGeneratedRoute (default off; dev menu JungleBooze > Route) swaps in the seeded RouteGenerator.
+            // Spec 003: the route every view places itself on. [ASSUMED] The seeded winding RouteGenerator is the default in
+            // every build. In the editor and dev builds F4 cycles Generated, Debug curve, Straight for the NEXT run (saved in
+            // PlayerPrefs, see RouteModeSettings). The route is rebuilt from the run seed on every BeginRun.
             RouteTuning routeTuning = RouteTuning.LoadOrDefault();
-            var routeSource = new SelectableRouteSource { Curved = routeTuning.DebugRoute };
             var routeChunks = new SessionRouteChunkSource();
-            bool generatedRoute = routeTuning.UseGeneratedRoute;
-            var pathFrame = new PathFrame(routeTuning, generatedRoute ? (IRouteSource)new RouteGenerator(routeTuning, routeChunks) : routeSource);
-            var pathFrameView = new PathFrameRunView(pathFrame, Debug.isDebugBuild && !generatedRoute ? routeSource : null);
+            var routeSource = new SelectableRouteSource(new RouteGenerator(routeTuning, routeChunks), RouteModeSettings.LoadInitial(routeTuning));
+            var pathFrame = new PathFrame(routeTuning, routeSource);
+            var pathFrameView = new PathFrameRunView(pathFrame, Debug.isDebugBuild ? routeSource : null);
 
             // Camera (portrait follow camera, spec 001 section 10).
             var cameraObject = new GameObject("RunCamera");
@@ -325,6 +324,16 @@ namespace JungleBooze.App
                 hitboxDebug.Init(kit, configs.Runner, obstacles, hazardView);
             }
 
+            // Dev aid: small label showing the route mode (F4) and the hitbox key (F3). Not created in release builds.
+            DevRouteLabelView routeLabel = null;
+            if (Debug.isDebugBuild)
+            {
+                var labelObject = new GameObject("DevRouteLabel", typeof(RectTransform));
+                labelObject.transform.SetParent(root.transform, false);
+                routeLabel = labelObject.AddComponent<DevRouteLabelView>();
+                routeLabel.Build(Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"), routeSource);
+            }
+
             var views = new System.Collections.Generic.List<IRunView>
             {
                 pathFrameView, eventCounter, tutorial, audioView, ground, worldView, gaps, obstacles, hazardView, vineView, coinView, powerUpView, runnerView, companionView, cameraView, hud, companionHud, tutorialView, continueView,
@@ -332,6 +341,11 @@ namespace JungleBooze.App
             if (hitboxDebug != null)
             {
                 views.Add(hitboxDebug);
+            }
+
+            if (routeLabel != null)
+            {
+                views.Add(routeLabel);
             }
 
             driver.Init(session, input, views.ToArray(), kit);

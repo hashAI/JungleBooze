@@ -7,7 +7,8 @@ namespace JungleBooze.Gameplay.Path
     /// <summary>
     /// Keeps a <see cref="PathFrame"/> in step with the run: rebuilds it from the run seed on <see cref="BeginRun"/>
     /// and extends it ahead of the hero every frame. Draws nothing and changes nothing in the simulation.
-    /// In the editor and development builds F4 toggles the curved debug route for the next run (spec 003 T3).
+    /// In the editor and development builds F4 (or a four-finger tap) cycles the route mode for the next run:
+    /// Generated, Debug curve, Straight (spec 003 T3). The choice is saved in PlayerPrefs.
     /// </summary>
     public sealed class PathFrameRunView : IRunView
     {
@@ -21,7 +22,7 @@ namespace JungleBooze.Gameplay.Path
 
         /// <summary>
         /// <paramref name="selectable"/> is the route source behind <paramref name="frame"/> when F4 should switch
-        /// between the straight and the curved debug route (null: no switching).
+        /// between the route modes (null: no switching).
         /// </summary>
         public PathFrameRunView(PathFrame frame, SelectableRouteSource selectable)
         {
@@ -49,8 +50,9 @@ namespace JungleBooze.Gameplay.Path
         {
             if (_selectable != null && DebugRouteKeyPressed())
             {
-                _selectable.Curved = !_selectable.Curved;
-                Debug.Log("[JungleBooze] Debug route for the NEXT run: " + (_selectable.Curved ? "CURVED" : "straight") + " (F4).");
+                _selectable.Mode = RouteModeSettings.Next(_selectable.Mode);
+                RouteModeSettings.Save(_selectable.Mode);
+                Debug.Log("[JungleBooze] Route mode for the NEXT run: " + _selectable.Mode + " (F4).");
             }
 
             if (session.Runner != null)
@@ -59,14 +61,60 @@ namespace JungleBooze.Gameplay.Path
             }
         }
 
+        // The Game view must have focus for the key to register (click once inside it). The Input System package is
+        // used when it is enabled (the project setting is Both); the legacy manager is the fallback.
         private static bool DebugRouteKeyPressed()
         {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
 #if ENABLE_INPUT_SYSTEM
             UnityEngine.InputSystem.Keyboard keyboard = UnityEngine.InputSystem.Keyboard.current;
-            return keyboard != null && keyboard.f4Key.wasPressedThisFrame;
+            if (keyboard != null && keyboard.f4Key.wasPressedThisFrame)
+            {
+                return true;
+            }
+
+            // Touch devices (development builds): put a fourth finger down while at least four are on the screen.
+            UnityEngine.InputSystem.Touchscreen screen = UnityEngine.InputSystem.Touchscreen.current;
+            if (screen != null)
+            {
+                bool began = false;
+                int down = 0;
+                for (int i = 0; i < screen.touches.Count; i++)
+                {
+                    UnityEngine.InputSystem.Controls.TouchControl touch = screen.touches[i];
+                    if (touch.press.isPressed)
+                    {
+                        down++;
+                    }
+
+                    if (touch.press.wasPressedThisFrame)
+                    {
+                        began = true;
+                    }
+                }
+
+                return began && down >= 4;
+            }
+
+            return false;
 #elif ENABLE_LEGACY_INPUT_MANAGER
-            return UnityEngine.Input.GetKeyDown(KeyCode.F4);
+            if (UnityEngine.Input.GetKeyDown(KeyCode.F4))
+            {
+                return true;
+            }
+
+            if (UnityEngine.Input.touchCount >= 4)
+            {
+                for (int i = 0; i < UnityEngine.Input.touchCount; i++)
+                {
+                    if (UnityEngine.Input.GetTouch(i).phase == TouchPhase.Began)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
 #else
             return false;
 #endif
