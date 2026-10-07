@@ -16,6 +16,7 @@ Owner: balance-simulator. Python 3 standard library only (nothing to install).
 | `pendulum_model.py` | Spec 004 fixed-pivot swing: polynomial sin/cos, symplectic Euler, catch clamp, windows in ticks, release impulse and floors, flight, guided chains, ground take-off window (drives `runner_model.Runner`). Takes a numeric type (float or numpy float32) to measure the determinism gap. |
 | `pendulum_study.py`, `pendulum_report.py` | T401: run every spec 004 check (`out/pendulum_study.json`, tables CSV), then write `docs/sim-reports/2026-10-07-fixed-pivot-swing.md`. About 30 s. |
 | `pendulum_golden.py` | Writes / checks the schema v2 vine traces `golden/07..12`. |
+| `export_golden_cs.py` | Writes the hard-coded C# vectors (`Tests/EditMode/Vine/GoldenVineVectors.cs`) from `golden/07..12`; `--check` fails when they are stale. |
 | `tests/` | `test_pendulum_model.py`: invariants of the swing model and the v2 goldens (pytest or unittest). |
 
 ## Commands

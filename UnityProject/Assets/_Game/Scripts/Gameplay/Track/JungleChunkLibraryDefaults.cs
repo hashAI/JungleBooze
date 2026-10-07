@@ -111,10 +111,13 @@ namespace JungleBooze.Gameplay.Track
         /// vine row(s), then an empty landing pad long enough for the longest launch at top speed plus 1.0 s.
         /// Picked by the vine schedule (<see cref="TrackGenerator"/>), never by tier weights. Tier gating uses
         /// MinTier (GDD 11.2: chasm vines and 2-vine chains from tier 3, 3-vine chains from tier 4); chasm vines also
-        /// need <c>VineConfig.ChasmVinesFromM</c>. Chasms are 18 m: longer than any plain jump at top speed (about
-        /// 14.3 m with coyote time), shorter than the shortest vine release at the slowest chasm speed. They are a
-        /// vine-only gap size, outside the kit's 3–4 m ravines [ASSUMED]. Chains are always over ground: an auto
-        /// release only chains into safe vines (GDD 7.3 step 5), so a chasm under a chained vine could not be fair.
+        /// need <c>VineConfig.ChasmVinesFromM</c>. Chasms are 16 m (spec 004 4.6): the near rim 4 m before the pivot, the
+        /// far edge 12 m past it. Longer than any plain jump at top speed (about 14.3 m with coyote time), shorter than
+        /// every vine release (the worst landing is 2.86 m past the far edge). They are a vine-only gap size, outside
+        /// the kit's 3–4 m ravines [ASSUMED]. Chains are always over ground: an auto release only chains into safe
+        /// vines (GDD 7.3 step 5), so a chasm under a chained vine could not be fair. Chain pivots are 18 m apart.
+        /// Pad coin lines start 62 m into a single-vine chunk (the farthest landing is pivot + 25.6 m) and 82 / 100 m
+        /// into V-05 / V-06 (T401).
         /// </summary>
         public static ChunkData[] CreateVineChunks()
         {
@@ -122,28 +125,28 @@ namespace JungleBooze.Gameplay.Track
             {
                 VineSection("V-01", "Vine Clearing", 1, 110f, "One safe vine in the middle lane; coins lead the way.",
                     new ObstaclePlacement[0],
-                    new[] { CoinPattern.Line(1, 6f, 28f), CoinPattern.Line(1, 76f, 104f) },
+                    new[] { CoinPattern.Line(1, 6f, 28f), CoinPattern.Line(1, 62f, 104f) },
                     new[] { VinePlacement.Safe(1, 34f) }),
                 VineSection("V-02", "Side Vine", 1, 110f, "A coin trail moves you to the side lane for a safe vine.",
                     new ObstaclePlacement[0],
-                    new[] { CoinPattern.Trail(1, 0, 4f, 16f), CoinPattern.Line(0, 18f, 28f), CoinPattern.Line(0, 76f, 104f) },
+                    new[] { CoinPattern.Trail(1, 0, 4f, 16f), CoinPattern.Line(0, 18f, 28f), CoinPattern.Line(0, 62f, 104f) },
                     new[] { VinePlacement.Safe(0, 34f) }),
                 VineSection("V-03", "Chasm Vine", 3, 110f, "A chasm under the middle vine: grab it or fall.",
-                    new[] { ObstaclePlacement.Gap(All, 31f, 18f) },
-                    new[] { CoinPattern.Line(1, 6f, 26f), CoinPattern.Line(1, 76f, 104f) },
+                    new[] { ObstaclePlacement.Gap(All, 30f, 16f) },
+                    new[] { CoinPattern.Line(1, 6f, 26f), CoinPattern.Line(1, 62f, 104f) },
                     new[] { VinePlacement.Chasm(1, 34f) }),
                 VineSection("V-04", "Chasm Side Vine", 3, 110f, "Coins lead to a side vine over a chasm.",
-                    new[] { ObstaclePlacement.Gap(All, 31f, 18f) },
-                    new[] { CoinPattern.Trail(1, 0, 4f, 16f), CoinPattern.Line(0, 18f, 26f), CoinPattern.Line(0, 76f, 104f) },
+                    new[] { ObstaclePlacement.Gap(All, 30f, 16f) },
+                    new[] { CoinPattern.Trail(1, 0, 4f, 16f), CoinPattern.Line(0, 18f, 26f), CoinPattern.Line(0, 62f, 104f) },
                     new[] { VinePlacement.Chasm(0, 34f) }),
-                VineSection("V-05", "Twin Vines", 3, 150f, "Two safe vines; aim left during the first swing to chain.",
+                VineSection("V-05", "Twin Vines", 3, 110f, "Two safe vines 18 m apart; aim left during the first swing to chain.",
                     new ObstaclePlacement[0],
-                    new[] { CoinPattern.Line(1, 6f, 28f), CoinPattern.Line(0, 120f, 146f) },
-                    new[] { VinePlacement.Safe(1, 34f, 0), VinePlacement.Safe(0, 78f, 1) }),
-                VineSection("V-06", "Vine Ladder", 4, 200f, "Three safe vines weaving across the lanes.",
+                    new[] { CoinPattern.Line(1, 6f, 28f), CoinPattern.Line(0, 82f, 106f) },
+                    new[] { VinePlacement.Safe(1, 34f, 0), VinePlacement.Safe(0, 52f, 1) }),
+                VineSection("V-06", "Vine Ladder", 4, 120f, "Three safe vines 18 m apart weaving across the lanes.",
                     new ObstaclePlacement[0],
-                    new[] { CoinPattern.Line(1, 6f, 28f), CoinPattern.Line(1, 166f, 196f) },
-                    new[] { VinePlacement.Safe(1, 34f, 0), VinePlacement.Safe(2, 78f, 1), VinePlacement.Safe(1, 122f, 2) }),
+                    new[] { CoinPattern.Line(1, 6f, 28f), CoinPattern.Line(1, 100f, 116f) },
+                    new[] { VinePlacement.Safe(1, 34f, 0), VinePlacement.Safe(2, 52f, 1), VinePlacement.Safe(1, 70f, 2) }),
             };
         }
 

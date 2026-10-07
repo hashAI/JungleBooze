@@ -465,9 +465,9 @@ are visible at spawn.
 Per world: River creek gorge (water 12 m below with white foam, rope remnants), Mountains cliff gap (rock strata, broken bridge planks
 hanging on one rope at the far lip), Ruins pit (collapsed floor, shards of paving, ancient stairs seen below). Tris: lips 600 each, walls 1,200 (shared strips), roots 300, mist 100.
 
-### 13.2 Vine chasm (the 18 m swing chasm)
+### 13.2 Vine chasm (the 16 m swing chasm)
 
-The sim: an 18 m ground absence under a vine section (GDD 7). Spec 003 8.3 dresses the canyon. This spec adds the grounding rules:
+The sim: a 16 m ground absence under a vine section (GDD 7, spec 004 4.6): the near rim 4 m before the vine pivot, the far edge 12 m past it (chunk data `Gap(All, Z - 4, 16)`). Spec 003 8.3 dresses the canyon. This spec adds the grounding rules:
 - The same lip, walls and strata as 13.1 but **taller and longer walls**: fixed 30 m depth, cliff sides continue 30 m before and after the chasm into the CP zone as a stepped bank (so the chasm reads as a canyon crossing the whole land, not a ditch).
 - A visible **river or darkness** at the bottom (River: a stream; Jungle: a dark leaf-floor with mist), light shafts allowed inside.
 - Near and far lips as in 13.1 plus a worn takeoff patch (bare soil, footprints) and a landing glade (spec 003 8.2).

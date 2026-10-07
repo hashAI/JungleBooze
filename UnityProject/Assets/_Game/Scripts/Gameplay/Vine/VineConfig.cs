@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using JungleBooze.Core;
 using JungleBooze.Gameplay.Runner;
 using JungleBooze.Gameplay.Track;
 
@@ -33,30 +34,39 @@ namespace JungleBooze.Gameplay.Vine
             GrabEarlinessS = v.GrabEarlinessMs / 1000.0;
             GrabBlendTicks = RunnerConfig.MsToTicksAllowZero(v.GrabBlendMs);
 
-            SwingTicks = RunnerConfig.MsToTicks(v.SwingMs);
-            SwingRadiusM = v.SwingRadiusM;
-            SwingStartAngleRad = v.SwingStartAngleDeg * DegToRad;
-            SwingEndAngleRad = v.SwingEndAngleDeg * DegToRad;
-            SwingLowestFeetM = v.SwingLowestFeetM;
+            RopeLengthM = v.RopeLengthM;
+            SwingGravityMps2 = v.SwingGravityMps2;
+            GravityOverRope = (double)v.SwingGravityMps2 / v.RopeLengthM;
+            CatchMinSpeedMps = v.CatchMinSpeedMps;
+            CatchMaxSpeedMps = v.CatchMaxSpeedMps;
+            MaxSwingAngleDeg = v.MaxSwingAngleDeg;
+            GrabMaxAngleDeg = v.GrabMaxAngleDeg;
+            GrabMaxAngleSin = DeterministicMath.Sin(v.GrabMaxAngleDeg * DegToRad);
+            HandToFeetM = v.HandToFeetM;
+            SwingMaxTicks = RunnerConfig.MsToTicks(v.SwingMaxMs);
             HangTicks = RunnerConfig.MsToTicksAllowZero(v.HangMs);
             HangTimeScale = v.HangTimeScale;
 
-            GoodStartPhase = v.GoodStartPhase;
-            PerfectStartPhase = v.PerfectStartPhase;
-            PerfectEndPhase = v.PerfectEndPhase;
-            GoodStartTick = PhaseToTick(v.GoodStartPhase, SwingTicks);
-            PerfectStartTick = PhaseToTick(v.PerfectStartPhase, SwingTicks);
-            PerfectEndTick = PhaseToTick(v.PerfectEndPhase, SwingTicks);
+            GoodStartTick = RunnerConfig.MsToTicks(v.GoodStartMs);
+            PerfectStartTick = RunnerConfig.MsToTicks(v.PerfectStartMs);
+            PerfectEndTick = PerfectStartTick + RunnerConfig.MsToTicks(v.PerfectWidthMs);
             ReleaseBufferTicks = RunnerConfig.MsToTicksAllowZero(v.ReleaseBufferMs);
 
             LaunchGravityMps2 = v.LaunchGravityMps2;
-            GoodLaunchSpeedMps = v.GoodLaunchSpeedMps;
-            PerfectLaunchSpeedMps = v.PerfectLaunchSpeedMps;
-            AutoLaunchSpeedMps = v.AutoLaunchSpeedMps;
+            PerfectImpulseMps = v.PerfectImpulseMps;
+            GoodImpulseMps = v.GoodImpulseMps;
+            PoorImpulseMps = v.PoorImpulseMps;
+            ImpulseAngleDeg = v.ImpulseAngleDeg;
+            ImpulseCos = DeterministicMath.Cos(v.ImpulseAngleDeg * DegToRad);
+            ImpulseSin = DeterministicMath.Sin(v.ImpulseAngleDeg * DegToRad);
+            ReleaseMinForwardMps = v.ReleaseMinForwardMps;
+            ReleaseMinUpMps = v.ReleaseMinUpMps;
+            LandingBlendTicks = RunnerConfig.MsToTicksAllowZero(v.LandingSpeedBlendMs);
             ChainArriveFeetM = v.ChainArriveFeetM;
-            ChainGravityMinMps2 = v.ChainGravityMinMps2;
-            ChainGravityMaxMps2 = v.ChainGravityMaxMps2;
+            ChainFlightMinS = v.ChainFlightMinS;
+            ChainFlightMaxS = v.ChainFlightMaxS;
             ChainMaxReachM = v.ChainMaxReachM;
+            ApexTicksEstimate = EstimateApexTicks();
 
             GoodScore = v.GoodScore;
             PerfectScore = v.PerfectScore;
@@ -97,53 +107,107 @@ namespace JungleBooze.Gameplay.Vine
 
         public int GrabBlendTicks { get; }
 
-        /// <summary>1.40 s = 84 ticks.</summary>
-        public int SwingTicks { get; }
+        /// <summary>Rope length L (m): pivot to the hand.</summary>
+        public float RopeLengthM { get; }
 
-        public float SwingRadiusM { get; }
+        /// <summary>Height of the fixed pivot above the path: <c>GrabPointHeightM + RopeLengthM</c> (17.0 m). Never stored.</summary>
+        public float PivotHeightM => GrabPointHeightM + RopeLengthM;
 
-        public double SwingStartAngleRad { get; }
+        public float SwingGravityMps2 { get; }
 
-        public double SwingEndAngleRad { get; }
+        /// <summary><c>SwingGravityMps2 / RopeLengthM</c> in double (1/s^2).</summary>
+        public double GravityOverRope { get; }
 
-        public float SwingLowestFeetM { get; }
+        public float CatchMinSpeedMps { get; }
+
+        public float CatchMaxSpeedMps { get; }
+
+        public float MaxSwingAngleDeg { get; }
+
+        public float GrabMaxAngleDeg { get; }
+
+        /// <summary>sin(GrabMaxAngleDeg): the clamp of the start angle argument.</summary>
+        public double GrabMaxAngleSin { get; }
+
+        /// <summary>Hand to feet distance while hanging (m).</summary>
+        public float HandToFeetM { get; }
+
+        /// <summary>Failsafe automatic release, in ticks since the grab (96).</summary>
+        public int SwingMaxTicks { get; }
 
         public int HangTicks { get; }
 
         public float HangTimeScale { get; }
 
-        public float GoodStartPhase { get; }
-
-        public float PerfectStartPhase { get; }
-
-        public float PerfectEndPhase { get; }
-
-        /// <summary>First swing tick (ticks since the grab) that counts as Good.</summary>
+        /// <summary>First swing tick (ticks since the grab) that counts as Good (27).</summary>
         public int GoodStartTick { get; }
 
-        /// <summary>First swing tick of the Perfect band.</summary>
+        /// <summary>First swing tick of the Perfect band (42).</summary>
         public int PerfectStartTick { get; }
 
-        /// <summary>First swing tick after the Perfect band.</summary>
+        /// <summary>First swing tick after the Perfect band (53, exclusive end).</summary>
         public int PerfectEndTick { get; }
 
         public int ReleaseBufferTicks { get; }
 
         public float LaunchGravityMps2 { get; }
 
-        public float GoodLaunchSpeedMps { get; }
+        public float PerfectImpulseMps { get; }
 
-        public float PerfectLaunchSpeedMps { get; }
+        public float GoodImpulseMps { get; }
 
-        public float AutoLaunchSpeedMps { get; }
+        public float PoorImpulseMps { get; }
+
+        public float ImpulseAngleDeg { get; }
+
+        public double ImpulseCos { get; }
+
+        public double ImpulseSin { get; }
+
+        public float ReleaseMinForwardMps { get; }
+
+        public float ReleaseMinUpMps { get; }
+
+        /// <summary>Length of the speed blend after landing from a vine, in ticks (30).</summary>
+        public int LandingBlendTicks { get; }
 
         public float ChainArriveFeetM { get; }
 
-        public float ChainGravityMinMps2 { get; }
+        public float ChainFlightMinS { get; }
 
-        public float ChainGravityMaxMps2 { get; }
+        public float ChainFlightMaxS { get; }
 
         public float ChainMaxReachM { get; }
+
+        /// <summary>
+        /// Tick since the grab at which an unreleased swing reaches its apex (first <c>omega &lt;= 0</c>) for a grab at
+        /// the middle of the catch range and the canonical grab point (1.25 m before the pivot): 85 with the start
+        /// values. Used for the HUD ring phase.
+        /// </summary>
+        public int ApexTicksEstimate { get; }
+
+        // ---- Compatibility with the pre-pendulum view code (VineView), until the view rewrite replaces it ----
+        // The span/knot rig was built on the travelling-pivot model. These keep it compiling and roughly right: the
+        // rope length is the new rope length, the rest angle is 0 (the rope hangs straight down from the pivot) and
+        // the ring phase is swing tick over ApexTicksEstimate.
+
+        /// <summary>Compatibility alias of <see cref="RopeLengthM"/> for the old view code.</summary>
+        public float SwingRadiusM => RopeLengthM;
+
+        /// <summary>Compatibility: the rope rests straight down (0 rad) in the fixed-pivot model.</summary>
+        public double SwingStartAngleRad => 0.0;
+
+        /// <summary>Compatibility alias of <see cref="ApexTicksEstimate"/> for the old view code.</summary>
+        public int SwingTicks => ApexTicksEstimate;
+
+        /// <summary>Compatibility: <see cref="GoodStartTick"/> as a fraction of <see cref="ApexTicksEstimate"/>.</summary>
+        public float GoodStartPhase => (float)GoodStartTick / ApexTicksEstimate;
+
+        /// <summary>Compatibility: <see cref="PerfectStartTick"/> as a fraction of <see cref="ApexTicksEstimate"/>.</summary>
+        public float PerfectStartPhase => (float)PerfectStartTick / ApexTicksEstimate;
+
+        /// <summary>Compatibility: <see cref="PerfectEndTick"/> as a fraction of <see cref="ApexTicksEstimate"/>.</summary>
+        public float PerfectEndPhase => (float)PerfectEndTick / ApexTicksEstimate;
 
         public int GoodScore { get; }
 
@@ -205,17 +269,82 @@ namespace JungleBooze.Gameplay.Vine
             return VineReleaseGrade.Good;
         }
 
-        public float LaunchSpeedFor(VineReleaseGrade grade)
+        /// <summary>Impulse (m/s) the grade adds to the pendulum velocity at the release (Auto = Poor).</summary>
+        public float ImpulseFor(VineReleaseGrade grade)
         {
             switch (grade)
             {
                 case VineReleaseGrade.Perfect:
-                    return PerfectLaunchSpeedMps;
+                    return PerfectImpulseMps;
                 case VineReleaseGrade.Good:
-                    return GoodLaunchSpeedMps;
+                    return GoodImpulseMps;
                 default:
-                    return AutoLaunchSpeedMps;
+                    return PoorImpulseMps;
             }
+        }
+
+        /// <summary>Catch speed (m/s): the entry speed clamped to [CatchMinSpeedMps, CatchMaxSpeedMps] (spec 004 4.2).</summary>
+        public double CatchSpeedFor(double entrySpeedMps)
+        {
+            if (entrySpeedMps < CatchMinSpeedMps)
+            {
+                return CatchMinSpeedMps;
+            }
+
+            return entrySpeedMps > CatchMaxSpeedMps ? CatchMaxSpeedMps : entrySpeedMps;
+        }
+
+        /// <summary>
+        /// Start angle (rad) of a grab <paramref name="zRelativeToPivotM"/> metres from the pivot (negative = before it):
+        /// <c>asin(clamp(z / L, +-sin(GrabMaxAngleDeg)))</c> with the deterministic series.
+        /// </summary>
+        public double StartAngleFor(double zRelativeToPivotM)
+        {
+            double a = zRelativeToPivotM / RopeLengthM;
+            if (a > GrabMaxAngleSin)
+            {
+                a = GrabMaxAngleSin;
+            }
+            else if (a < -GrabMaxAngleSin)
+            {
+                a = -GrabMaxAngleSin;
+            }
+
+            return DeterministicMath.AsinSmall(a);
+        }
+
+        /// <summary>
+        /// Release velocity (spec 004 4.5) for the pendulum state <paramref name="theta"/>, <paramref name="omega"/>
+        /// and the grade's impulse, with the floors applied: <c>vx = max(vt cos(theta) + I cos(a), minForward)</c>,
+        /// <c>vy = max(vt sin(theta) + I sin(a), minUp)</c>, <c>vt = L omega</c>.
+        /// </summary>
+        public void LaunchVelocity(double theta, double omega, VineReleaseGrade grade, out double vx, out double vy)
+        {
+            double vt = (double)RopeLengthM * omega;
+            double impulse = ImpulseFor(grade);
+            vx = (vt * DeterministicMath.Cos(theta)) + (impulse * ImpulseCos);
+            vy = (vt * DeterministicMath.Sin(theta)) + (impulse * ImpulseSin);
+            if (vx < ReleaseMinForwardMps)
+            {
+                vx = ReleaseMinForwardMps;
+            }
+
+            if (vy < ReleaseMinUpMps)
+            {
+                vy = ReleaseMinUpMps;
+            }
+        }
+
+        /// <summary>Hand z, relative to the pivot, for a rope angle: <c>L sin(theta)</c>.</summary>
+        public double HandOffsetZ(double theta)
+        {
+            return RopeLengthM * DeterministicMath.Sin(theta);
+        }
+
+        /// <summary>Hand height above the path for a rope angle: <c>PivotHeightM - L cos(theta)</c>.</summary>
+        public double HandHeightY(double theta)
+        {
+            return PivotHeightM - (RopeLengthM * DeterministicMath.Cos(theta));
         }
 
         public int ScoreFor(VineReleaseGrade grade)
@@ -253,24 +382,11 @@ namespace JungleBooze.Gameplay.Vine
             return _chainMultipliers[i < _chainMultipliers.Length ? i : _chainMultipliers.Length - 1];
         }
 
-        /// <summary>Swing phase 0..1 for a swing tick.</summary>
+        /// <summary>Swing phase 0..1 for the HUD ring: <c>swingTick / ApexTicksEstimate</c>, clamped.</summary>
         public double PhaseAt(int swingTick)
         {
-            double p = (double)swingTick / SwingTicks;
+            double p = (double)swingTick / ApexTicksEstimate;
             return p < 0.0 ? 0.0 : (p > 1.0 ? 1.0 : p);
-        }
-
-        /// <summary>Pendulum angle (rad, positive = swung forward) at a swing tick.</summary>
-        public double SwingAngleAt(int swingTick)
-        {
-            double p = PhaseAt(swingTick);
-            return SwingStartAngleRad + (SwingEndAngleRad - SwingStartAngleRad) * p;
-        }
-
-        /// <summary>HERO's feet height on the swing arc at a swing tick.</summary>
-        public double SwingFeetYAt(int swingTick)
-        {
-            return SwingLowestFeetM + SwingRadiusM * (1.0 - Math.Cos(SwingAngleAt(swingTick)));
         }
 
         public ulong ComputeHash()
@@ -289,22 +405,29 @@ namespace JungleBooze.Gameplay.Vine
             h = StableHash.Mix(h, GrabZoneTopM);
             h = StableHash.Mix(h, GrabEarlinessS);
             h = StableHash.Mix(h, GrabBlendTicks);
-            h = StableHash.Mix(h, SwingTicks);
-            h = StableHash.Mix(h, SwingRadiusM);
-            h = StableHash.Mix(h, SwingStartAngleRad);
-            h = StableHash.Mix(h, SwingEndAngleRad);
-            h = StableHash.Mix(h, SwingLowestFeetM);
+            h = StableHash.Mix(h, RopeLengthM);
+            h = StableHash.Mix(h, SwingGravityMps2);
+            h = StableHash.Mix(h, CatchMinSpeedMps);
+            h = StableHash.Mix(h, CatchMaxSpeedMps);
+            h = StableHash.Mix(h, MaxSwingAngleDeg);
+            h = StableHash.Mix(h, GrabMaxAngleDeg);
+            h = StableHash.Mix(h, HandToFeetM);
+            h = StableHash.Mix(h, SwingMaxTicks);
             h = StableHash.Mix(h, GoodStartTick);
             h = StableHash.Mix(h, PerfectStartTick);
             h = StableHash.Mix(h, PerfectEndTick);
             h = StableHash.Mix(h, ReleaseBufferTicks);
             h = StableHash.Mix(h, LaunchGravityMps2);
-            h = StableHash.Mix(h, GoodLaunchSpeedMps);
-            h = StableHash.Mix(h, PerfectLaunchSpeedMps);
-            h = StableHash.Mix(h, AutoLaunchSpeedMps);
+            h = StableHash.Mix(h, PerfectImpulseMps);
+            h = StableHash.Mix(h, GoodImpulseMps);
+            h = StableHash.Mix(h, PoorImpulseMps);
+            h = StableHash.Mix(h, ImpulseAngleDeg);
+            h = StableHash.Mix(h, ReleaseMinForwardMps);
+            h = StableHash.Mix(h, ReleaseMinUpMps);
+            h = StableHash.Mix(h, LandingBlendTicks);
             h = StableHash.Mix(h, ChainArriveFeetM);
-            h = StableHash.Mix(h, ChainGravityMinMps2);
-            h = StableHash.Mix(h, ChainGravityMaxMps2);
+            h = StableHash.Mix(h, ChainFlightMinS);
+            h = StableHash.Mix(h, ChainFlightMaxS);
             h = StableHash.Mix(h, ChainMaxReachM);
             h = StableHash.Mix(h, GoodScore);
             h = StableHash.Mix(h, PerfectScore);
@@ -321,9 +444,22 @@ namespace JungleBooze.Gameplay.Vine
             return h;
         }
 
-        private static int PhaseToTick(float phase, int swingTicks)
+        /// <summary>Runs an unreleased swing (catch speed mid-range, grab 1.25 m before the pivot) to its apex.</summary>
+        private int EstimateApexTicks()
         {
-            return (int)Math.Ceiling(phase * (double)swingTicks - 1e-6);
+            double theta = StartAngleFor(-1.25);
+            double omega = CatchSpeedFor(0.5 * ((double)CatchMinSpeedMps + CatchMaxSpeedMps)) / RopeLengthM;
+            for (int n = 1; n < SwingMaxTicks; n++)
+            {
+                omega -= GravityOverRope * DeterministicMath.Sin(theta) * RunnerConfig.TickSeconds;
+                theta += omega * RunnerConfig.TickSeconds;
+                if (omega <= 0.0)
+                {
+                    return n;
+                }
+            }
+
+            return SwingMaxTicks;
         }
     }
 }

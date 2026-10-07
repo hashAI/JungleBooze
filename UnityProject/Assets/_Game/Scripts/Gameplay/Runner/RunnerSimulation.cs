@@ -10,11 +10,12 @@ namespace JungleBooze.Gameplay.Runner
     /// stumble, daze, edge forgiveness, near-miss, invulnerability).
     /// One call to <see cref="Step(InputCommand)"/> = one 60 Hz tick, processed in the order of rule I8 as amended by
     /// spec 002 section 13.3 (hook points 7a, 11a, 11b in <see cref="IRunnerStepHooks"/>).
-    /// Vine swinging (GDD 7): when the track also implements <see cref="IVineTrackQuery"/>, an airborne HERO who
-    /// enters a vine's grab zone is <see cref="Locomotion.Carried"/> along the swing arc (safe from collisions);
-    /// Jump releases (graded by swing phase), Move aims at the next vine, Slide is kept for the landing. The
-    /// release is a launch on a ballistic arc (state <see cref="Locomotion.Falling"/> with the vine gravity),
-    /// guided into the next vine of a chain. Steps 9a (grab and passed-vine check) runs after step 9.
+    /// Vine swinging (GDD 7, spec 004): when the track also implements <see cref="IVineTrackQuery"/>, an airborne
+    /// HERO who enters a vine's grab zone is <see cref="Locomotion.Carried"/> on a real pendulum about the vine's
+    /// FIXED pivot (safe from collisions); Jump releases (graded by swing tick), Move aims at the next vine, Slide is
+    /// kept for the landing. The release is a launch on a ballistic arc (state <see cref="Locomotion.Falling"/> with
+    /// the vine gravity and a constant forward speed), guided into the next vine of a chain. Step 9a (grab and
+    /// passed-vine check) runs after step 9.
     /// Plain C#: no engine time, engine randomness or physics; no allocations per step.
     /// </summary>
     public sealed class RunnerSimulation
@@ -37,14 +38,14 @@ namespace JungleBooze.Gameplay.Runner
         /// <summary>Vines read from the track per query.</summary>
         private const int VineBufferCapacity = 16;
 
-        /// <summary>A chained launch shorter than this is not guided (the target is practically reached).</summary>
-        private const double MinGuidedFlightS = 0.05;
+        /// <summary>A chained launch to a vine closer than this (m) is not guided (the target is practically reached).</summary>
+        private const double MinGuidedDistanceM = 1.0;
 
         /// <summary>Range behind HERO searched for the vine of a chasm he fell into ("Missed vine").</summary>
         private const double MissedVineLookBackM = 40.0;
 
-        /// <summary>Range ahead of HERO searched for the vine of a chasm he fell into.</summary>
-        private const double MissedVineLookAheadM = 6.0;
+        /// <summary>Range ahead of HERO searched for the vine of a chasm he fell into (spec 004 4.9: 16 m chasm, far edge 12 m past the pivot).</summary>
+        private const double MissedVineLookAheadM = 16.0;
 
         private const byte EngagedContact = 1;
         private const byte EngagedInvulnerable = 2;
@@ -159,6 +160,21 @@ namespace JungleBooze.Gameplay.Runner
         private int _missedGroup;
         private int _missedRow;
 
+        // ---- Fixed-pivot pendulum (spec 004) ----
+        private bool _swingUsed;
+        private double _swingTheta;
+        private double _swingOmega;
+        private double _swingPivotZ;
+        private double _swingResY;
+        private bool _landBlendActive;
+        private int _landBlendElapsed;
+        private double _landSpeed;
+        private double _releasedTheta;
+        private double _releasedOmega;
+        private double _releasedPivotZ;
+        private int _releasedVineId;
+        private int _releasedVineLane;
+
         // ---- Companion Lift state (GDD 15.1) ----
         private LiftParameters _lift;
         private int _liftElapsed;
@@ -187,6 +203,7 @@ namespace JungleBooze.Gameplay.Runner
             _vineTrack = _track as IVineTrackQuery;
             _fallGravity = config.GravityMps2;
             _vineScanZ = double.NegativeInfinity;
+            _releasedVineLane = -1;
             _grabbedGroup = -1;
             _grabbedRow = -1;
             _missedGroup = -1;
@@ -309,6 +326,21 @@ namespace JungleBooze.Gameplay.Runner
 
         /// <summary>Aimed lane of the last launch.</summary>
         public int LaunchLane => _launchLane;
+
+        /// <summary>Rope angle theta (rad) of the last vine release, for the view's after-release pendulum.</summary>
+        public double ReleasedSwingThetaRad => _releasedTheta;
+
+        /// <summary>Rope angular speed omega (rad/s) of the last vine release.</summary>
+        public double ReleasedSwingOmegaRadS => _releasedOmega;
+
+        /// <summary>World z of the pivot of the vine released last.</summary>
+        public double ReleasedPivotZ => _releasedPivotZ;
+
+        /// <summary>Id of the vine released last (0 before the first release).</summary>
+        public int ReleasedVineId => _releasedVineId;
+
+        /// <summary>Lane of the vine released last (-1 before the first release).</summary>
+        public int ReleasedVineLane => _releasedVineLane;
 
         public DeathCause DeathCause => _deathCause;
 
@@ -486,6 +518,15 @@ namespace JungleBooze.Gameplay.Runner
                 _lastOutcomes.Slide = outcome;
             }
 
+            // (6a) A buffered too-early release fires on the first Good tick and acts like a command on that tick
+            // (spec 004 4.4 / AC-410): the state is the one after the previous tick's integration.
+            if (_releaseBuffered && _locomotion == Locomotion.Carried && _swingElapsed + 1 >= _vines.GoodStartTick)
+            {
+                _releaseBuffered = false;
+                _counters.Resolve(CommandOutcome.Buffered, CommandOutcome.Executed);
+                ReleaseVine(tick, _vines.GradeForSwingTick(_swingElapsed + 1), true);
+            }
+
             // Hitbox height for this tick's sweep. A command (step 6) changes the box at the start of the tick:
             // a slide shrinks it for the whole tick, a jump out of a slide grows it during the tick (so rising into a
             // high barrier is detected as "from below"). Changes in steps 9 and 10 (slide on landing, standing up
@@ -578,6 +619,25 @@ namespace JungleBooze.Gameplay.Runner
             _airStartZ = _z;
             _fallGravity = _config.GravityMps2;
             _slideOnLanding = false;
+        }
+
+        /// <summary>
+        /// Test hook: grabs <paramref name="vine"/> now from the given position and entry speed, exactly like the
+        /// grab test at step 9a would (the previous tick is the grab tick; the next Step is swing tick 1).
+        /// </summary>
+        internal void DebugGrab(in VineAnchor vine, double z, double feetY, double entrySpeedMps)
+        {
+            _locomotion = Locomotion.Falling;
+            _x = _config.LaneCenterX(vine.Lane);
+            _y = feetY;
+            _z = z;
+            _speed = entrySpeedMps;
+            _fallStartTick = _tick - 1;
+            _airStartTick = _tick - 1;
+            _airStartZ = z;
+            GrabVine(_tick - 1, in vine);
+            Current = BuildSnapshot(_tick - 1);
+            Previous = Current;
         }
 
         /// <summary>
@@ -676,6 +736,21 @@ namespace JungleBooze.Gameplay.Runner
             h = Mix(h, _liftDescending ? 1L : 0L);
             h = Mix(h, _liftDescentElapsed);
             h = Mix(h, _liftDescentStartY);
+
+            // Spec 004 pendulum state. Mixed only once a vine was grabbed, so runs without vines keep their
+            // pre-pendulum hashes (AC-435).
+            if (_swingUsed)
+            {
+                h = Mix(h, 1L);
+                h = Mix(h, _swingTheta);
+                h = Mix(h, _swingOmega);
+                h = Mix(h, _swingPivotZ);
+                h = Mix(h, _swingResY);
+                h = Mix(h, _landBlendActive ? 1L : 0L);
+                h = Mix(h, _landBlendElapsed);
+                h = Mix(h, _landSpeed);
+            }
+
             return h;
         }
 
@@ -783,6 +858,19 @@ namespace JungleBooze.Gameplay.Runner
             _liftDescending = source._liftDescending;
             _liftDescentElapsed = source._liftDescentElapsed;
             _liftDescentStartY = source._liftDescentStartY;
+            _swingUsed = source._swingUsed;
+            _swingTheta = source._swingTheta;
+            _swingOmega = source._swingOmega;
+            _swingPivotZ = source._swingPivotZ;
+            _swingResY = source._swingResY;
+            _landBlendActive = source._landBlendActive;
+            _landBlendElapsed = source._landBlendElapsed;
+            _landSpeed = source._landSpeed;
+            _releasedTheta = source._releasedTheta;
+            _releasedOmega = source._releasedOmega;
+            _releasedPivotZ = source._releasedPivotZ;
+            _releasedVineId = source._releasedVineId;
+            _releasedVineLane = source._releasedVineLane;
             _lastOutcomes = source._lastOutcomes;
             _counters.CopyFrom(source._counters);
             SpeedMultiplier = source.SpeedMultiplier;
@@ -1375,6 +1463,7 @@ namespace JungleBooze.Gameplay.Runner
         private void Land(long tick, bool wasFastFall)
         {
             _y = 0.0;
+            bool fromVine = _launchedFromVine;
             long airTicks = tick - _airStartTick;
             Emit(
                 RunnerEventType.Landed,
@@ -1390,6 +1479,13 @@ namespace JungleBooze.Gameplay.Runner
             _fallGravity = _config.GravityMps2;
             _launchedFromVine = false;
             _chainPerfects = 0;
+            if (fromVine && _vines.LandingBlendTicks > 0)
+            {
+                // Spec 004 4.7: the speed blends from the flight speed to the run speed over LandingSpeedBlendMs.
+                _landBlendActive = true;
+                _landBlendElapsed = 0;
+                _landSpeed = _speed;
+            }
 
             // Rule I3 first, then the pending slide from a fast-fall (6.2.3, 6.3.4).
             if (_bufferedJump)
@@ -1494,6 +1590,7 @@ namespace JungleBooze.Gameplay.Runner
             _slideOnLanding = false;
             _swingVineId = 0;
             _launchedFromVine = false;
+            _landBlendActive = false;
             if (_releaseBuffered)
             {
                 _releaseBuffered = false;
@@ -1641,6 +1738,12 @@ namespace JungleBooze.Gameplay.Runner
             _engagedCount = 0;
             _swingVineId = 0;
             _swingElapsed = 0;
+            _swingTheta = 0.0;
+            _swingOmega = 0.0;
+            _swingPivotZ = 0.0;
+            _swingResY = 0.0;
+            _landBlendActive = false;
+            _landBlendElapsed = 0;
             _launchedFromVine = false;
             _chainPerfects = 0;
             _fallGravity = _config.GravityMps2;
@@ -1755,7 +1858,8 @@ namespace JungleBooze.Gameplay.Runner
         /// <summary>GDD 7.3 step 4: Jump on a vine releases; too early it is buffered for <c>ReleaseBufferMs</c>.</summary>
         private CommandOutcome ProcessRelease(long tick)
         {
-            VineReleaseGrade grade = _vines.GradeForSwingTick(_swingElapsed);
+            // This command acts on swing tick k = ticks since the grab; the state is the one after k - 1 integrations.
+            VineReleaseGrade grade = _vines.GradeForSwingTick(_swingElapsed + 1);
             if (grade == VineReleaseGrade.None)
             {
                 if (_releaseBuffered)
@@ -1772,47 +1876,54 @@ namespace JungleBooze.Gameplay.Runner
             return CommandOutcome.Executed;
         }
 
-        /// <summary>Step 9 while carried: advance the swing, settle onto the arc, fire a buffered or automatic release.</summary>
+        /// <summary>
+        /// Step 9 while carried (spec 004 4.3): one symplectic Euler step of the pendulum about the fixed pivot
+        /// (omega first, then theta with the new omega), z and height from the rope angle, y and x blended onto the
+        /// arc for the first <c>GrabBlendMs</c>, then the automatic (Poor) release at the apex or at the failsafe tick.
+        /// A buffered release is fired earlier, at step 6a. Uses only <c>+ - * /</c> and the deterministic polynomials.
+        /// </summary>
         private void UpdateSwing(long tick)
         {
             _swingElapsed++;
+            double dt = RunnerConfig.TickSeconds;
+            double rope = _vines.RopeLengthM;
+            _swingOmega -= _vines.GravityOverRope * DeterministicMath.Sin(_swingTheta) * dt;
+            _swingTheta += _swingOmega * dt;
+
+            _z = _swingPivotZ + (rope * DeterministicMath.Sin(_swingTheta));
+            double feet = _vines.HandHeightY(_swingTheta) - _vines.HandToFeetM;
             float laneX = _config.LaneCenterX(_swingLane);
-            double arcY = _vines.SwingFeetYAt(_swingElapsed);
             int blend = _vines.GrabBlendTicks;
             if (_swingElapsed < blend)
             {
                 double u = (double)_swingElapsed / blend;
-                u = 1.0 - (1.0 - u) * (1.0 - u);
-                _x = (float)(_swingGrabX + (laneX - _swingGrabX) * u);
-                _y = _swingGrabY + (arcY - _swingGrabY) * u;
+                double inv = 1.0 - u;
+                feet += _swingResY * inv * inv;
+                _x = (float)(_swingGrabX + ((laneX - _swingGrabX) * (1.0 - (inv * inv))));
             }
             else
             {
                 _x = laneX;
-                _y = arcY;
             }
 
+            _y = feet;
+            _speed = rope * _swingOmega * DeterministicMath.Cos(_swingTheta);
+            EmitSpeedRows(tick);
             RefreshAimTarget();
 
-            if (_releaseBuffered && _swingElapsed >= _vines.GoodStartTick)
-            {
-                _releaseBuffered = false;
-                _counters.Resolve(CommandOutcome.Buffered, CommandOutcome.Executed);
-                ReleaseVine(tick, _vines.GradeForSwingTick(_swingElapsed), false);
-                return;
-            }
-
-            if (_swingElapsed >= _vines.SwingTicks)
+            if (_swingOmega <= 0.0 || _swingElapsed >= _vines.SwingMaxTicks)
             {
                 ReleaseVine(tick, VineReleaseGrade.Auto, false);
             }
         }
 
         /// <summary>
-        /// Lets go of the vine (GDD 7.3 steps 4 and 5): a launch on a ballistic arc. If a next vine of the chain is
-        /// aimed at (and, for an auto release, is safe), the arc is guided so HERO arrives at its grab point:
-        /// gravity is solved from the flight time and clamped, then the vertical speed is solved again.
-        /// <paramref name="fromCommand"/>: released at step 6, so the arc already moves on this tick's step 9.
+        /// Lets go of the vine (spec 004 4.5 and 4.8): the pendulum velocity at the release plus the grade's impulse
+        /// (floors applied) starts a ballistic flight with a constant forward speed. If a next vine of the chain is
+        /// aimed at (and, for an auto release, is safe), the flight is guided: the time is
+        /// <c>clamp((Zb - z) / vx, ChainFlightMinS, ChainFlightMaxS)</c>, then vx and vy are solved for it with the
+        /// fixed launch gravity. <paramref name="fromCommand"/>: released at step 6, so the arc already moves on this
+        /// tick's steps 7 and 9.
         /// </summary>
         private void ReleaseVine(long tick, VineReleaseGrade grade, bool fromCommand)
         {
@@ -1822,55 +1933,70 @@ namespace JungleBooze.Gameplay.Runner
                 _chainPerfects++;
             }
 
+            if (_releaseBuffered)
+            {
+                _releaseBuffered = false;
+                _counters.Resolve(CommandOutcome.Buffered, CommandOutcome.Superseded);
+            }
+
             double y0 = _y;
-            double vy = _vines.LaunchSpeedFor(grade);
+            double z0 = _z;
+            _vines.LaunchVelocity(_swingTheta, _swingOmega, grade, out double vx, out double vy);
             double g = _vines.LaunchGravityMps2;
-            double speed = _speed > 0.1 ? _speed : 0.1;
             bool chained = _aimVineId != 0 && (grade != VineReleaseGrade.Auto || !_aimVineOverChasm);
             double flight;
-            double guidedT = (_aimVineZ - _z) / speed;
-            if (chained && guidedT > MinGuidedFlightS)
+            double dz = _aimVineZ - z0;
+            if (chained && dz > MinGuidedDistanceM)
             {
-                double arrive = _vines.ChainArriveFeetM;
-                g = 2.0 * (y0 + vy * guidedT - arrive) / (guidedT * guidedT);
-                if (g < _vines.ChainGravityMinMps2)
+                double t = dz / vx;
+                if (t < _vines.ChainFlightMinS)
                 {
-                    g = _vines.ChainGravityMinMps2;
+                    t = _vines.ChainFlightMinS;
                 }
-                else if (g > _vines.ChainGravityMaxMps2)
+                else if (t > _vines.ChainFlightMaxS)
                 {
-                    g = _vines.ChainGravityMaxMps2;
+                    t = _vines.ChainFlightMaxS;
                 }
 
-                vy = (arrive - y0 + 0.5 * g * guidedT * guidedT) / guidedT;
-                flight = guidedT;
+                vx = dz / t;
+                vy = (_vines.ChainArriveFeetM - y0 + (0.5 * g * t * t)) / t;
+                flight = t;
             }
             else
             {
-                flight = (vy + Math.Sqrt(vy * vy + 2.0 * g * (y0 > 0.0 ? y0 : 0.0))) / g;
+                flight = (vy + Math.Sqrt((vy * vy) + (2.0 * g * (y0 > 0.0 ? y0 : 0.0)))) / g;
             }
 
             int vineId = _swingVineId;
+            _releasedTheta = _swingTheta;
+            _releasedOmega = _swingOmega;
+            _releasedPivotZ = _swingPivotZ;
+            _releasedVineId = vineId;
+            _releasedVineLane = _swingLane;
             _releaseThisTick = grade;
             _releaseMultiplierThisTick = multiplier;
             _lastReleaseGrade = grade;
             _launchStartY = y0;
             _launchVelocityY = vy;
             _launchGravity = g;
-            _launchSpeed = speed;
-            _launchStartZ = _z;
+            _launchSpeed = vx;
+            _launchStartZ = z0;
             _launchFlightS = flight;
             _launchLane = _aimLane;
 
             _swingVineId = 0;
             _swingElapsed = 0;
+            _swingTheta = 0.0;
+            _swingOmega = 0.0;
+            _swingPivotZ = 0.0;
+            _swingResY = 0.0;
             _locomotion = Locomotion.Falling;
             _fallStartTick = fromCommand ? tick - 1 : tick;
             _fallStartY = y0;
             _fallStartVelocity = vy;
             _fallGravity = g;
             _airStartTick = tick;
-            _airStartZ = _z;
+            _airStartZ = z0;
             _launchedFromVine = true;
 
             if (_aimLane != _targetLane)
@@ -2003,6 +2129,18 @@ namespace JungleBooze.Gameplay.Runner
             {
                 _chainPerfects = 0;
             }
+
+            // Spec 004 4.2: the catch. Start angle from where HERO is, tangential catch speed clamp(vIn, 13, 16).
+            double rope = _vines.RopeLengthM;
+            double theta0 = _vines.StartAngleFor(_z - v.Z);
+            _swingUsed = true;
+            _swingTheta = theta0;
+            _swingOmega = _vines.CatchSpeedFor(_speed) / rope;
+            _swingPivotZ = v.Z;
+            _swingResY = (_y + _vines.HandToFeetM) - _vines.HandHeightY(theta0);
+            _speed = rope * _swingOmega * DeterministicMath.Cos(theta0);
+            _landBlendActive = false;
+            _landBlendElapsed = 0;
 
             _moveActive = false;
             _moveElapsed = 0;
@@ -2433,6 +2571,24 @@ namespace JungleBooze.Gameplay.Runner
 
         private void UpdateSpeedAndDistance(long tick)
         {
+            if (_locomotion == Locomotion.Carried)
+            {
+                // Spec 004 4.7: the pendulum owns z (step 9); the speed is the horizontal speed of the last state.
+                // The curve, the run-start ramp and the Speed Boost multiplier play no role while on the rope.
+                _speed = (double)_vines.RopeLengthM * _swingOmega * DeterministicMath.Cos(_swingTheta);
+                EmitSpeedRows(tick);
+                return;
+            }
+
+            if (_launchedFromVine && _locomotion == Locomotion.Falling)
+            {
+                // Vine flight: constant forward speed from the release, no multiplier (spec 004 4.5, 4.7).
+                _speed = _launchSpeed;
+                _z += _launchSpeed * RunnerConfig.TickSeconds;
+                EmitSpeedRows(tick);
+                return;
+            }
+
             double speed;
             if (SpeedSource != null)
             {
@@ -2451,9 +2607,30 @@ namespace JungleBooze.Gameplay.Runner
             }
 
             speed *= SpeedMultiplier;
+            if (_landBlendActive)
+            {
+                // Spec 004 4.7: smoothstep from the speed at touchdown to the (boosted) curve speed.
+                _landBlendElapsed++;
+                int total = _vines.LandingBlendTicks;
+                if (_landBlendElapsed >= total)
+                {
+                    _landBlendActive = false;
+                }
+                else
+                {
+                    double u = (double)_landBlendElapsed / total;
+                    double w = u * u * (3.0 - (2.0 * u));
+                    speed = _landSpeed + ((speed - _landSpeed) * w);
+                }
+            }
+
             _speed = speed;
             _z += speed * RunnerConfig.TickSeconds;
+            EmitSpeedRows(tick);
+        }
 
+        private void EmitSpeedRows(long tick)
+        {
             while (_nextSpeedRow < _curve.RowCount && _z >= _curve.GetRowDistance(_nextSpeedRow))
             {
                 Emit(RunnerEventType.SpeedStepReached, tick, 0, (byte)_targetLane, 0, (short)_nextSpeedRow);
@@ -2497,7 +2674,10 @@ namespace JungleBooze.Gameplay.Runner
                 HitboxHeight = CurrentHitboxHeight(),
                 IsDead = _locomotion == Locomotion.Dead,
                 SwingPhase = carried ? (float)_vines.PhaseAt(_swingElapsed) : 0f,
-                SwingAngleRad = carried ? (float)_vines.SwingAngleAt(_swingElapsed) : 0f,
+                SwingAngleRad = carried ? (float)_swingTheta : 0f,
+                SwingOmegaRadS = carried ? (float)_swingOmega : 0f,
+                SwingPivotZ = carried ? _swingPivotZ : 0.0,
+                LandBlend = _landBlendActive ? (float)_landBlendElapsed / _vines.LandingBlendTicks : 1f,
                 SwingTick = carried ? _swingElapsed : 0,
                 VineId = carried ? _swingVineId : 0,
                 VineLane = carried ? _swingLane : -1,

@@ -109,3 +109,9 @@ Meshy commercial licence is still UNVERIFIED (docs/STATUS.md); verify before shi
 2. **Grab cue strength.** (a) Tuft + flower + glow ring + Duko call-out + dim others (recommended); (b) glow ring only (cleaner, harder to see in dense jungle); (c) add a brief gold sparkle trail on approach.
 3. **Spend now?** Approve 45 credits (Buttress, Root_Arch, Trunk_Fallen; previews first as a contact sheet) after the zero-credit Blender slice? (a) Yes, after you see the mock (recommended); (b) Blender only, no Meshy; (c) also allow the 45 for Cliff/Ruins now.
 4. **Canopy openness.** (a) Open canopy with light holes and a warm sky strip (recommended, keeps Duko readable); (b) closed canopy, darker, more "deep jungle" but harder on the macaw rule.
+
+## Update 2026-10-07 (spec 004, fixed-pivot swing)
+
+The swing is a pendulum about one fixed branch tip, so the overhead span and the sliding knot are dropped: no span art, no `Vine_Knot` slot.
+Each vine needs one tapered limb growing out of its anchor tree (0.8 m thick at the trunk, 0.35 m at the tip, tip exactly at the pivot 17.0 m above the lane),
+a leafy knot at the pivot, and the 14 m `Vine_Liana` rope. The chasm is 16 m long (rim 4 m before the pivot, far edge 12 m past it).

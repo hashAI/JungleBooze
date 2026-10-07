@@ -29,8 +29,11 @@ namespace JungleBooze.Gameplay.Tutorial
         /// <summary>The vine lesson starts when the first vine is this close (m).</summary>
         public const double VineTriggerM = 22.0;
 
-        /// <summary>The vine lesson ends this far past the vine if nothing happened (m).</summary>
-        public const double VineGiveUpPastM = 30.0;
+        /// <summary>
+        /// The vine lesson ends this far past the vine if nothing happened (m). Spec 004 4.11: landing + 5 m; after a
+        /// Perfect the hero lands about 23 m past the pivot, the farthest possible landing is 25.6 m past it.
+        /// </summary>
+        public const double VineGiveUpPastM = 31.0;
 
         /// <summary>The companion Assist lesson may start after this much run time (s).</summary>
         public const double AssistAfterSeconds = 30.0;

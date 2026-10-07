@@ -16,15 +16,16 @@ namespace JungleBooze.Tests.EditMode.RouteFrame
             return vines.SwingTicks * (float)RunnerConfig.TickSeconds;
         }
 
+        // Spec 004: the pre-pendulum rig tests below run against the VineConfig compatibility members (rope 14 m, rest
+        // angle 0, so the rest pivot is straight above the grab point at 17 m). The view rewrite (T405) replaces them.
         [Test]
         public void AC318_RestPivotHeightComesFromTheConfig()
         {
             VineConfig vines = VineConfig.CreateDefault();
             float pivotY = SwingRigMath.RestPivotHeightM(vines.GrabPointHeightM, vines.SwingRadiusM, vines.SwingStartAngleRad);
-            float expected = vines.GrabPointHeightM + (vines.SwingRadiusM * (float)System.Math.Cos(vines.SwingStartAngleRad));
-            Assert.AreEqual(expected, pivotY, Tolerance);
-            Assert.AreEqual(8.64f, pivotY, Tolerance);
-            Assert.AreEqual(2.05f, SwingRigMath.RestPivotAheadM(vines.SwingRadiusM, vines.SwingStartAngleRad), Tolerance);
+            Assert.AreEqual(vines.PivotHeightM, pivotY, Tolerance);
+            Assert.AreEqual(17f, pivotY, Tolerance);
+            Assert.AreEqual(0f, SwingRigMath.RestPivotAheadM(vines.SwingRadiusM, vines.SwingStartAngleRad), Tolerance);
         }
 
         [Test]
@@ -33,7 +34,7 @@ namespace JungleBooze.Tests.EditMode.RouteFrame
             VineConfig vines = VineConfig.CreateDefault();
             for (int tick = 0; tick <= vines.SwingTicks; tick++)
             {
-                double angle = vines.SwingAngleAt(tick);
+                double angle = -0.1 + (tick * 0.012);
                 SwingRigMath.PivotOffsetFromHand(vines.SwingRadiusM, angle, out float up, out float ahead);
                 float length = (float)System.Math.Sqrt((up * up) + (ahead * ahead));
                 Assert.AreEqual(vines.SwingRadiusM, length, 0.02f, "rope end must coincide with the hand at tick " + tick);

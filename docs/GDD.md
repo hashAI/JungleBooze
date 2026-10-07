@@ -194,18 +194,19 @@ Vines break the rhythm of dodging, give the run a high point every minute, and c
 
 ### 7.2 Section layout
 
-A vine section is a pre-built chunk, 60–110 m long:
+A vine section is a pre-built chunk, 110–120 m long (spec 004 section 9):
 
 ```
  [Approach 30 m: coins point to the vine lane, a signpost/glow marks it]
- [Grab zone]  vine 1 ─ swing arc ─ [release window] ─► (optional) vine 2 ─► vine 3
+ [Grab zone]  vine 1 ─ swing ─ [release window] ─► (optional) vine 2 ─► vine 3   (vines 18 m apart)
  [Landing pad 20 m: always safe, no obstacles for 1.0 s after landing]
 ```
 
-- Each vine hangs over one lane. Its grab point is 3.0 m above the track, shown by a bright, color-blind-safe glow
+- Each vine is a 14 m rope hanging from the tip of one branch of an anchor tree beside the path: a **fixed pivot** 17.0 m above the lane
+  (spec 004). The rope end (the grab point) rests 3.0 m above the track, shown by a bright, color-blind-safe glow
   (white core with a sun-gold pulse, faked with an additive sprite card, no bloom) and a ring icon pulsing at 2 Hz.
 - Below the vine there is either **ground** (a "safe" vine: missing it only loses the bonus) or a **chasm** (missing
-  it is a death). Early in a run and in the tutorial, only safe vines appear (section 11).
+  it is a death). The chasm is 16 m long: the near rim 4 m before the vine, the far edge 12 m past it. Early in a run and in the tutorial, only safe vines appear (section 11).
 - Vine sections never spawn within 8 s of a world transition, and never while a speed boost is active (the
   generator waits until the boost ends).
 
@@ -216,29 +217,32 @@ A vine section is a pre-built chunk, 60–110 m long:
    vine lane (section 15.1).
 2. **Grab.** The player swipes up (jump) so that Pista is airborne inside the grab zone (a box 2.0 m long,
    1.6 m wide, from 1.6 m to 3.6 m high, centered on the vine). Grab is **automatic** on entering the box while
-   airborne. A jump started up to 0.45 s before the box counts, so there is a generous timing window.
+   airborne. A jump started up to 0.55 s before the box counts, so there is a generous timing window.
    - Coyote rule applies: a jump within 80 ms after the approach ends still counts.
    - Being in the wrong lane = no grab. Lane switching in the air into the box still grabs.
-3. **Swing.** Pista swings forward along a pendulum arc (visual radius 6 m) for **1.40 s** (swing phase 0.0 to 1.0).
-   - Game speed stays the same in meters per second, but presentation slows to **0.8× for the first 0.3 s**
+3. **Swing.** Pista is a real pendulum about the fixed pivot (rope 14 m, swing gravity 22 m/s²). The catch speed is the
+   run speed clamped to **13–16 m/s** (a slow runner is pulled forward, a fast one slowed), so every run speed gets the
+   same swing: it peaks at 44° to 55° about **1.42 s** after the grab (tick 85). Pista stays in the vine's lane.
+   - The forward motion is the pendulum's own (about 6 to 14 m/s); a Speed Boost multiplier does not apply on the rope or
+     in the flight, and the run speed blends back over 0.5 s after landing. Presentation slows to **0.8× for the first 0.3 s**
      (a "hang" moment) and the camera pulls back to FOV 70° and tilts 8°. (Turned off by Reduce Motion.)
    - The swing is **safe**: nothing can hit Pista while on a vine.
    - Swiping left/right during the swing **aims** at the next vine if one exists in that lane (shown by a glow).
      Without aiming, Pista aims at the next vine in the same lane, or the landing pad.
 4. **Release.** The player swipes up during the release window:
 
-   | Swing phase | Result | Effect |
+   | Time since the grab | Result | Effect |
    |---|---|---|
-   | 0.00–0.45 | Too early | Ignored (buffered for 150 ms, so a slightly early swipe still lands in "Good") |
-   | 0.45–0.66 | Good | Normal launch, coin shower, +150 score |
-   | 0.66–0.80 | **Perfect** | Higher, longer launch through a bonus coin ring, +400 score, +25% COMPANION meter, stamped "PERFECT!", radial speed lines (0.4 s) and a sun-gold trail on Pista (`design/STYLE_GUIDE.md` 10) |
-   | 0.80–1.00 | Good | Normal launch |
-   | No swipe by 1.00 | Auto-release | Short, safe launch, +50 score, no coin shower |
+   | 0–450 ms (ticks 0–26) | Too early | Ignored (buffered for 150 ms, so a slightly early swipe still lands in "Good") |
+   | 450–700 ms (27–41) | Good | Pendulum velocity + a 1.5 m/s push, coin shower, +150 score |
+   | 700–883 ms (42–52) | **Perfect** | Pendulum velocity + a 3.0 m/s push: the longest throw, through a bonus coin ring, +400 score, +25% COMPANION meter, stamped "PERFECT!", radial speed lines (0.4 s) and a sun-gold trail on Pista (`design/STYLE_GUIDE.md` 10) |
+   | 883 ms to the apex (53–85) | Good | As the early Good |
+   | No swipe by the apex | Auto-release ("Poor") | Safe launch (floors 6 m/s forward, 2 m/s up), +50 score, no coin shower; never later than 1,600 ms |
 
    The release window is visible: a ring around the hand fills and flashes gold in the Perfect band.
-   Perfect band width: 0.14 of 1.40 s = **196 ms**.
-5. **Chain.** If the next vine is ahead in the aimed lane, a Good/Perfect release launches into its grab zone
-   automatically (no extra jump needed). Auto-release reaches the next vine only if it is a "safe" vine.
+   Perfect band width: 11 ticks = **183 ms**. Every release lands 2.9 to 13.6 m past the far edge of the chasm (spec 004 section 15).
+5. **Chain.** If the next vine (18 m on) is in the aimed lane, a Good/Perfect release launches into its grab zone
+   automatically (no extra jump needed; guided flight of 0.85 to 1.5 s). Auto-release reaches the next vine only if it is a "safe" vine.
    Chains are up to 3 vines. Each Perfect in a chain raises the swing multiplier: ×1, ×1.5, ×2 on the score bonus.
 6. **Landing.** Pista lands on the landing pad in the aimed lane. The landing pad is guaranteed clear for 1.0 s.
    A buffered swipe down on landing becomes a slide; a buffered up becomes a jump.
@@ -262,10 +266,14 @@ A vine section is a pre-built chunk, 60–110 m long:
 |---|---|
 | Time between vine sections | 35–70 s of run time (random within seeded range) |
 | First vine section in a run | 20–30 s after run start (after the tutorial: section 12) |
-| Swing duration | 1.40 s |
-| Perfect window | phase 0.66–0.80 (196 ms) |
-| Good window | phase 0.45–0.66 and 0.80–1.00 |
-| Grab timing window (jump earliness) | 0.45 s |
+| Rope / pivot height / swing gravity | 14 m / 17.0 m / 22 m/s² |
+| Catch speed | run speed clamped to 13–16 m/s |
+| Time to the apex | 1.42 s (tick 85); failsafe release at 1.6 s |
+| Perfect window | 700–883 ms (ticks 42–52, 183 ms) |
+| Good window | 450–700 ms and 883 ms to the apex |
+| Release impulse (Perfect / Good / Poor) | 3.0 / 1.5 / 0 m/s at 30°, floors 6 m/s forward and 2 m/s up |
+| Grab timing window (jump earliness) | 0.55 s |
+| Chasm | 16 m, rim 4 m before the vine, far edge 12 m past it |
 | Chain length | 1 to 3 vines (3 only at difficulty tier 4+) |
 | Score bonus | Good 150 / Perfect 400 / Auto 50, × chain multiplier |
 | Coin shower | Good 10 coins / Perfect 25 coins (ring) |
