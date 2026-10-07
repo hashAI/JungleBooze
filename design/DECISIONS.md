@@ -5,6 +5,7 @@ Newest first.
 
 | Date | Gate | Decision | Options considered | Decided by |
 |---|---|---|---|---|
+| 2026-10-07 | — | Pause lifted. Single focus: deliver a playable version. Reviewers apply fixes | — | Owner |
 | 2026-10-07 | — | Tests are deferred: focus on making the code correct now; add the remaining tests later | — | Owner |
 | 2026-10-07 | — | **Paused for owner code review.** Let the running agents (B1 collisions, B2 track, FP0 compile review) finish and commit their output; then make no further code changes and launch no new work until the owner has reviewed and says to continue. Review findings are reported, not applied. Resume watchdog disabled | — | Owner |
 | 2026-10-07 | — | **Autonomous until the first playable version.** No questions to the owner; agents use their recommended defaults (marked `[ASSUMED]`, reviewed later). Don't stop until the owner can play a first version. Sessions may hand off and resume after usage limits on their own | — | Owner |

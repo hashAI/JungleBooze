@@ -7,7 +7,7 @@ Decisions themselves live in `design/DECISIONS.md`; the plan lives in `docs/AGEN
 _Last updated: 2026-10-07 (06:50 UTC)_
 
 ## Current milestone
-**⏸ PAUSED FOR OWNER CODE REVIEW (2026-10-07).** Owner: "make sure code is proper; tests we'll add later" — remaining tests (track AC-201–250, validator, PlayMode/perf) are deferred. After the running agents finish and their output is committed, make no code changes and start no new agents until the owner says to continue. Code-reviewer findings are reported, not applied.
+**▶ ACTIVE (2026-10-07): owner lifted the pause and asked for a playable version, focus only on that.** Plan: C2 (wire track + views) in parallel with compile-fix passes; then a compile-fix pass over the presentation code; then hand the owner `docs/PLAY_FIRST_BUILD.md`. Tests stay deferred. Reviewers now APPLY fixes.
 
 **Goal: First Playable (FP1). Autonomous mandate: no owner questions until it's done.** Release/store work is paused.
 
@@ -110,6 +110,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Log
 Newest first. One line per event.
+- 2026-10-07: Owner lifted the pause: "give me a playable version, just focus on that". Launching C2 + two compile-fix passes.
 - 2026-10-07: Stage B2 done (track code, no new tests). All agents finished. Project is paused for the owner's code review.
 - 2026-10-07: Owner deferred tests; track agent redirected from writing tests to verifying code consistency and .meta files.
 - 2026-10-07: Owner stopped the code-reviewer to save tokens. Track agent (B2) continues to finish its tests.
