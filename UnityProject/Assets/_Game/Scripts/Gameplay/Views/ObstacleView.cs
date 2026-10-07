@@ -31,6 +31,7 @@ namespace JungleBooze.Gameplay.Views
             public MeshRenderer CubeRenderer;
             public MeshRenderer SphereRenderer;
             public GameObject[] Art;
+            public int ObstacleId;
         }
 
         private const int ArchetypeSlots = 8;
@@ -45,6 +46,33 @@ namespace JungleBooze.Gameplay.Views
 
         /// <summary>Pieces shown last frame (tests).</summary>
         public int ShownPieceCount => _shown;
+
+        /// <summary>
+        /// Debug aid: true when a piece for <paramref name="obstacleId"/> is shown this frame with at least one enabled
+        /// renderer (gray-box or verified art). Allocates; call once per death at most.
+        /// </summary>
+        public bool IsDrawn(int obstacleId)
+        {
+            for (int i = 0; _pieces != null && i < _shown; i++)
+            {
+                Piece piece = _pieces[i];
+                if (piece.ObstacleId != obstacleId || !piece.Root.activeInHierarchy)
+                {
+                    continue;
+                }
+
+                Renderer[] renderers = piece.Root.GetComponentsInChildren<Renderer>(false);
+                for (int r = 0; r < renderers.Length; r++)
+                {
+                    if (renderers[r].enabled && renderers[r].sharedMaterial != null)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
 
         public void Init(GrayBoxKit kit, RunnerConfig runnerConfig, float viewDistanceM)
         {
@@ -199,6 +227,7 @@ namespace JungleBooze.Gameplay.Views
             float width = shape.WidthM;
             float depth = o.DepthM > 0f ? o.DepthM : shape.DepthM;
             float height = shape.TopM - shape.BottomM;
+            piece.ObstacleId = o.Id;
             piece.Root.transform.localPosition = new Vector3(x, 0f, (float)o.Z + depth * 0.5f);
             if (!piece.Root.activeSelf)
             {

@@ -58,6 +58,7 @@ namespace JungleBooze.Gameplay.Views
         private bool[] _wallFlip;
         private int _wallsPerSide;
         private int _wallVariants;
+        private int[] _wallUsable;
 
         // Fallback dressing: single foliage models along the verges.
         private const float DressSpacingM = 9f;
@@ -433,13 +434,13 @@ namespace JungleBooze.Gameplay.Views
             }
 
             float length = _look.WallSegmentM;
-            _wallVariants = available.Count;
+            int declared = available.Count;
             _wallsPerSide = Mathf.CeilToInt((_look.WallBehindM + viewDistanceM + length) / length) + 1;
             int total = _wallsPerSide * 2;
             _walls = new GameObject[total][];
             _wallRoots = new Transform[total];
             _wallIndex = new long[total];
-            _wallFlip = new bool[_wallVariants];
+            _wallFlip = new bool[declared];
 
             var parent = new GameObject("JungleWalls").transform;
             parent.SetParent(transform, false);
@@ -449,10 +450,16 @@ namespace JungleBooze.Gameplay.Views
                 root.SetParent(parent, false);
                 _wallRoots[i] = root;
                 _wallIndex[i] = long.MinValue;
-                _walls[i] = new GameObject[_wallVariants];
-                for (int v = 0; v < _wallVariants; v++)
+                _walls[i] = new GameObject[declared];
+                for (int v = 0; v < declared; v++)
                 {
+                    // Null when the model would not draw (EnvironmentArt verifies it); that variant is then skipped.
                     Transform art = EnvironmentArt.Attach(root, available[v]);
+                    if (art == null)
+                    {
+                        continue;
+                    }
+
                     if (i == 0)
                     {
                         // Segments are authored to extend toward +x from the path edge; turn them around if an
@@ -463,6 +470,25 @@ namespace JungleBooze.Gameplay.Views
                     art.gameObject.SetActive(false);
                     _walls[i][v] = art.gameObject;
                 }
+            }
+
+            _wallUsable = new int[declared];
+            _wallVariants = 0;
+            for (int v = 0; v < declared; v++)
+            {
+                if (_walls[0][v] != null)
+                {
+                    _wallUsable[_wallVariants++] = v;
+                }
+            }
+
+            if (_wallVariants == 0)
+            {
+                Destroy(parent.gameObject);
+                _walls = null;
+                _wallRoots = null;
+                _wallIndex = null;
+                return false;
             }
 
             return true;
@@ -504,11 +530,14 @@ namespace JungleBooze.Gameplay.Views
 
                     _wallIndex[slot] = key;
                     uint h = EnvironmentArt.Hash(key);
-                    int variant = (int)(h % (uint)_wallVariants);
+                    int variant = _wallUsable[(int)(h % (uint)_wallVariants)];
                     GameObject[] options = _walls[slot];
                     for (int v = 0; v < options.Length; v++)
                     {
-                        options[v].SetActive(v == variant);
+                        if (options[v] != null)
+                        {
+                            options[v].SetActive(v == variant);
+                        }
                     }
 
                     float yaw = right != _wallFlip[variant] ? 0f : 180f;

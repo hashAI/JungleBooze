@@ -100,10 +100,7 @@ namespace JungleBooze.Gameplay.Views
                 slot.Rope = kit.Create(PrimitiveType.Cylinder, "Rope", root, StylePalette.VineRope).transform;
                 slot.Branch = kit.Create(PrimitiveType.Cube, "Branch", root, StylePalette.VineRope).transform;
                 // Real branch (fits a unit cube, scaled lane-wide by the placement code) replaces the cube.
-                if (EnvironmentArt.Attach(slot.Branch, EnvironmentArt.VineBranch) != null)
-                {
-                    EnvironmentArt.HideRenderer(slot.Branch);
-                }
+                EnvironmentArt.AttachAndHide(slot.Branch, EnvironmentArt.VineBranch);
 
                 slot.Core = kit.Create(PrimitiveType.Sphere, "GlowCore", root, StylePalette.VineGlowCore).transform;
                 slot.Core.localScale = new Vector3(CoreSizeM, CoreSizeM, CoreSizeM);

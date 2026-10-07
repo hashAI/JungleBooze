@@ -30,8 +30,10 @@ namespace JungleBooze.Gameplay.Views
         private const float FrameM = 0.15f;
         private const float ChevronBarM = 0.9f;
         private const float ChevronThicknessM = 0.16f;
-        private const float DropHeightM = 5f;
-        private const int DropTicks = 6;
+        // The strike box is lethal from its first active tick, so the column starts almost on the hitbox (it used to
+        // fall from 5 m over 6 ticks, i.e. the box was live while the rock was still above it).
+        private const float DropHeightM = 1f;
+        private const int DropTicks = 3;
         private const float BandHeightM = 0.2f;
         private const float StripeHeightM = 0.1f;
 
@@ -41,6 +43,7 @@ namespace JungleBooze.Gameplay.Views
             public Transform Body;
             public Transform[] Thorns;
             public Transform[] Tips;
+            public int ObstacleId;
         }
 
         private sealed class StrikePiece
@@ -53,6 +56,7 @@ namespace JungleBooze.Gameplay.Views
             public Transform Rocks;
             public Transform Band;
             public Transform Stripe;
+            public int ObstacleId;
         }
 
         private RunnerConfig _runnerConfig;
@@ -67,6 +71,48 @@ namespace JungleBooze.Gameplay.Views
         public int ShownThornCount => _thornsShown;
 
         public int ShownStrikeCount => _strikesShown;
+
+        /// <summary>
+        /// Debug aid: true when a thorn patch or strike column for <paramref name="obstacleId"/> is shown this frame with
+        /// at least one enabled renderer. Allocates; call once per death at most.
+        /// </summary>
+        public bool IsDrawn(int obstacleId)
+        {
+            for (int i = 0; _thorns != null && i < _thornsShown; i++)
+            {
+                if (_thorns[i].ObstacleId == obstacleId && _thorns[i].Root.activeInHierarchy
+                    && HasEnabledRenderer(_thorns[i].Root.transform))
+                {
+                    return true;
+                }
+            }
+
+            for (int i = 0; _strikes != null && i < _strikesShown; i++)
+            {
+                // A strike only has a box while active, so what must be visible is the column.
+                if (_strikes[i].ObstacleId == obstacleId && _strikes[i].Column.gameObject.activeInHierarchy
+                    && HasEnabledRenderer(_strikes[i].Column))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool HasEnabledRenderer(Transform root)
+        {
+            Renderer[] renderers = root.GetComponentsInChildren<Renderer>(false);
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                if (renderers[i].enabled && renderers[i].sharedMaterial != null)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
 
         public void Init(GrayBoxKit kit, RunnerConfig runnerConfig, float viewDistanceM)
         {
@@ -165,11 +211,8 @@ namespace JungleBooze.Gameplay.Views
             piece.Root = root.gameObject;
             piece.Body = kit.Create(PrimitiveType.Cube, "Body", root, StylePalette.HazardThorn).transform;
             // Real art (fits a unit cube, scaled to the hitbox by PlaceThorn) replaces body, thorns and tips.
-            bool thornArt = EnvironmentArt.Attach(piece.Body, EnvironmentArt.ThornPatch) != null;
-            if (thornArt)
-            {
-                EnvironmentArt.HideRenderer(piece.Body);
-            }
+            // The gray-box body is only hidden once the art is verified visible (EnvironmentArt.AttachAndHide).
+            bool thornArt = EnvironmentArt.AttachAndHide(piece.Body, EnvironmentArt.ThornPatch);
 
             int n = ThornsPerFace * 2;
             piece.Thorns = new Transform[n];
@@ -230,10 +273,9 @@ namespace JungleBooze.Gameplay.Views
             piece.Rocks = kit.Create(PrimitiveType.Cube, "Rocks", column, StylePalette.HazardStone).transform;
             piece.Band = kit.Create(PrimitiveType.Cube, "HazardBand", column, StylePalette.HazardRed).transform;
             piece.Stripe = kit.Create(PrimitiveType.Cube, "InkStripe", column, StylePalette.Ink).transform;
-            // Real art (unit cube, scaled to 90% of the hitbox by PlaceStrike) replaces rocks and marker bands.
-            if (EnvironmentArt.Attach(piece.Rocks, EnvironmentArt.StrikeColumn) != null)
+            // Real art (unit cube, scaled to the full hitbox by PlaceStrike) replaces rocks and marker bands.
+            if (EnvironmentArt.AttachAndHide(piece.Rocks, EnvironmentArt.StrikeColumn))
             {
-                EnvironmentArt.HideRenderer(piece.Rocks);
                 piece.Band.gameObject.SetActive(false);
                 piece.Stripe.gameObject.SetActive(false);
             }
@@ -247,6 +289,7 @@ namespace JungleBooze.Gameplay.Views
             float width = shape.WidthM;
             float depth = o.DepthM > 0f ? o.DepthM : shape.DepthM;
             float height = shape.TopM - shape.BottomM;
+            piece.ObstacleId = o.Id;
             piece.Root.transform.localPosition = new Vector3(x, 0f, (float)o.Z + depth * 0.5f);
             if (!piece.Root.activeSelf)
             {
@@ -277,6 +320,7 @@ namespace JungleBooze.Gameplay.Views
         {
             float depth = o.DepthM > 0f ? o.DepthM : shape.DepthM;
             float width = shape.WidthM;
+            piece.ObstacleId = o.Id;
             piece.Root.transform.localPosition = new Vector3(_runnerConfig.LaneCenterX(o.FromLane), 0f, (float)o.Z + depth * 0.5f);
             if (!piece.Root.activeSelf)
             {
@@ -318,11 +362,11 @@ namespace JungleBooze.Gameplay.Views
                 float y = (1f - drop) * DropHeightM;
                 piece.Column.localPosition = new Vector3(0f, y, 0f);
                 piece.Rocks.localPosition = new Vector3(0f, shape.BottomM + height * 0.5f, 0f);
-                piece.Rocks.localScale = new Vector3(width * 0.9f, height, depth * 0.9f);
+                piece.Rocks.localScale = new Vector3(width, height, depth);
                 piece.Band.localPosition = new Vector3(0f, 1f, 0f);
-                piece.Band.localScale = new Vector3(width * 0.9f + 0.01f, BandHeightM, depth * 0.9f + 0.01f);
+                piece.Band.localScale = new Vector3(width + 0.01f, BandHeightM, depth + 0.01f);
                 piece.Stripe.localPosition = new Vector3(0f, 1f - BandHeightM * 0.5f - StripeHeightM * 0.5f, 0f);
-                piece.Stripe.localScale = new Vector3(width * 0.9f + 0.01f, StripeHeightM, depth * 0.9f + 0.01f);
+                piece.Stripe.localScale = new Vector3(width + 0.01f, StripeHeightM, depth + 0.01f);
             }
         }
     }

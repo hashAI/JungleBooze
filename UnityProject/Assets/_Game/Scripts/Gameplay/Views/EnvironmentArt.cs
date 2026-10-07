@@ -7,7 +7,8 @@ namespace JungleBooze.Gameplay.Views
     /// Optional real art for the gray-box views. Looks up a prefab by name in
     /// <c>Resources/EnvironmentArt/</c> (stored under <c>Art/Environment/Resources/EnvironmentArt</c>). When the prefab
     /// exists the views parent an instance to the gray-box piece they already scale and move, hide the primitive's
-    /// renderer, and carry on; when it is missing nothing changes and the gray-box shows. Conventions for each
+    /// renderer once the art is verified visible (<see cref="VerifyVisible"/>), and carry on; when it is missing or would
+    /// not draw nothing changes and the gray-box shows. Conventions for each
     /// prefab are in <c>Art/Environment/README.md</c>. Setup-time only (instantiates); never call per frame.
     /// </summary>
     public static class EnvironmentArt
@@ -66,11 +67,18 @@ namespace JungleBooze.Gameplay.Views
         private static readonly Dictionary<string, Material> MaterialCache = new Dictionary<string, Material>();
         private static Material _template;
 
+        private static readonly HashSet<string> Rejected = new HashSet<string>();
+        private const string ErrorShaderName = "Hidden/InternalErrorShader";
+        private const float MinExtentM = 0.02f;
+        private const float MinFitFraction = 0.25f;
+        private const float MinAlpha = 0.05f;
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStatics()
         {
             Cache.Clear();
             MaterialCache.Clear();
+            Rejected.Clear();
             _template = null;
         }
 
@@ -145,7 +153,238 @@ namespace JungleBooze.Gameplay.Views
 
             string textureKey = TextureKeyFor(prefabName);
             EnsureTexturedMaterials(instance, ResourcesFolder + textureKey + BaseColorSuffix, textureKey);
+
+            // A model that would not draw (no mesh, no material, error shader, scaled to nothing, nowhere near the
+            // hitbox it stands in for) must never replace a gray-box: the gray-box stays and the reason is logged.
+            bool hasFit = TryGetExpectedFit(prefabName, out Bounds fit);
+            if (!VerifyVisible(instance.transform, hasFit, fit, out string reason))
+            {
+                if (Rejected.Add(prefabName))
+                {
+                    Debug.LogWarning("[JungleBooze] Environment art '" + prefabName + "' would not be visible (" + reason
+                        + "); keeping the gray-box so the hitbox stays drawn.");
+                }
+
+                Object.Destroy(instance);
+                return null;
+            }
+
             return instance.transform;
+        }
+
+        /// <summary>
+        /// Attaches the art under <paramref name="grayBox"/> and, only when it is verified visible, turns the gray-box
+        /// primitive's own renderer off. Returns false (gray-box untouched and visible) when there is no usable art.
+        /// </summary>
+        public static bool AttachAndHide(Transform grayBox, string prefabName)
+        {
+            if (grayBox == null || Attach(grayBox, prefabName) == null)
+            {
+                return false;
+            }
+
+            HideRenderer(grayBox);
+            return true;
+        }
+
+        private static bool TryGetExpectedFit(string prefabName, out Bounds fit)
+        {
+            switch (prefabName)
+            {
+                case LowBarrier:
+                case HighBarrier:
+                case FullBlock:
+                case Boulder:
+                case ThornPatch:
+                case StrikeColumn:
+                case VineBranch:
+                case Magnet:
+                case Shield:
+                case Boost:
+                    fit = new Bounds(Vector3.zero, Vector3.one);
+                    return true;
+                case Coin:
+                    fit = new Bounds(Vector3.zero, new Vector3(0.5f, 0.5f, 0.5f));
+                    return true;
+                default:
+                    fit = default;
+                    return false;
+            }
+        }
+
+        /// <summary>
+        /// True only when <paramref name="art"/> has at least one mesh renderer that draws: a mesh with vertices, a
+        /// non-null supported material that is not see-through, and bounds (measured in the parent's local space, where
+        /// a gray-box's scale is the hitbox) that are not degenerate and, when <paramref name="hasFit"/>, overlap
+        /// <paramref name="fit"/> and are not a tiny fraction of it. Renderers and their parents are switched on
+        /// (a model exported with visibility off must not vanish). Setup-time only (allocates).
+        /// </summary>
+        public static bool VerifyVisible(Transform art, bool hasFit, Bounds fit, out string reason)
+        {
+            reason = null;
+            if (art == null)
+            {
+                reason = "no instance";
+                return false;
+            }
+
+            Transform space = art.parent != null ? art.parent : art;
+            Renderer[] renderers = art.GetComponentsInChildren<Renderer>(true);
+            bool any = false;
+            bool hasBounds = false;
+            Bounds total = default;
+            string lastProblem = "no mesh renderer";
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                Renderer r = renderers[i];
+                Mesh mesh = null;
+                var meshRenderer = r as MeshRenderer;
+                if (meshRenderer != null)
+                {
+                    MeshFilter filter = r.GetComponent<MeshFilter>();
+                    mesh = filter != null ? filter.sharedMesh : null;
+                }
+                else
+                {
+                    var skinned = r as SkinnedMeshRenderer;
+                    if (skinned != null)
+                    {
+                        mesh = skinned.sharedMesh;
+                    }
+                }
+
+                if (mesh == null || mesh.vertexCount == 0)
+                {
+                    lastProblem = "renderer without a mesh";
+                    continue;
+                }
+
+                if (!HasUsableMaterial(r, out string materialProblem))
+                {
+                    lastProblem = materialProblem;
+                    continue;
+                }
+
+                // Make sure nothing in the model's own hierarchy hides it.
+                r.enabled = true;
+                for (Transform t = r.transform; t != null; t = t.parent)
+                {
+                    if (!t.gameObject.activeSelf)
+                    {
+                        t.gameObject.SetActive(true);
+                    }
+
+                    if (t == art)
+                    {
+                        break;
+                    }
+                }
+
+                Bounds mb = mesh.bounds;
+                Vector3 c = mb.center;
+                Vector3 e = mb.extents;
+                for (int corner = 0; corner < 8; corner++)
+                {
+                    var local = new Vector3(
+                        c.x + ((corner & 1) == 0 ? -e.x : e.x),
+                        c.y + ((corner & 2) == 0 ? -e.y : e.y),
+                        c.z + ((corner & 4) == 0 ? -e.z : e.z));
+                    Vector3 p = space.InverseTransformPoint(r.transform.TransformPoint(local));
+                    if (!hasBounds)
+                    {
+                        total = new Bounds(p, Vector3.zero);
+                        hasBounds = true;
+                    }
+                    else
+                    {
+                        total.Encapsulate(p);
+                    }
+                }
+
+                any = true;
+            }
+
+            if (!any)
+            {
+                reason = lastProblem;
+                return false;
+            }
+
+            Vector3 size = total.size;
+            if (float.IsNaN(size.x) || float.IsNaN(size.y) || float.IsNaN(size.z)
+                || float.IsInfinity(size.x) || float.IsInfinity(size.y) || float.IsInfinity(size.z))
+            {
+                reason = "bounds are not finite (parent scale zero?)";
+                return false;
+            }
+
+            float largest = Mathf.Max(size.x, Mathf.Max(size.y, size.z));
+            if (largest < MinExtentM)
+            {
+                reason = "degenerate bounds " + size.ToString("F4");
+                return false;
+            }
+
+            if (hasFit)
+            {
+                if (!total.Intersects(fit))
+                {
+                    reason = "bounds " + total.center.ToString("F2") + " size " + size.ToString("F2") + " do not overlap the hitbox";
+                    return false;
+                }
+
+                float expected = Mathf.Max(fit.size.x, Mathf.Max(fit.size.y, fit.size.z));
+                if (largest < expected * MinFitFraction)
+                {
+                    reason = "model is only " + largest.ToString("F3") + " m across (expected about " + expected.ToString("F2") + " m)";
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static bool HasUsableMaterial(Renderer r, out string problem)
+        {
+            problem = "no material";
+            Material[] materials = r.sharedMaterials;
+            for (int m = 0; m < materials.Length; m++)
+            {
+                Material material = materials[m];
+                if (material == null)
+                {
+                    continue;
+                }
+
+                Shader shader = material.shader;
+                if (shader == null || !shader.isSupported
+                    || string.Equals(shader.name, ErrorShaderName, System.StringComparison.Ordinal))
+                {
+                    problem = "material '" + material.name + "' has an unsupported or error shader";
+                    continue;
+                }
+
+                float alpha = 1f;
+                if (material.HasProperty("_BaseColor"))
+                {
+                    alpha = material.GetColor("_BaseColor").a;
+                }
+                else if (material.HasProperty("_Color"))
+                {
+                    alpha = material.GetColor("_Color").a;
+                }
+
+                bool transparentSurface = !material.HasProperty("_Surface") || material.GetFloat("_Surface") > 0.5f;
+                if (alpha < MinAlpha && transparentSurface)
+                {
+                    problem = "material '" + material.name + "' is transparent (alpha " + alpha.ToString("F2") + ")";
+                    continue;
+                }
+
+                return true;
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -265,8 +504,11 @@ namespace JungleBooze.Gameplay.Views
             return material;
         }
 
-        /// <summary>Turns off the renderer of a gray-box primitive (its transform keeps driving the attached art).</summary>
-        public static void HideRenderer(Transform grayBox)
+        /// <summary>
+        /// Turns off the renderer of a gray-box primitive (its transform keeps driving the attached art). Private on
+        /// purpose: callers go through <see cref="AttachAndHide"/>, which only hides after the art is verified visible.
+        /// </summary>
+        private static void HideRenderer(Transform grayBox)
         {
             if (grayBox == null)
             {
@@ -281,12 +523,20 @@ namespace JungleBooze.Gameplay.Views
         }
 
         /// <summary>
-        /// Swaps a whole gray-box group for the prefab: every renderer already under <paramref name="group"/> is
-        /// disabled, then the prefab is attached. Returns the new instance, or null (group untouched) when missing.
+        /// Swaps a whole gray-box group for the prefab: the prefab is attached and verified visible, and only
+        /// then is every gray-box renderer under <paramref name="group"/> disabled. Returns the new instance, or null
+        /// (group untouched, gray-box still drawn) when the art is missing or would not render.
         /// </summary>
         public static Transform ReplaceGroup(Transform group, string prefabName)
         {
-            if (!Exists(prefabName))
+            if (group == null || !Exists(prefabName))
+            {
+                return null;
+            }
+
+            // Attach first: the gray-box renderers are only switched off once the art is verified visible.
+            Transform art = Attach(group, prefabName);
+            if (art == null)
             {
                 return null;
             }
@@ -294,10 +544,13 @@ namespace JungleBooze.Gameplay.Views
             MeshRenderer[] renderers = group.GetComponentsInChildren<MeshRenderer>(true);
             for (int i = 0; i < renderers.Length; i++)
             {
-                renderers[i].enabled = false;
+                if (!renderers[i].transform.IsChildOf(art))
+                {
+                    renderers[i].enabled = false;
+                }
             }
 
-            return Attach(group, prefabName);
+            return art;
         }
 
         /// <summary>Deterministic hash of a tile or slot index, for dressing variety without a random source.</summary>
