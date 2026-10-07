@@ -43,6 +43,56 @@ namespace JungleBooze.Gameplay.Track
         }
 
         /// <summary>
+        /// The library the game plays: the 16 FP1 chunks, the vine sections, then the signature hazard chunks
+        /// (GDD 8.3). Appended in that order, so every earlier chunk keeps its index.
+        /// </summary>
+        public static ChunkLibrary CreateGameLibrary()
+        {
+            ChunkData[] fp1 = CreateChunks();
+            ChunkData[] vines = CreateVineChunks();
+            ChunkData[] signature = CreateSignatureChunks();
+            var all = new ChunkData[fp1.Length + vines.Length + signature.Length];
+            fp1.CopyTo(all, 0);
+            vines.CopyTo(all, fp1.Length);
+            signature.CopyTo(all, fp1.Length + vines.Length);
+            return new ChunkLibrary(all);
+        }
+
+        /// <summary>
+        /// Signature hazard chunks (GDD 8.3), gray-box: lane denial (thorn patch across 2 lanes, forces the third) and
+        /// the telegraphed lane strike (warning in a lane, then the strike). Picked by tier weight
+        /// (<see cref="CreateGameTierDesigns"/>) from tier 2 (300 m, so never in the first 150 m, GDD 8.3); more
+        /// often from tier 4 ("signature hazards everywhere", GDD 11.2). Fair placement: a free lane always stays
+        /// open next to every hazard, coins lead into it, and consecutive hazards leave at least 16 m (≥ 0.75 s at
+        /// the tier's top speed) to change lanes. Lane strikes are in every world's chunk set in the gray-box build
+        /// [ASSUMED]; once worlds have skins, the Jungle keeps the thorn patch and the other worlds their strike.
+        /// </summary>
+        public static ChunkData[] CreateSignatureChunks()
+        {
+            return new[]
+            {
+                Signature("SG-01", "Thorn Patch", 2, "A thorn patch blocks two lanes; coins show the free one.",
+                    new[] { ObstaclePlacement.LaneDenial(L01, 16f) },
+                    new[] { CoinPattern.Line(2, 6f, 34f) }),
+                Signature("SG-02", "Thorn Gate", 2, "Thorns force the left lane, then a log in it: jump.",
+                    new[] { ObstaclePlacement.LaneDenial(L12, 8f), ObstaclePlacement.Low(L0, 28f) },
+                    new[] { CoinPattern.Line(0, 2f, 20f), CoinPattern.Arc(0, 28.3f) }),
+                Signature("SG-03", "Thorn Slalom", 3, "Thorns force the left lane, then the right lane.",
+                    new[] { ObstaclePlacement.LaneDenial(L12, 6f), ObstaclePlacement.LaneDenial(L01, 26f) },
+                    new[] { CoinPattern.Line(0, 2f, 12f), CoinPattern.Trail(0, 2, 13f, 22f), CoinPattern.Line(2, 24f, 36f) }),
+                Signature("SG-04", "Falling Rocks", 2, "The middle lane flashes a warning, then rocks fall there.",
+                    new[] { ObstaclePlacement.LaneStrike(1, 20f) },
+                    new[] { CoinPattern.Line(0, 10f, 30f) }),
+                Signature("SG-05", "Rockfall Pinch", 3, "Rocks fall on both sides, then in the middle.",
+                    new[] { ObstaclePlacement.LaneStrike(0, 12f), ObstaclePlacement.LaneStrike(2, 12f), ObstaclePlacement.LaneStrike(1, 32f) },
+                    new[] { CoinPattern.Line(1, 4f, 18f), CoinPattern.Trail(1, 0, 20f, 26f), CoinPattern.Line(0, 28f, 38f) }),
+                Signature("SG-06", "Thorns and Rocks", 4, "Thorns force the right lane, then rocks fall in it.",
+                    new[] { ObstaclePlacement.LaneDenial(L01, 8f), ObstaclePlacement.LaneStrike(2, 30f) },
+                    new[] { CoinPattern.Line(2, 2f, 14f), CoinPattern.Trail(2, 1, 16f, 24f) }),
+            };
+        }
+
+        /// <summary>
         /// Vine sections (GDD 7.2): a 30 m approach with coins leading into the vine lane and no obstacles, the
         /// vine row(s), then an empty landing pad long enough for the longest launch at top speed plus 1.0 s.
         /// Picked by the vine schedule (<see cref="TrackGenerator"/>), never by tier weights. Tier gating uses
@@ -178,6 +228,38 @@ namespace JungleBooze.Gameplay.Track
             };
         }
 
+        /// <summary>
+        /// The tier rows the game plays with <see cref="CreateGameLibrary"/>: <see cref="CreateTierDesigns"/> plus the
+        /// signature hazard chunks (rare in tiers 2–3, common from tier 4).
+        /// </summary>
+        public static DifficultyTierDesign[] CreateGameTierDesigns()
+        {
+            DifficultyTierDesign[] tiers = CreateTierDesigns();
+            ChunkWeight[] tier2 = { new ChunkWeight("SG-01", 1), new ChunkWeight("SG-02", 1), new ChunkWeight("SG-04", 1) };
+            ChunkWeight[] tier3 =
+            {
+                new ChunkWeight("SG-01", 1), new ChunkWeight("SG-02", 1), new ChunkWeight("SG-03", 2),
+                new ChunkWeight("SG-04", 1), new ChunkWeight("SG-05", 2),
+            };
+            ChunkWeight[] tier4 =
+            {
+                new ChunkWeight("SG-01", 2), new ChunkWeight("SG-02", 2), new ChunkWeight("SG-03", 3),
+                new ChunkWeight("SG-04", 2), new ChunkWeight("SG-05", 3), new ChunkWeight("SG-06", 3),
+            };
+
+            for (int t = 1; t < tiers.Length; t++)
+            {
+                ChunkWeight[] extra = t == 1 ? tier2 : (t == 2 ? tier3 : tier4);
+                ChunkWeight[] old = tiers[t].Weights;
+                var merged = new ChunkWeight[old.Length + extra.Length];
+                old.CopyTo(merged, 0);
+                extra.CopyTo(merged, old.Length);
+                tiers[t].Weights = merged;
+            }
+
+            return tiers;
+        }
+
         /// <summary>Tier configuration for the default library and the given speed curve.</summary>
         public static DifficultyTiersConfig CreateTiers(SpeedCurve curve, ChunkLibrary library)
         {
@@ -222,6 +304,11 @@ namespace JungleBooze.Gameplay.Track
         {
             return new ChunkData(
                 id, ChunkKind.Vine, lengthM, minTier, 6, obstacles, coins, displayName: name, designNote: note, vines: vines);
+        }
+
+        private static ChunkData Signature(string id, string name, int minTier, string note, ObstaclePlacement[] obstacles, CoinPattern[] coins)
+        {
+            return new ChunkData(id, ChunkKind.Signature, 40f, minTier, 6, obstacles, coins, displayName: name, designNote: note);
         }
 
         private static ChunkData Breather(string id, string name, string note, CoinPattern[] coins)

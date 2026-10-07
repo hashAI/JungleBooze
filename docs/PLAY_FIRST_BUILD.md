@@ -134,6 +134,9 @@ key press, click or swipe only starts the run; it does not move her.
 | On a vine: let go (time it with the ring) | Up arrow, W or Space | Drag up | Swipe up |
 | On a vine: aim at the next vine / landing lane | Left / right arrow or A / D | Drag left / right | Swipe left / right |
 | On a vine: slide when you land | Down arrow or S | Drag down | Swipe down |
+| Lift (when the violet LIFT meter is full) | E or Left Shift | Double-click (two quick clicks without moving) | Double tap |
+| Continue screen: continue (free or for coins) | Space or Enter | Click **Free continue** / **Continue** | Tap **Free continue** / **Continue** |
+| Continue screen: skip to Game Over | Esc or P | Click **Skip** | Tap **Skip** |
 | Pause | P or Esc | Click the **pause** button (top right) | Tap the **pause** button (top right) |
 | Resume (3-2-1 countdown, then the run continues) | P or Esc | Click **Resume** | Tap **Resume** |
 | Game Over: run again on a new track | Space, Enter or R | Click **Run again** | Tap **Run again** |
@@ -166,6 +169,21 @@ Notes:
 - **Chains** (from about 600 m): two or three vines in a row. While swinging, swipe toward the lane of the next vine
   (its glow grows when aimed at); a GOOD or PERFECT release then flies you straight to it. Each PERFECT in a chain
   raises the bonus multiplier (x1, x1.5, x2).
+- **Duko, the macaw** (gray-box: violet body, orange head, turquoise tail tip) flies just ahead of and above Pista.
+  He calls out big moments in a speech bubble (no audio yet): **"Vine!"** about 2 s before a vine section (he swoops
+  over the vine lane), **"Look out!"** about 1.5 s before a rolling boulder or a signature hazard (he swoops over that
+  lane), and a cheer (**"Shiny!"**, **"Wow!"**, **"Yeah!"**) for a PERFECT release or when you pass your best
+  distance. After a death he perches on Pista's head.
+- **LIFT meter** (violet bar under the score): near misses +5%, every 25-coin streak +5%, GOOD release +10%, PERFECT
+  +25%. When it is full it pulses and says how to trigger it. **Lift**: Duko grabs Pista's wrists and carries her
+  2.5 m up for 4 seconds; nothing can hurt her, left/right still change lanes (up/down are ignored), and coins from
+  all three lanes within 10 m fly to her. He sets her down in the last 0.6 s on a clear stretch, and she stays safe
+  for 0.5 s after. A double tap on a vine waits until she lands. A full meter waits for you; it never fires by itself.
+- **Continue** (after a death, before Game Over): a 5-second screen. In your **first session** Duko gives one free
+  continue. Otherwise it costs coins from your wallet: 300 for the first continue in a run, 600 for the second (max 2
+  per run); the screen only appears when you can use it. Pista comes back at a safe spot (after a ravine or a missed
+  vine chasm: on the ground past it), the obstacle that got her is gone, the next 1.5 s of track is clear, and she
+  is safe for 2 s. A 3-2-1 countdown runs first. "Watch ad" is a placeholder and stays disabled until ads exist.
 - **Run again** uses a new track; **Same track** replays the same seed (same obstacles and coins). Use **K**
   (development builds) to end a run on purpose.
 

@@ -24,6 +24,12 @@ namespace JungleBooze.Gameplay.Track
             return new DifficultyTiersDesignValues();
         }
 
+        /// <summary>The tiers the game plays (with the signature hazard chunks of the game library).</summary>
+        public static DifficultyTiersDesignValues CreateGameDefault()
+        {
+            return new DifficultyTiersDesignValues { Tiers = JungleChunkLibraryDefaults.CreateGameTierDesigns() };
+        }
+
         public DifficultyTiersDesignValues Clone()
         {
             var copy = new DifficultyTiersDesignValues();

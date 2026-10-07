@@ -118,6 +118,13 @@ namespace JungleBooze.Gameplay.Track
         public double VineDueSeconds => _vineDueS;
 
         /// <summary>
+        /// No vine section starts before this z (GDD 7.2: never while a Speed Boost is active; the pickup placer
+        /// raises it for every placed Speed Boost). Other systems may raise it too (for example Lift, GDD 15.1).
+        /// Reset to negative infinity by <see cref="Reset(IRandom, IRandom)"/>.
+        /// </summary>
+        public double VineBlockedUntilZ { get; set; }
+
+        /// <summary>
         /// Starts a new run on <paramref name="trackStream"/> (the forked <see cref="RandomStreamIds.TrackGeneration"/>
         /// stream). Clears all generator state and draws the first breather interval.
         /// </summary>
@@ -136,6 +143,7 @@ namespace JungleBooze.Gameplay.Track
             _vineRng = _vines.Enabled ? vineStream : null;
             _vineElapsedS = 0.0;
             VinePickCount = 0;
+            VineBlockedUntilZ = double.NegativeInfinity;
             _vineDueS = _vineRng != null
                 ? _vineRng.NextFloat(_vines.FirstSectionMinS, _vines.FirstSectionMaxS)
                 : double.PositiveInfinity;
@@ -188,7 +196,7 @@ namespace JungleBooze.Gameplay.Track
                 return CountVineTime(PickBreather(startZ, tier), startZ);
             }
 
-            if (_vineRng != null && _vineElapsedS >= _vineDueS)
+            if (_vineRng != null && _vineElapsedS >= _vineDueS && startZ >= VineBlockedUntilZ)
             {
                 int vine = PickVine(startZ, tier, out bool vineMirrored);
                 if (vine >= 0)
@@ -229,6 +237,7 @@ namespace JungleBooze.Gameplay.Track
             h = StableHash.Mix(h, _vineElapsedS);
             h = StableHash.Mix(h, _vineDueS);
             h = StableHash.Mix(h, VinePickCount);
+            h = StableHash.Mix(h, VineBlockedUntilZ);
             return h;
         }
 

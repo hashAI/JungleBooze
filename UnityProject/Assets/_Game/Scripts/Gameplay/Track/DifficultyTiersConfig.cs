@@ -83,9 +83,9 @@ namespace JungleBooze.Gameplay.Track
                     ChunkData chunk = library[index];
                     if (entry.Weight > 0)
                     {
-                        if (chunk.Kind != ChunkKind.Normal)
+                        if (chunk.Kind != ChunkKind.Normal && chunk.Kind != ChunkKind.Signature)
                         {
-                            errors.Add("tier " + number + ": " + chunk.Id + " is not a normal chunk and cannot have a weight.");
+                            errors.Add("tier " + number + ": " + chunk.Id + " is not a normal or signature chunk and cannot have a weight.");
                         }
 
                         if (number < chunk.MinTier || number > chunk.MaxTier)

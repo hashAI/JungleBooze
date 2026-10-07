@@ -1,5 +1,7 @@
 using System;
 using JungleBooze.Core;
+using JungleBooze.Gameplay.Hazards;
+using JungleBooze.Gameplay.PowerUps;
 using JungleBooze.Gameplay.Runner;
 using JungleBooze.Gameplay.Vine;
 
@@ -68,6 +70,9 @@ namespace JungleBooze.Gameplay.Track
         private int _currentChunkIndex;
         private bool _hasReset;
 
+        private readonly HazardConfig _hazards;
+        private readonly PowerUpPlacer _pickups;
+
         public TrackSimulation(
             TrackConfig config,
             ObstacleKitConfig kit,
@@ -76,7 +81,9 @@ namespace JungleBooze.Gameplay.Track
             DifficultyTiersConfig tiers,
             SpeedCurve curve,
             RunnerConfig runner,
-            VineConfig vines = null)
+            VineConfig vines = null,
+            PowerUpConfig powerUps = null,
+            HazardConfig hazards = null)
         {
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _kit = kit ?? throw new ArgumentNullException(nameof(kit));
@@ -102,7 +109,15 @@ namespace JungleBooze.Gameplay.Track
             _moverStepM = (float)(kit.MoverLateralSpeedMps * RunnerConfig.TickSeconds);
             _moverTicks = Math.Max(1, (int)Math.Ceiling(runner.LaneWidthM / (kit.MoverLateralSpeedMps * RunnerConfig.TickSeconds) - 1e-6));
             _currentChunkIndex = -1;
+            _hazards = hazards ?? HazardConfig.CreateDefault();
+            _pickups = new PowerUpPlacer(powerUps ?? PowerUpConfig.CreateDefault(), runner, curve);
         }
+
+        /// <summary>Lane-strike timing (GDD 8.3).</summary>
+        public HazardConfig Hazards => _hazards;
+
+        /// <summary>Power-up pickups on the track (GDD 10).</summary>
+        public PowerUpPlacer PowerUpPickups => _pickups;
 
         public TrackConfig Config => _config;
 
@@ -234,6 +249,16 @@ namespace JungleBooze.Gameplay.Track
         /// </summary>
         public void Reset(IRandom trackStream, IRandom vineStream)
         {
+            Reset(trackStream, vineStream, null);
+        }
+
+        /// <summary>
+        /// Like <see cref="Reset(IRandom, IRandom)"/>, with the run's forked <see cref="RandomStreamIds.Pickups"/>
+        /// stream (null = no power-up pickups).
+        /// </summary>
+        public void Reset(IRandom trackStream, IRandom vineStream, IRandom pickupStream)
+        {
+            _pickups.Reset(pickupStream);
             _vineRing.Clear();
             _bonusCoinCount = 0;
             _nextVineId = 1;
@@ -272,6 +297,7 @@ namespace JungleBooze.Gameplay.Track
             GenerateAhead(info.Z);
             DespawnBehind(info.Z);
             UpdateMovers(info, runner);
+            UpdateLaneStrikes(info, runner);
             UpdateEnteredChunks(info, runner);
         }
 
@@ -350,6 +376,12 @@ namespace JungleBooze.Gameplay.Track
 
                 if (o.Archetype == ObstacleArchetype.Gap || o.BackZ < zMin)
                 {
+                    continue;
+                }
+
+                if (o.Archetype == ObstacleArchetype.LaneStrike && o.StrikePhase != LaneStrikePhase.Active)
+                {
+                    // GDD 8.3: the lane is only dangerous while the strike is active.
                     continue;
                 }
 
@@ -598,6 +630,8 @@ namespace JungleBooze.Gameplay.Track
                 h = StableHash.Mix(h, o.MoverX);
                 h = StableHash.Mix(h, o.MoverXPrev);
                 h = StableHash.Mix(h, o.MoverTicks);
+                h = StableHash.Mix(h, (int)o.StrikePhase);
+                h = StableHash.Mix(h, o.StrikeTicks);
             }
 
             h = StableHash.Mix(h, _coins.Count);
@@ -624,7 +658,7 @@ namespace JungleBooze.Gameplay.Track
                 h = MixCoin(h, _bonusCoins[i]);
             }
 
-            return h;
+            return _pickups.ComputeStateHash(h);
         }
 
         /// <summary>Hash of the coin layout only (positions and ids of every active coin), for determinism tests.</summary>
@@ -735,6 +769,13 @@ namespace JungleBooze.Gameplay.Track
             if (!_chunks.TryAdd(chunk))
             {
                 ChunkOverflowCount++;
+            }
+
+            // GDD 10: maybe a power-up pickup in this chunk; a Speed Boost holds back vine sections.
+            double vineBlock = _pickups.OnChunkSpawned(this, data.Kind, startZ, data.LengthM, serial);
+            if (vineBlock > _generator.VineBlockedUntilZ)
+            {
+                _generator.VineBlockedUntilZ = vineBlock;
             }
 
             _generatedEndZ = startZ + data.LengthM;
@@ -861,6 +902,8 @@ namespace JungleBooze.Gameplay.Track
                 _vineRing.RemoveFirst();
             }
 
+            _pickups.Despawn(limit);
+
             int write = 0;
             for (int i = 0; i < _bonusCoinCount; i++)
             {
@@ -940,6 +983,96 @@ namespace JungleBooze.Gameplay.Track
                         break;
                 }
             }
+        }
+
+        /// <summary>
+        /// Removes the obstacle with <paramref name="id"/> from the ring (smashed by a power-up, GDD 10). Returns false
+        /// if it is not live. O(n); for single events, never per tick.
+        /// </summary>
+        public bool RemoveObstacle(int id)
+        {
+            for (int i = 0; i < _obstacles.Count; i++)
+            {
+                if (_obstacles[i].Id == id)
+                {
+                    _obstacles.RemoveAt(i);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// GDD 8.3 telegraphed lane strike: dormant until HERO is <c>TriggerLeadS</c> away at his current speed,
+        /// then Warning → Active → Rest → Warning … The box exists only while Active (see <see cref="GetBoxes"/>).
+        /// </summary>
+        private void UpdateLaneStrikes(in RunnerTickInfo info, RunnerSimulation runner)
+        {
+            double speed = info.Speed > 0.1 ? info.Speed : 0.1;
+            double lead = _hazards.TriggerLeadS * speed;
+            for (int i = 0; i < _obstacles.Count; i++)
+            {
+                ref ObstacleInstance o = ref _obstacles[i];
+                if (o.Archetype != ObstacleArchetype.LaneStrike)
+                {
+                    continue;
+                }
+
+                switch (o.StrikePhase)
+                {
+                    case LaneStrikePhase.Dormant:
+                        if (o.Z - info.FrontZ <= lead)
+                        {
+                            EnterStrikePhase(ref o, LaneStrikePhase.Warning, info.Tick, runner);
+                        }
+
+                        break;
+
+                    case LaneStrikePhase.Warning:
+                        if (++o.StrikeTicks >= _hazards.WarningTicks)
+                        {
+                            EnterStrikePhase(ref o, LaneStrikePhase.Active, info.Tick, runner);
+                        }
+
+                        break;
+
+                    case LaneStrikePhase.Active:
+                        if (++o.StrikeTicks >= _hazards.ActiveTicks)
+                        {
+                            EnterStrikePhase(ref o, LaneStrikePhase.Rest, info.Tick, runner);
+                        }
+
+                        break;
+
+                    case LaneStrikePhase.Rest:
+                        if (++o.StrikeTicks >= _hazards.RestTicks)
+                        {
+                            EnterStrikePhase(ref o, LaneStrikePhase.Warning, info.Tick, runner);
+                        }
+
+                        break;
+                }
+            }
+        }
+
+        private static void EnterStrikePhase(ref ObstacleInstance o, LaneStrikePhase phase, long tick, RunnerSimulation runner)
+        {
+            o.StrikePhase = phase;
+            o.StrikeTicks = 0;
+            if (phase != LaneStrikePhase.Warning && phase != LaneStrikePhase.Active)
+            {
+                return;
+            }
+
+            Emit(runner, new RunnerEvent
+            {
+                Type = phase == LaneStrikePhase.Warning ? RunnerEventType.HazardWarning : RunnerEventType.HazardStrike,
+                Tick = tick,
+                EntityId = o.Id,
+                Lane = o.FromLane,
+                Archetype = (byte)ObstacleArchetype.LaneStrike,
+            });
         }
 
         private void UpdateEnteredChunks(in RunnerTickInfo info, RunnerSimulation runner)

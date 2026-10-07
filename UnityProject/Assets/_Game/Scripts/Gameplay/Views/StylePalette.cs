@@ -31,6 +31,17 @@ namespace JungleBooze.Gameplay.Views
         /// <summary>Gray-box mover (rolling boulder) body: dark stone.</summary>
         public static readonly Color HazardStone = Hex(0x6B, 0x5F, 0x52);
 
+        /// <summary>Gray-box thorn patch body (lane denial): dark, desaturated thorny green-brown (section 4.1).</summary>
+        public static readonly Color HazardThorn = Hex(0x3E, 0x4A, 0x2E);
+
+        // 2.1 Power-up glows (cool colors only; power-ups and their effects only).
+        public static readonly Color MagnetGlow = Hex(0x4F, 0xF0, 0xFF);
+        public static readonly Color ShieldGlow = Hex(0x7C, 0xC6, 0xFF);
+        public static readonly Color BoostGlow = Hex(0xFF, 0x3F, 0xA4);
+
+        /// <summary>The shield bubble over a chasm: no glow (GDD 10 readability), sky blue dimmed toward ink.</summary>
+        public static readonly Color ShieldDim = Color.Lerp(ShieldGlow, Ink, 0.55f);
+
         /// <summary>Ravine void on the ground: ink.</summary>
         public static readonly Color Void = Ink;
 

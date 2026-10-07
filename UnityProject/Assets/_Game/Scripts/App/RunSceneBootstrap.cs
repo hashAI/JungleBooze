@@ -1,4 +1,5 @@
 using System;
+using JungleBooze.Gameplay.Companion;
 using JungleBooze.Gameplay.Controls;
 using JungleBooze.Gameplay.Session;
 using JungleBooze.Gameplay.Track;
@@ -6,6 +7,7 @@ using JungleBooze.Gameplay.Views;
 using JungleBooze.Gameplay.Vine;
 using JungleBooze.Services.Persistence;
 using JungleBooze.UI.Hud;
+using JungleBooze.UI.Menus;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
@@ -44,6 +46,9 @@ namespace JungleBooze.App
 
             // The game: main menu first, real save on the device.
             PlayerSave save = PlayerSave.Load(new FileSaveStorage(Application.persistentDataPath));
+
+            // GDD 14.4 / 19: count app sessions (the free continue belongs to session 1).
+            save.BeginSession();
             Build(scene, RunConfigLoader.Load(), SeedFromClock(), save, true);
         }
 
@@ -162,6 +167,13 @@ namespace JungleBooze.App
             RunnerView runnerView = runnerObject.AddComponent<RunnerView>();
             runnerView.Init(kit, configs.Runner, presentation);
 
+            // GDD 15: the companion macaw (gray-box).
+            CompanionConfig companionConfig = RunConfigLoader.LoadCompanion();
+            var companionObject = new GameObject("Companion");
+            companionObject.transform.SetParent(root.transform, false);
+            CompanionView companionView = companionObject.AddComponent<CompanionView>();
+            companionView.Init(kit, configs.Runner, companionConfig);
+
             // Input and session.
             var input = new PlayerInputAdapter(configs.Input, PlayerInputAdapter.PixelsPerPointForDpi(Screen.dpi));
             var session = new GameSession(
@@ -176,6 +188,11 @@ namespace JungleBooze.App
             // GDD 7.3 step 3: the vine "hang" slow-down is off with Reduce Motion.
             session.VineHangSlowdown = !presentation.ReduceMotion;
 
+            // GDD 15 companion (meter, Lift, call-outs) and GDD 14.4 Continue rules.
+            session.RecordDistanceM = save.BestDistanceM;
+            session.ConfigureCompanion(companionConfig);
+            session.ContinueRules = RunConfigLoader.LoadContinueRules();
+
             RunDriver driver = root.AddComponent<RunDriver>();
 
             // HUD.
@@ -184,8 +201,20 @@ namespace JungleBooze.App
             HudView hud = hudObject.AddComponent<HudView>();
             hud.Build(driver, Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"), save);
             driver.AttachMeta(new RunResultRecorder(save), hud);
+            session.ContinuePolicy = driver;
 
-            driver.Init(session, input, new IRunView[] { ground, gaps, obstacles, vineView, coinView, runnerView, cameraView, hud }, kit);
+            // Companion HUD (Lift meter, call-out bubble) and the Continue screen, each on its own canvas.
+            var companionHudObject = new GameObject("CompanionHud", typeof(RectTransform));
+            companionHudObject.transform.SetParent(root.transform, false);
+            CompanionHudView companionHud = companionHudObject.AddComponent<CompanionHudView>();
+            companionHud.Build(Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"), companionConfig, camera, companionView);
+
+            var continueObject = new GameObject("ContinueScreen", typeof(RectTransform));
+            continueObject.transform.SetParent(root.transform, false);
+            ContinueView continueView = continueObject.AddComponent<ContinueView>();
+            continueView.Build(driver, Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"), save);
+
+            driver.Init(session, input, new IRunView[] { ground, gaps, obstacles, vineView, coinView, runnerView, companionView, cameraView, hud, companionHud, continueView }, kit);
 
             if (Debug.isDebugBuild)
             {

@@ -1,4 +1,6 @@
 using System;
+using JungleBooze.Gameplay.Hazards;
+using JungleBooze.Gameplay.PowerUps;
 using JungleBooze.Gameplay.Runner;
 using JungleBooze.Gameplay.Vine;
 
@@ -24,9 +26,13 @@ namespace JungleBooze.Gameplay.Track
             ChunkLibrary library,
             DifficultyTiersDesignValues tiers,
             WorldSkinConfig skin = null,
-            VineConfig vines = null)
+            VineConfig vines = null,
+            PowerUpConfig powerUps = null,
+            HazardConfig hazards = null)
         {
             Vines = vines ?? VineConfig.CreateDefault();
+            PowerUps = powerUps ?? PowerUpConfig.CreateDefault();
+            Hazards = hazards ?? HazardConfig.CreateDefault();
             Track = track ?? throw new ArgumentNullException(nameof(track));
             Kit = kit ?? throw new ArgumentNullException(nameof(kit));
             Coins = coins ?? throw new ArgumentNullException(nameof(coins));
@@ -55,8 +61,14 @@ namespace JungleBooze.Gameplay.Track
         /// <summary>Vine tuning (GDD 7.5): vine sections, swing, release, launch, vine score and coins.</summary>
         public VineConfig Vines { get; }
 
+        /// <summary>Power-up tuning (GDD 10): pickup schedule and placement, durations, effects.</summary>
+        public PowerUpConfig PowerUps { get; }
+
+        /// <summary>Signature hazard tuning (GDD 8.3): lane-strike warning, active time and rhythm.</summary>
+        public HazardConfig Hazards { get; }
+
         /// <summary>
-        /// The defaults: spec 002 start values, the 16-chunk Jungle library plus the vine sections, and the GDD 7.5
+        /// The defaults: spec 002 start values, the 16-chunk Jungle library plus the vine sections and signature hazard chunks, and the GDD 7.5
         /// vine values.
         /// </summary>
         public static TrackRunSetup CreateDefault()
@@ -67,15 +79,26 @@ namespace JungleBooze.Gameplay.Track
         /// <summary>Like <see cref="CreateDefault()"/> with the given vine tuning (for example from the VineTuning asset).</summary>
         public static TrackRunSetup CreateDefault(VineConfig vines)
         {
+            return CreateDefault(vines, null, null);
+        }
+
+        /// <summary>
+        /// The game setup: defaults plus the given vine, power-up and hazard tuning (null = built-in defaults), on the
+        /// game library (FP1 chunks, vine sections and signature hazard chunks, GDD 8.3).
+        /// </summary>
+        public static TrackRunSetup CreateDefault(VineConfig vines, PowerUpConfig powerUps, HazardConfig hazards)
+        {
             return new TrackRunSetup(
                 TrackConfig.CreateDefault(),
                 ObstacleKitConfig.CreateDefault(),
                 CoinConfig.CreateDefault(),
                 ScoreConfig.CreateDefault(),
-                JungleChunkLibraryDefaults.CreateLibraryWithVines(),
-                DifficultyTiersDesignValues.CreateDefault(),
+                JungleChunkLibraryDefaults.CreateGameLibrary(),
+                DifficultyTiersDesignValues.CreateGameDefault(),
                 WorldSkinConfig.CreateJungle(),
-                vines);
+                vines,
+                powerUps,
+                hazards);
         }
 
         /// <summary>
@@ -109,6 +132,8 @@ namespace JungleBooze.Gameplay.Track
             h = StableHash.Mix(h, Library.DataHash);
             h = StableHash.Mix(h, GetTiers(curve).ComputeHash());
             h = StableHash.Mix(h, Vines.ComputeHash());
+            h = StableHash.Mix(h, PowerUps.ComputeHash());
+            h = StableHash.Mix(h, Hazards.ComputeHash());
             return h;
         }
     }

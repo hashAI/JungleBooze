@@ -453,10 +453,14 @@ namespace JungleBooze.Gameplay.Session
             Phase = SessionPhase.Dying;
         }
 
-        /// <summary>End of the death sequence: the Continue screen if the policy offers one, else Game Over.</summary>
+        /// <summary>
+        /// End of the death sequence: the Continue screen if HERO really died (not the development end-run key) and
+        /// the policy offers one, else Game Over.
+        /// </summary>
         private void EndDying()
         {
             if (ContinuePolicy != null
+                && Runner.Current.IsDead
                 && ContinuesUsed < ContinueRules.MaxContinuesPerRun
                 && World is IRunWorldRecovery
                 && ContinuePolicy.CanOfferContinue(this))

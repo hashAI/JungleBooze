@@ -25,6 +25,16 @@ namespace JungleBooze.UI.Menus
         public const string Distance = "Distance";
         public const string CoinsThisRun = "Coins";
 
+        // Continue (GDD 14.4).
+        public const string ContinueTitle = "Continue?";
+        public const string ContinueFree = "Free continue";
+        public const string ContinueFreeNote = "Duko will catch you!";
+        public const string ContinuePaid = "Continue";
+        public const string ContinueWatchAd = "Watch ad (soon)";
+        public const string ContinueSkip = "Skip";
+        public const string ContinueWallet = "Your coins";
+        public const string ContinueKeyHint = "Space: continue   Esc: skip";
+
         // Settings.
         public const string Music = "Music";
         public const string SoundEffects = "Sound effects";

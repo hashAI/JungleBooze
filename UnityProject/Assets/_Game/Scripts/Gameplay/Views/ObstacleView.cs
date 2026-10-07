@@ -98,6 +98,12 @@ namespace JungleBooze.Gameplay.Views
                         continue;
                     }
 
+                    if (o.Archetype == ObstacleArchetype.LaneDenial || o.Archetype == ObstacleArchetype.LaneStrike)
+                    {
+                        // Signature hazards are drawn by HazardView.
+                        continue;
+                    }
+
                     ObstacleShape shape = _track.Kit.GetShape(o.Archetype);
                     if (o.Archetype == ObstacleArchetype.Mover)
                     {

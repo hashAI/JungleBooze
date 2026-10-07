@@ -46,6 +46,18 @@ namespace JungleBooze.Gameplay.Track
             return p;
         }
 
+        /// <summary>Signature lane denial (GDD 8.3, thorn patch): a contiguous 2-lane mask.</summary>
+        public static ObstaclePlacement LaneDenial(byte laneMask, float zc)
+        {
+            return Make(ObstacleArchetype.LaneDenial, laneMask, zc);
+        }
+
+        /// <summary>Signature telegraphed lane strike (GDD 8.3) in one lane.</summary>
+        public static ObstaclePlacement LaneStrike(int lane, float zc)
+        {
+            return Make(ObstacleArchetype.LaneStrike, LaneMasks.Of(lane), zc);
+        }
+
         public static ObstaclePlacement Gap(byte laneMask, float zc, float lengthM)
         {
             ObstaclePlacement p = Make(ObstacleArchetype.Gap, laneMask, zc);

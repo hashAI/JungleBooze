@@ -171,6 +171,12 @@ namespace JungleBooze.Gameplay.Views
                 case RunnerEventType.Died:
                     _dead = true;
                     break;
+
+                case RunnerEventType.Revived:
+                    // GDD 14.4: back on her feet after a Continue.
+                    _dead = false;
+                    _stumbleLeft = 0f;
+                    break;
             }
         }
 
@@ -235,7 +241,8 @@ namespace JungleBooze.Gameplay.Views
             }
 
             transform.localPosition = new Vector3(x, 0f, (float)z);
-            bool carried = current.Locomotion == Locomotion.Carried;
+            // On a vine, or held by the wrists during the companion's Lift (no swing angle then).
+            bool carried = current.Locomotion == Locomotion.Carried || current.Locomotion == Locomotion.Lifted;
             if (_arms.activeSelf != carried)
             {
                 _arms.SetActive(carried);

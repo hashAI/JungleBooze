@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using JungleBooze.Gameplay.Companion;
 using JungleBooze.Gameplay.Config;
 using JungleBooze.Gameplay.Controls;
+using JungleBooze.Gameplay.Hazards;
+using JungleBooze.Gameplay.PowerUps;
 using JungleBooze.Gameplay.Runner;
 using JungleBooze.Gameplay.Session;
 using JungleBooze.Gameplay.Vine;
@@ -25,6 +27,8 @@ namespace JungleBooze.App
         public const string InputTuningName = "InputTuning";
         public const string PresentationTuningName = "RunnerPresentationTuning";
         public const string VineTuningName = "VineTuning";
+        public const string PowerUpTuningName = "PowerUpTuning";
+        public const string HazardTuningName = "HazardTuning";
         public const string CompanionTuningName = "CompanionTuning";
         public const string EconomyConfigName = "EconomyConfig";
 
@@ -59,6 +63,34 @@ namespace JungleBooze.App
             }
 
             return vines;
+        }
+
+        /// <summary>Power-up tuning (GDD 10) from <c>Resources/PowerUpTuning.asset</c> if present and valid, else defaults.</summary>
+        public static PowerUpConfig LoadPowerUps()
+        {
+            var sources = new List<string>(1);
+            PowerUpConfig config = LoadOrDefault<PowerUpConfigAsset, PowerUpConfig>(
+                PowerUpTuningName, a => a.ToConfig(), PowerUpConfig.CreateDefault, sources);
+            if (Debug.isDebugBuild)
+            {
+                Debug.Log("[JungleBooze] " + sources[0] + ".");
+            }
+
+            return config;
+        }
+
+        /// <summary>Signature hazard tuning (GDD 8.3) from <c>Resources/HazardTuning.asset</c> if present and valid, else defaults.</summary>
+        public static HazardConfig LoadHazards()
+        {
+            var sources = new List<string>(1);
+            HazardConfig config = LoadOrDefault<HazardConfigAsset, HazardConfig>(
+                HazardTuningName, a => a.ToConfig(), HazardConfig.CreateDefault, sources);
+            if (Debug.isDebugBuild)
+            {
+                Debug.Log("[JungleBooze] " + sources[0] + ".");
+            }
+
+            return config;
         }
 
         /// <summary>Companion tuning (GDD 15.2) from <c>Resources/CompanionTuning.asset</c> if present and valid, else defaults.</summary>

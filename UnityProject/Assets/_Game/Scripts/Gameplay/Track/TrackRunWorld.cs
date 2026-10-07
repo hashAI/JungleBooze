@@ -1,6 +1,7 @@
 using System;
 using JungleBooze.Core;
 using JungleBooze.Gameplay.Companion;
+using JungleBooze.Gameplay.PowerUps;
 using JungleBooze.Gameplay.Runner;
 using JungleBooze.Gameplay.Session;
 
@@ -52,6 +53,9 @@ namespace JungleBooze.Gameplay.Track
         /// <summary>Coins, streak and score. Null until <see cref="CreateRunner"/>.</summary>
         public RunScoring Scoring { get; private set; }
 
+        /// <summary>Active power-ups and their pickups (GDD 10). Null until <see cref="CreateRunner"/>.</summary>
+        public PowerUpSystem PowerUps { get; private set; }
+
         /// <summary>The runner built by <see cref="CreateRunner"/>.</summary>
         public RunnerSimulation Runner { get; private set; }
 
@@ -96,7 +100,10 @@ namespace JungleBooze.Gameplay.Track
                 _setup.GetTiers(speedCurve),
                 speedCurve,
                 config,
-                _setup.Vines);
+                _setup.Vines,
+                _setup.PowerUps,
+                _setup.Hazards);
+            PowerUps = new PowerUpSystem(_setup.PowerUps, config);
             Scoring = new RunScoring(_setup.Coins, _setup.Score, config, _setup.Vines);
             ResetRun(Seed);
             return Runner;
@@ -118,11 +125,16 @@ namespace JungleBooze.Gameplay.Track
             RootRandom = new Pcg32Random(seed);
             IRandom trackStream = RootRandom.Fork(RandomStreamIds.TrackGeneration);
             IRandom vineStream = _setup.Vines.Enabled ? RootRandom.Fork(RandomStreamIds.VineSchedule) : null;
-            Track.Reset(trackStream, vineStream);
+            // GDD 10: power-up pickups on their own stream, forked after the vine stream (track and vines unchanged).
+            IRandom pickupStream = _setup.PowerUps.Enabled ? RootRandom.Fork(RandomStreamIds.Pickups) : null;
+            Track.Reset(trackStream, vineStream, pickupStream);
+            PowerUps.Reset();
+            PowerUps.Bind(Track);
             Scoring.Reset();
             Runner = new RunnerSimulation(_runnerConfig, _curve, Track, null, _setup.Vines)
             {
                 StepHooks = this,
+                ContactHooks = PowerUps,
             };
 
             return Runner;
@@ -146,6 +158,8 @@ namespace JungleBooze.Gameplay.Track
                 Track.SpawnVineBonusCoins(info.VineRelease, runner);
             }
 
+            // GDD 10: power-up pickups, then the Magnet / Speed Boost coin pull, before the coin pickups.
+            PowerUps.OnCoinPickups(info, runner);
             Scoring.OnCoinPickups(info, Track, runner);
 
             // GDD 15.1: during Lift the companion pulls in coins from all lanes ahead.
@@ -247,6 +261,9 @@ namespace JungleBooze.Gameplay.Track
         public void OnScore(RunnerSimulation runner, in RunnerTickInfo info)
         {
             Scoring.OnScore(info, Track, runner);
+
+            // GDD 10: power-up timers and effects for the next tick (speed, invulnerability, gap auto-jump).
+            PowerUps.OnScore(info, runner);
         }
 
         /// <summary>Hash of runner, track and scoring state (AC-241, AC-247). Allocation-free.</summary>
@@ -266,6 +283,11 @@ namespace JungleBooze.Gameplay.Track
             if (Scoring != null)
             {
                 h = Scoring.ComputeStateHash(h);
+            }
+
+            if (PowerUps != null)
+            {
+                h = PowerUps.ComputeStateHash(h);
             }
 
             return h;
