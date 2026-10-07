@@ -23,9 +23,11 @@ Not in FP1 (comes right after): vine swinging, Duko, power-ups, menus/shop, real
 
 **FP1 plan (stages; tick as they land):**
 - [x] A1 gameplay-engineer: movement simulation (spec 001 minus collisions) + EditMode tests (AC-01–14, 16–33, 45–46, 61–63; collisions deferred to B)
-- [ ] A2 game-designer: spec 002 (track, obstacles, coins)
+- [x] A2 game-designer: spec 002 (track, obstacles, coins): 16 Jungle chunks, generator, coins/score, fairness rules, run lifecycle, AC-201–250
 - [ ] A3 balance-simulator: Python reference model of spec 001 + golden traces (the only code we can execute here)
-- [ ] B gameplay-engineer: collisions + track/obstacles/coins simulation (specs 001 + 002) + tests
+- [ ] B1 gameplay-engineer: collisions in the runner (spec 001 §9 + spec 002 changes), extended ITrackQuery, stumble/daze/near-miss + tests
+- [ ] B2 gameplay-engineer: track simulation (chunk data, 16-chunk library, seeded generator, coins, score, run lifecycle) + tests
+- [ ] B3 gameplay-engineer: chunk fairness validator (spec 002 §11) as an EditMode test + editor menu
 - [ ] C1 ui-engineer (running): presentation for movement; C2 later adds track/obstacle/coin views.
 - [ ] C gameplay/ui-engineer: Unity presentation layer: auto-built scene, gray-box views, camera, input adapter, HUD, game over/restart, default config assets
 - [x] D tech-architect: first-open bootstrap (`Assets/_Game/Editor/Setup/ProjectBootstrap.cs`, ADR 0003) + `docs/PLAY_FIRST_BUILD.md`
@@ -40,7 +42,7 @@ and commit after every agent report.
 | Agent | State | Current / last task | Output | Next for this agent |
 |---|---|---|---|---|
 | producer | not used yet | (the coordinating session does this role for now) | this file | — |
-| game-designer | **working** | FP1 stage A2: spec 002 track, obstacles, coins (Jungle chunk library) | `docs/specs/002-track-obstacles-coins.md` | Spec 003: vine swinging |
+| game-designer | done (stage A2) | Spec 002: track, obstacles, coins, generator, fairness, lifecycle | `docs/specs/002-track-obstacles-coins.md` | Apply spec 002's listed changes to spec 001 and the GDD; spec 003 vine swinging |
 | balance-simulator | **working** | FP1 stage A3: Python reference model of spec 001, unit tests, S1–S9 report, golden traces | `tools/sim/`, `docs/sim-reports/` | Fairness fuzzing for spec 002 |
 | tech-architect | done (stage D) | First-open bootstrap: URP mobile asset, input set to Both, iOS basics (placeholder bundle id `com.pistaduko.junglerunner`, iOS 15, portrait), empty Run scene in build list; Mac play guide | `Assets/_Game/Editor/Setup/`, `docs/adr/0003-first-playable-bootstrap.md`, `docs/PLAY_FIRST_BUILD.md` | Add EditMode tests for `ProjectSetupRules`; Roslyn analyzers |
 | gameplay-engineer | done (stage A1) | Movement simulation, config assets, bot input provider, EditMode tests; logic cross-checked in Python | `Scripts/Gameplay/Runner/`, `Config/`, `Bots/`, `Tests/EditMode/Gameplay/` | Stage B: collisions + track (needs spec 002) |
@@ -95,6 +97,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Log
 Newest first. One line per event.
+- 2026-10-07: Stage A2 done (game-designer): spec 002. Launching B1 (collisions) and B2 (track) in parallel.
 - 2026-10-07: Launched stage C1 (ui-engineer) in parallel with A2/A3, since it only needs the movement simulation.
 - 2026-10-07: Stage A1 done (gameplay-engineer): movement simulation + tests, not compiled.
 - 2026-10-07: Stage D done (tech-architect): bootstrap script, ADR 0003, Mac play guide.

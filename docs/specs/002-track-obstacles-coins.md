@@ -1,7 +1,8 @@
 # Spec 002: Track, obstacles and coins
 
 **Owner:** game-designer | **Builder:** gameplay-engineer (simulation), gameplay/ui-engineer (views, HUD, Game Over) |
-**Milestone:** First Playable (FP1), stage B (simulation) and C (presentation) | **Status:** Ready to build |
+**Milestone:** First Playable (FP1), stage B (simulation) and C (presentation) | **Status:** Ready to build (chunk
+layouts are designer-checked by hand; the validator in section 11 is the gate that proves them) |
 **Last updated:** 2026-10-07
 
 **Source of truth:** GDD sections 8 (obstacles), 9 (worlds), 11 (difficulty), 13.1 (score), 14.1 (coin income),
@@ -81,6 +82,7 @@ and sim reports covers every asset in this section, including the chunk library.
 | `breatherMinDurationS` | s | 2.0 | 1.0–4.0 | Breathers are repeated until their total length ≥ this × speed (section 8.4) |
 | `noRepeatWindow` | chunks | 3 | 0–6 | A chunk id is not picked again within the last N normal chunks (relaxed if the pool is too small) |
 | `mirrorChance` | 0..1 | 0.5 | 0–1 | Chance a chunk is mirrored (lane 0 ↔ lane 2) |
+| `maxPickAttempts` | count | 8 | 1–32 | Weighted picks tried against the seam table before the breather fallback (8.3) |
 | `maxActiveChunks` | count | 8 | 4–16 | Fixed capacity of the simulation chunk ring |
 | `maxActiveObstacles` | count | 64 | 32–256 | Fixed capacity; overflow is an error in dev builds |
 | `maxActiveCoins` | count | 256 | 64–1024 | Fixed capacity; overflow is an error in dev builds |
@@ -105,6 +107,7 @@ Gap and mover fields:
 | `gapLengthsM` | list, m | 3.0, 4.0 | each 2.0–6.0 | Allowed gap lengths (authoring picks one) |
 | `gapMinWindowS` | s | 0.25 | 0.15–0.40 | Jump timing window a gap must leave at the band's minimum speed (F6) |
 | `gapRunAcrossMarginM` | m | 0.25 | 0.1–0.5 | Extra length so a gap can never be crossed by coyote time alone (F6) |
+| `gapLandingClearM` | m | 1.0 | 0.5–3.0 | No obstacle front within this distance after a gap's far edge (F6) |
 | `moverLateralSpeedMps` | m/s | 4.8 | 3.0–8.0 | One lane (2.4 m) in 0.50 s; linear motion |
 | `moverTriggerLeadS` | s | 1.4 | 1.2–2.5 | The mover starts when HERO's front is `moverTriggerLeadS × currentSpeed` before the mover's front |
 | `moverMinSettleS` | s | 0.5 | 0.3–1.0 | The mover must reach its end lane at least this long before HERO can reach it (F8) |
@@ -161,7 +164,7 @@ Gap and mover fields:
 |---|---|---|---|
 | `viewSpawnAheadM` | m | 95 | Views appear when their front is this far ahead of HERO; beyond fog end (90 m), so nothing pops in |
 | `fogStartM` / `fogEndM` | m | 45 / 90 | Style guide; `fogStartM` must equal `RunnerPresentationTuning.fogStartM` (validated) |
-| `telegraphMinS` | s | 1.2 | GDD 8.3; checked by AC-238 |
+| `telegraphMinS` | s | 1.2 | GDD 8.3; checked by AC-237 and rule F7 |
 | `grayBoxVisualMarginM` | m | 0.08 | FP1 gray-box meshes = hitbox grown by this on every side except the ground (5.3) |
 | `poolPrewarm` | per pool | see 8.6 | Pool sizes |
 | `moverMarkerWidthM` | m | 0.5 | Ink ground stripe along the mover path and an end circle (style guide 4.1) |
@@ -173,7 +176,7 @@ Gap and mover fields:
 |---|---|---|---|
 | `startOnFirstInput` | bool | true | Ready screen waits for the first tap, swipe or key; that input only starts the run (12.1) |
 | `gameOverInputLockMs` | ms | 400 | Game Over buttons ignore input for this long after the panel appears [ASSUMED] |
-| `restartMaxMs` | ms | 1000 | Budget from Restart press to the first running tick (AC-252) |
+| `restartMaxMs` | ms | 1000 | Budget from Restart press to the first running tick (AC-244) |
 | `devFixedSeed` | ulong | 0 | 0 = off. Non-zero forces this seed for every run (dev builds only) |
 
 ### 3.8 `WorldSkin_Jungle.asset` (`WorldSkinConfigAsset`), presentation only, FP1 subset
@@ -193,11 +196,14 @@ FP1 needs only the per-archetype display name (Game Over cause text) and a gray-
 
 | Field | Unit | Start value | Notes |
 |---|---|---|---|
-| `quickSpeeds` | rule | band min, each tier's `vMaxMps` inside the band, band max | Used by the EditMode test (AC-243) |
+| `quickSpeeds` | rule | band min, each tier's `vMaxMps` inside the band, band max | Used by the EditMode library gate (AC-232) |
 | `fullSpeedStepMps` | m/s | 0.25 | Used by the nightly/balance-simulator full sweep (S2) |
 | `phaseOffsets` | fractions of a tick's distance | 0, 1/3, 2/3 | Chunk start is not tick-aligned in real runs |
 | `maxStatesPerTick` | count | 50,000 | Exceeding it is a validator error, never a pass |
 | `positionQuantumM` | m | 0.001 | State dedupe quantum for `X`, `Y` |
+| `visibilitySampleOffsetM` | m | 0.7 | F7 sample points at lane center and ± this |
+| `visibilityMinPoints` | of 3 | 2 | F7 pass threshold |
+| `survivingLaneSampleM` | m | 0.5 | Spacing of the surviving-lane table used for seams |
 
 ---
 
@@ -240,7 +246,7 @@ FP1 needs only the per-archetype display name (Game Over cause text) and a gray-
 ### 4.2 Mirroring
 
 A mirrored chunk maps every lane `l` to `2 − l` (lane masks, `moverToLane`, coin lanes) and every `x` to `−x`.
-Nothing else changes. The validator validates both orientations (AC-243).
+Nothing else changes. The validator validates both orientations (AC-232).
 
 ### 4.3 Chunk library
 
@@ -359,11 +365,9 @@ soon as the footprint has no ground (coyote applies); once `Y < 0` there is no r
 
 ## 7. Chunk library for FP1
 
-15 chunks: 1 start, 12 normal (5 tier-1, 4 tier-2, 4 tier-3... see note) and 2 breathers. Names refer to the Jungle
-skin; the layouts are world-neutral (`worldMask = All`). All normal chunks are 40 m and allowed up to tier 6, so
-every one of them is validated up to the 21 m/s cap.
-
-Note: tier 1 has 5 chunks rather than 4 so the opening minutes have more variety; tiers 2 and 3 have 4 each.
+16 chunks: 1 start, 13 normal (5 tier-1, 4 tier-2, 4 tier-3) and 2 breathers. Names refer to the Jungle skin; the
+layouts are world-neutral (`worldMask = All`). All normal chunks are 40 m and allowed up to tier 6, so every one of
+them is validated up to the 21 m/s cap. Tier 1 has 5 chunks so the opening minutes have more variety.
 
 ### 7.1 Notation
 
@@ -467,8 +471,8 @@ if nothing was accepted: emit breather B-01 (not mirrored) and record "seam fall
 
 - Exactly 2 draws per attempt, always, so a change in one chunk's `allowMirror` does not shift other runs'
   sequences more than necessary.
-- `TierChanged(tier)` is emitted when the tier of a generated chunk differs from the previous one (for debug HUD,
-  music later).
+- The generator stores the tier on each `ChunkInstance`; `TierChanged(tier)` is emitted when HERO enters the first
+  chunk of a new tier (13.1), not at generation time.
 - **No spike rule (GDD 11.2):** tiers are at least 300 m apart, so density never rises by more than one tier step
   within 200 m. The config validation checks this for `fromM` (AC-201).
 
@@ -510,7 +514,7 @@ are compatible with everything.
 | Coin | 120 | ≤ 15 per 40 m × 110 m in range, plus margin |
 | Coin pickup VFX | 16 | |
 
-A pool that has to grow logs a warning in development builds and fails AC-249.
+A pool that has to grow logs a warning in development builds and fails AC-222.
 
 ---
 
@@ -521,7 +525,7 @@ it, at the current speed.
 
 1. **Spawned and unfogged:** views exist from 95 m (beyond the 90 m fog end). At 1.2 s an obstacle is at most
    1.2 × 21 = 25.2 m away (40.3 m at a 33.6 m/s boost), always inside the fog start (45 m), so it is fully
-   readable, not half-fogged. Checked by AC-238.
+   readable, not half-fogged. Checked by AC-236 and AC-237.
 2. **Not hidden behind another obstacle:** checked by the validator's visibility rule F7 (11.1). Tall obstacles
    (full blocks 3.0 m, movers 1.9 m) seen from a camera 3.2 m high can hide what is behind them in the same lane.
 3. **Mover end lane:** the ink path stripe and end circle are on the ground from spawn, so the end lane is readable
@@ -536,8 +540,9 @@ it, at the current speed.
 
 ### 10.1 Coin heights and placement
 
-- Ground coins: center at `coinHeightM` = 0.75 m. A standing, sliding or jumping HERO collects them (see 10.4), so
-  a slide under a branch or a small hop never costs coins.
+- Ground coins: center at `coinHeightM` = 0.75 m. A running or sliding HERO collects them (see 10.4), so a slide
+  under a branch never costs coins. During a jump they are collected while HERO's feet are at most 1.35 m high, so a
+  full jump over a 2 m-spaced line skips about one coin near the apex (0.19 s above 1.35 m).
 - Coins never touch an obstacle (rule C1): coin sphere (radius 0.25 m) + 0.1 m clearance must not overlap any
   hitbox, including a mover's start and end positions.
 - Coin patterns are always clean `Line`, `Arc` or `Trail` shapes (style guide 7.2: never random clouds).
@@ -549,7 +554,7 @@ An `Arc` shows the jump. Its shape follows HERO's real jump at the speed HERO wi
 - Coin `k` of `n` (`n = 7`, `k = 0..n−1`): `d = (k − (n−1)/2) × arcSpanFraction × jumpLength / (n − 1)`,
   `z = zCenter + d`, `y = coinHeightM + Yjump(d)`, where `Yjump(d) = 1.5 − ½·g·(d/v)²` (apex 1.5 m above
   `zCenter`, `g` from `RunnerConfig`).
-- At 10 m/s the arc spans 4.5 m and its outer coins sit 1.53 m high (inner ones up to 2.25 m), so they are collected
+- At 10 m/s the arc spans 4.5 m and its outer coins sit 1.41 m high (the middle one 2.25 m), so they are collected
   by a jump timed anywhere in the middle of the window, and a well-timed jump collects all 7.
 
 ### 10.3 Lane-change trails
@@ -569,7 +574,8 @@ coins between lanes are collected while HERO is moving (the expanded pickup box 
 ### 10.5 Coin streak
 
 - `streak` counts consecutive collected coins. A coin is **missed** when HERO's back face passes `coin.z + 0.6` while
-  the coin is uncollected and `|coin.x − X| ≤ 1.2 m` (the coin was in HERO's lane). A miss or a `Stumbled` resets
+  the coin is uncollected and `|coin.x − X| ≤ 1.2 m` (the coin was in HERO's lane; 1.2 m is half the lane width, derived, and 0.6 m is
+  `pickupRadiusM`). A miss or a `Stumbled` resets
   the streak to 0.
 - When `streak` reaches `streakLength` (25): add `coinStreakBonus` (50) to the bonus score, emit
   `CoinStreak(count = 25)`, and reset `streak` to 0.
@@ -814,17 +820,18 @@ Values assume the start values in section 3 and spec 001 section 3.
   rule is rejected with that rule id in the report.
 - **AC-229 [EditMode]** With static checks off, a fixture `Low[0,1,2]@10` + `High[0,1,2]@12` at 21 m/s fails F1;
   the report contains a failure trace.
-- **AC-230 [EditMode]** Ceiling-trap fixture (static checks off): `Gap[0,1,2]@10 len 4.0` + `High[0,1,2]@14` at
-  10 m/s fails F1 (F9 is covered by the real collision rules).
-- **AC-231 [EditMode]** Fixture (static checks off) `Full[0,1]@37` in a 40 m chunk at 10 m/s passes F1 but fails F2
-  (N(0) is not reachable by the chunk end from lane 2).
+- **AC-230 [EditMode]** Ceiling-trap fixture (static checks off): `Gap[0,1,2]@10 len 4.0` + `High[0,1,2]@13`
+  (a branch above the gap) at 10 m/s fails F1 (F9 is covered by the real collision rules).
+- **AC-231 [EditMode]** Fixture (static checks off) `Full[0,1]@38` in a 40 m chunk at 10 m/s passes F1 but fails F2
+  (from lane 2, N(0) is not reachable by the chunk end).
 - **AC-232 [EditMode]** **Library gate:** every library chunk, both mirrors, every quick speed of its band, all 3
   phases and all 3 entry lanes pass F1, F2, F7 and C2. The validator steps the production `RunnerSimulation` (no
   copy of movement rules). The test finishes in ≤ 60 s in the editor, or is split per chunk.
 - **AC-233 [EditMode]** The seam table stored in the library equals a fresh computation, and covers every ordered
   pair and mirror combination.
-- **AC-234 [EditMode]** Best-path coins: a fixture with `Line(0, 4→20)` (9 coins) and `Line(2, 4→12)` (5 coins)
-  reports 9 at 21 m/s and 14 at 10 m/s (the switch between z 12 and 20 is only possible... see note below).
+- **AC-234 [EditMode]** Best-path coins: a fixture with `Line(2, 4→12)` (5 coins) and `Line(0, 24→36)` (7 coins)
+  reports 12 at 10 and 21 m/s (12 m is enough to switch); a fixture with `Line(0, 4→12)` and `Line(2, 4→12)`
+  (side by side) reports 5.
 - **AC-235 [EditMode]** The validator is deterministic: two runs give byte-identical reports.
 
 ### Telegraph and presentation
@@ -860,9 +867,6 @@ Values assume the start values in section 3 and spec 001 section 3.
 - **AC-249 [PlayMode]** A 120 s bot run allocates 0 bytes per frame after warm-up.
 - **AC-250 [PlayMode]** Simulation step with track update, 30 obstacles in range and coin pickups ≤ 0.5 ms on the
   editor benchmark; generating one chunk ≤ 0.1 ms.
-
-Note on AC-234: at 21 m/s a path can take only one of the two lines if they overlap in z; the fixture is laid out so
-the lines do not overlap (`Line(2, 4→12)` then `Line(0, 14→30)`), giving 5 + 9 = 14 at both speeds. Use that layout.
 
 ---
 

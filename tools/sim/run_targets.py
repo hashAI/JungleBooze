@@ -169,8 +169,27 @@ def s2():
                              latest_before_contact_min=min(x["last"] for x in per_phase if x["last"] is not None),
                              all_contiguous=all(x["contiguous"] for x in per_phase),
                              phases=per_phase))
-    _save("s2", dict(rows=rows))
-    return rows
+    gap_rows = []
+    for speed in S1_SPEEDS:
+        for glen in (2.0, 3.0, 4.0):
+            ns = []
+            for p in range(10):
+                z0 = 3.0 * speed + 0.5 + p / 10.0 * speed / 60.0
+                course = fixed_course(speed, [("gap", z0, glen)])
+                base = make_runner(course)
+                ok = []
+                for t in range(0, int(z0 / (speed / 60.0)) + 20):
+                    rr = base.clone()
+                    rr.step(JUMP)
+                    if _clear(rr, course.end_z):
+                        ok.append(t)
+                    base.step()
+                    if base.dead:
+                        break
+                ns.append(len(ok))
+            gap_rows.append(dict(speed=speed, gap_m=glen, min_window=min(ns), max_window=max(ns)))
+    _save("s2", dict(rows=rows, gap_rows=gap_rows))
+    return rows, gap_rows
 
 
 # ---------------------------------------------------------------------------
@@ -298,8 +317,20 @@ def _bot_run(setup, seed):
             cause = "Tripped twice (%s)" % d["archetype"]
         else:
             cause = "Hit %s (%s)" % (d["archetype"], d["entry"])
+        # group being passed at death: first group whose far end is not yet behind HERO's back
+        gi = None
+        if d["cause"] == "Fell":
+            for i, g in enumerate(course.groups):
+                if g.kind == "gap" and g.z0 <= d["z"]:
+                    gi = i
+        else:
+            for i, g in enumerate(course.groups):
+                if g.z1 + 0.6 >= d["z"] - 0.25:
+                    gi = i
+                    break
         death = dict(cause=cause, tick=d["tick"], tripped_twice=bool(d["after_stumble"]),
-                     old_lane_60=old_lane_60)
+                     old_lane_60=old_lane_60, group=gi,
+                     error_injected=(gi in bot.error_groups) if gi is not None else False)
     return dict(seed=seed, survived=survived, ticks=r.tick, death=death, stumbles=len(r.stumbles),
                 outcomes=r.outcomes, flags=r.flags_received, buffered_entered=r.buffered_entered,
                 groups=len(course.groups), stretched=course.stretched)
@@ -324,6 +355,8 @@ def _summ(setup, runs):
     return dict(setup=setup, n=n, survived=surv, survive_rate=surv / float(n), deaths=len(deaths),
                 causes=dict(causes), tripped_twice=sum(1 for d in deaths if d["tripped_twice"]),
                 old_lane_60=sum(1 for d in deaths if d["old_lane_60"]),
+                deaths_error_injected=sum(1 for d in deaths if d["error_injected"]),
+                causes_execution=dict(Counter(d["cause"] for d in deaths if not d["error_injected"])),
                 stumbles=sum(r["stumbles"] for r in runs), outcomes=dict(oc), flags=flags,
                 accounting_ok=(sum(oc.values()) == flags), buffered_entered=buffered,
                 expired=oc.get(EXPIRED, 0),

@@ -181,6 +181,7 @@ class SkillBot(object):
         speed = course.speed
         hd = cfg.player_hitbox_depth_m / 2.0
         ticks = {}
+        self.error_groups = set()
         lane = course.start_lane
         prev_clear_tick = 0
         prev_vertical_tick = -100
@@ -210,6 +211,7 @@ class SkillBot(object):
                 vertical = JUMP if a == LOW_BARRIER else SLIDE if a == HIGH_BARRIER else None
             # error: wrong or missing answer for this group
             if self.rng.random() < self.p.error_rate:
+                self.error_groups.add(gi)
                 kind = self.rng.randrange(3)
                 if kind == 0:
                     vertical, target_lane = None, lane          # froze
@@ -225,12 +227,21 @@ class SkillBot(object):
                     ticks[t_lat + k] = ticks.get(t_lat + k, 0) | (MOVE_RIGHT if d > 0 else MOVE_LEFT)
                 lane = target_lane
             if vertical == JUMP:
-                ideal = t_center - cfg.jump_airtime_ticks // 2
+                if g.kind == "gap":
+                    # aim at the middle of the take-off window: earliest = landing footprint just reaches
+                    # the far edge, latest = last coyote tick after the footprint leaves the near edge
+                    dz = speed / 60.0
+                    jump_len = cfg.jump_airtime_ticks * dz
+                    z_early = g.z1 - jump_len - hd
+                    z_late = g.z0 + hd + cfg.coyote_ticks * dz
+                    ideal = _tick_when_z(0.0, 0, speed, (z_early + z_late) / 2.0)
+                else:
+                    ideal = t_center - cfg.jump_airtime_ticks // 2  # arc centred on the obstacle
                 tv = max(t_react, ideal + self._noise())
                 ticks[tv] = ticks.get(tv, 0) | JUMP
                 prev_vertical_tick = tv
             elif vertical == SLIDE:
-                ideal = t_front - 8
+                ideal = t_front - cfg.slide_ticks // 2  # middle of the window [contact-39, contact]
                 tv = max(t_react, ideal + self._noise())
                 ticks[tv] = ticks.get(tv, 0) | SLIDE
                 prev_vertical_tick = tv
