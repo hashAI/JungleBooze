@@ -165,6 +165,7 @@ namespace JungleBooze.Gameplay.Path
             pose.BankDeg = bank * Mathf.Rad2Deg;
             pose.Layer = a.Layer;
             pose.Surface = a.Surface;
+            pose.Beat = a.Beat;
             pose.HalfWidthM = a.HalfWidthM;
         }
 

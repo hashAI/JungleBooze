@@ -262,6 +262,54 @@ namespace JungleBooze.Gameplay.Track
             return ref _chunks[index];
         }
 
+        /// <summary>
+        /// Serial of the oldest chunk still in the ring (0 when the ring is empty). Chunks are numbered from 1 in
+        /// generation order, so the active serials are <c>OldestChunkSerial .. GeneratedChunkCount</c>.
+        /// </summary>
+        public int OldestChunkSerial => _chunks.Count > 0 ? _chunks[0].Serial : 0;
+
+        /// <summary>
+        /// Read-only view of the generated chunk with generation serial <paramref name="serial"/> (1 = the start chunk):
+        /// kind, start z and length (spec 003 section 4.1, AC-313). Not valid (<see cref="ChunkPeek.IsValid"/> false)
+        /// for chunks not generated yet or already despawned. Never generates, never changes anything; no allocation.
+        /// </summary>
+        public ChunkPeek PeekChunk(int serial)
+        {
+            var peek = default(ChunkPeek);
+            if (_chunks.Count == 0)
+            {
+                return peek;
+            }
+
+            int index = serial - _chunks[0].Serial;
+            if (index < 0 || index >= _chunks.Count)
+            {
+                return peek;
+            }
+
+            ref ChunkInstance chunk = ref _chunks[index];
+            if (chunk.Serial != serial)
+            {
+                return peek;
+            }
+
+            peek.IsValid = true;
+            peek.Serial = chunk.Serial;
+            peek.Kind = chunk.Kind;
+            peek.StartZ = chunk.StartZ;
+            peek.LengthM = chunk.LengthM;
+            return peek;
+        }
+
+        /// <summary>
+        /// How far the generated track reaches ahead of <paramref name="heroZ"/> (AC-313: at least 175 m after every
+        /// update; the default <c>generateAheadM</c> of 190 m leaves a margin).
+        /// </summary>
+        public double CommittedAheadM(double heroZ)
+        {
+            return _generatedEndZ - heroZ;
+        }
+
         /// <summary>Active obstacle <paramref name="index"/>, 0 = oldest (lowest id, smallest z).</summary>
         public ref readonly ObstacleInstance GetObstacle(int index)
         {

@@ -11,7 +11,11 @@ namespace JungleBooze.Gameplay.Track
     [Serializable]
     public sealed class TrackDesignValues
     {
-        public float GenerateAheadM = 150f;
+        /// <summary>
+        /// [ASSUMED] 190 m since spec 003 (was 150): the route needs at least 175 m committed ahead (viewSpawnAheadM
+        /// 95 m + two chunks 80 m) and reads the chunk kinds 70 m ahead of what it builds.
+        /// </summary>
+        public float GenerateAheadM = 190f;
         public float DespawnBehindM = 15f;
         public float LeadInM = 6f;
         public float LeadOutM = 6f;
@@ -22,9 +26,9 @@ namespace JungleBooze.Gameplay.Track
         public int NoRepeatWindow = 3;
         public float MirrorChance = 0.5f;
         public int MaxPickAttempts = 8;
-        public int MaxActiveChunks = 8;
+        public int MaxActiveChunks = 12;
         public int MaxActiveObstacles = 64;
-        public int MaxActiveCoins = 256;
+        public int MaxActiveCoins = 320;
 
         /// <summary>Id of the first chunk of every run.</summary>
         public string StartChunkId = "S-01";

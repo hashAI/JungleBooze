@@ -46,7 +46,7 @@ namespace JungleBooze.Tests.EditMode.Track
             Assert.IsTrue(Create<TrackPresentationConfigAsset>().Validate(errors), string.Join(" ", errors));
 
             TrackConfig track = Create<TrackConfigAsset>().ToConfig();
-            Assert.AreEqual(150f, track.GenerateAheadM);
+            Assert.AreEqual(190f, track.GenerateAheadM);
             Assert.AreEqual(15f, track.DespawnBehindM);
             Assert.AreEqual(3, track.NoRepeatWindow);
             Assert.AreEqual("S-01", track.StartChunkId);

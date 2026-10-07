@@ -33,6 +33,9 @@ namespace JungleBooze.Gameplay.Path
 
         public PathSurface Surface;
 
+        /// <summary>Beat the centerline is on at this point (Straight for the straight route).</summary>
+        public RouteBeatKind Beat;
+
         /// <summary>Half of the playable width in m (3.6).</summary>
         public float HalfWidthM;
     }
