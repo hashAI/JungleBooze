@@ -73,6 +73,14 @@ namespace JungleBooze.Gameplay.Track
         private readonly HazardConfig _hazards;
         private readonly PowerUpPlacer _pickups;
 
+        /// <summary>Most world switches remembered per run (about 600 km of track); later ones fall back to the nominal boundary.</summary>
+        public const int MaxWorldSwitches = 512;
+
+        private readonly WorldScheduleConfig _worlds;
+        private readonly double[] _switchZ = new double[MaxWorldSwitches];
+        private int _switchCount;
+        private float _gatewayLengthM;
+
         public TrackSimulation(
             TrackConfig config,
             ObstacleKitConfig kit,
@@ -83,7 +91,8 @@ namespace JungleBooze.Gameplay.Track
             RunnerConfig runner,
             VineConfig vines = null,
             PowerUpConfig powerUps = null,
-            HazardConfig hazards = null)
+            HazardConfig hazards = null,
+            WorldScheduleConfig worlds = null)
         {
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _kit = kit ?? throw new ArgumentNullException(nameof(kit));
@@ -97,7 +106,8 @@ namespace JungleBooze.Gameplay.Track
             }
 
             _vines = vines ?? VineConfig.CreateDefault();
-            _generator = new TrackGenerator(config, library, tiers, curve, _vines);
+            _worlds = worlds;
+            _generator = new TrackGenerator(config, library, tiers, curve, _vines, worlds);
             _vineRing = new FixedRing<VineInstance>(_vines.MaxActiveVines);
             _bonusCoins = new CoinInstance[_vines.MaxBonusCoins];
             _chunks = new FixedRing<ChunkInstance>(config.MaxActiveChunks);
@@ -115,6 +125,61 @@ namespace JungleBooze.Gameplay.Track
 
         /// <summary>Lane-strike timing (GDD 8.3).</summary>
         public HazardConfig Hazards => _hazards;
+
+        /// <summary>World order (GDD 9), or null when the run has a single world.</summary>
+        public WorldScheduleConfig Worlds => _worlds;
+
+        /// <summary>World switches generated so far (the gateways placed).</summary>
+        public int WorldSwitchCount => _switchCount;
+
+        /// <summary>Length of the gateway chunk (the world blend runs over it); 0 before the first gateway.</summary>
+        public float GatewayLengthM => _gatewayLengthM;
+
+        /// <summary>
+        /// World segment (0-based; segment 0 is the first Jungle) that contains <paramref name="z"/>. A segment ends at
+        /// the centre of its gateway chunk; gateways not generated yet are not counted. Binary search, no allocation.
+        /// </summary>
+        public int WorldSegmentAt(double z)
+        {
+            int low = 0;
+            int high = _switchCount;
+            while (low < high)
+            {
+                int mid = (low + high) >> 1;
+                if (_switchZ[mid] <= z)
+                {
+                    low = mid + 1;
+                }
+                else
+                {
+                    high = mid;
+                }
+            }
+
+            return low;
+        }
+
+        /// <summary>World of the segment at <paramref name="z"/> (Jungle when the run has no worlds).</summary>
+        public WorldKind WorldKindAt(double z)
+        {
+            return _worlds == null ? WorldKind.Jungle : _worlds.KindOfSegment(WorldSegmentAt(z));
+        }
+
+        /// <summary>
+        /// Distance at which segment <paramref name="segment"/> (at least 1) starts, i.e. the centre of its gateway.
+        /// False while that gateway has not been generated yet.
+        /// </summary>
+        public bool TryGetSegmentStartZ(int segment, out double z)
+        {
+            if (segment >= 1 && segment <= _switchCount)
+            {
+                z = _switchZ[segment - 1];
+                return true;
+            }
+
+            z = 0.0;
+            return false;
+        }
 
         /// <summary>Power-up pickups on the track (GDD 10).</summary>
         public PowerUpPlacer PowerUpPickups => _pickups;
@@ -271,6 +336,8 @@ namespace JungleBooze.Gameplay.Track
             _nextCoinId = 1;
             _nextChunkSerial = 1;
             _generatedEndZ = 0.0;
+            _switchCount = 0;
+            _gatewayLengthM = 0f;
             _enteredSerial = 0;
             _currentTier = 1;
             _currentChunkIndex = -1;
@@ -769,6 +836,16 @@ namespace JungleBooze.Gameplay.Track
             if (!_chunks.TryAdd(chunk))
             {
                 ChunkOverflowCount++;
+            }
+
+            if (data.Kind == ChunkKind.Gateway)
+            {
+                // GDD 9: the world changes at the centre of the gateway.
+                _gatewayLengthM = data.LengthM;
+                if (_switchCount < MaxWorldSwitches)
+                {
+                    _switchZ[_switchCount++] = startZ + data.LengthM * 0.5;
+                }
             }
 
             // GDD 10: maybe a power-up pickup in this chunk; a Speed Boost holds back vine sections.

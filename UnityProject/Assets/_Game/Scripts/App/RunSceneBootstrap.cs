@@ -180,6 +180,20 @@ namespace JungleBooze.App
             PowerUpView powerUpView = powerUpObject.AddComponent<PowerUpView>();
             powerUpView.Init(kit, configs.Runner, presentation, presentation.FogEndM);
 
+            // GDD 9: world themes (palette, fog, ground and obstacle tint) and the gateway frames.
+            var worldObject = new GameObject("Worlds");
+            worldObject.transform.SetParent(root.transform, false);
+            WorldThemeView worldView = worldObject.AddComponent<WorldThemeView>();
+            worldView.Init(
+                camera,
+                keyLight,
+                ground,
+                obstacles,
+                kit,
+                configs.Runner,
+                Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"),
+                presentation.FogEndM);
+
             var runnerObject = new GameObject("Pista");
             runnerObject.transform.SetParent(root.transform, false);
             RunnerView runnerView = runnerObject.AddComponent<RunnerView>();
@@ -255,7 +269,7 @@ namespace JungleBooze.App
             audio.Bind(save);
             var audioView = new RunAudioView(audio);
 
-            driver.Init(session, input, new IRunView[] { eventCounter, tutorial, audioView, ground, gaps, obstacles, hazardView, vineView, coinView, powerUpView, runnerView, companionView, cameraView, hud, companionHud, tutorialView, continueView }, kit);
+            driver.Init(session, input, new IRunView[] { eventCounter, tutorial, audioView, ground, worldView, gaps, obstacles, hazardView, vineView, coinView, powerUpView, runnerView, companionView, cameraView, hud, companionHud, tutorialView, continueView }, kit);
 
             if (Debug.isDebugBuild)
             {
@@ -276,7 +290,8 @@ namespace JungleBooze.App
             VineConfig vines = RunConfigLoader.LoadVines();
             PowerUpConfig powerUps = RunConfigLoader.LoadPowerUps();
             HazardConfig hazards = RunConfigLoader.LoadHazards();
-            return new TrackRunWorldFactory(TrackRunSetup.CreateDefault(vines, powerUps, hazards));
+            WorldScheduleConfig worlds = RunConfigLoader.LoadWorlds();
+            return new TrackRunWorldFactory(TrackRunSetup.CreateDefault(vines, powerUps, hazards, worlds));
         }
 
         private static bool IsRunScene(Scene scene)

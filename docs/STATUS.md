@@ -16,10 +16,15 @@ The coordinating session compile-checks in Unity batch mode on the owner's Mac (
 - [x] Batch 2: power-ups and lane-strike hazards (GDD §10, §8.3) · Duko companion + continue (GDD §15, §14.4) · audio files + playback code (not yet hooked into the Run scene)
 - [x] Batch 3a: missions, daily reward, shop/unlocks (GDD §13), uncompiled
 - [x] Batch 3b: onboarding (GDD §12), uncompiled
-- [ ] Batch 4: worlds and transitions (GDD §9) · difficulty ramp check (GDD §11)
+- [x] Batch 4: worlds and transitions (GDD §9) · difficulty ramp check (GDD §11), uncompiled
 - [ ] Later: 3D from locked concepts, wire audio into the run, ads/IAP, review, tests, TestFlight.
 
-**Resume note:** Audio is now wired into the Run scene (`RunAudioView`, catalog moved to `Audio/Resources`); not yet compiled on the Mac. Next: Batch 3 (missions, daily reward, shop/unlocks, onboarding). Mesh generation waits on Meshy after this commit. If interrupted: compile-check with Unity 6000.3.25f1 rsp + bundled csc, then commit.
+**PAUSED by owner (2026-10-07) after Batches 3 and 4. No agents running.** Resume note:
+1. Pull on the Mac, open in Unity, send the compile errors (a lot of code is unseen by a compiler: audio wiring, meta menus, shop, tutorial, worlds, art plumbing). Fix those first.
+2. Art: cloud has no keys/Blender/Meshy access. Either run `tools/assetgen/meshy_characters.py` and `gen_env_assets.py` on the Mac (caps: 250 / 200 Meshy credits, 4 images), or start a new session after adding MESHY_API_KEY/OPENAI_API_KEY to the environment and allowing api.meshy.ai / api.openai.com.
+3. Stale PlayMode tests (view count now ~18; fresh save starts the tutorial). Tests were deferred by the owner.
+4. Then: fairness validator (B3) on the new T4 chunks, wire world banner/music crossfade to `WorldThemeView.SegmentChanged`, review/tests pass.
+The 8 files in design/concepts/2026-10-07 show as modified in the cloud container only because of a git LFS stub problem: never commit them from the container. Mesh generation waits on Meshy after this commit. If interrupted: compile-check with Unity 6000.3.25f1 rsp + bundled csc, then commit.
 
 **Goal: First Playable (FP1). Autonomous mandate: no owner questions until it's done.** Release/store work is paused.
 
@@ -126,6 +131,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Log
 Newest first. One line per event.
+- 2026-10-07: Batch 4 done (gameplay-engineer): four worlds (Jungle 0-1100 m, River to 2300, Mountains to 3600, Ruins to 5000, then loop with dusk Jungle), 54 m gateway chunk at boundaries, per-world gray-box themes and skins, hazard rules, five new T4 chunks and reweighted tier 4-6 pools (densities estimated ~7.8/8.6/8.9 per 100 m vs 8/9/10; tier 6 target not reachable with breathers). Speed curve and tier table match GDD 11. Uncompiled; fairness validator not run on T4 chunks. **Owner paused all work; no agents running.**
 - 2026-10-07: Batch 3b done (ui-engineer): onboarding via `TutorialDirector` (contextual lessons on the real tier-1 run, 30% speed until first swipe, revive-with-hint instead of death, 75 s cap), `TutorialView`, Replay tutorial in Settings, tutorial flags in the save. Uncompiled. [ASSUMED] contextual not the fixed 45 s script; Skip only after first completion; tutorial run counts as run 1. Existing PlayMode tests are stale (view count 17; restart on a fresh save starts the tutorial). Batch 4 (worlds) still running.
 - 2026-10-07: Batch 3a done (ui-engineer): missions (sets of 3, score multiplier), daily challenge, 7-day calendar (IDayClock), coin shop (upgrades, Head Start, Shield start), run loadout, panels on the main menu. Uncompiled. [ASSUMED] Boosts armed in the shop; calendar pauses, never resets; multiplier permanent +1/set (cap 30); mission targets and daily goals are guesses; characters/outfits not for sale; no ad doubling, no Restore Purchases, no haptics yet. Existing PlayMode tests may be stale (view count +1).
 - 2026-10-07: Art agents finished but generated NOTHING: the cloud container has no Meshy/OpenAI keys (`~/.config/junglebooze/secrets.env` lives on the owner's Mac), no Blender, and the proxy blocks Meshy. Code is in: `EnvironmentArt` prefab loader in all environment views (Resources/EnvironmentArt, gray-box fallback), editor menu `JungleBooze > Art > Build Environment Prefabs`, character loading in RunnerView/CompanionView (Resources/Characters), import postprocessor, scripts `tools/assetgen/gen_env_assets.py` and `meshy_characters.py` (caps: 250 / 200 Meshy credits, 4 images; Meshy endpoints written from memory, verify on first run). Spent 0 credits. [ASSUMED] Duko flight stays procedural (no wing rig); whole model incl. hair fit to hitbox; animation ids chosen by the pipeline agent. Next: run the scripts on the Mac.

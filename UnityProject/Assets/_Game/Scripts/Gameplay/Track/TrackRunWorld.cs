@@ -76,7 +76,7 @@ namespace JungleBooze.Gameplay.Track
             get
             {
                 DeathInfo d = Death;
-                return d.HasDied ? _setup.Skin.GetCauseText(d) : string.Empty;
+                return d.HasDied ? SkinAt(d.DistanceM).GetCauseText(d) : string.Empty;
             }
         }
 
@@ -85,7 +85,13 @@ namespace JungleBooze.Gameplay.Track
 
         public string DescribeDeath(DeathCause cause, ObstacleArchetype archetype, bool afterStumble)
         {
-            return _setup.Skin.GetCauseText(cause, archetype, afterStumble);
+            return SkinAt(Runner == null ? 0.0 : Runner.Current.Z).GetCauseText(cause, archetype, afterStumble);
+        }
+
+        /// <summary>Names of the world that contains <paramref name="z"/> (the Jungle skin when there are no worlds).</summary>
+        private WorldSkinConfig SkinAt(double z)
+        {
+            return Track == null || _setup.Worlds == null ? _setup.Skin : _setup.GetSkin(Track.WorldKindAt(z));
         }
 
         public RunnerSimulation CreateRunner(RunnerConfig config, SpeedCurve speedCurve)
@@ -102,7 +108,8 @@ namespace JungleBooze.Gameplay.Track
                 config,
                 _setup.Vines,
                 _setup.PowerUps,
-                _setup.Hazards);
+                _setup.Hazards,
+                _setup.Worlds);
             PowerUps = new PowerUpSystem(_setup.PowerUps, config);
             Scoring = new RunScoring(_setup.Coins, _setup.Score, config, _setup.Vines);
             ResetRun(Seed);

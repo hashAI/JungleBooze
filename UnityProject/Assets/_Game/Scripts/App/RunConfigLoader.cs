@@ -7,6 +7,7 @@ using JungleBooze.Gameplay.Hazards;
 using JungleBooze.Gameplay.PowerUps;
 using JungleBooze.Gameplay.Runner;
 using JungleBooze.Gameplay.Session;
+using JungleBooze.Gameplay.Track;
 using JungleBooze.Gameplay.Vine;
 using JungleBooze.Gameplay.Views;
 using JungleBooze.Services.Meta;
@@ -30,6 +31,7 @@ namespace JungleBooze.App
         public const string VineTuningName = "VineTuning";
         public const string PowerUpTuningName = "PowerUpTuning";
         public const string HazardTuningName = "HazardTuning";
+        public const string WorldScheduleName = "WorldSchedule";
         public const string CompanionTuningName = "CompanionTuning";
         public const string EconomyConfigName = "EconomyConfig";
         public const string MetaConfigName = "MetaConfig";
@@ -87,6 +89,20 @@ namespace JungleBooze.App
             var sources = new List<string>(1);
             HazardConfig config = LoadOrDefault<HazardConfigAsset, HazardConfig>(
                 HazardTuningName, a => a.ToConfig(), HazardConfig.CreateDefault, sources);
+            if (Debug.isDebugBuild)
+            {
+                Debug.Log("[JungleBooze] " + sources[0] + ".");
+            }
+
+            return config;
+        }
+
+        /// <summary>World order and lengths (GDD 9) from <c>Resources/WorldSchedule.asset</c> if present and valid, else defaults.</summary>
+        public static WorldScheduleConfig LoadWorlds()
+        {
+            var sources = new List<string>(1);
+            WorldScheduleConfig config = LoadOrDefault<WorldScheduleConfigAsset, WorldScheduleConfig>(
+                WorldScheduleName, a => a.ToConfig(), WorldScheduleConfig.CreateDefault, sources);
             if (Debug.isDebugBuild)
             {
                 Debug.Log("[JungleBooze] " + sources[0] + ".");

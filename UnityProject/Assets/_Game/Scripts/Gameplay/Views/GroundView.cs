@@ -30,6 +30,7 @@ namespace JungleBooze.Gameplay.Views
         private long[] _tileIndex;
         private Material _pathMaterial;
         private Material _pathAlternateMaterial;
+        private Material _vergeMaterial;
         private Transform _strips;
 
         // Foliage dressing along the verges (optional art; recycled like the tiles, deterministic by slot index).
@@ -102,8 +103,11 @@ namespace JungleBooze.Gameplay.Views
             _pathHalfWidthM = pathWidth * 0.5f;
             InitDressing(tileCount);
 
-            _pathMaterial = _tileRenderers[0].sharedMaterial;
-            _pathAlternateMaterial = kit.GetMaterial(StylePalette.PathAlternate, _pathMaterial);
+            // Own materials, so a world theme can recolor the ground without touching other views' shared colors.
+            Material template = _tileRenderers[0].sharedMaterial;
+            _pathMaterial = new Material(template) { name = "World_Path", color = StylePalette.CreamPath };
+            _pathAlternateMaterial = new Material(template) { name = "World_PathAlternate", color = StylePalette.PathAlternate };
+            _vergeMaterial = new Material(template) { name = "World_Verge", color = StylePalette.JungleGreen };
 
             // Long strips that follow HERO (uniform color, so following shows no motion): path edges and verges.
             _strips = new GameObject("Strips").transform;
@@ -112,13 +116,14 @@ namespace JungleBooze.Gameplay.Views
             float stripCenterZ = StripLengthM * 0.5f - StripBehindM;
             for (int side = -1; side <= 1; side += 2)
             {
-                kit.Create(
+                Transform verge = kit.Create(
                     PrimitiveType.Cube,
                     side < 0 ? "VergeLeft" : "VergeRight",
                     _strips,
                     StylePalette.JungleGreen,
                     new Vector3(side * (halfPath + VergeWidthM * 0.5f), -GroundThicknessM * 0.5f - MarkerLiftM, stripCenterZ),
                     new Vector3(VergeWidthM, GroundThicknessM, StripLengthM));
+                verge.GetComponent<MeshRenderer>().sharedMaterial = _vergeMaterial;
 
                 kit.Create(
                     PrimitiveType.Cube,
@@ -127,6 +132,34 @@ namespace JungleBooze.Gameplay.Views
                     StylePalette.Ink,
                     new Vector3(side * (halfPath - EdgeWidthM * 0.5f), MarkerLiftM, stripCenterZ),
                     new Vector3(EdgeWidthM, MarkerLiftM, StripLengthM));
+            }
+        }
+
+        /// <summary>Recolors the path tiles and the verges (world themes, GDD 9). Allocation free.</summary>
+        public void ApplyTheme(in WorldTheme theme)
+        {
+            if (_pathMaterial == null)
+            {
+                return;
+            }
+
+            _pathMaterial.color = theme.Path;
+            _pathAlternateMaterial.color = theme.PathAlternate;
+            _vergeMaterial.color = theme.Verge;
+        }
+
+        private void OnDestroy()
+        {
+            DestroyMaterial(_pathMaterial);
+            DestroyMaterial(_pathAlternateMaterial);
+            DestroyMaterial(_vergeMaterial);
+        }
+
+        private static void DestroyMaterial(Material material)
+        {
+            if (material != null)
+            {
+                Destroy(material);
             }
         }
 

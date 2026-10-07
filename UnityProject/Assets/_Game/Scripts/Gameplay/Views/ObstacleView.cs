@@ -40,6 +40,8 @@ namespace JungleBooze.Gameplay.Views
         private Piece[] _pieces;
         private int _shown;
         private TrackSimulation _track;
+        private Material _bodyMaterial;
+        private Material _moverMaterial;
 
         /// <summary>Pieces shown last frame (tests).</summary>
         public int ShownPieceCount => _shown;
@@ -69,6 +71,40 @@ namespace JungleBooze.Gameplay.Views
                 AttachArt(piece, ObstacleArchetype.Mover, piece.Sphere, EnvironmentArt.Boulder);
                 piece.Root.SetActive(false);
                 _pieces[i] = piece;
+            }
+
+            // Own body materials, so a world theme can tint the obstacles without touching other views' shared colors.
+            _bodyMaterial = new Material(_pieces[0].CubeRenderer.sharedMaterial) { name = "World_ObstacleBody" };
+            _moverMaterial = new Material(_pieces[0].SphereRenderer.sharedMaterial) { name = "World_MoverBody" };
+            for (int i = 0; i < PieceCapacity; i++)
+            {
+                _pieces[i].CubeRenderer.sharedMaterial = _bodyMaterial;
+                _pieces[i].SphereRenderer.sharedMaterial = _moverMaterial;
+            }
+        }
+
+        /// <summary>Tints the obstacle and mover bodies (world themes, GDD 9). Allocation free.</summary>
+        public void ApplyTheme(in WorldTheme theme)
+        {
+            if (_bodyMaterial == null)
+            {
+                return;
+            }
+
+            _bodyMaterial.color = theme.ObstacleBody;
+            _moverMaterial.color = theme.MoverBody;
+        }
+
+        private void OnDestroy()
+        {
+            if (_bodyMaterial != null)
+            {
+                Destroy(_bodyMaterial);
+            }
+
+            if (_moverMaterial != null)
+            {
+                Destroy(_moverMaterial);
             }
         }
 
