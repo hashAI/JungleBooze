@@ -36,7 +36,7 @@ namespace JungleBooze.CharacterArt
             importer.importLights = false;
             importer.animationCompression = ModelImporterAnimationCompression.Optimal;
             importer.animationType = ModelImporterAnimationType.Generic;
-            importer.importAnimation = file != "Duko";
+            importer.importAnimation = true; // Duko.fbx carries Idle / Flap / TailWag clips
 
             if (!isMain)
             {
@@ -54,17 +54,74 @@ namespace JungleBooze.CharacterArt
 
             var importer = (ModelImporter)assetImporter;
             string file = System.IO.Path.GetFileNameWithoutExtension(assetPath).ToLowerInvariant();
-            bool loops = file.EndsWith("_run", System.StringComparison.Ordinal)
+            bool loops = file == "duko"
+                || file.EndsWith("_run", System.StringComparison.Ordinal)
                 || file.EndsWith("_idle", System.StringComparison.Ordinal)
                 || file.EndsWith("_walk", System.StringComparison.Ordinal);
             ModelImporterClipAnimation[] clips = importer.defaultClipAnimations;
             for (int i = 0; i < clips.Length; i++)
             {
-                clips[i].loopTime = loops;
-                clips[i].loopPose = loops;
+                bool clipLoops = loops;
+                clips[i].loopTime = clipLoops;
+                clips[i].loopPose = clipLoops;
             }
 
             importer.clipAnimations = clips;
+        }
+
+        /// <summary>
+        /// The Meshy/Blender FBX files embed an unlit-looking material. After a main model (Pista.fbx, Duko.fbx) imports,
+        /// build a URP Simple Lit material from the sibling "&lt;Name&gt;_basecolor.png" and remap the model to it, once.
+        /// </summary>
+        private static void OnPostprocessAllAssets(string[] imported, string[] deleted, string[] moved, string[] movedFrom)
+        {
+            foreach (string path in imported)
+            {
+                if (!path.StartsWith(Root, System.StringComparison.Ordinal) || !path.EndsWith(".fbx", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                string file = System.IO.Path.GetFileNameWithoutExtension(path);
+                if (file != "Pista" && file != "Duko")
+                {
+                    continue;
+                }
+
+                string dir = System.IO.Path.GetDirectoryName(path).Replace('\\', '/');
+                string matPath = dir + "/" + file + "_Mat.mat";
+                string texPath = dir + "/" + file + "_basecolor.png";
+                var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(texPath);
+                var importer = AssetImporter.GetAtPath(path) as ModelImporter;
+                if (texture == null || importer == null || importer.GetExternalObjectMap().Count > 0)
+                {
+                    continue; // texture not imported yet (a later pass handles it) or already remapped
+                }
+
+                Shader shader = Shader.Find("Universal Render Pipeline/Simple Lit") ?? Shader.Find("Universal Render Pipeline/Lit");
+                var mat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
+                if (mat == null)
+                {
+                    mat = new Material(shader);
+                    AssetDatabase.CreateAsset(mat, matPath);
+                }
+
+                mat.mainTexture = texture;
+                mat.SetTexture("_BaseMap", texture);
+                mat.SetColor("_BaseColor", Color.white);
+                if (mat.HasProperty("_SpecColor")) { mat.SetColor("_SpecColor", Color.black); }
+                EditorUtility.SetDirty(mat);
+
+                foreach (Object sub in AssetDatabase.LoadAllAssetsAtPath(path))
+                {
+                    if (sub is Material embedded)
+                    {
+                        importer.AddRemap(new AssetImporter.SourceAssetIdentifier(typeof(Material), embedded.name), mat);
+                    }
+                }
+
+                importer.SaveAndReimport();
+            }
         }
 
         private void OnPreprocessTexture()

@@ -26,7 +26,7 @@ def wait(path, tid):
         time.sleep(10)
 
 def run(name, poly, model):
-    l = led(); spent = l["start_balance"] - bal()
+    l = led(); spent = sum(e.get("credits_est", 0) for e in l["entries"])
     if spent + 30 > CAP: sys.exit(f"cap: {spent} spent")
     pr = ENV_PROMPTS[name]
     b0 = bal()
@@ -43,8 +43,8 @@ def run(name, poly, model):
     if t["status"] == "SUCCEEDED":
         (RAW / f"{name}.glb").write_bytes(requests.get(t["model_urls"]["glb"], timeout=300).content)
     l["entries"].append({"date": str(date.today()), "name": name, "model": model, "preview_task": pid, "refine_task": rid,
-                         "status": t["status"], "credits": b0 - bal(), "polycount_req": int(poly)})
-    save(l); print(name, t["status"], "credits", b0 - bal(), "total", l["start_balance"] - bal())
+                         "status": t["status"], "credits_est": 15 if model == "meshy-6-lite" else 30, "balance_delta_noisy": b0 - bal(), "polycount_req": int(poly)})
+    save(l); print(name, t["status"], "est total", sum(e.get("credits_est", 0) for e in l["entries"]))
 
 if __name__ == "__main__":
     run(sys.argv[1], sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else "meshy-6")
