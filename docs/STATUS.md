@@ -72,7 +72,7 @@ and commit after every agent report.
 | gameplay-engineer | done (batch 2) | Power-ups, lane strikes, Duko, continue; compile-checked | `Scripts/Gameplay/PowerUps`, `Hazards`, `Companion`, `Views`, `App/RunSceneBootstrap.cs` | Batch 3 |
 | ui-engineer | done (C2) | Track wired into the Run scene with gray-box views and HUD | `Scripts/Gameplay/Views`, `Scripts/App`, `Scripts/UI/Hud` | Fix errors the owner sends from Unity |
 | art-director | done (concepts) | Hero take 1 and macaw take 1 locked; four unused recolors on disk | `design/concepts/2026-10-07/` | Store art later |
-| asset-pipeline | waiting | — | — | Keys ready. Starts from locked sheets: `hero_take1_turnaround.png`, `macaw_take1_turnaround.png` |
+| asset-pipeline | **working** (look pass) | Run scene look pass: clean path, dense layered jungle walls, gradient sky, lighting; Blender mock previews; Meshy cap 150 credits | `Art/Environment/`, `GroundView`, `tools/blender/run_mock.py` | Report, then owner compiles and looks |
 | audio-director | done (files) | SFX, Duko voice (from history), Jungle/menu music, `AudioPlayback` | `Assets/_Game/Audio`, `Scripts/Services/Audio` | Done in code (uncompiled); owner to listen |
 | qa-engineer | waiting | — | — | FP1 stage F: test plan + owner play-test script |
 | performance-engineer | waiting | — | — | Benchmark scene (week 2+) |
@@ -131,6 +131,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Log
 Newest first. One line per event.
+- 2026-10-07: Owner: in-game 3D art looks wrong (trees lying on the ground) and should look amazing. Cause: env FBXs kept Blender's -90 X axis rotation on the root, and `EnvironmentArt.Attach` resets root rotation. Fixed (5d9395c): all 17 FBXs re-exported with baked axes, load-time warning added; checked in a Blender mock of the run camera. Launched asset-pipeline for a full look pass (path, jungle walls, sky, lighting).
 - 2026-10-07: **Integration pass done (all uncompiled).** Meshy art: Pista (7,859 tris, rigged, 5 clips, X painted on), Duko (3,879 tris, 7-bone rig), 17 env props (FBX). Env prefabs auto-build on first open (EnvironmentAutoBuild); URP materials per model; Duko plays embedded clips via PlayableGraph; UiTapAudioBinder for button sounds; facing fix constant ModelYawFixDeg in RunnerView/CompanionView. Meshy balance ~600 credits. Owner next step: pull claude/clever-cerf-bffyg5, git lfs pull, open in Unity, send compile errors. [ASSUMED] painterly look accepted for FP; Meshy licence UNVERIFIED.
 - 2026-10-07: Meshy models generated (60 credits, 1040 left): Pista 8,356 tris, Duko 4,158 tris, static, no rig. Duko close to concept; Pista missing the back X and a clear satchel, not accepted. Waiting on owner: regenerate Pista (recommended), approve Duko, rigging route, Meshy commercial terms (UNVERIFIED in LICENSES.md).
 - 2026-10-07: Merged branch claude/nifty-hawking-uk9zpl (Batches 3-4, art plumbing) into claude/clever-cerf-bffyg5, which is now the single branch with everything. Duplicate audio wiring resolved in favor of the other branch's RunAudioView. This session's cloud container HAS Meshy/OpenAI/ElevenLabs keys; asset-pipeline launched for hero + macaw models (cap ~300 credits).
