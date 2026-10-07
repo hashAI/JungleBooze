@@ -407,6 +407,127 @@ def swing_cost():
     return rows
 
 
+
+# ------------------------------------------------------------------------------------------ extras
+def sens_bots():
+    """Exact (analytic) Perfect share vs release sigma and Perfect width (ticks), swipe centred on the window."""
+    out = {}
+    ka = SwingTrace(15, Z_GRAB).k_apex
+    for width in (9, 11, 13):
+        saved = (P.perfect_start_ms, P.perfect_width_ms)
+        start = 47 - width // 2  # centred on tick 47
+        P.perfect_start_ms = start * 1000.0 / 60.0
+        P.perfect_width_ms = width * 1000.0 / 60.0
+        row = {}
+        mu = (start + start + width - 1) / 2.0 * 1000.0 / 60.0
+        for sg in (70, 100, 120, 150, 180, 220, 260):
+            def cdf(k):
+                return phi(((k + 0.5) * 1000.0 / 60.0 - mu) / sg)
+            row[sg] = cdf(start + width - 1) - cdf(start - 1)
+        P.perfect_start_ms, P.perfect_width_ms = saved
+        out[width] = row
+    return out
+
+
+def what_if():
+    """Candidate parameter changes (NOT applied anywhere): landing past the far edge over all valid releases."""
+    cands = [("baseline (spec 004)", {}),
+             ("CatchMaxSpeedMps 15", dict(catch_max_speed_mps=15.0)),
+             ("PerfectImpulseMps 2.0", dict(perfect_impulse_mps=2.0)),
+             ("GoodStartMs 500", dict(good_start_ms=500.0)),
+             ("GoodStartMs 500 + PerfectImpulseMps 2.0", dict(good_start_ms=500.0, perfect_impulse_mps=2.0)),
+             ("CatchMaxSpeedMps 15 + GoodStartMs 500", dict(catch_max_speed_mps=15.0, good_start_ms=500.0))]
+    out = []
+    for name, ov in cands:
+        q = pm.Params(**ov)
+        mn, mx_perf, mn_perf, mx_good = 1e9, -1e9, 1e9, -1e9
+        ladder = 1e9
+        vcs = [13.0 + i * 0.5 for i in range(int((q.catch_max_speed_mps - 13.0) / 0.5) + 1)]
+        for vc in vcs:
+            tr = SwingTrace(vc, Z_GRAB, q)
+            vp, vg = [], []
+            for k in range(q.good_start_tick, tr.k_apex + 1):
+                gr = grade_for_tick(k, tr.k_apex, q)
+                r = release_at(tr, k, gr, q)
+                pe = r.z_land - q.far_edge_m
+                mn = min(mn, pe)
+                if gr == "Perfect":
+                    mx_perf, mn_perf = max(mx_perf, pe), min(mn_perf, pe)
+                    vp.append(pe)
+                else:
+                    mx_good = max(mx_good, pe)
+                    vg.append(pe)
+            ladder = min(ladder, min(vp) - max(vg))
+            r = release_at(tr, tr.k_apex, "Poor", q, auto=True)
+            mn = min(mn, r.z_land - q.far_edge_m)
+        out.append(dict(name=name, min_past=mn, perfect_min=mn_perf, perfect_max=mx_perf, good_max=mx_good,
+                        ladder=ladder))
+    return out
+
+
+def verlet_drift(vc=14.0):
+    """Velocity Verlet (kick-drift-kick) energy drift for comparison; NOT the spec integrator."""
+    L, g, dt = P.rope_length_m, P.swing_gravity_mps2, 1 / 60.0
+    th, om = pm.start_angle(Z_GRAB), vc / L
+    e0 = 0.5 * L * L * om * om + g * L * (1 - math.cos(th))
+    worst = 0.0
+    for _ in range(100):
+        om -= 0.5 * (g / L) * math.sin(th) * dt
+        th += om * dt
+        om -= 0.5 * (g / L) * math.sin(th) * dt
+        e = 0.5 * L * L * om * om + g * L * (1 - math.cos(th))
+        worst = max(worst, abs(e - e0) / e0)
+    return worst
+
+
+def long_run_drift(vc=14.0, n=6000):
+    """Is the symplectic Euler energy error bounded (no secular growth)? Max |dE|/E0 per 600-tick block."""
+    th, om = free_swing(vc, Z_GRAB, n)
+    e = [0.5 * P.rope_length_m ** 2 * float(o) ** 2 + P.swing_gravity_mps2 * P.rope_length_m * (1 - math.cos(float(t)))
+         for t, o in zip(th, om)]
+    return [max(abs(x - e[0]) / e[0] for x in e[i:i + 600]) for i in range(0, n, 600)]
+
+
+def perfect_flight_max_feet():
+    out = {}
+    for vc in VC_LIST:
+        tr = SwingTrace(vc, Z_GRAB)
+        r = release_at(tr, 47, "Perfect")
+        out[vc] = r.y0 + r.vy ** 2 / (2 * P.launch_gravity_mps2)
+    return out
+
+
+def chain_grab_z_poor():
+    out = {}
+    for vc in VC_LIST:
+        tr = SwingTrace(vc, Z_GRAB)
+        r = release_at(tr, tr.k_apex, "Poor", auto=True)
+        T, vx, vy = guide_chain(r, P.chain_spacing_m)
+        c = chain_catch(r, T, vx, vy)
+        out[vc] = dict(T=T, vx=vx, vy=vy, z_rel_B=c["z_rel_B"], y=c["y"], apex_y=r.y0 + vy ** 2 / 32.0)
+    return out
+
+
+def poly_asin_error():
+    lim = math.sin(math.radians(P.grab_max_angle_deg))
+    return max(abs(pm.det_asin(-lim + 2 * lim * i / 10000) - math.asin(-lim + 2 * lim * i / 10000)) for i in range(10001))
+
+
+def cap_validator():
+    """Largest vC whose true peak angle (start at the clamp angle -10 deg and at -5.1 deg) stays <= 62 deg."""
+    out = {}
+    for th0 in (math.radians(10.0), math.radians(5.1225)):
+        out[round(math.degrees(th0), 2)] = math.sqrt(2 * P.swing_gravity_mps2 * P.rope_length_m * (
+            math.cos(th0) - math.cos(math.radians(P.max_swing_angle_deg))))
+    out["closed_form_from_bottom"] = math.sqrt(2 * P.swing_gravity_mps2 * P.rope_length_m * (
+        1 - math.cos(math.radians(P.max_swing_angle_deg))))
+    return out
+
+
+def takeoff_13_21():
+    return dict((v, takeoff_window(v)["ms"]) for v in (8, 10, 13, 21))
+
+
 def main():
     t0 = time.time()
     os.makedirs(OUT, exist_ok=True)
@@ -430,6 +551,15 @@ def main():
     R["bots_analytic"] = analytic_bot_table()
     R["f32"] = f32_vs_f64(1000)
     R["cost"] = swing_cost()
+    R["sens_bots"] = sens_bots()
+    R["what_if"] = what_if()
+    R["verlet100"] = verlet_drift()
+    R["long_drift"] = long_run_drift()
+    R["perfect_max_feet"] = perfect_flight_max_feet()
+    R["chain_poor"] = chain_grab_z_poor()
+    R["asin_err"] = poly_asin_error()
+    R["cap"] = cap_validator()
+    R["takeoff_key"] = takeoff_13_21()
     R["seconds"] = time.time() - t0
     with open(os.path.join(OUT, "pendulum_study.json"), "w") as f:
         json.dump(R, f, indent=1, default=str)

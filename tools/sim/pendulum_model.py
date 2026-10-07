@@ -153,6 +153,14 @@ def poly_error_report(F=float, n=26001, lim=1.3):
     return es, ec
 
 
+def det_asin(a, F=float):
+    """RECOMMENDATION, not in the spec: odd series asin(a) = a + a^3/6 + 3a^5/40 + 15a^7/336 for |a| <= sin(10 deg)
+    (max error 4.3e-9 rad). The spec's catch needs an asin but DeterministicMath only has Sin and Cos."""
+    a = F(a)
+    a2 = a * a
+    return a * (F(1.0) + a2 * (F(1.0 / 6.0) + a2 * (F(3.0 / 40.0) + a2 * F(15.0 / 336.0))))
+
+
 def _sqrt(x, F):
     return F(math.sqrt(x)) if F is float else np.sqrt(x)
 

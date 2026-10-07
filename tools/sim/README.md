@@ -12,7 +12,11 @@ Owner: balance-simulator. Python 3 standard library only (nothing to install).
 | `bots.py` | Oracle solver (DFS over per-tick commands) and expert / average / new skill bots (profiles [ASSUMED]). |
 | `run_targets.py` | Runs S1–S9 and writes the report. Raw results go to `out/` (git-ignored: regenerate them; the committed artifact is the report in `docs/sim-reports/`). |
 | `report.py` | Builds `docs/sim-reports/<date>-spec001.md` from `out/*.json`. |
-| `golden.py` | Writes / checks `golden/*.json`. |
+| `golden.py` | Writes / checks `golden/*.json` (v1 movement traces 01..06). |
+| `pendulum_model.py` | Spec 004 fixed-pivot swing: polynomial sin/cos, symplectic Euler, catch clamp, windows in ticks, release impulse and floors, flight, guided chains, ground take-off window (drives `runner_model.Runner`). Takes a numeric type (float or numpy float32) to measure the determinism gap. |
+| `pendulum_study.py`, `pendulum_report.py` | T401: run every spec 004 check (`out/pendulum_study.json`, tables CSV), then write `docs/sim-reports/2026-10-07-fixed-pivot-swing.md`. About 30 s. |
+| `pendulum_golden.py` | Writes / checks the schema v2 vine traces `golden/07..12`. |
+| `tests/` | `test_pendulum_model.py`: invariants of the swing model and the v2 goldens (pytest or unittest). |
 
 ## Commands
 
@@ -21,6 +25,9 @@ cd tools/sim
 python3 -I -m unittest -v                 # all tests (64, about 1 s)
 python3 -I golden.py --check              # golden files match the model (exit 1 if not)
 python3 -I golden.py                      # regenerate golden files (only after a spec change)
+python3 -I pendulum_golden.py [--check]   # schema v2 vine traces 07..12
+python3 -I -m unittest discover -s tests -t .   # swing model tests (or: python3 -I -m pytest tests -q)
+python3 -I pendulum_study.py && python3 -I pendulum_report.py   # spec 004 study + report
 python3 -I run_targets.py all             # S1..S9 + report (S1 about 23 min on 4 cores, bots a few min)
 python3 -I run_targets.py bots            # S4..S7 only (13,400 bot runs)
 python3 -I run_targets.py whatif          # candidate tuning variants on the S5/S6 seeds (model only, nothing applied)
@@ -104,3 +111,22 @@ fixed here.
   store explicit per-tick commands, so C# never needs to reproduce Python's generator.
 - The model uses Python floats (double). If the C# runner uses `float` for `X`/`Y`, differences stay far below
   the 1e-4 m tolerance over these trace lengths.
+
+## Golden trace format v2 (`junglebooze.golden-trace.v2`, files `07..12`, spec 004)
+
+Additive over v1 (v1 files 01..06 stay valid and byte-identical). Reference precision is float64; `tolerance` gives the allowed difference for a float implementation
+(`x`, `y`, `z` 1e-4 m, `theta`, `omega` 5e-6). The swing model works pivot-relative; the files use world `z` with the first vine at z = 100.
+
+| Field | Meaning |
+|---|---|
+| `config`, `derived` | Spec 004 section 5 authoring values (camelCase) and the derived ticks (`goodStartTick` 27, `perfectStartTick` 42, `perfectEndTickExclusive` 53, `releaseBufferTicks` 9, `swingMaxTicks` 96, `grabBlendTicks` 6, `pivotHeightM` 17). A C# test builds its config from these and fails loudly on drift |
+| `vines` | `{id, z, lane, row, over_chasm}`; pivot = `(z, laneCenterX(lane), 17.0)` |
+| `grab` | `{tick: 0, vIn, z, y, x, vineId}`: hero state on the grab tick (v2 swing files). `null` for the missed-vine trace |
+| `inputs` | Release swipes `{tick, cmd: "Jump"}`. Swing files: tick = swing tick (ticks since the grab); chain file: B's swipe is a global tick |
+| `speed` | `speedMultiplier` (informational: it must have no effect on the swing); trace 11 also has `fixedSpeedMps`, `useStartRamp`, `track`, `startZ` for spec 001 movement |
+| `expect` | Summary of key numbers: catch speed, apex tick, release tick, grade, peak angle, landing tick and z, landing past the far edge, chasm geometry (chain: guided T/vx/vy, B grab tick/z/y) |
+| `ticks[]` | `t`, `state` (`Carried`, `Falling` = vine flight, `Landed`; trace 11 uses the v1 state names), `x`, `y` (feet), `z`, `hand_y`, `swing {theta, omega}` (state after that tick, while `Carried`), `launch {vx, vy, y0, vxRaw, vyRaw}` on the release tick (vy/vx after floors and the chain guide), `events` (`VineGrabbed`, `VineReleased {grade, auto}`, `Landed`) |
+
+Tick conventions (the spec is silent, pinned by this model): the grab tick (t = 0) sets `theta0`, `omega0 = vC / L` and integrates nothing; carried tick n shows the state after n
+integrations; y has the blend residual `resY (1 - n/6)^2` for n < 6. A swipe on swing tick k releases with the state after k-1 integrations and the hero is at the flight position one tick later
+on that same tick; the auto release (first omega <= 0, tick 85) shows the swing state on its tick and flies from the next. Landing: first tick with y <= 0, shown with y = 0 and the unclamped z.

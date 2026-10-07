@@ -555,3 +555,63 @@ All have a recommended default that is already applied (`[ASSUMED]`).
 4. **What does Poor mean?**
    a) A safe automatic release at the apex with a small push-off, never a death (recommended, pillar 2).
    b) A no-push release that can drop short into the chasm for a "Missed vine" style death (harder, ties the swing to a skill check; risky for fairness).
+
+---
+
+## 15. T401 verified numbers (balance-simulator, 2026-10-07; supersede the hand numbers in sections 4 to 6, 10 and 12 wherever they differ)
+
+Source: exact runs of `tools/sim/pendulum_model.py` (the section 4 model implemented literally; 33 tests in `tools/sim/tests`), full evidence and seeds in
+`docs/sim-reports/2026-10-07-fixed-pivot-swing.md`, per-tick tables in `docs/sim-reports/data/2026-10-07-fixed-pivot-swing-tables.csv`, golden vectors
+`tools/sim/golden/07..12` (schema v2). No parameter in section 5 was changed; the design holds (0 of 3.1 million fuzzed releases in the chasm). Only the
+derived numbers below were wrong. Convention: swing tick k = ticks since the grab tick (grab tick = 0, nothing integrated on it); a swipe at tick k uses the state
+after k-1 integrations; the auto release uses the state after k_a integrations. Canonical grab z = pivot - 1.25 (theta0 = -5.12 deg).
+
+**Corrections (the reading of section 4 is unchanged):**
+
+| Was | Is |
+|---|---|
+| Apex tick 78 / 78.5 / 79 / 80 (AC-407), time to the apex 1.30 to 1.33 s | **Tick 85 (84..85 for a normal first-tick grab; 73 for a grab late in the zone)**, 1.417 s from the grab. 1.30 to 1.33 s is the time from the lowest point. `ApexTicksEstimate` = 85; `SwingMaxMs` 1600 (96 ticks) still leaves 11 ticks |
+| Peak angle 43.4 / 47.0 / 50.6 / 54.2 deg | **43.9 / 47.4 / 51.0 / 54.6 deg** (the start angle adds energy) |
+| Rope end at the apex 7.4 / 8.2 / 8.9 / 9.6 m | **6.9 / 7.5 / 8.2 / 8.9 m** (feet 5.2 / 5.8 / 6.4 / 7.1 m) |
+| Energy drift <= 0.1 % (AC-403) | **<= 1.5 %** (1.27 % measured, bounded; symplectic Euler as specified) |
+| Validator `vCmax <= 18.1` | **`vCmax <= 17.8`**: `cos(theta0max) - vC^2/(2 g L) >= cos(62 deg)` with theta0max = 10 deg |
+| Perfect lands 6 to 11 m past the edge | **6.6 to 13.6 m** (window range per vC 13..16: 6.6..7.3, 8.2..9.3, 9.9..11.5, 11.5..13.6) |
+| Every valid release >= 3.2 m past the edge | **>= 2.86 m** (Good at tick 27, vC 13); Poor >= 3.32 m. AC-413 bounds (14.5 / 30) hold: measured 14.86 and 25.61 |
+| "The longest throw is an earlier Good" (4.4, R404) | **Perfect is the longest throw at every vC** (min Perfect minus max Good at one vC: 1.46 / 1.20 / 0.85 / 0.34 m); the maximum is at tick 42 |
+| Chain: arrival vx 6 to 12.1 m/s, every later swing vC 13 (AC-419) | **Arrival vx 6.0 to 14.78 m/s; later swings vC 13 to 14.78** (13 after Perfect and Poor). Catch 100 %, T 0.85..1.5, feet 1.5 in 120,000 trials |
+| Take-off window `[sP - 1.25 - 0.55v, rim + 0.08v]`: 286 / 355 / 418 / 499 ms | **`[sP - 1.25 - 0.55v, rim + 0.25 + 0.0833v]`: 333 / 400 / 467 / 533 ms at 8 / 10 / 13 / 21 m/s** (capped at 550 ms from 24 m/s); with 450 ms earliness only 233 / 300 ms, so `GrabEarlinessMs` 550 is confirmed. AC-427 floors (280 / 350 / 410) stay |
+| `theta0 = asin(...)` | `DeterministicMath` has no asin: add `a(1 + a^2(1/6 + a^2(3/40 + a^2 15/336)))` (error 4.5e-9 rad for `|a| <= sin 10 deg`) |
+| DeterministicMath error <= 1e-7 (AC-408) | float64: 5e-9 (sin), 4e-10 (cos). float32 sin: 1.04e-7. Keep the swing in double (section 4.3 already says so) or allow 2e-7 |
+| Golden theta tolerance 1e-6 (AC-435) | **5e-6** (float vs double differ by up to 6e-7 rad over 1,000 random swings; results are not bit-identical) |
+| Bot table "new": Poor 5.5 % (2.6 late + 2.9 early) | Poor 3.6 % (late swipes after the apex are 0.7 %); Perfect 81.0 / 38.9 / 27.6 % confirmed (120k bot trials 80.9 / 38.6 / 26.9) |
+| Pad coins V-05 / V-06 from 78 / 96 | Max landing is `sP + 25.6` (77.6 / 95.6): start the pad coin lines at **82 / 100** |
+
+**4.2/4.3 swing, exact (vC = catch speed, canonical grab):**
+
+| vC | Peak deg | Apex tick | Apex hand y / feet y (m) | Min rope tension (m/s^2) |
+|---|---|---|---|---|
+| 13 | 43.87 | 85 | 6.90 / 5.15 | 15.9 |
+| 14 | 47.39 | 85 | 7.52 / 5.77 | 14.9 |
+| 15 | 50.96 | 85 | 8.18 / 6.43 | 13.9 |
+| 16 | 54.58 | 85 | 8.89 / 7.14 | 12.8 |
+
+Rope never slack for vC 13 to 16. Unclamped 28 m/s: slack at 100.5 deg from tick 78 (claim confirmed); 24 m/s stays taut (86 deg, tension 1.3).
+
+**4.6 landings, exact (past the far edge, m; Perfect = release tick 47 with the window range in brackets; Good-early = tick 27, Good-late = tick 66, Poor = auto at tick 85):**
+
+| vC | Perfect | Good-early | Good-late | Poor | Perfect rope angle / grab-to-release m / release (vx, vy) / feet y / flight s |
+|---|---|---|---|---|---|
+| 13 | **7.11** [6.58 .. 7.30] | 2.86 | 3.42 | 3.32 | 32.0 deg / 8.7 / 10.2, 6.2 / 3.4 / 1.15 |
+| 14 | **8.98** [8.24 .. 9.34] | 4.81 | 4.47 | 4.20 | 34.7 deg / 9.2 / 10.5, 6.9 / 3.7 / 1.24 |
+| 15 | **10.87** [9.89 .. 11.45] | 6.93 | 5.52 | 5.05 | 37.4 deg / 9.7 / 10.7, 7.7 / 4.1 / 1.34 |
+| 16 | **12.76** [11.52 .. 13.61] | 9.20 | 6.54 | 5.87 | 40.1 deg / 10.3 / 10.9, 8.5 / 4.5 / 1.45 |
+
+Rope angle at the windows (vC 14): Good 19.3 to 30.6 deg (ticks 27..41), Perfect 31.3 to 37.7 deg (42..52), late Good 38.3 to 47.4 deg. Grab-to-release distance for any grade and vC:
+5.5 to 12.7 m. Perfect ring: `vy / 16` = 0.39 to 0.53 s after release. Whole airborne time grab to landing (Perfect): 1.91 to 2.22 s.
+
+**Fairness bots (20k trials x 6 speeds per profile, release sigma 70 / 180 / 260 ms, jump sigma 33 / 67 / 100 ms):** Perfect 80.9 / 38.6 / 26.9 %, Good 18.9 / 60.6 / 66.1 %,
+Poor 0.0 / 0.3 / 3.5 %, no grab (Miss) 0.2 / 0.5 / 3.5 %. Grab success: expert 99.8 %, average 99.5 %, new 96.5 % (targets 90 and 75: met; at double the jump sigma new drops to 72.7 % at 12 m/s).
+The average Perfect rate is 1.4 points under the 40 % cap: at sigma 150 ms it would be 45.9 % with 11 ticks (38.3 % with 9 ticks).
+
+**Open for game-designer (not applied):** (a) accept the corrected guarantee "Perfect 6.6 to 13.6 m, minimum 2.86 m" or choose `GoodStartMs` 500 (minimum 3.23 m) and/or `CatchMaxSpeedMps` 15
+(Perfect at most 11.45 m); (b) `PerfectImpulseMps` 2.0 is not recommended (the best Good would out-throw Perfect); (c) cost of a Poor swing at 21 m/s is 33 m, 1.6 s of progress (Perfect 20.5 m, 0.98 s).
