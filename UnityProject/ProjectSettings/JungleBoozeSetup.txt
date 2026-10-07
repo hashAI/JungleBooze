@@ -1,0 +1,3 @@
+# Written by JungleBooze.Editor.Setup.ProjectBootstrap. Commit this file with ProjectSettings.
+# Delete it (or raise SetupVersion) to make the automatic setup run again.
+setupVersion=1

@@ -54,9 +54,9 @@ namespace JungleBooze.Gameplay.Views
                 Transform root = new GameObject("Gap" + i).transform;
                 root.SetParent(transform, false);
                 _slots[i] = new Slot { Root = root.gameObject };
-                _slabs[i] = kit.Create(PrimitiveType.Cube, "Void", root, StylePalette.Void);
-                _redMarkers[i] = kit.Create(PrimitiveType.Cube, "EdgeMarkerRed", root, StylePalette.HazardRed);
-                _inkMarkers[i] = kit.Create(PrimitiveType.Cube, "EdgeMarkerInk", root, StylePalette.Ink);
+                _slabs[i] = kit.Create(PrimitiveType.Cube, "Void", root, StylePalette.Void).transform;
+                _redMarkers[i] = kit.Create(PrimitiveType.Cube, "EdgeMarkerRed", root, StylePalette.HazardRed).transform;
+                _inkMarkers[i] = kit.Create(PrimitiveType.Cube, "EdgeMarkerInk", root, StylePalette.Ink).transform;
                 _slots[i].Root.SetActive(false);
             }
         }

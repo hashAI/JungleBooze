@@ -1,10 +1,10 @@
 {
   "dependencies": {
-    "com.unity.addressables": "2.7.4",
-    "com.unity.inputsystem": "1.17.0",
+    "com.unity.addressables": "2.10.3",
+    "com.unity.inputsystem": "1.20.0",
     "com.unity.render-pipelines.universal": "17.3.0",
     "com.unity.test-framework": "1.6.0",
-    "com.unity.test-framework.performance": "3.2.0",
+    "com.unity.test-framework.performance": "3.5.0",
     "com.unity.ugui": "2.0.0",
     "com.unity.modules.animation": "1.0.0",
     "com.unity.modules.audio": "1.0.0",

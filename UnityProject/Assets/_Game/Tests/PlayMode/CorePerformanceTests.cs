@@ -1,6 +1,7 @@
 using JungleBooze.Core;
 using NUnit.Framework;
 using Unity.PerformanceTesting;
+using UnityEngine.TestTools.Constraints;
 using Is = UnityEngine.TestTools.Constraints.Is;
 
 namespace JungleBooze.Tests.PlayMode

@@ -50,10 +50,10 @@ namespace JungleBooze.Gameplay.Views
                 Transform root = new GameObject("Obstacle" + i).transform;
                 root.SetParent(transform, false);
                 piece.Root = root.gameObject;
-                piece.Cube = kit.Create(PrimitiveType.Cube, "Body", root, StylePalette.HazardWood);
-                piece.Sphere = kit.Create(PrimitiveType.Sphere, "Boulder", root, StylePalette.HazardStone);
-                piece.Band = kit.Create(PrimitiveType.Cube, "HazardBand", root, StylePalette.HazardRed);
-                piece.Stripe = kit.Create(PrimitiveType.Cube, "InkStripe", root, StylePalette.Ink);
+                piece.Cube = kit.Create(PrimitiveType.Cube, "Body", root, StylePalette.HazardWood).transform;
+                piece.Sphere = kit.Create(PrimitiveType.Sphere, "Boulder", root, StylePalette.HazardStone).transform;
+                piece.Band = kit.Create(PrimitiveType.Cube, "HazardBand", root, StylePalette.HazardRed).transform;
+                piece.Stripe = kit.Create(PrimitiveType.Cube, "InkStripe", root, StylePalette.Ink).transform;
                 piece.Kind = ObstacleArchetype.None;
                 piece.Root.SetActive(false);
                 _pieces[i] = piece;
