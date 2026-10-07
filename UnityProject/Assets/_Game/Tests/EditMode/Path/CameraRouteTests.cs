@@ -196,18 +196,83 @@ namespace JungleBooze.Tests.EditMode.RouteCamera
         }
 
         [Test]
-        public void AC316_SwingCameraNeverPutsTheCameraInsideTheSpanCorridor()
+        public void AC316_SwingCameraStaysBelowTheBranchAndInsideTheAnchorTreeFace()
         {
-            // Weak proxy until the span exists (T6): the swing camera (7.5 m back, 4.4 m up) stays below the pivot
-            // height of 8.64 m (spec 003 AC-318) and well off the middle lane line (the span's center).
+            // Spec 004 section 8: the pivot is 17 m up and the trunk face is at least 6 m - 1.75 m = 4.25 m from the centerline.
             var h = new CameraHarness(new StraightRouteSource(), false, 100.0);
             for (int i = 0; i < 90; i++)
             {
                 h.Step(20.0, 0f, true, 0.6f, false);
             }
 
-            Assert.Less(h.Rig.Position.y, 8.64f);
-            Assert.GreaterOrEqual(Mathf.Abs(h.Rig.Position.x), 1f);
+            Assert.Less(h.Rig.Position.y, 17f - 5f);
+            Assert.Less(Mathf.Abs(h.Rig.Position.x), SwingRigMath.TreeLateralMinM - SwingRigMath.TreeRadiusMaxM);
+        }
+
+        [Test]
+        public void SwingCameraKeepsTheBranchTipAndTheHeroInThePortraitFrame()
+        {
+            // A Perfect-speed swing (catch 16 m/s, rope 14 m, g 22) integrated like the simulation; the pivot is 17 m up.
+            const float rope = 14f;
+            const float pivotHeight = 17f;
+            const float gravity = 22f;
+            const float dt = CameraHarness.Dt;
+            var h = new CameraHarness(new StraightRouteSource(), false, 100.0);
+            double s = 100.0;
+            for (int i = 0; i < 30; i++)
+            {
+                s += 16.0 * dt;
+                h.Frame.Extend(s + h.Frame.Tuning.AheadM);
+                h.Rig.Update(h.Frame, dt, SwingInput(s, 0f, 0f, 0, false, 0f, 0f), 0f);
+            }
+
+            double pivotS = s + 1.25;
+            float theta = Mathf.Asin(-1.25f / rope);
+            float omega = 16f / rope;
+            for (int tick = 1; tick <= 85; tick++)
+            {
+                omega -= (gravity / rope) * Mathf.Sin(theta) * dt;
+                theta += omega * dt;
+                s = pivotS + (rope * Mathf.Sin(theta));
+                float feet = Mathf.Max(0f, pivotHeight - (rope * Mathf.Cos(theta)) - 1.75f);
+                h.Frame.Extend(s + h.Frame.Tuning.AheadM);
+                h.Rig.Update(h.Frame, dt, SwingInput(s, feet, theta, 1, true, (float)(pivotS - s), pivotHeight), 0f);
+                if (tick < 40)
+                {
+                    continue;
+                }
+
+                float halfV = h.Rig.FovDeg * 0.5f;
+                float halfH = Mathf.Atan(Mathf.Tan(halfV * Mathf.Deg2Rad) * h.Tuning.AspectWidthOverHeight) * Mathf.Rad2Deg;
+                AssertInFrame(h, pivotS, 0f, pivotHeight, halfV, halfH, "branch tip at tick " + tick);
+                AssertInFrame(h, s, 0f, feet + 2f, halfV, halfH, "hero head at tick " + tick);
+                AssertInFrame(h, s, 0f, feet, halfV, halfH, "hero feet at tick " + tick);
+            }
+        }
+
+        private static CameraRouteInput SwingInput(double s, float heroY, float theta, int openSide, bool framePivot, float pivotAheadM, float pivotHeightM)
+        {
+            return new CameraRouteInput
+            {
+                HeroX = 0f,
+                HeroY = heroY,
+                HeroS = s,
+                Swinging = framePivot,
+                SwingAngleRad = theta,
+                OpenSide = openSide,
+                FramePivot = framePivot,
+                PivotAheadM = pivotAheadM,
+                PivotHeightM = pivotHeightM,
+            };
+        }
+
+        private static void AssertInFrame(CameraHarness h, double s, float x, float y, float halfVerticalDeg, float halfHorizontalDeg, string what)
+        {
+            Vector3 p = h.Frame.ToWorld(s, x, y);
+            Vector3 local = Quaternion.Inverse(h.Rig.Rotation) * (p - h.Rig.Position);
+            Assert.Greater(local.z, 0.5f, what + ": in front of the camera");
+            Assert.Less(Mathf.Abs(Mathf.Atan2(local.y, local.z) * Mathf.Rad2Deg), halfVerticalDeg, what + ": vertical");
+            Assert.Less(Mathf.Abs(Mathf.Atan2(local.x, local.z) * Mathf.Rad2Deg), halfHorizontalDeg, what + ": horizontal");
         }
 
         private static float LaneSwitchOnScreenSeconds(IRouteSource source, double startS)

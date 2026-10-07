@@ -33,8 +33,11 @@ namespace JungleBooze.Gameplay.Views
         private const float StumbleHopM = 0.2f;
         private const float StumbleTiltDeg = 20f;
 
-        /// <summary>Height of the vine hand hold above the feet (gray-box proportion; the vine view uses the same).</summary>
-        public const float HandAboveFeetM = 2.0f;
+        /// <summary>
+        /// Height of the vine hand hold above the feet. Equals <c>VineDesignValues.HandToFeetM</c> (1.75 m, spec 004
+        /// section 3): the simulation puts the feet that far below the hand, so the rope end is exactly at her hand.
+        /// </summary>
+        public const float HandAboveFeetM = 1.75f;
 
         private const float ShoulderHeightM = 1.3f;
         private const float FlightLeanDeg = 18f;
@@ -524,7 +527,9 @@ namespace JungleBooze.Gameplay.Views
 
             if (carried)
             {
-                // Hang from the hand: rotate about the hand hold by the pendulum angle (feet swing forward).
+                // Hang from the hand: rotate about the hand hold by the real pendulum angle theta (the body hangs along
+                // the rope, feet pointing away from the pivot: behind the hand before the lowest point, ahead of it after).
+                // The hand stays on the rope end: the simulation puts the feet HandAboveFeetM below it.
                 RunnerState previous = runner.Previous;
                 float angle = previous.Locomotion == Locomotion.Carried
                     ? Mathf.Lerp(previous.SwingAngleRad, current.SwingAngleRad, alpha)

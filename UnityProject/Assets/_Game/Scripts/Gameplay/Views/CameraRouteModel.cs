@@ -48,6 +48,12 @@ namespace JungleBooze.Gameplay.Views
         private float _swingRollTarget;
         private float _velSwingRoll;
         private float _bump;
+        private float _framePull;
+        private float _velFramePull;
+        private float _framePitch;
+        private float _velFramePitch;
+        private float _frameFov;
+        private float _velFrameFov;
         private int _openSide = 1;
         private float _aimYaw;
         private float _safetyYawDelta;
@@ -111,8 +117,17 @@ namespace JungleBooze.Gameplay.Views
         /// <summary>Eased swing blend 0..1 that scales pull-back, side offset, roll, tilt and swing FOV.</summary>
         public float SwingEase => _swingEase;
 
-        /// <summary>Extra distance behind HERO from the swing pull-back.</summary>
-        public float PullBackM => _tuning.SwingPullBackM * _swingEase;
+        /// <summary>Extra distance behind HERO from the swing pull-back, including the framing that keeps the branch tip in view.</summary>
+        public float PullBackM => (_tuning.SwingPullBackM + _framePull) * _swingEase;
+
+        /// <summary>Pull-back added by the pivot framing on top of the fixed swing pull-back (0 off a rope), before the swing ease.</summary>
+        public float FramePullBackM => _framePull;
+
+        /// <summary>Pitch added by the pivot framing in degrees (before the swing ease).</summary>
+        public float FramePitchDeg => _framePitch;
+
+        /// <summary>FOV added by the pivot framing in degrees (before the swing ease).</summary>
+        public float FrameFovDeg => _frameFov;
 
         /// <summary>Total distance behind HERO.</summary>
         public float BehindM => _config.CameraOffsetBehindM + PullBackM;
@@ -139,6 +154,12 @@ namespace JungleBooze.Gameplay.Views
             _velSafetyFov = 0f;
             _swingBlend = input.Swinging && !input.ReduceMotion ? 1f : 0f;
             _bump = 0f;
+            _framePull = 0f;
+            _velFramePull = 0f;
+            _framePitch = 0f;
+            _velFramePitch = 0f;
+            _frameFov = 0f;
+            _velFrameFov = 0f;
             _safetyYawDelta = 0f;
             _safetyFov = 0f;
             _bankRoll = input.ReduceMotion ? 0f : Mathf.Clamp(_tuning.RollGain * input.BankDeg, -_tuning.RollMaxDeg, _tuning.RollMaxDeg);
@@ -243,7 +264,8 @@ namespace JungleBooze.Gameplay.Views
                 _boostFov = Mathf.SmoothDamp(_boostFov, input.Boost ? _tuning.BoostFovDeg : 0f, ref _velBoost, _tuning.BoostFovBlendMs / 1000f, Mathf.Infinity, _dt);
             }
 
-            float swingFov = rm ? 0f : (_config.SwingCameraFovDeg - _config.CameraFovDeg) * _swingEase;
+            UpdateFraming(input, rm);
+            float swingFov = rm ? 0f : ((_config.SwingCameraFovDeg - _config.CameraFovDeg) + _frameFov) * _swingEase;
             _fovNoSafety = _config.CameraFovDeg + _bendFov + _boostFov + swingFov + (rm ? 0f : _bump);
 
             // Yaw lead (aim between the headings 8 and 22 m ahead), swing side look-back, safety lead; low-pass, rate cap.
@@ -390,6 +412,61 @@ namespace JungleBooze.Gameplay.Views
             return _tuning.BendFovBonusDeg * share;
         }
 
+        /// <summary>
+        /// Spec 004 section 8: while the hero holds a rope, keep the branch tip (the fixed pivot, 17 m up) and the hero (up
+        /// to 8 m high) in the portrait frame. The camera moves back so the pivot stays at least
+        /// <see cref="CameraRouteTuning.SwingPivotClearM"/> in front of it while the hero swings past, tilts so the
+        /// span from the hero's feet to the tip is centered, and widens the FOV if both still do not fit.
+        /// The targets are computed for the full swing blend and smoothed; off a rope (and with Reduce Motion) they are 0.
+        /// </summary>
+        private void UpdateFraming(in CameraRouteInput input, bool rm)
+        {
+            float pullTarget = 0f;
+            float pitchTarget = 0f;
+            float fovTarget = 0f;
+            if (!rm && input.FramePivot)
+            {
+                float baseBehind = _config.CameraOffsetBehindM + _tuning.SwingPullBackM;
+                float maxExtra = Mathf.Max(0f, _tuning.SwingMaxBehindM - baseBehind);
+                pullTarget = Mathf.Clamp((-input.PivotAheadM) + _tuning.SwingPivotClearM - baseBehind, 0f, maxExtra);
+
+                // Elevation of the hero's feet and head and of the pivot as seen from the camera at the full swing blend
+                // (it is really at the smoothed pull-back), against the pitch the swing camera has without any framing.
+                float behind = baseBehind + _framePull;
+                float baseUp = _config.CameraOffsetUpM + _tuning.SwingUpM;
+                float height = baseUp + _camY;
+                float low = Mathf.Atan2(input.HeroY - _tuning.SwingFrameFeetBelowM - height, behind) * Mathf.Rad2Deg;
+                float highHero = Mathf.Atan2(input.HeroY + _tuning.SwingFrameHeadAboveM - height, behind) * Mathf.Rad2Deg;
+                float pivotDepth = Mathf.Max(1f, behind + input.PivotAheadM);
+                float highPivot = Mathf.Atan2(input.PivotHeightM - height, pivotDepth) * Mathf.Rad2Deg;
+                float high = Mathf.Max(highHero, highPivot);
+                float basePitch = (-Mathf.Atan2(baseUp - _config.CameraLookAtHeightM, behind + _config.CameraLookAheadM) * Mathf.Rad2Deg)
+                    + _config.SwingCameraTiltDeg + _followPitch;
+                pitchTarget = Mathf.Clamp((0.5f * (low + high)) - basePitch, -_tuning.SwingFramePitchMaxDeg, _tuning.SwingFramePitchMaxDeg);
+
+                float fovHave = _config.SwingCameraFovDeg + _bendFov + _boostFov;
+                float fovNeed = (high - low) / Mathf.Max(0.1f, 1f - (2f * _tuning.SwingFrameMargin));
+                fovTarget = Mathf.Clamp(fovNeed - fovHave, 0f, _tuning.SwingFrameFovMaxExtraDeg);
+            }
+
+            if (rm)
+            {
+                _framePull = 0f;
+                _velFramePull = 0f;
+                _framePitch = 0f;
+                _velFramePitch = 0f;
+                _frameFov = 0f;
+                _velFrameFov = 0f;
+            }
+            else if (_dt > 0f)
+            {
+                float seconds = _tuning.SwingFrameBlendMs / 1000f;
+                _framePull = Mathf.SmoothDamp(_framePull, pullTarget, ref _velFramePull, seconds, Mathf.Infinity, _dt);
+                _framePitch = Mathf.SmoothDamp(_framePitch, pitchTarget, ref _velFramePitch, seconds, Mathf.Infinity, _dt);
+                _frameFov = Mathf.SmoothDamp(_frameFov, fovTarget, ref _velFrameFov, seconds, Mathf.Infinity, _dt);
+            }
+        }
+
         private void UpdateSwingValues(in CameraRouteInput input)
         {
             float b = _swingBlend;
@@ -403,7 +480,7 @@ namespace JungleBooze.Gameplay.Views
             float up = _config.CameraOffsetUpM + UpExtraM;
             float basePitchDeg = -Mathf.Atan2(up - _config.CameraLookAtHeightM, BehindM + _config.CameraLookAheadM) * Mathf.Rad2Deg;
             SwingTiltDeg = _config.SwingCameraTiltDeg * _swingEase;
-            PitchDeg = basePitchDeg + _followPitch + SwingTiltDeg;
+            PitchDeg = basePitchDeg + _followPitch + SwingTiltDeg + (_framePitch * _swingEase);
         }
 
         private void SmoothSafetyFov(float target)

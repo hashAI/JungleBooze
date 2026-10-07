@@ -186,29 +186,6 @@ namespace JungleBooze.Gameplay.Vine
         /// </summary>
         public int ApexTicksEstimate { get; }
 
-        // ---- Compatibility with the pre-pendulum view code (VineView), until the view rewrite replaces it ----
-        // The span/knot rig was built on the travelling-pivot model. These keep it compiling and roughly right: the
-        // rope length is the new rope length, the rest angle is 0 (the rope hangs straight down from the pivot) and
-        // the ring phase is swing tick over ApexTicksEstimate.
-
-        /// <summary>Compatibility alias of <see cref="RopeLengthM"/> for the old view code.</summary>
-        public float SwingRadiusM => RopeLengthM;
-
-        /// <summary>Compatibility: the rope rests straight down (0 rad) in the fixed-pivot model.</summary>
-        public double SwingStartAngleRad => 0.0;
-
-        /// <summary>Compatibility alias of <see cref="ApexTicksEstimate"/> for the old view code.</summary>
-        public int SwingTicks => ApexTicksEstimate;
-
-        /// <summary>Compatibility: <see cref="GoodStartTick"/> as a fraction of <see cref="ApexTicksEstimate"/>.</summary>
-        public float GoodStartPhase => (float)GoodStartTick / ApexTicksEstimate;
-
-        /// <summary>Compatibility: <see cref="PerfectStartTick"/> as a fraction of <see cref="ApexTicksEstimate"/>.</summary>
-        public float PerfectStartPhase => (float)PerfectStartTick / ApexTicksEstimate;
-
-        /// <summary>Compatibility: <see cref="PerfectEndTick"/> as a fraction of <see cref="ApexTicksEstimate"/>.</summary>
-        public float PerfectEndPhase => (float)PerfectEndTick / ApexTicksEstimate;
-
         public int GoodScore { get; }
 
         public int PerfectScore { get; }

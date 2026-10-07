@@ -12,8 +12,10 @@ namespace JungleBooze.UI.Tutorial
         public const string Jump = "Swipe up to jump!";
         public const string Slide = "Swipe down to slide!";
         public const string Coins = "Grab coins!";
-        public const string VineGrab = "Swipe up to grab the vine!";
-        public const string VineRelease = "Swipe up when it glows!";
+        // Fixed-pivot swing (spec 004): the rope sets the catch speed (13 to 16 m/s), so the lesson is only "jump to catch it";
+        // the Perfect window is 183 ms around the gold part of the ring, so the lesson is "let go when the ring is gold".
+        public const string VineGrab = "Jump to catch the rope!";
+        public const string VineRelease = "Swipe up when the ring is gold!";
         public const string Outro = "You're on your own!";
         public const string Skip = "Skip";
 
@@ -27,7 +29,7 @@ namespace JungleBooze.UI.Tutorial
         public const string RescueJump = "Swipe up to jump!";
         public const string RescueSlide = "Swipe down to slide!";
         public const string RescueLateral = "Swipe left or right to dodge!";
-        public const string RescueVine = "Swipe up to grab the vine!";
+        public const string RescueVine = "Jump to catch the rope!";
 
         // Ghost-hand symbols (arrows are in the UI font).
         public const string GlyphSides = "↔";

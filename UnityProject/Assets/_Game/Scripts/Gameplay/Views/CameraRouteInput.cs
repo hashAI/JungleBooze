@@ -25,6 +25,18 @@ namespace JungleBooze.Gameplay.Views
         /// <summary>Side the canyon is open on: +1 right, -1 left, 0 unknown (the last non-zero value is kept).</summary>
         public int OpenSide;
 
+        /// <summary>
+        /// The hero holds a rope: the swing camera frames the branch tip (the fixed pivot) as well as the hero
+        /// (spec 004 section 8). False in the flight after a release and off a vine.
+        /// </summary>
+        public bool FramePivot;
+
+        /// <summary>Pivot distance along the route minus the hero's (positive = the pivot is still ahead, negative = behind the hero). Used when <see cref="FramePivot"/>.</summary>
+        public float PivotAheadM;
+
+        /// <summary>Pivot height above the path (17 m). Used when <see cref="FramePivot"/>.</summary>
+        public float PivotHeightM;
+
         /// <summary>Speed Boost is active.</summary>
         public bool Boost;
 

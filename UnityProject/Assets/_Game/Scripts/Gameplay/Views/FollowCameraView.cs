@@ -1,3 +1,4 @@
+using JungleBooze.Core;
 using JungleBooze.Gameplay.Path;
 using JungleBooze.Gameplay.PowerUps;
 using JungleBooze.Gameplay.Runner;
@@ -13,7 +14,9 @@ namespace JungleBooze.Gameplay.Views
     /// applies the result. On the straight route the camera is exactly the old one: 6 m behind, 3.2 m up, looking
     /// 8 m ahead at 1 m, lateral follow 70 percent (90 ms), vertical 25 percent (150 ms), FOV 60. On a curved route it
     /// leads into the bend (yaw), banks, follows the grade, widens the FOV on tight bends and keeps the next 40 m of
-    /// path on screen. On a vine it pulls back, moves toward the open side, rolls with the swing and widens the FOV.
+    /// path on screen. On a vine it pulls back (further while the hero swings past the pivot, so the branch tip 17 m up
+    /// and the hero up to 8 m high both stay in the portrait frame), moves toward the open side of the canyon (opposite
+    /// the anchor tree), rolls with the swing and widens the FOV.
     /// Stumble shake and every roll, FOV and pull-back effect are off with Reduce Motion (the yaw lead stays, at half
     /// the rate). Smoothing uses the snapped real delta the run driver passes in. Freezes during the death hit-pause.
     /// No allocations per frame.
@@ -30,6 +33,8 @@ namespace JungleBooze.Gameplay.Views
         private float _shakeLeft;
         private float _shakeClock;
         private PathFrame _frame;
+        private int _openSideVineId;
+        private int _openSideValue;
 
         public Camera Camera => _camera;
 
@@ -74,6 +79,8 @@ namespace JungleBooze.Gameplay.Views
             _world = session.World as TrackRunWorld;
             _shakeLeft = 0f;
             _shakeClock = 0f;
+            _openSideVineId = 0;
+            _openSideValue = 0;
             CameraRouteInput input = BuildInput(session, 1f);
             _rig.Reset(_frame, input);
             Apply();
@@ -129,7 +136,10 @@ namespace JungleBooze.Gameplay.Views
                 HeroS = z,
                 Swinging = carried || state.InVineFlight,
                 SwingAngleRad = carried ? state.SwingAngleRad : 0f,
-                OpenSide = carried ? OpenSideOf(state.VineLane) : 0,
+                OpenSide = OpenSideFor(runner, state, carried),
+                FramePivot = carried,
+                PivotAheadM = carried ? (float)(state.SwingPivotZ - z) : 0f,
+                PivotHeightM = carried ? runner.Vines.PivotHeightM : 0f,
                 Boost = _world != null && _world.PowerUps != null && _world.PowerUps.IsActive(PowerUpType.SpeedBoost),
                 ReduceMotion = ReduceMotion,
             };
@@ -137,9 +147,46 @@ namespace JungleBooze.Gameplay.Views
         }
 
         /// <summary>
-        /// [ASSUMED] Open side of the canyon until the anchor trees exist (spec 003 T6): away from the vine's lane
-        /// (left lane: open to the right; right lane: open to the left; middle lane: right).
+        /// Open side of the canyon: opposite the anchor tree of the vine (the tree is a pure function of the run seed, the
+        /// chunk serial and the row, so this is the same tree <see cref="VineView"/> draws). Kept for the flight after the
+        /// release. Without a track (tests) it is away from the vine's lane until a tree is known.
         /// </summary>
+        private int OpenSideFor(RunnerSimulation runner, in RunnerState state, bool carried)
+        {
+            int vineId = carried ? state.VineId : (state.InVineFlight ? runner.ReleasedVineId : 0);
+            if (vineId == 0)
+            {
+                return 0;
+            }
+
+            if (vineId == _openSideVineId)
+            {
+                return _openSideValue;
+            }
+
+            TrackSimulation track = _world != null ? _world.Track : null;
+            if (track == null)
+            {
+                return carried ? OpenSideOf(state.VineLane) : 0;
+            }
+
+            int count = track.VineCount;
+            for (int i = 0; i < count; i++)
+            {
+                ref readonly VineInstance v = ref track.GetVine(i);
+                if (v.Id == vineId)
+                {
+                    SwingTree tree = SwingRigMath.PlaceTree(_frame.RunSeed, RandomStreamIds.Scenery, v.ChunkSerial, v.Row, runner.Config.LaneCenterX(v.Lane));
+                    _openSideVineId = vineId;
+                    _openSideValue = tree.OpenSide;
+                    return _openSideValue;
+                }
+            }
+
+            return 0;
+        }
+
+        /// <summary>Fallback open side when no track is available: away from the vine's lane (left lane: right; right lane: left; middle: right).</summary>
         private static int OpenSideOf(int vineLane)
         {
             return vineLane == 2 ? -1 : (vineLane >= 0 ? 1 : 0);

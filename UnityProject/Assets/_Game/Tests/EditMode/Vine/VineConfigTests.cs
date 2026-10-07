@@ -184,17 +184,5 @@ namespace JungleBooze.Tests.EditMode
                 UnityEngine.Object.DestroyImmediate(asset);
             }
         }
-
-        [Test]
-        public void CompatibilityMembersForTheOldViewMatchThePendulum()
-        {
-            VineConfig vines = VineConfig.CreateDefault();
-            Assert.AreEqual(vines.RopeLengthM, vines.SwingRadiusM);
-            Assert.AreEqual(0.0, vines.SwingStartAngleRad);
-            Assert.AreEqual(vines.ApexTicksEstimate, vines.SwingTicks);
-            Assert.AreEqual(27.0 / 85.0, vines.GoodStartPhase, 1e-6);
-            Assert.AreEqual(42.0 / 85.0, vines.PerfectStartPhase, 1e-6);
-            Assert.AreEqual(53.0 / 85.0, vines.PerfectEndPhase, 1e-6);
-        }
     }
 }
