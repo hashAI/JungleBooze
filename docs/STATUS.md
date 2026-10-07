@@ -4,10 +4,10 @@
 The coordinating session updates it whenever it launches an agent, receives an agent's report, or records an owner decision.
 Decisions themselves live in `design/DECISIONS.md`; the plan lives in `docs/AGENT_PLAN.md`.
 
-_Last updated: 2026-10-07_
+_Last updated: 2026-10-07 (06:50 UTC)_
 
 ## Current milestone
-**⏸ PAUSED FOR OWNER CODE REVIEW (2026-10-07).** After the running agents finish and their output is committed, make no code changes and start no new agents until the owner says to continue. Code-reviewer findings are reported, not applied.
+**⏸ PAUSED FOR OWNER CODE REVIEW (2026-10-07).** Owner: "make sure code is proper; tests we'll add later" — remaining tests (track AC-201–250, validator, PlayMode/perf) are deferred. After the running agents finish and their output is committed, make no code changes and start no new agents until the owner says to continue. Code-reviewer findings are reported, not applied.
 
 **Goal: First Playable (FP1). Autonomous mandate: no owner questions until it's done.** Release/store work is paused.
 
@@ -33,12 +33,12 @@ compiler on the Mac is the fastest way to find remaining errors; fix whatever th
 - [x] A2 game-designer: spec 002 (track, obstacles, coins): 16 Jungle chunks, generator, coins/score, fairness rules, run lifecycle, AC-201–250
 - [x] A3 balance-simulator: Python reference model (64 tests pass), 6 golden traces, targets report: S1–S3, S6–S8 pass; S4/S5 fail (bot mistake profiles, low-barrier jump is the tightest timing)
 - [x] B1 gameplay-engineer: collisions (swept AABB, lethal vs stumble, daze, edge forgiveness, near-miss, step hooks) + tests for AC-34–45
-- [ ] B2 gameplay-engineer: track simulation (chunk data, 16-chunk library, seeded generator, coins, score, run lifecycle) + tests
+- [ ] B2 gameplay-engineer (running): track simulation (chunk data, 16-chunk library, seeded generator, coins, score, run lifecycle). Tests deferred by owner
 - [ ] B3 gameplay-engineer: chunk fairness validator (spec 002 §11) as an EditMode test + editor menu
 - [x] C1 ui-engineer: presentation (bootstrap, session with Ready/Dying/GameOver, Run again/Same track, input, gray-box views, HUD, PlayMode tests). Swap point for C2: `RunSceneBootstrap.CreateWorldFactory`.
-- [ ] C gameplay/ui-engineer: Unity presentation layer: auto-built scene, gray-box views, camera, input adapter, HUD, game over/restart, default config assets
+- [ ] C2 ui-engineer: swap in `TrackRunWorldFactory`, add track/obstacle/coin views, resolve `RunSession` vs `GameSession` overlap
 - [x] D tech-architect: first-open bootstrap (`Assets/_Game/Editor/Setup/ProjectBootstrap.cs`, ADR 0003) + `docs/PLAY_FIRST_BUILD.md`
-- [ ] E code-reviewer: compile-correctness and logic review of everything; fixes applied
+- [ ] E code-reviewer: compile-correctness and logic review of everything; fixes applied (an early run was stopped by the owner to save tokens)
 - [ ] F qa-engineer: test plan + owner play-test script
 
 Lesson from the 2026-10-07 worker restart: uncommitted agent work is lost on restart. Keep agent tasks small,
@@ -52,7 +52,7 @@ and commit after every agent report.
 | game-designer | done (stage A2) | Spec 002: track, obstacles, coins, generator, fairness, lifecycle | `docs/specs/002-track-obstacles-coins.md` | Apply spec 002's listed changes to spec 001 and the GDD; spec 003 vine swinging |
 | balance-simulator | done (A3) | Python reference model, golden traces, S1–S9 report (`docs/sim-reports/2026-10-07-spec001.md`) | `tools/sim/`, `docs/sim-reports/` | Fairness fuzzing for spec 002; recommendations R1–R6 go to game-designer |
 | tech-architect | done (stage D) | First-open bootstrap: URP mobile asset, input set to Both, iOS basics (placeholder bundle id `com.pistaduko.junglerunner`, iOS 15, portrait), empty Run scene in build list; Mac play guide | `Assets/_Game/Editor/Setup/`, `docs/adr/0003-first-playable-bootstrap.md`, `docs/PLAY_FIRST_BUILD.md` | Add EditMode tests for `ProjectSetupRules`; Roslyn analyzers |
-| gameplay-engineer | **working** (2 instances, resumed) | B1: collisions in `Runner/`. B2: generator, track world, coins, score, lifecycle in `Track/` | `Scripts/Gameplay/Runner/`, `Scripts/Gameplay/Track/`, `Tests/EditMode/` | B3: chunk fairness validator |
+| gameplay-engineer | **working** (1 instance: B2) | B1 done. B2: track code (generator, track world, coins, score, lifecycle) — owner said skip tests for now; it is verifying code consistency and missing .meta files instead | `Scripts/Gameplay/Track/`, `Config/Track/` | Paused for owner review after B2 reports |
 | ui-engineer | done (C1) | Presentation layer + 3 PlayMode test files + controls table | `Scripts/Gameplay/{Session,Views,Controls}`, `Scripts/App`, `Scripts/UI/Hud`, `Tests/` | C2: swap in TrackRunWorldFactory, add track/obstacle/coin views, resolve RunSession vs GameSession overlap |
 | art-director | done | Style guide and prompts updated with names Pista/Duko and the chest-band sash | `design/STYLE_GUIDE.md`, `design/prompts/` | Generate concept images once an image API key exists |
 | asset-pipeline | waiting | — | — | Needs an image/3D generation API key from the owner |
@@ -107,6 +107,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Log
 Newest first. One line per event.
+- 2026-10-07: Owner deferred tests; track agent redirected from writing tests to verifying code consistency and .meta files.
 - 2026-10-07: Owner stopped the code-reviewer to save tokens. Track agent (B2) continues to finish its tests.
 - 2026-10-07: Stage B1 done (gameplay-engineer): collisions + tests. Not compiled.
 - 2026-10-07: Owner asked to review the code before any more changes. Running agents finish; nothing new is launched; resume watchdog disabled.
