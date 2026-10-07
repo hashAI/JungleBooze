@@ -4,10 +4,19 @@
 The coordinating session updates it whenever it launches an agent, receives an agent's report, or records an owner decision.
 Decisions themselves live in `design/DECISIONS.md`; the plan lives in `docs/AGENT_PLAN.md`.
 
-_Last updated: 2026-10-07 (06:50 UTC)_
+_Last updated: 2026-10-07 (build phase)_
 
 ## Current milestone
-**FIRST PLAYABLE WRITTEN (2026-10-07), not yet compiled.** Owner's next step: open `UnityProject/` in Unity 6.3 per `docs/PLAY_FIRST_BUILD.md`, press Play in the Run scene, and send back any red errors. Fix those first.
+**FP1 COMPILED AND PLAYED by the owner (2026-10-07).** New phase: **BUILD THE GAME** (owner: "only focus on building first; review, test etc. later").
+Agents implement features straight from the GDD sections (no separate spec docs, no new tests, no code-review passes for now).
+The coordinating session compile-checks in Unity batch mode on the owner's Mac (Unity 6000.3.25f1 is installed) after each batch and fixes errors before committing.
+
+**Build plan (tick as they land):**
+- [ ] Batch 1 (parallel): gameplay-engineer vine swinging (GDD §7) · ui-engineer main menu, pause, game over, settings, save of coins/best (GDD §19, §13.1)
+- [ ] Batch 2: power-ups (GDD §10) · Duko companion behavior (GDD §15)
+- [ ] Batch 3: missions, daily reward, shop/unlocks (GDD §13) · onboarding (GDD §12)
+- [ ] Batch 4: worlds and transitions (GDD §9) · difficulty ramp check (GDD §11)
+- [ ] Later (owner keys needed): real art, audio. Later (owner): ads/IAP, review, tests, TestFlight.
 
 **Goal: First Playable (FP1). Autonomous mandate: no owner questions until it's done.** Release/store work is paused.
 
@@ -110,6 +119,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Log
 Newest first. One line per event.
+- 2026-10-07: Owner compiled and played FP1. Owner decision: build features first; review and tests come later. Launched batch 1 (vine swinging, menus/save).
 - 2026-10-07: Stage C2 done. First playable (track, obstacles, ravines, coins, HUD) is written; waiting for the owner to open it in Unity and report errors.
 - 2026-10-07: Owner declined compile-review agents ("just write code"). Launched only C2.
 - 2026-10-07: Owner lifted the pause: "give me a playable version, just focus on that". Launching C2 + two compile-fix passes.
