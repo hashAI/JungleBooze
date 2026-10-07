@@ -1,5 +1,6 @@
 using System.IO;
 using JungleBooze.Gameplay.Config;
+using JungleBooze.Services.Meta;
 using UnityEditor;
 using UnityEngine;
 
@@ -37,6 +38,7 @@ namespace JungleBooze.Editor.Setup
             created += CreateIfMissing<HazardConfigAsset>("HazardTuning");
             created += CreateIfMissing<CompanionConfigAsset>("CompanionTuning");
             created += CreateIfMissing<EconomyConfigAsset>("EconomyConfig");
+            created += CreateIfMissing<MetaConfigAsset>("MetaConfig");
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();

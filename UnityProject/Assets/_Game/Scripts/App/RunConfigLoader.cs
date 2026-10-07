@@ -7,8 +7,10 @@ using JungleBooze.Gameplay.Hazards;
 using JungleBooze.Gameplay.PowerUps;
 using JungleBooze.Gameplay.Runner;
 using JungleBooze.Gameplay.Session;
+using JungleBooze.Gameplay.Track;
 using JungleBooze.Gameplay.Vine;
 using JungleBooze.Gameplay.Views;
+using JungleBooze.Services.Meta;
 using UnityEngine;
 
 namespace JungleBooze.App
@@ -29,8 +31,10 @@ namespace JungleBooze.App
         public const string VineTuningName = "VineTuning";
         public const string PowerUpTuningName = "PowerUpTuning";
         public const string HazardTuningName = "HazardTuning";
+        public const string WorldScheduleName = "WorldSchedule";
         public const string CompanionTuningName = "CompanionTuning";
         public const string EconomyConfigName = "EconomyConfig";
+        public const string MetaConfigName = "MetaConfig";
 
         public static RunConfigSet Load()
         {
@@ -93,6 +97,20 @@ namespace JungleBooze.App
             return config;
         }
 
+        /// <summary>World order and lengths (GDD 9) from <c>Resources/WorldSchedule.asset</c> if present and valid, else defaults.</summary>
+        public static WorldScheduleConfig LoadWorlds()
+        {
+            var sources = new List<string>(1);
+            WorldScheduleConfig config = LoadOrDefault<WorldScheduleConfigAsset, WorldScheduleConfig>(
+                WorldScheduleName, a => a.ToConfig(), WorldScheduleConfig.CreateDefault, sources);
+            if (Debug.isDebugBuild)
+            {
+                Debug.Log("[JungleBooze] " + sources[0] + ".");
+            }
+
+            return config;
+        }
+
         /// <summary>Companion tuning (GDD 15.2) from <c>Resources/CompanionTuning.asset</c> if present and valid, else defaults.</summary>
         public static CompanionConfig LoadCompanion()
         {
@@ -119,6 +137,20 @@ namespace JungleBooze.App
             }
 
             return rules;
+        }
+
+        /// <summary>Missions, daily reward and shop tuning (GDD 13) from <c>Resources/MetaConfig.asset</c> if present and valid, else defaults.</summary>
+        public static MetaConfig LoadMeta()
+        {
+            var sources = new List<string>(1);
+            MetaConfig config = LoadOrDefault<MetaConfigAsset, MetaConfig>(
+                MetaConfigName, a => a.ToConfig(), MetaConfig.CreateDefault, sources);
+            if (Debug.isDebugBuild)
+            {
+                Debug.Log("[JungleBooze] " + sources[0] + ".");
+            }
+
+            return config;
         }
 
         private static TConfig LoadOrDefault<TAsset, TConfig>(

@@ -139,6 +139,41 @@ namespace JungleBooze.Gameplay.PowerUps
             ShieldHitsAbsorbed = 0;
         }
 
+        /// <summary>
+        /// Shop Shield start (GDD 13.4): the run begins with a Shield active for its normal time at the current level.
+        /// Call before the first tick. [ASSUMED] It lasts as long as a picked-up Shield.
+        /// </summary>
+        public void GrantStartShield()
+        {
+            int s = (int)PowerUpType.Shield;
+            int full = _config.DurationTicks(PowerUpType.Shield, _levels[s]);
+            _ticksLeft[s] = full;
+            _fullTicks[s] = full;
+            _shield = true;
+            _shieldHeld = false;
+            _shieldGraceLeft = 0;
+        }
+
+        /// <summary>
+        /// Shop Head Start (GDD 13.4): the run begins with a Speed Boost dash lasting <paramref name="ticks"/> (the
+        /// caller works out how long covers the wanted distance). Call before the first tick.
+        /// </summary>
+        public void GrantStartBoost(int ticks)
+        {
+            if (ticks <= 0)
+            {
+                return;
+            }
+
+            int b = (int)PowerUpType.SpeedBoost;
+            _ticksLeft[b] = ticks;
+            _fullTicks[b] = ticks;
+            _boost = SpeedBoostPhase.Dash;
+            _slowdownElapsed = 0;
+            _multiplier = _config.SpeedBoostMultiplier;
+            HoldVineSections();
+        }
+
         public bool IsActive(PowerUpType type)
         {
             switch (type)

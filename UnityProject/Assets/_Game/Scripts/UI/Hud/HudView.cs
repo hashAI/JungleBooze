@@ -2,6 +2,7 @@ using System;
 using JungleBooze.Gameplay.Runner;
 using JungleBooze.Gameplay.Session;
 using JungleBooze.Gameplay.Views;
+using JungleBooze.Services.Meta;
 using JungleBooze.Services.Persistence;
 using JungleBooze.UI.Menus;
 using UnityEngine;
@@ -45,6 +46,7 @@ namespace JungleBooze.UI.Hud
 
         private Canvas _canvas;
         private PlayerSave _save;
+        private MetaProgress _meta;
         private GameObject _topBar;
         private DigitCounter _distance;
         private DigitCounter _coins;
@@ -59,6 +61,9 @@ namespace JungleBooze.UI.Hud
         private PausePanel _pauseMenu;
         private GameOverPanel _gameOver;
         private SettingsPanel _settings;
+        private MissionsPanel _missions;
+        private DailyPanel _daily;
+        private ShopPanel _shop;
         private float _flashLeft;
         private float _toastLeft;
         private SessionPhase _shownPhase = NoPhase;
@@ -92,6 +97,13 @@ namespace JungleBooze.UI.Hud
 
         public SettingsPanel Settings => _settings;
 
+        /// <summary>Missions panel (null when built without <see cref="MetaProgress"/>).</summary>
+        public MissionsPanel Missions => _missions;
+
+        public DailyPanel Daily => _daily;
+
+        public ShopPanel Shop => _shop;
+
         public MainMenuPanel MainMenu => _mainMenu;
 
         public bool GameOverVisible => _gameOver != null && _gameOver.Visible;
@@ -100,8 +112,16 @@ namespace JungleBooze.UI.Hud
 
         public bool MainMenuVisible => _mainMenu != null && _mainMenu.Visible;
 
-        /// <summary>True while Settings is open (the run driver ignores the keyboard Play then).</summary>
-        public bool SettingsVisible => _settings != null && _settings.Visible;
+        /// <summary>
+        /// True while Settings, Missions, Daily or the Shop is open (the run driver ignores the keyboard Play then).
+        /// </summary>
+        public bool SettingsVisible => ModalVisible;
+
+        private bool ModalVisible =>
+            (_settings != null && _settings.Visible)
+            || (_missions != null && _missions.Visible)
+            || (_daily != null && _daily.Visible)
+            || (_shop != null && _shop.Visible);
 
         public bool NewBestVisible => _gameOver != null && _gameOver.Visible && _gameOver.NewBestVisible;
 
@@ -119,12 +139,22 @@ namespace JungleBooze.UI.Hud
         /// </summary>
         public void Build(IRunCommands commands, Font font, PlayerSave save)
         {
+            Build(commands, font, save, null);
+        }
+
+        /// <summary>
+        /// Like <see cref="Build(IRunCommands, Font, PlayerSave)"/>; with <paramref name="meta"/> the main menu gets
+        /// Missions, Daily and Shop buttons and the Game Over panel shows what the run earned (GDD 13).
+        /// </summary>
+        public void Build(IRunCommands commands, Font font, PlayerSave save, MetaProgress meta)
+        {
             if (commands == null)
             {
                 throw new ArgumentNullException(nameof(commands));
             }
 
             _save = save;
+            _meta = meta;
 
             _canvas = gameObject.AddComponent<Canvas>();
             _canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -228,7 +258,9 @@ namespace JungleBooze.UI.Hud
             HudFactory.Place(_toast.rectTransform, new Vector2(0.5f, 0.62f), new Vector2(300f, 50f), Vector2.zero);
             _toast.gameObject.SetActive(false);
 
-            _mainMenu = new MainMenuPanel(safe, font, commands.Play, OpenSettings);
+            _mainMenu = meta != null
+                ? new MainMenuPanel(safe, font, commands.Play, OpenSettings, OpenMissions, OpenDaily, OpenShop)
+                : new MainMenuPanel(safe, font, commands.Play, OpenSettings);
             _pauseMenu = new PausePanel(safe, font, commands);
 
             // Countdown 3-2-1.
@@ -237,6 +269,12 @@ namespace JungleBooze.UI.Hud
 
             _gameOver = new GameOverPanel(safe, font, commands);
             _settings = new SettingsPanel(safe, font, save, OnSettingsClosed);
+            if (meta != null)
+            {
+                _missions = new MissionsPanel(safe, font, meta, OnSettingsClosed);
+                _daily = new DailyPanel(safe, font, meta, OnSettingsClosed, null);
+                _shop = new ShopPanel(safe, font, meta, OnSettingsClosed);
+            }
 
             ApplyPhase(SessionPhase.Running, null);
             _shownPhase = NoPhase;
@@ -245,7 +283,7 @@ namespace JungleBooze.UI.Hud
         /// <summary>Main menu "Settings": hides the menu and opens the Settings panel.</summary>
         public void OpenSettings()
         {
-            if (_settings == null || _settings.Visible)
+            if (_settings == null || ModalVisible)
             {
                 return;
             }
@@ -253,6 +291,42 @@ namespace JungleBooze.UI.Hud
             _mainMenu.Hide();
             _dim.enabled = true;
             _settings.Open();
+        }
+
+        /// <summary>Main menu "Missions": hides the menu and opens the Missions panel.</summary>
+        public void OpenMissions()
+        {
+            if (_missions != null && !ModalVisible)
+            {
+                OpenModal();
+                _missions.Open();
+            }
+        }
+
+        /// <summary>Main menu "Daily": hides the menu and opens the daily reward panel.</summary>
+        public void OpenDaily()
+        {
+            if (_daily != null && !ModalVisible)
+            {
+                OpenModal();
+                _daily.Open();
+            }
+        }
+
+        /// <summary>Main menu "Shop": hides the menu and opens the shop.</summary>
+        public void OpenShop()
+        {
+            if (_shop != null && !ModalVisible)
+            {
+                OpenModal();
+                _shop.Open();
+            }
+        }
+
+        private void OpenModal()
+        {
+            _mainMenu.Hide();
+            _dim.enabled = true;
         }
 
         public void BeginRun(GameSession session)
@@ -445,7 +519,30 @@ namespace JungleBooze.UI.Hud
             _dim.enabled = _shownPhase == SessionPhase.Paused || _shownPhase == SessionPhase.GameOver;
             if (_shownPhase == SessionPhase.Menu)
             {
-                _mainMenu.Show(_save);
+                _mainMenu.Show(_save, _meta);
+            }
+        }
+
+        private void CloseModals()
+        {
+            if (_settings != null && _settings.Visible)
+            {
+                _settings.Close();
+            }
+
+            if (_missions != null && _missions.Visible)
+            {
+                _missions.Close();
+            }
+
+            if (_daily != null && _daily.Visible)
+            {
+                _daily.Close();
+            }
+
+            if (_shop != null && _shop.Visible)
+            {
+                _shop.Close();
             }
         }
 
@@ -455,10 +552,10 @@ namespace JungleBooze.UI.Hud
             bool paused = phase == SessionPhase.Paused;
             bool over = phase == SessionPhase.GameOver;
 
-            // Settings belongs to the main menu; leaving the menu closes it (and saves).
-            if (!menu && _settings.Visible)
+            // Settings, Missions, Daily and Shop belong to the main menu; leaving the menu closes them (and saves).
+            if (!menu && ModalVisible)
             {
-                _settings.Close();
+                CloseModals();
             }
 
             if (_topBar.activeSelf == menu)
@@ -466,23 +563,23 @@ namespace JungleBooze.UI.Hud
                 _topBar.SetActive(!menu);
             }
 
-            if (menu && !_settings.Visible)
+            if (menu && !ModalVisible)
             {
-                _mainMenu.Show(_save);
+                _mainMenu.Show(_save, _meta);
             }
             else if (!menu)
             {
                 _mainMenu.Hide();
             }
 
-            _dim.enabled = paused || over || _settings.Visible;
+            _dim.enabled = paused || over || ModalVisible;
             _readyPrompt.gameObject.SetActive(phase == SessionPhase.Ready);
             _pauseMenu.SetVisible(paused);
             _countdownText.gameObject.SetActive(phase == SessionPhase.Countdown);
 
             if (over && session != null)
             {
-                _gameOver.Show(session, _save);
+                _gameOver.Show(session, _save, _meta != null ? MetaStrings.Describe(_meta.LastOutcome) : null);
                 _shownLock = session.GameOverInputLocked;
             }
             else

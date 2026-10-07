@@ -47,8 +47,20 @@ namespace JungleBooze.Gameplay.Track
         private double _vineElapsedS;
         private double _vineDueS;
 
+        // Worlds (GDD 9): null = a single world, exactly the generation without worlds.
+        private readonly WorldScheduleConfig _worlds;
+        private readonly int _gatewayIndex = -1;
+        private readonly double _gatewayHalfM;
+        private readonly double _maxVineLengthM;
+        private double _worldStartZ;
+
         public TrackGenerator(
-            TrackConfig config, ChunkLibrary library, DifficultyTiersConfig tiers, SpeedCurve curve, VineConfig vines = null)
+            TrackConfig config,
+            ChunkLibrary library,
+            DifficultyTiersConfig tiers,
+            SpeedCurve curve,
+            VineConfig vines = null,
+            WorldScheduleConfig worlds = null)
         {
             _vines = vines ?? VineConfig.CreateDefault();
             _config = config ?? throw new ArgumentNullException(nameof(config));
@@ -75,6 +87,25 @@ namespace JungleBooze.Gameplay.Track
                 if (tiers.GetTier(t).ChunkCount != library.Count)
                 {
                     throw new ArgumentException("The difficulty tiers were built for another library.", nameof(tiers));
+                }
+            }
+
+            _worlds = worlds;
+            if (worlds != null)
+            {
+                _gatewayIndex = library.IndexOf(JungleChunkLibraryDefaults.GatewayId);
+                if (_gatewayIndex < 0 || library[_gatewayIndex].Kind != ChunkKind.Gateway)
+                {
+                    throw new ArgumentException("Worlds need a gateway chunk '" + JungleChunkLibraryDefaults.GatewayId + "' in the library.", nameof(library));
+                }
+
+                _gatewayHalfM = library[_gatewayIndex].LengthM * 0.5;
+                for (int i = 0; i < library.Count; i++)
+                {
+                    if (library[i].Kind == ChunkKind.Vine)
+                    {
+                        _maxVineLengthM = Math.Max(_maxVineLengthM, library[i].LengthM);
+                    }
                 }
             }
 
@@ -107,6 +138,9 @@ namespace JungleBooze.Gameplay.Track
 
         /// <summary>The current breather interval (s).</summary>
         public double BreatherDueSeconds => _breatherDueS;
+
+        /// <summary>World gateways placed so far (also the index of the current world segment).</summary>
+        public int GatewaysEmitted { get; private set; }
 
         /// <summary>Vine sections picked so far.</summary>
         public int VinePickCount { get; private set; }
@@ -147,6 +181,8 @@ namespace JungleBooze.Gameplay.Track
             _vineDueS = _vineRng != null
                 ? _vineRng.NextFloat(_vines.FirstSectionMinS, _vines.FirstSectionMaxS)
                 : double.PositiveInfinity;
+            GatewaysEmitted = 0;
+            _worldStartZ = 0.0;
             _historyCount = 0;
             _historyNext = 0;
             for (int i = 0; i < _history.Length; i++)
@@ -191,12 +227,22 @@ namespace JungleBooze.Gameplay.Track
                 return CountVineTime(new ChunkPick(_startIndex, false, tier, false), startZ);
             }
 
+            // GDD 9: a gateway (no obstacles, coin arc) where the next world boundary falls. It uses no random draws,
+            // so it never shifts the track or vine streams; the world switches at its centre.
+            if (_worlds != null && startZ + _gatewayHalfM >= _worlds.SegmentStartZ(GatewaysEmitted + 1))
+            {
+                GatewaysEmitted++;
+                _worldStartZ = startZ + _gatewayHalfM;
+                Remember(_gatewayIndex, false);
+                return CountVineTime(new ChunkPick(_gatewayIndex, false, tier, false), startZ);
+            }
+
             if (_breatherPending || _inBreatherRun)
             {
                 return CountVineTime(PickBreather(startZ, tier), startZ);
             }
 
-            if (_vineRng != null && _vineElapsedS >= _vineDueS && startZ >= VineBlockedUntilZ)
+            if (_vineRng != null && _vineElapsedS >= _vineDueS && startZ >= VineBlockedUntilZ && !VineWouldCrossBoundary(startZ))
             {
                 int vine = PickVine(startZ, tier, out bool vineMirrored);
                 if (vine >= 0)
@@ -238,6 +284,12 @@ namespace JungleBooze.Gameplay.Track
             h = StableHash.Mix(h, _vineDueS);
             h = StableHash.Mix(h, VinePickCount);
             h = StableHash.Mix(h, VineBlockedUntilZ);
+            if (_worlds != null)
+            {
+                h = StableHash.Mix(h, GatewaysEmitted);
+                h = StableHash.Mix(h, _worldStartZ);
+            }
+
             return h;
         }
 
@@ -300,14 +352,28 @@ namespace JungleBooze.Gameplay.Track
             return !chunk.HasChasmVine || startZ >= _vines.ChasmVinesFromM;
         }
 
+        /// <summary>True when a vine section started here could still be running when the next gateway is due.</summary>
+        private bool VineWouldCrossBoundary(double startZ)
+        {
+            return _worlds != null && startZ + _maxVineLengthM + _gatewayHalfM >= _worlds.SegmentStartZ(GatewaysEmitted + 1);
+        }
+
         private ChunkPick PickNormal(double startZ, int tierIndex, int tier)
         {
             DifficultyTier pool = _tiers.GetTier(tierIndex);
-            int total = BuildPool(pool, true);
+            int total = BuildPool(pool, true, startZ);
             if (total <= 0)
             {
                 // Spec 8.3: if the no-repeat rule empties the pool, ignore it.
-                total = BuildPool(pool, false);
+                total = BuildPool(pool, false, startZ);
+            }
+
+            if (total <= 0)
+            {
+                // World rules (chunk world masks, signature quiet distance) left nothing: breather, no draws.
+                SeamFallbackCount++;
+                Remember(_fallbackIndex, false);
+                return new ChunkPick(_fallbackIndex, false, tier, true);
             }
 
             int attempts = _config.MaxPickAttempts;
@@ -367,12 +433,25 @@ namespace JungleBooze.Gameplay.Track
         }
 
         /// <summary>Marks excluded chunks and returns the pool's total weight.</summary>
-        private int BuildPool(DifficultyTier pool, bool applyNoRepeat)
+        private int BuildPool(DifficultyTier pool, bool applyNoRepeat, double startZ)
         {
             int total = 0;
+            WorldMask worldMask = WorldMask.All;
+            bool signatureQuiet = false;
+            if (_worlds != null)
+            {
+                // GDD 8.3: only the worlds that own a signature hazard get it, and never in the first 150 m of a world.
+                worldMask = WorldScheduleConfig.MaskOf(_worlds.KindOfSegment(GatewaysEmitted));
+                signatureQuiet = startZ < _worldStartZ + _worlds.SignatureQuietM;
+            }
+
             for (int i = 0; i < _excluded.Length; i++)
             {
-                bool excluded = pool.GetWeight(i) <= 0 || (applyNoRepeat && InHistory(i));
+                ChunkData candidate = _library[i];
+                bool excluded = pool.GetWeight(i) <= 0
+                    || (applyNoRepeat && InHistory(i))
+                    || (candidate.WorldMask & worldMask) == WorldMask.None
+                    || (signatureQuiet && candidate.Kind == ChunkKind.Signature);
                 _excluded[i] = excluded;
                 if (!excluded)
                 {

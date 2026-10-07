@@ -46,6 +46,50 @@ namespace JungleBooze.Services.Persistence
         /// <summary>The free first-session continue (GDD 14.4) was already used.</summary>
         public bool FreeContinueUsed => _data.freeContinueUsed;
 
+        /// <summary>The first-run tutorial was finished or skipped once (GDD 12).</summary>
+        public bool TutorialCompleted => _data.tutorialCompleted;
+
+        /// <summary>Settings asked to replay the tutorial on the next run.</summary>
+        public bool TutorialReplayRequested => _data.tutorialReplay;
+
+        /// <summary>
+        /// The next run starts with the tutorial: a replay was requested, or this is a brand-new player.
+        /// [ASSUMED] A save that already recorded runs (from before the tutorial existed) never gets it unasked.
+        /// </summary>
+        public bool ShouldRunTutorial =>
+            _data.tutorialReplay || (!_data.tutorialCompleted && (_data.runsPlayed == 0 || _data.tutorialStarted));
+
+        /// <summary>The tutorial begins now (remembered so a quit halfway repeats it). Does not write.</summary>
+        public void MarkTutorialStarted()
+        {
+            if (!_data.tutorialStarted)
+            {
+                _data.tutorialStarted = true;
+                _dirty = true;
+            }
+        }
+
+        /// <summary>The tutorial ended (finished or skipped): never shown again unless replayed. Does not write.</summary>
+        public void CompleteTutorial()
+        {
+            if (!_data.tutorialCompleted || _data.tutorialReplay)
+            {
+                _data.tutorialCompleted = true;
+                _data.tutorialReplay = false;
+                _dirty = true;
+            }
+        }
+
+        /// <summary>Settings "Replay tutorial": the next run teaches again. Does not write.</summary>
+        public void RequestTutorialReplay()
+        {
+            if (!_data.tutorialReplay)
+            {
+                _data.tutorialReplay = true;
+                _dirty = true;
+            }
+        }
+
         /// <summary>
         /// Counts a new app session (call once at app start) and writes the save. Returns the new session number.
         /// </summary>
@@ -91,6 +135,44 @@ namespace JungleBooze.Services.Persistence
                 _data.freeContinueUsed = true;
                 _dirty = true;
             }
+        }
+
+        /// <summary>The save's data, for the missions, daily reward and shop services of this assembly.</summary>
+        internal SaveData Data => _data;
+
+        /// <summary>Marks the data as changed; the services call it after every change.</summary>
+        internal void MarkDirty()
+        {
+            _dirty = true;
+        }
+
+        /// <summary>Adds coins to the wallet (mission, set and daily rewards). Does not write.</summary>
+        internal void AddCoins(long amount)
+        {
+            if (amount <= 0L)
+            {
+                return;
+            }
+
+            _data.totalCoins = _data.totalCoins > long.MaxValue - amount ? long.MaxValue : _data.totalCoins + amount;
+            _dirty = true;
+        }
+
+        /// <summary>
+        /// Takes <paramref name="amount"/> coins from the wallet for a shop purchase. Returns false (and changes
+        /// nothing) if the wallet holds fewer. Does not write.
+        /// </summary>
+        internal bool TrySpendCoinsInShop(long amount)
+        {
+            if (amount < 0L || _data.totalCoins < amount)
+            {
+                return false;
+            }
+
+            _data.totalCoins -= amount;
+            _data.coinsSpentInShop += amount;
+            _dirty = true;
+            return true;
         }
 
         /// <summary>The last run recorded this session (default value until the first one).</summary>

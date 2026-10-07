@@ -1,54 +1,27 @@
-using System;
 using JungleBooze.Gameplay.Runner;
 using JungleBooze.Gameplay.Session;
 using JungleBooze.Services.Audio;
-using JungleBooze.UI.Hud;
+using UnityEngine;
 
 namespace JungleBooze.App
 {
     /// <summary>
-    /// Run-scene audio adapter. Forwards runner events to <see cref="AudioPlayback"/> (cue mapping lives in
-    /// <see cref="RunAudioCues"/>), plays the UI tap on every HUD/menu button, and picks the music from the session
-    /// phase: menu loop in the Menu, Jungle theme in a run, silence while dying, the sting on Game Over.
-    /// [ASSUMED] Jungle theme A until the owner picks a variation. Thin view only; no allocations per frame.
+    /// Plays run sounds and music from the runner's events and the session phase. Menu bed on the main menu,
+    /// Jungle bed while a run is going, Game Over sting when the run ends. No allocations per frame.
     /// </summary>
-    public sealed class RunAudioView : IRunView, IDisposable
+    public sealed class RunAudioView : IRunView
     {
-        private const SessionPhase NoPhase = (SessionPhase)255;
-
         private readonly AudioPlayback _audio;
-        private readonly Action _onButtonPressed;
-        private SessionPhase _phase = NoPhase;
+        private SessionPhase _lastPhase = (SessionPhase)255;
 
         public RunAudioView(AudioPlayback audio)
         {
-            _audio = audio ?? throw new ArgumentNullException(nameof(audio));
-            _onButtonPressed = OnButtonPressed;
-            HudFactory.ButtonPressed += _onButtonPressed;
-        }
-
-        public void Dispose()
-        {
-            HudFactory.ButtonPressed -= _onButtonPressed;
-        }
-
-        private void OnButtonPressed()
-        {
-            // The audio object is destroyed with the Run scene; drop the static subscription then.
-            if (_audio == null)
-            {
-                Dispose();
-                return;
-            }
-
-            _audio.PlayUiTap();
+            _audio = audio;
         }
 
         public void BeginRun(GameSession session)
         {
-            // A new run (Restart, Home) re-applies the music for whatever phase it starts in.
-            _phase = NoPhase;
-            ApplyPhase(session.Phase);
+            _lastPhase = (SessionPhase)255;
         }
 
         public void OnRunnerEvent(in RunnerEvent e)
@@ -58,32 +31,30 @@ namespace JungleBooze.App
 
         public void Render(GameSession session, float alpha, float realDeltaSeconds)
         {
-            ApplyPhase(session.Phase);
-        }
-
-        private void ApplyPhase(SessionPhase phase)
-        {
-            if (phase == _phase)
+            SessionPhase phase = session.Phase;
+            if (phase == _lastPhase)
             {
                 return;
             }
 
-            _phase = phase;
+            SessionPhase previous = _lastPhase;
+            _lastPhase = phase;
             switch (phase)
             {
                 case SessionPhase.Menu:
                     _audio.PlayMenuMusic();
                     break;
-                case SessionPhase.Dying:
-                case SessionPhase.ContinueOffer:
-                    _audio.StopMusic();
+                case SessionPhase.Ready:
+                case SessionPhase.Running:
+                case SessionPhase.Countdown:
+                    _audio.PlayJungleMusic();
                     break;
                 case SessionPhase.GameOver:
-                    _audio.PlayGameOverSting();
-                    break;
-                default:
-                    // Ready, Running, Paused, Countdown: keep the Jungle bed going (no-op if already playing).
-                    _audio.PlayJungleMusic();
+                    if (previous != SessionPhase.GameOver)
+                    {
+                        _audio.PlayGameOverSting();
+                    }
+
                     break;
             }
         }

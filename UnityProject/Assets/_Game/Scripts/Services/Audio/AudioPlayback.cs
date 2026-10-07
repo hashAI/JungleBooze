@@ -41,7 +41,7 @@ namespace JungleBooze.Services.Audio
 
         public AudioCatalog Catalog => _catalog;
 
-        /// <summary>Sets the clip catalog when the component is created in code. Setup-time only.</summary>
+        /// <summary>Sets the clip catalog when the component is created in code.</summary>
         public void SetCatalog(AudioCatalog catalog)
         {
             _catalog = catalog;

@@ -1,5 +1,7 @@
 using System;
 using JungleBooze.Gameplay.Session;
+using JungleBooze.Gameplay.Track;
+using JungleBooze.Services.Meta;
 using JungleBooze.Services.Persistence;
 
 namespace JungleBooze.App
@@ -15,6 +17,8 @@ namespace JungleBooze.App
     public sealed class RunResultRecorder
     {
         private int _recordedRunNumber;
+        private MetaProgress _meta;
+        private RunEventCounter _counter;
 
         public RunResultRecorder(PlayerSave save)
         {
@@ -22,6 +26,16 @@ namespace JungleBooze.App
         }
 
         public PlayerSave Save { get; }
+
+        /// <summary>
+        /// Optional: missions and the daily challenge (GDD 13). <paramref name="counter"/> supplies the slide and
+        /// Shield counts. Either may be null.
+        /// </summary>
+        public void AttachMeta(MetaProgress meta, RunEventCounter counter)
+        {
+            _meta = meta;
+            _counter = counter;
+        }
 
         /// <summary>Records the current run if it has ended and was not recorded yet. Returns true if it recorded.</summary>
         public bool RecordIfEnded(GameSession session)
@@ -59,8 +73,35 @@ namespace JungleBooze.App
             _recordedRunNumber = session.RunNumber;
             double distance = session.DistanceM;
             Save.RecordRun(session.Score, distance > 0.0 ? (long)distance : 0L, session.Coins);
+            _meta?.ApplyRun(BuildStats(session));
             Save.Save();
             return true;
+        }
+
+        private RunStats BuildStats(GameSession session)
+        {
+            double distance = session.DistanceM;
+            var stats = new RunStats
+            {
+                Coins = session.Coins,
+                DistanceM = distance > 0.0 ? (distance >= int.MaxValue ? int.MaxValue : (int)distance) : 0,
+            };
+
+            if (session.World is TrackRunWorld world)
+            {
+                RunTotals totals = world.Totals;
+                stats.Vines = totals.VinesGrabbed;
+                stats.PerfectReleases = totals.PerfectReleases;
+                stats.NearMisses = totals.NearMisses;
+            }
+
+            if (_counter != null)
+            {
+                stats.Slides = _counter.Slides;
+                stats.Shields = _counter.Shields;
+            }
+
+            return stats;
         }
     }
 }

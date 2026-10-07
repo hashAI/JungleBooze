@@ -36,6 +36,57 @@ namespace JungleBooze.Services.Persistence
 
         public SettingsData settings = new SettingsData();
 
+        // ---- Missions, daily reward and shop (GDD 13.2 to 13.4). Added without a version bump: old saves simply
+        // lack these fields and get the defaults from SaveCodec.Repair. ----
+
+        /// <summary>Completed mission sets; the score multiplier is 1 + this, capped (GDD 13.1).</summary>
+        public int completedMissionSets;
+
+        /// <summary>The current set's missions (empty until the first set is made).</summary>
+        public MissionSlotData[] missions = new MissionSlotData[0];
+
+        /// <summary>Calendar day (days since 1970) of the last daily reward claim; 0 = never.</summary>
+        public int lastDailyClaimDay;
+
+        /// <summary>Next day of the 7-day calendar to claim, 0 to 6. A missed day does not reset it (GDD 13.3).</summary>
+        public int dailyCalendarIndex;
+
+        /// <summary>Calendar day the daily challenge flag below belongs to; 0 = none.</summary>
+        public int dailyChallengeDay;
+
+        public bool dailyChallengeDone;
+
+        /// <summary>Head Start boosts owned (GDD 13.4).</summary>
+        public int headStarts;
+
+        /// <summary>Shield starts owned (GDD 13.4).</summary>
+        public int shieldStarts;
+
+        /// <summary>Use a Head Start / Shield start in the next run.</summary>
+        public bool armHeadStart;
+
+        public bool armShieldStart;
+
+        /// <summary>Power-up upgrade levels 1 to 5: Magnet, Shield, Speed Boost.</summary>
+        public int[] powerUpLevels = { 1, 1, 1 };
+
+        /// <summary>Exclusive outfit pieces from the day-7 reward (outfits themselves come with the characters).</summary>
+        public int outfitPieces;
+
+        /// <summary>Coins spent in the shop so far (for balance checks later).</summary>
+        public long coinsSpentInShop;
+
+        // ---- Onboarding (GDD 12). Added without a version bump: old saves get false for both. ----
+
+        /// <summary>The first-run tutorial was finished or skipped once.</summary>
+        public bool tutorialCompleted;
+
+        /// <summary>The tutorial began at least once (so a quit halfway repeats it even after the run was recorded).</summary>
+        public bool tutorialStarted;
+
+        /// <summary>Settings asked to play the tutorial again on the next run.</summary>
+        public bool tutorialReplay;
+
         public static SaveData CreateDefault()
         {
             return new SaveData

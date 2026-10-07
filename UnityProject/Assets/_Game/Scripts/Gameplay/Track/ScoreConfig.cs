@@ -48,9 +48,15 @@ namespace JungleBooze.Gameplay.Track
         /// </summary>
         public long ComputeScore(double distanceM, long bonusScore)
         {
+            return ComputeScore(distanceM, bonusScore, ScoreMultiplier);
+        }
+
+        /// <summary>Same with the player's multiplier (GDD 13.1: +1 per completed mission set) instead of the config's.</summary>
+        public long ComputeScore(double distanceM, long bonusScore, int multiplier)
+        {
             double d = distanceM > 0.0 ? distanceM : 0.0;
             long distancePoints = (long)Math.Floor(d * PointsPerMeter);
-            return (distancePoints + bonusScore) * ScoreMultiplier;
+            return (distancePoints + bonusScore) * multiplier;
         }
 
         public ulong ComputeHash()

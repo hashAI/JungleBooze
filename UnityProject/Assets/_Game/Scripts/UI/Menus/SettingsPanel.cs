@@ -19,7 +19,7 @@ namespace JungleBooze.UI.Menus
     {
         private const int VolumeSteps = 10;
         private const float WidthPt = 320f;
-        private const float HeightPt = 460f;
+        private const float HeightPt = 520f;
         private const float ContentWidthPt = 270f;
         private const int TitleFontSize = 34;
         private const int RowFontSize = 20;
@@ -37,6 +37,8 @@ namespace JungleBooze.UI.Menus
         private readonly Text _sfxValue;
         private readonly Button _haptics;
         private readonly Button _reduceMotion;
+        private readonly Button _replayTutorial;
+        private readonly Text _replayTutorialLabel;
 
         public SettingsPanel(Transform safeArea, Font font, PlayerSave save, UnityAction onClosed)
         {
@@ -62,6 +64,10 @@ namespace JungleBooze.UI.Menus
             _haptics = CreateToggleRow(panel, "Haptics", font, MenuStrings.Haptics, -252f, OnHapticsClicked);
             _reduceMotion = CreateToggleRow(panel, "ReduceMotion", font, MenuStrings.ReduceMotion, -316f, OnReduceMotionClicked);
 
+            _replayTutorial = MenuFactory.NeutralButton(
+                panel, "ReplayTutorialButton", font, MenuStrings.ReplayTutorial, ToggleFontSize, top, new Vector2(ContentWidthPt, 48f), new Vector2(0f, -376f), OnReplayTutorialClicked);
+            _replayTutorialLabel = _replayTutorial.GetComponentInChildren<Text>();
+
             BackButton = MenuFactory.NeutralButton(
                 panel, "BackButton", font, MenuStrings.Back, BackFontSize, new Vector2(0.5f, 0f), new Vector2(220f, 60f), new Vector2(0f, 20f), Close);
 
@@ -73,6 +79,9 @@ namespace JungleBooze.UI.Menus
         public Button HapticsButton => _haptics;
 
         public Button ReduceMotionButton => _reduceMotion;
+
+        /// <summary>"Replay tutorial" (GDD 12): the next run teaches again.</summary>
+        public Button ReplayTutorialButton => _replayTutorial;
 
         public Slider MusicSlider => _music;
 
@@ -147,6 +156,16 @@ namespace JungleBooze.UI.Menus
             _sfxValue.text = PercentStrings[sfx];
             ShowToggle(_haptics, _save.HapticsEnabled);
             ShowToggle(_reduceMotion, _save.ReduceMotion);
+            _replayTutorialLabel.text = _save.TutorialReplayRequested ? MenuStrings.TutorialQueued : MenuStrings.ReplayTutorial;
+        }
+
+        private void OnReplayTutorialClicked()
+        {
+            if (_save != null)
+            {
+                _save.RequestTutorialReplay();
+                _replayTutorialLabel.text = MenuStrings.TutorialQueued;
+            }
         }
 
         private void OnMusicChanged(float value)

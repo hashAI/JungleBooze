@@ -220,6 +220,31 @@ namespace JungleBooze.Gameplay.Session
             return true;
         }
 
+        /// <summary>
+        /// Tutorial rule (GDD 12: no deaths in the tutorial): a death during the death sequence is undone at once. HERO
+        /// is revived where it died (or on the first ground ahead), the stretch ahead is cleared, and the run goes
+        /// straight on. [ASSUMED] Same recovery as Continue, not a true 2 s rewind. Returns false if there is nothing
+        /// to rescue or the world cannot revive.
+        /// </summary>
+        public bool RescueInTutorial()
+        {
+            if (Phase != SessionPhase.Dying || !Runner.Current.IsDead || !(World is IRunWorldRecovery recovery))
+            {
+                return false;
+            }
+
+            if (!recovery.Revive(Runner, ContinueRules.InvulnerableTicks, ContinueRules.ClearStretchSeconds))
+            {
+                return false;
+            }
+
+            Companion?.OnRevived();
+            _deathElapsed = 0.0;
+            _time.ClearAccumulator();
+            Phase = SessionPhase.Running;
+            return true;
+        }
+
         /// <summary>Continue screen "Skip": Game Over now. Returns false outside the offer.</summary>
         public bool DeclineContinue()
         {

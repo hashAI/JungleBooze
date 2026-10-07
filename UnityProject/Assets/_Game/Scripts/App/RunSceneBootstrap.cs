@@ -5,12 +5,15 @@ using JungleBooze.Gameplay.Hazards;
 using JungleBooze.Gameplay.PowerUps;
 using JungleBooze.Gameplay.Session;
 using JungleBooze.Gameplay.Track;
+using JungleBooze.Gameplay.Tutorial;
 using JungleBooze.Gameplay.Views;
 using JungleBooze.Gameplay.Vine;
 using JungleBooze.Services.Audio;
+using JungleBooze.Services.Meta;
 using JungleBooze.Services.Persistence;
 using JungleBooze.UI.Hud;
 using JungleBooze.UI.Menus;
+using JungleBooze.UI.Tutorial;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
@@ -177,6 +180,20 @@ namespace JungleBooze.App
             PowerUpView powerUpView = powerUpObject.AddComponent<PowerUpView>();
             powerUpView.Init(kit, configs.Runner, presentation, presentation.FogEndM);
 
+            // GDD 9: world themes (palette, fog, ground and obstacle tint) and the gateway frames.
+            var worldObject = new GameObject("Worlds");
+            worldObject.transform.SetParent(root.transform, false);
+            WorldThemeView worldView = worldObject.AddComponent<WorldThemeView>();
+            worldView.Init(
+                camera,
+                keyLight,
+                ground,
+                obstacles,
+                kit,
+                configs.Runner,
+                Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"),
+                presentation.FogEndM);
+
             var runnerObject = new GameObject("Pista");
             runnerObject.transform.SetParent(root.transform, false);
             RunnerView runnerView = runnerObject.AddComponent<RunnerView>();
@@ -214,8 +231,14 @@ namespace JungleBooze.App
             var hudObject = new GameObject("Hud", typeof(RectTransform));
             hudObject.transform.SetParent(root.transform, false);
             HudView hud = hudObject.AddComponent<HudView>();
-            hud.Build(driver, Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"), save);
-            driver.AttachMeta(new RunResultRecorder(save), hud);
+            // GDD 13: missions, daily reward and shop on the same save.
+            var progress = new MetaProgress(save, RunConfigLoader.LoadMeta(), new SystemDayClock());
+            var eventCounter = new RunEventCounter();
+            hud.Build(driver, Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"), save, progress);
+            var recorder = new RunResultRecorder(save);
+            recorder.AttachMeta(progress, eventCounter);
+            driver.AttachMeta(recorder, hud);
+            driver.AttachProgress(progress);
             session.ContinuePolicy = driver;
 
             // Companion HUD (Lift meter, call-out bubble) and the Continue screen, each on its own canvas.
@@ -229,10 +252,24 @@ namespace JungleBooze.App
             ContinueView continueView = continueObject.AddComponent<ContinueView>();
             continueView.Build(driver, Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"), save);
 
-            // Audio: pooled playback (music, SFX, Duko voice) following the save's volume settings.
-            var audioView = new RunAudioView(CreateAudio(root.transform, save));
+            // GDD 12: first-run tutorial (hints, ghost hand, Skip once completed); the driver starts it on Play.
+            var tutorial = new TutorialDirector();
+            var tutorialObject = new GameObject("TutorialHud", typeof(RectTransform));
+            tutorialObject.transform.SetParent(root.transform, false);
+            TutorialView tutorialView = tutorialObject.AddComponent<TutorialView>();
+            tutorialView.Build(tutorial, Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"), save.ReduceMotion);
+            save.SettingsChanged += () => tutorialView.SetReduceMotion(save.ReduceMotion);
+            driver.AttachTutorial(tutorial);
 
-            driver.Init(session, input, new IRunView[] { audioView, ground, gaps, obstacles, hazardView, vineView, coinView, powerUpView, runnerView, companionView, cameraView, hud, companionHud, continueView }, kit);
+            // Audio: pooled playback (Resources/RunAudioCatalog), volumes follow the save's settings.
+            var audioObject = new GameObject("Audio");
+            audioObject.transform.SetParent(root.transform, false);
+            AudioPlayback audio = audioObject.AddComponent<AudioPlayback>();
+            audio.SetCatalog(Resources.Load<AudioCatalog>("RunAudioCatalog"));
+            audio.Bind(save);
+            var audioView = new RunAudioView(audio);
+
+            driver.Init(session, input, new IRunView[] { eventCounter, tutorial, audioView, ground, worldView, gaps, obstacles, hazardView, vineView, coinView, powerUpView, runnerView, companionView, cameraView, hud, companionHud, tutorialView, continueView }, kit);
 
             if (Debug.isDebugBuild)
             {
@@ -253,17 +290,8 @@ namespace JungleBooze.App
             VineConfig vines = RunConfigLoader.LoadVines();
             PowerUpConfig powerUps = RunConfigLoader.LoadPowerUps();
             HazardConfig hazards = RunConfigLoader.LoadHazards();
-            return new TrackRunWorldFactory(TrackRunSetup.CreateDefault(vines, powerUps, hazards));
-        }
-
-        private static AudioPlayback CreateAudio(Transform parent, PlayerSave save)
-        {
-            var audioObject = new GameObject("Audio");
-            audioObject.transform.SetParent(parent, false);
-            AudioPlayback audio = audioObject.AddComponent<AudioPlayback>();
-            audio.SetCatalog(Resources.Load<AudioCatalog>("RunAudioCatalog"));
-            audio.Bind(save);
-            return audio;
+            WorldScheduleConfig worlds = RunConfigLoader.LoadWorlds();
+            return new TrackRunWorldFactory(TrackRunSetup.CreateDefault(vines, powerUps, hazards, worlds));
         }
 
         private static bool IsRunScene(Scene scene)

@@ -28,13 +28,20 @@ namespace JungleBooze.Gameplay.Views
             public Transform Band;
             public Transform Stripe;
             public ObstacleArchetype Kind;
+            public MeshRenderer CubeRenderer;
+            public MeshRenderer SphereRenderer;
+            public GameObject[] Art;
         }
+
+        private const int ArchetypeSlots = 8;
 
         private RunnerConfig _runnerConfig;
         private float _viewDistanceM;
         private Piece[] _pieces;
         private int _shown;
         private TrackSimulation _track;
+        private Material _bodyMaterial;
+        private Material _moverMaterial;
 
         /// <summary>Pieces shown last frame (tests).</summary>
         public int ShownPieceCount => _shown;
@@ -55,9 +62,66 @@ namespace JungleBooze.Gameplay.Views
                 piece.Band = kit.Create(PrimitiveType.Cube, "HazardBand", root, StylePalette.HazardRed).transform;
                 piece.Stripe = kit.Create(PrimitiveType.Cube, "InkStripe", root, StylePalette.Ink).transform;
                 piece.Kind = ObstacleArchetype.None;
+                piece.CubeRenderer = piece.Cube.GetComponent<MeshRenderer>();
+                piece.SphereRenderer = piece.Sphere.GetComponent<MeshRenderer>();
+                piece.Art = new GameObject[ArchetypeSlots];
+                AttachArt(piece, ObstacleArchetype.LowBarrier, piece.Cube, EnvironmentArt.LowBarrier);
+                AttachArt(piece, ObstacleArchetype.HighBarrier, piece.Cube, EnvironmentArt.HighBarrier);
+                AttachArt(piece, ObstacleArchetype.FullBlock, piece.Cube, EnvironmentArt.FullBlock);
+                AttachArt(piece, ObstacleArchetype.Mover, piece.Sphere, EnvironmentArt.Boulder);
                 piece.Root.SetActive(false);
                 _pieces[i] = piece;
             }
+
+            // Own body materials, so a world theme can tint the obstacles without touching other views' shared colors.
+            _bodyMaterial = new Material(_pieces[0].CubeRenderer.sharedMaterial) { name = "World_ObstacleBody" };
+            _moverMaterial = new Material(_pieces[0].SphereRenderer.sharedMaterial) { name = "World_MoverBody" };
+            for (int i = 0; i < PieceCapacity; i++)
+            {
+                _pieces[i].CubeRenderer.sharedMaterial = _bodyMaterial;
+                _pieces[i].SphereRenderer.sharedMaterial = _moverMaterial;
+            }
+        }
+
+        /// <summary>Tints the obstacle and mover bodies (world themes, GDD 9). Allocation free.</summary>
+        public void ApplyTheme(in WorldTheme theme)
+        {
+            if (_bodyMaterial == null)
+            {
+                return;
+            }
+
+            _bodyMaterial.color = theme.ObstacleBody;
+            _moverMaterial.color = theme.MoverBody;
+        }
+
+        private void OnDestroy()
+        {
+            if (_bodyMaterial != null)
+            {
+                Destroy(_bodyMaterial);
+            }
+
+            if (_moverMaterial != null)
+            {
+                Destroy(_moverMaterial);
+            }
+        }
+
+        /// <summary>
+        /// Real art for one archetype, parented to the gray-box body that Place() already scales to the hitbox
+        /// (art is authored to fit a unit cube or a unit sphere). Missing prefab: the gray-box stays.
+        /// </summary>
+        private static void AttachArt(Piece piece, ObstacleArchetype kind, Transform body, string prefabName)
+        {
+            Transform art = EnvironmentArt.Attach(body, prefabName);
+            if (art == null)
+            {
+                return;
+            }
+
+            art.gameObject.SetActive(false);
+            piece.Art[(int)kind] = art.gameObject;
         }
 
         public void BeginRun(GameSession session)
@@ -147,6 +211,22 @@ namespace JungleBooze.Gameplay.Views
                 bool mover = o.Archetype == ObstacleArchetype.Mover;
                 piece.Cube.gameObject.SetActive(!mover);
                 piece.Sphere.gameObject.SetActive(mover);
+
+                // Real art replaces the body and the red/ink marker bands (the prefab carries its own markings).
+                int kindIndex = (int)o.Archetype;
+                bool hasArt = kindIndex >= 0 && kindIndex < ArchetypeSlots && piece.Art[kindIndex] != null;
+                for (int a = 0; a < ArchetypeSlots; a++)
+                {
+                    if (piece.Art[a] != null)
+                    {
+                        piece.Art[a].SetActive(hasArt && a == kindIndex);
+                    }
+                }
+
+                piece.CubeRenderer.enabled = !hasArt;
+                piece.SphereRenderer.enabled = !hasArt;
+                piece.Band.gameObject.SetActive(!hasArt);
+                piece.Stripe.gameObject.SetActive(!hasArt);
             }
 
             float centerY = shape.BottomM + height * 0.5f;

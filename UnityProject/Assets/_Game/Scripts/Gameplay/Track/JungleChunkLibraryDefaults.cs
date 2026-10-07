@@ -14,12 +14,23 @@ namespace JungleBooze.Gameplay.Track
         public const string StartId = "S-01";
         public const string FallbackBreatherId = "B-01";
 
+        /// <summary>The world gateway chunk (GDD 9), placed by the generator at every world boundary.</summary>
+        public const string GatewayId = "G-01";
+
+        /// <summary>Gateway length: 4 s at the 13.5 m/s of the first boundary (GDD 9) [ASSUMED fixed length].</summary>
+        public const float GatewayLengthM = 54f;
+
         private const byte L0 = LaneMasks.Lane0;
         private const byte L1 = LaneMasks.Lane1;
         private const byte L2 = LaneMasks.Lane2;
         private const byte L01 = LaneMasks.Lane0 | LaneMasks.Lane1;
         private const byte L12 = LaneMasks.Lane1 | LaneMasks.Lane2;
         private const byte All = LaneMasks.All;
+
+        // GDD 8.2: the thorn patch is the Jungle's signature hazard; the other worlds have their own telegraphed
+        // lane strike (water spout, falling rocks, dart plates). "Thorns and Rocks" stays a Jungle chunk.
+        private const WorldMask ThornWorlds = WorldMask.Jungle;
+        private const WorldMask StrikeWorlds = WorldMask.River | WorldMask.Mountains | WorldMask.Ruins;
 
         /// <summary>Builds the 16-chunk library (no seam table: every pair compatible until stage B3 builds one).</summary>
         public static ChunkLibrary CreateLibrary()
@@ -51,10 +62,13 @@ namespace JungleBooze.Gameplay.Track
             ChunkData[] fp1 = CreateChunks();
             ChunkData[] vines = CreateVineChunks();
             ChunkData[] signature = CreateSignatureChunks();
-            var all = new ChunkData[fp1.Length + vines.Length + signature.Length];
+            ChunkData[] dense = CreateDenseChunks();
+            var all = new ChunkData[fp1.Length + vines.Length + signature.Length + dense.Length + 1];
             fp1.CopyTo(all, 0);
             vines.CopyTo(all, fp1.Length);
             signature.CopyTo(all, fp1.Length + vines.Length);
+            dense.CopyTo(all, fp1.Length + vines.Length + signature.Length);
+            all[all.Length - 1] = CreateGatewayChunk();
             return new ChunkLibrary(all);
         }
 
@@ -71,22 +85,22 @@ namespace JungleBooze.Gameplay.Track
         {
             return new[]
             {
-                Signature("SG-01", "Thorn Patch", 2, "A thorn patch blocks two lanes; coins show the free one.",
+                Signature("SG-01", "Thorn Patch", 2, ThornWorlds, "A thorn patch blocks two lanes; coins show the free one.",
                     new[] { ObstaclePlacement.LaneDenial(L01, 16f) },
                     new[] { CoinPattern.Line(2, 6f, 34f) }),
-                Signature("SG-02", "Thorn Gate", 2, "Thorns force the left lane, then a log in it: jump.",
+                Signature("SG-02", "Thorn Gate", 2, ThornWorlds, "Thorns force the left lane, then a log in it: jump.",
                     new[] { ObstaclePlacement.LaneDenial(L12, 8f), ObstaclePlacement.Low(L0, 28f) },
                     new[] { CoinPattern.Line(0, 2f, 20f), CoinPattern.Arc(0, 28.3f) }),
-                Signature("SG-03", "Thorn Slalom", 3, "Thorns force the left lane, then the right lane.",
+                Signature("SG-03", "Thorn Slalom", 3, ThornWorlds, "Thorns force the left lane, then the right lane.",
                     new[] { ObstaclePlacement.LaneDenial(L12, 6f), ObstaclePlacement.LaneDenial(L01, 26f) },
                     new[] { CoinPattern.Line(0, 2f, 12f), CoinPattern.Trail(0, 2, 13f, 22f), CoinPattern.Line(2, 24f, 36f) }),
-                Signature("SG-04", "Falling Rocks", 2, "The middle lane flashes a warning, then rocks fall there.",
+                Signature("SG-04", "Falling Rocks", 2, StrikeWorlds, "The middle lane flashes a warning, then rocks fall there.",
                     new[] { ObstaclePlacement.LaneStrike(1, 20f) },
                     new[] { CoinPattern.Line(0, 10f, 30f) }),
-                Signature("SG-05", "Rockfall Pinch", 3, "Rocks fall on both sides, then in the middle.",
+                Signature("SG-05", "Rockfall Pinch", 3, StrikeWorlds, "Rocks fall on both sides, then in the middle.",
                     new[] { ObstaclePlacement.LaneStrike(0, 12f), ObstaclePlacement.LaneStrike(2, 12f), ObstaclePlacement.LaneStrike(1, 32f) },
                     new[] { CoinPattern.Line(1, 4f, 18f), CoinPattern.Trail(1, 0, 20f, 26f), CoinPattern.Line(0, 28f, 38f) }),
-                Signature("SG-06", "Thorns and Rocks", 4, "Thorns force the right lane, then rocks fall in it.",
+                Signature("SG-06", "Thorns and Rocks", 4, ThornWorlds, "Thorns force the right lane, then rocks fall in it.",
                     new[] { ObstaclePlacement.LaneDenial(L01, 8f), ObstaclePlacement.LaneStrike(2, 30f) },
                     new[] { CoinPattern.Line(2, 2f, 14f), CoinPattern.Trail(2, 1, 16f, 24f) }),
             };
@@ -257,7 +271,114 @@ namespace JungleBooze.Gameplay.Track
                 tiers[t].Weights = merged;
             }
 
+            // GDD 11.2: tiers 4 to 6 must keep raising the obstacle density. The T3 pool alone tops out at about 3 rows
+            // per chunk, so tiers 4+ lean on the 4-row T4 chunks (rows every 10 m, 0.48 s at the 21 m/s cap).
+            tiers[3].Weights = DenseTierWeights(2, 4, new[] { 1, 1, 1, 1, 1, 1 });
+            tiers[4].Weights = DenseTierWeights(2, 6, new[] { 0, 0, 1, 0, 1, 1 });
+            tiers[5].Weights = DenseTierWeights(1, 6, new[] { 0, 0, 1, 0, 1, 1 });
             return tiers;
+        }
+
+        private static ChunkWeight[] DenseTierWeights(int t3Weight, int t4Weight, int[] signatureWeights)
+        {
+            var list = new System.Collections.Generic.List<ChunkWeight>();
+            for (int i = 1; i <= 4; i++)
+            {
+                list.Add(new ChunkWeight("T3-0" + i, t3Weight));
+            }
+
+            for (int i = 1; i <= 5; i++)
+            {
+                list.Add(new ChunkWeight("T4-0" + i, t4Weight));
+            }
+
+            for (int i = 0; i < signatureWeights.Length; i++)
+            {
+                if (signatureWeights[i] > 0)
+                {
+                    list.Add(new ChunkWeight("SG-0" + (i + 1), signatureWeights[i]));
+                }
+            }
+
+            return list.ToArray();
+        }
+
+        /// <summary>
+        /// The world gateway (GDD 9): no obstacles, a coin line into an arc and out again. Kind <see cref="ChunkKind.Gateway"/>:
+        /// never in a tier pool; the generator places it where a world boundary falls and the world switches at its centre.
+        /// </summary>
+        public static ChunkData CreateGatewayChunk()
+        {
+            return new ChunkData(
+                GatewayId,
+                ChunkKind.Gateway,
+                GatewayLengthM,
+                1,
+                6,
+                new ObstaclePlacement[0],
+                new[] { CoinPattern.Line(1, 2f, 14f), CoinPattern.Arc(1, 27f), CoinPattern.Line(1, 40f, 52f) },
+                allowMirror: false,
+                displayName: "Gateway",
+                designNote: "Cave mouth, waterfall, rope bridge or temple gate: nothing to dodge while the world changes.");
+        }
+
+        /// <summary>
+        /// Four-row chunks for tiers 4 to 6 (GDD 11.2: combos of jump and slide, density 8 to 10 per 100 m). Rows at
+        /// 5, 15, 25 and 35 m (10 m apart: 0.48 s at the 21 m/s cap, above the tier's 0.45 s minimum). Fairness by
+        /// construction [ASSUMED, the chunk fairness validator B3 still has to confirm]: every row leaves one lane
+        /// completely free, and consecutive free lanes are neighbours, so a pure lane-change path always exists
+        /// without any jump or slide.
+        /// </summary>
+        public static ChunkData[] CreateDenseChunks()
+        {
+            return new[]
+            {
+                Normal("T4-01", "Zigzag Gauntlet", 4, "Free lane 1, 0, 1, 2: wall and branch, log, branch and wall, log.",
+                    new[]
+                    {
+                        ObstaclePlacement.Full(L0, 5f), ObstaclePlacement.High(L2, 5f),
+                        ObstaclePlacement.Low(L12, 15f),
+                        ObstaclePlacement.High(L0, 25f), ObstaclePlacement.Full(L2, 25f),
+                        ObstaclePlacement.Low(L01, 35f),
+                    },
+                    new[] { CoinPattern.Trail(1, 0, 7f, 13f), CoinPattern.Trail(0, 1, 17f, 23f), CoinPattern.Trail(1, 2, 27f, 33f) }),
+                Normal("T4-02", "Jump and Slide", 4, "Free lane 2, 1, 1, 0: a log, a branch and a log, a wall and a branch, a log.",
+                    new[]
+                    {
+                        ObstaclePlacement.Low(L01, 5f),
+                        ObstaclePlacement.High(L0, 15f), ObstaclePlacement.Low(L2, 15f),
+                        ObstaclePlacement.Full(L0, 25f), ObstaclePlacement.High(L2, 25f),
+                        ObstaclePlacement.Low(L12, 35f),
+                    },
+                    new[] { CoinPattern.Trail(2, 1, 7f, 13f), CoinPattern.Line(1, 17f, 23f), CoinPattern.Trail(1, 0, 27f, 33f) }),
+                Normal("T4-03", "Branch Weave", 4, "Free lane 0, 1, 2, 1: branches high and low across the path.",
+                    new[]
+                    {
+                        ObstaclePlacement.High(L12, 5f),
+                        ObstaclePlacement.Full(L0, 15f), ObstaclePlacement.Low(L2, 15f),
+                        ObstaclePlacement.High(L01, 25f),
+                        ObstaclePlacement.Full(L0, 35f), ObstaclePlacement.High(L2, 35f),
+                    },
+                    new[] { CoinPattern.Trail(0, 1, 7f, 13f), CoinPattern.Trail(1, 2, 17f, 23f), CoinPattern.Trail(2, 1, 27f, 33f) }),
+                Normal("T4-04", "Log then Branch", 4, "Free lane 1, 1, 0, 0: a pinch, then a jump and a slide side by side.",
+                    new[]
+                    {
+                        ObstaclePlacement.Low(L0, 5f), ObstaclePlacement.High(L2, 5f),
+                        ObstaclePlacement.Full(L0, 15f), ObstaclePlacement.Full(L2, 15f),
+                        ObstaclePlacement.Low(L12, 25f),
+                        ObstaclePlacement.High(L12, 35f),
+                    },
+                    new[] { CoinPattern.Line(1, 2f, 13f), CoinPattern.Trail(1, 0, 17f, 23f), CoinPattern.Line(0, 27f, 33f) }),
+                Normal("T4-05", "Narrow Path", 4, "Free lane 2, 2, 1, 0: two walls on the left, then a split, then a wall.",
+                    new[]
+                    {
+                        ObstaclePlacement.Full(L01, 5f),
+                        ObstaclePlacement.Low(L01, 15f),
+                        ObstaclePlacement.High(L0, 25f), ObstaclePlacement.Low(L2, 25f),
+                        ObstaclePlacement.Full(L12, 35f),
+                    },
+                    new[] { CoinPattern.Line(2, 1f, 13f), CoinPattern.Trail(2, 1, 17f, 23f), CoinPattern.Trail(1, 0, 27f, 33f) }),
+            };
         }
 
         /// <summary>Tier configuration for the default library and the given speed curve.</summary>
@@ -306,9 +427,10 @@ namespace JungleBooze.Gameplay.Track
                 id, ChunkKind.Vine, lengthM, minTier, 6, obstacles, coins, displayName: name, designNote: note, vines: vines);
         }
 
-        private static ChunkData Signature(string id, string name, int minTier, string note, ObstaclePlacement[] obstacles, CoinPattern[] coins)
+        private static ChunkData Signature(
+            string id, string name, int minTier, WorldMask worlds, string note, ObstaclePlacement[] obstacles, CoinPattern[] coins)
         {
-            return new ChunkData(id, ChunkKind.Signature, 40f, minTier, 6, obstacles, coins, displayName: name, designNote: note);
+            return new ChunkData(id, ChunkKind.Signature, 40f, minTier, 6, obstacles, coins, worldMask: worlds, displayName: name, designNote: note);
         }
 
         private static ChunkData Breather(string id, string name, string note, CoinPattern[] coins)

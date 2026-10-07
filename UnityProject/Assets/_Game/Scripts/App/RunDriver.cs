@@ -2,7 +2,10 @@ using System;
 using JungleBooze.Gameplay.Controls;
 using JungleBooze.Gameplay.Runner;
 using JungleBooze.Gameplay.Session;
+using JungleBooze.Gameplay.Track;
+using JungleBooze.Gameplay.Tutorial;
 using JungleBooze.Gameplay.Views;
+using JungleBooze.Services.Meta;
 using JungleBooze.Services.Persistence;
 using JungleBooze.UI.Hud;
 using UnityEngine;
@@ -34,6 +37,8 @@ namespace JungleBooze.App
         private int _reportedOverflow;
         private RunResultRecorder _recorder;
         private HudView _hud;
+        private MetaProgress _progress;
+        private TutorialDirector _tutorial;
 
         public GameSession Session => _session;
 
@@ -69,6 +74,58 @@ namespace JungleBooze.App
             _hud = hud;
         }
 
+        /// <summary>
+        /// Missions, daily reward and shop (GDD 13). With this attached, every run start brings in the shop upgrades,
+        /// armed start boosts and the score multiplier. May be left out (then runs start plain).
+        /// </summary>
+        public void AttachProgress(MetaProgress progress)
+        {
+            _progress = progress;
+        }
+
+        /// <summary>
+        /// First-run tutorial (GDD 12). With this attached, a run that should teach (new player or replay from
+        /// Settings) starts with the director active; its end or Skip marks the tutorial done in the save. May be
+        /// left out (then no tutorial).
+        /// </summary>
+        public void AttachTutorial(TutorialDirector tutorial)
+        {
+            if (_tutorial != null)
+            {
+                _tutorial.Finished -= OnTutorialFinished;
+            }
+
+            _tutorial = tutorial;
+            if (_tutorial != null)
+            {
+                _tutorial.Finished += OnTutorialFinished;
+            }
+        }
+
+        /// <summary>Starts the tutorial in the run that is about to move, if the save says it is due.</summary>
+        private void StartTutorialIfDue()
+        {
+            PlayerSave save = _recorder?.Save;
+            if (_tutorial == null || save == null || !save.ShouldRunTutorial)
+            {
+                return;
+            }
+
+            save.MarkTutorialStarted();
+            save.SaveIfDirty();
+            _tutorial.Begin(_session, save.TutorialCompleted);
+        }
+
+        private void OnTutorialFinished()
+        {
+            PlayerSave save = _recorder?.Save;
+            if (save != null)
+            {
+                save.CompleteTutorial();
+                save.SaveIfDirty();
+            }
+        }
+
         /// <summary>Main menu "Play": the run set up behind the menu starts running. Ignored outside the menu.</summary>
         public void Play()
         {
@@ -77,11 +134,26 @@ namespace JungleBooze.App
                 return;
             }
 
+            ApplyLoadout();
             if (_session.Begin())
             {
                 _input.Reset();
                 _input.GameplayEnabled = true;
+                StartTutorialIfDue();
             }
+        }
+
+        /// <summary>Brings the shop upgrades, armed start boosts and score multiplier into the run about to start.</summary>
+        private void ApplyLoadout()
+        {
+            if (_progress == null || !(_session.World is TrackRunWorld world))
+            {
+                return;
+            }
+
+            RunLoadout loadout = RunLoadoutBuilder.Build(_progress);
+            world.ApplyLoadout(loadout);
+            _progress.Save.SaveIfDirty();
         }
 
         /// <summary>
@@ -244,9 +316,11 @@ namespace JungleBooze.App
                 _session.Restart();
             }
 
+            ApplyLoadout();
             _input.Reset();
             _input.GameplayEnabled = true;
             BeginViews();
+            StartTutorialIfDue();
             return true;
         }
 
@@ -289,7 +363,24 @@ namespace JungleBooze.App
                 ContinueRun();
             }
 
-            _session.Advance(realDeltaSeconds);
+            // GDD 12: the game slows to 30% while the tutorial waits for the player's swipe.
+            double advanceSeconds = realDeltaSeconds;
+            if (_tutorial != null && _tutorial.Active && _session.Phase == SessionPhase.Running)
+            {
+                advanceSeconds *= _tutorial.TimeScale;
+            }
+
+            _session.Advance(advanceSeconds);
+            if (_tutorial != null && _tutorial.Active && _session.Phase == SessionPhase.Dying)
+            {
+                // GDD 12: no deaths in the tutorial; the run goes on after a gentle hint.
+                if (_tutorial.TryTakeRescue() && _session.RescueInTutorial())
+                {
+                    _tutorial.OnRescued();
+                    _input.Reset();
+                }
+            }
+
             _recorder?.RecordIfEnded(_session);
 
             DispatchEvents();

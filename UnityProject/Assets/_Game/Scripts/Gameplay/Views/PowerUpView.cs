@@ -217,6 +217,11 @@ namespace JungleBooze.Gameplay.Views
                 }
             }
 
+            // Real icons (about 1 m across, facing the camera, glow included) replace the gray-box groups.
+            EnvironmentArt.ReplaceGroup(m, EnvironmentArt.Magnet);
+            EnvironmentArt.ReplaceGroup(s, EnvironmentArt.Shield);
+            EnvironmentArt.ReplaceGroup(b, EnvironmentArt.Boost);
+
             float scale = IconSizeM;
             slot.Icon.localScale = new Vector3(scale, scale, scale);
             rim.localScale = new Vector3(1.12f * scale, 0.01f, 1.12f * scale);

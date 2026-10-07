@@ -34,6 +34,8 @@ namespace JungleBooze.Gameplay.Views
         private Transform[] _slabs;
         private Transform[] _redMarkers;
         private Transform[] _inkMarkers;
+        private Transform[] _edgeNear;
+        private Transform[] _edgeFar;
         private int _shown;
         private TrackSimulation _track;
 
@@ -49,6 +51,8 @@ namespace JungleBooze.Gameplay.Views
             _slabs = new Transform[Capacity];
             _redMarkers = new Transform[Capacity];
             _inkMarkers = new Transform[Capacity];
+            _edgeNear = new Transform[Capacity];
+            _edgeFar = new Transform[Capacity];
             for (int i = 0; i < Capacity; i++)
             {
                 Transform root = new GameObject("Gap" + i).transform;
@@ -57,6 +61,16 @@ namespace JungleBooze.Gameplay.Views
                 _slabs[i] = kit.Create(PrimitiveType.Cube, "Void", root, StylePalette.Void).transform;
                 _redMarkers[i] = kit.Create(PrimitiveType.Cube, "EdgeMarkerRed", root, StylePalette.HazardRed).transform;
                 _inkMarkers[i] = kit.Create(PrimitiveType.Cube, "EdgeMarkerInk", root, StylePalette.Ink).transform;
+
+                // Optional ravine lips (art: lip face at local z=0, 1 m wide and deep, body toward -Z).
+                // The near lip sits at the gap start; the far lip is turned around at the gap end.
+                _edgeNear[i] = EnvironmentArt.Attach(root, EnvironmentArt.RavineEdge);
+                _edgeFar[i] = EnvironmentArt.Attach(root, EnvironmentArt.RavineEdge);
+                if (_edgeFar[i] != null)
+                {
+                    _edgeFar[i].localRotation = Quaternion.Euler(0f, 180f, 0f);
+                }
+
                 _slots[i].Root.SetActive(false);
             }
         }
@@ -120,6 +134,14 @@ namespace JungleBooze.Gameplay.Views
                     _redMarkers[used].localScale = new Vector3(width, MarkerHeightM, MarkerDepthM);
                     _inkMarkers[used].localPosition = new Vector3(cx, MarkerHeightM * 0.5f, -(MarkerGapToEdgeM + MarkerDepthM * 1.5f));
                     _inkMarkers[used].localScale = new Vector3(width, MarkerHeightM, MarkerDepthM);
+                    if (_edgeNear[used] != null)
+                    {
+                        _edgeNear[used].localPosition = new Vector3(cx, 0f, 0f);
+                        _edgeNear[used].localScale = new Vector3(width, 1f, 1f);
+                        _edgeFar[used].localPosition = new Vector3(cx, 0f, length);
+                        _edgeFar[used].localScale = new Vector3(width, 1f, 1f);
+                    }
+
                     used++;
                 }
             }

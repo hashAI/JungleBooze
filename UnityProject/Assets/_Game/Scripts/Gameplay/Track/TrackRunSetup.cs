@@ -15,6 +15,7 @@ namespace JungleBooze.Gameplay.Track
     public sealed class TrackRunSetup
     {
         private readonly DifficultyTiersDesignValues _tierValues;
+        private readonly WorldSkinConfig[] _skins = new WorldSkinConfig[4];
         private SpeedCurve _cachedCurve;
         private DifficultyTiersConfig _cachedTiers;
 
@@ -28,8 +29,10 @@ namespace JungleBooze.Gameplay.Track
             WorldSkinConfig skin = null,
             VineConfig vines = null,
             PowerUpConfig powerUps = null,
-            HazardConfig hazards = null)
+            HazardConfig hazards = null,
+            WorldScheduleConfig worlds = null)
         {
+            Worlds = worlds;
             Vines = vines ?? VineConfig.CreateDefault();
             PowerUps = powerUps ?? PowerUpConfig.CreateDefault();
             Hazards = hazards ?? HazardConfig.CreateDefault();
@@ -40,6 +43,15 @@ namespace JungleBooze.Gameplay.Track
             Library = library ?? throw new ArgumentNullException(nameof(library));
             _tierValues = (tiers ?? throw new ArgumentNullException(nameof(tiers))).Clone();
             Skin = skin ?? WorldSkinConfig.CreateJungle();
+            _skins[(int)WorldKind.Jungle] = Skin;
+            _skins[(int)WorldKind.River] = WorldSkinConfig.CreateRiver();
+            _skins[(int)WorldKind.Mountains] = WorldSkinConfig.CreateMountains();
+            _skins[(int)WorldKind.Ruins] = WorldSkinConfig.CreateRuins();
+            if (worlds != null && library.IndexOf(JungleChunkLibraryDefaults.GatewayId) < 0)
+            {
+                throw new ArgumentException("A run with worlds needs the gateway chunk '" + JungleChunkLibraryDefaults.GatewayId + "'.", nameof(library));
+            }
+
             if (library.IndexOf(track.StartChunkId) < 0)
             {
                 throw new ArgumentException("The chunk library has no start chunk '" + track.StartChunkId + "'.", nameof(library));
@@ -57,6 +69,15 @@ namespace JungleBooze.Gameplay.Track
         public ChunkLibrary Library { get; }
 
         public WorldSkinConfig Skin { get; }
+
+        /// <summary>World order and lengths (GDD 9); null = the run stays in the Jungle.</summary>
+        public WorldScheduleConfig Worlds { get; }
+
+        /// <summary>Display names of <paramref name="kind"/> (Game Over cause text).</summary>
+        public WorldSkinConfig GetSkin(WorldKind kind)
+        {
+            return _skins[(int)kind];
+        }
 
         /// <summary>Vine tuning (GDD 7.5): vine sections, swing, release, launch, vine score and coins.</summary>
         public VineConfig Vines { get; }
@@ -79,7 +100,7 @@ namespace JungleBooze.Gameplay.Track
         /// <summary>Like <see cref="CreateDefault()"/> with the given vine tuning (for example from the VineTuning asset).</summary>
         public static TrackRunSetup CreateDefault(VineConfig vines)
         {
-            return CreateDefault(vines, null, null);
+            return CreateDefault(vines, null, null, null);
         }
 
         /// <summary>
@@ -87,6 +108,14 @@ namespace JungleBooze.Gameplay.Track
         /// game library (FP1 chunks, vine sections and signature hazard chunks, GDD 8.3).
         /// </summary>
         public static TrackRunSetup CreateDefault(VineConfig vines, PowerUpConfig powerUps, HazardConfig hazards)
+        {
+            return CreateDefault(vines, powerUps, hazards, null);
+        }
+
+        /// <summary>
+        /// Like the overload without worlds, with the given world schedule (null = the built-in four worlds of GDD 9).
+        /// </summary>
+        public static TrackRunSetup CreateDefault(VineConfig vines, PowerUpConfig powerUps, HazardConfig hazards, WorldScheduleConfig worlds)
         {
             return new TrackRunSetup(
                 TrackConfig.CreateDefault(),
@@ -98,7 +127,8 @@ namespace JungleBooze.Gameplay.Track
                 WorldSkinConfig.CreateJungle(),
                 vines,
                 powerUps,
-                hazards);
+                hazards,
+                worlds ?? WorldScheduleConfig.CreateDefault());
         }
 
         /// <summary>
@@ -134,6 +164,11 @@ namespace JungleBooze.Gameplay.Track
             h = StableHash.Mix(h, Vines.ComputeHash());
             h = StableHash.Mix(h, PowerUps.ComputeHash());
             h = StableHash.Mix(h, Hazards.ComputeHash());
+            if (Worlds != null)
+            {
+                h = StableHash.Mix(h, Worlds.ComputeHash());
+            }
+
             return h;
         }
     }

@@ -27,6 +27,14 @@ namespace JungleBooze.Gameplay.Views
         private const float CarryWingScale = 1.2f;
         private const float FoldedWingDeg = -70f;
 
+        // Real model (optional): a static mesh without a wing rig, so flight is procedural (pitch, roll, bob).
+        private const string ModelResourcePath = "Characters/Duko/Duko";
+        private const float ModelHeightM = 0.55f;
+        private const float ModelFlightPitchDeg = 70f;
+        private const float ModelFlapRollDeg = 14f;
+        private const float ModelFlapBobM = 0.04f;
+        private const float ModelPoseSmoothSeconds = 0.1f;
+
         private RunnerConfig _runnerConfig;
         private CompanionConfig _config;
         private Transform _model;
@@ -42,6 +50,8 @@ namespace JungleBooze.Gameplay.Views
         private float _loopLeft;
         private float _rescueLeft;
         private bool _snap;
+        private Transform _visualHolder;
+        private float _visualPitch;
 
         /// <summary>World position of the bird (where its speech bubble is anchored).</summary>
         public Vector3 BubbleAnchor => _position + new Vector3(0f, 0.55f, 0f);
@@ -56,6 +66,23 @@ namespace JungleBooze.Gameplay.Views
 
             _model = new GameObject("MacawModel").transform;
             _model.SetParent(transform, false);
+
+            GameObject prefab = Resources.Load<GameObject>(ModelResourcePath);
+            if (prefab != null)
+            {
+                GameObject visual = Instantiate(prefab, _model);
+                visual.name = "DukoVisual";
+                visual.transform.localPosition = Vector3.zero;
+                visual.transform.localRotation = Quaternion.identity;
+                RunnerView.FitToHeight(visual, ModelHeightM);
+                // Pivot at the body center: the fitted model stands on y = 0, so lift it into a holder.
+                Transform holder = new GameObject("DukoHolder").transform;
+                holder.SetParent(_model, false);
+                visual.transform.SetParent(holder, true);
+                visual.transform.localPosition -= new Vector3(0f, ModelHeightM * 0.5f, 0f);
+                _visualHolder = holder;
+                return;
+            }
 
             // Body: violet teardrop (longer than wide), chest and head orange, wrapping round the back of the head.
             kit.Create(PrimitiveType.Sphere, "Body", _model, StylePalette.MacawViolet, new Vector3(0f, 0f, 0f), new Vector3(0.26f, 0.24f, 0.44f));
@@ -194,14 +221,28 @@ namespace JungleBooze.Gameplay.Views
                 _flapClock -= 1000f;
             }
 
-            float wingAngle = current.IsDead && !IsCarrying
+            bool perched = current.IsDead && !IsCarrying;
+            float wingAngle = perched
                 ? FoldedWingDeg
                 : FlapAmplitudeDeg * Mathf.Sin(_flapClock * 2f * Mathf.PI);
-            _leftWing.localRotation = Quaternion.Euler(0f, 0f, -wingAngle);
-            _rightWing.localRotation = Quaternion.Euler(0f, 0f, wingAngle);
-            float wingScale = IsCarrying ? CarryWingScale : 1f;
-            _leftWing.localScale = new Vector3(wingScale, 1f, wingScale);
-            _rightWing.localScale = new Vector3(wingScale, 1f, wingScale);
+            if (_visualHolder != null)
+            {
+                // Static model: body pitches into flight, rolls and bobs with the beat; upright when perched.
+                float targetPitch = perched ? 0f : ModelFlightPitchDeg;
+                float pk = dt <= 0f ? 0f : 1f - Mathf.Exp(-dt / ModelPoseSmoothSeconds);
+                _visualPitch += (targetPitch - _visualPitch) * pk;
+                float beat = perched ? 0f : Mathf.Sin(_flapClock * 2f * Mathf.PI);
+                _visualHolder.localRotation = Quaternion.Euler(_visualPitch, 0f, ModelFlapRollDeg * beat);
+                _visualHolder.localPosition = new Vector3(0f, ModelFlapBobM * beat, 0f);
+            }
+            else
+            {
+                _leftWing.localRotation = Quaternion.Euler(0f, 0f, -wingAngle);
+                _rightWing.localRotation = Quaternion.Euler(0f, 0f, wingAngle);
+                float wingScale = IsCarrying ? CarryWingScale : 1f;
+                _leftWing.localScale = new Vector3(wingScale, 1f, wingScale);
+                _rightWing.localScale = new Vector3(wingScale, 1f, wingScale);
+            }
 
             float pitch = 0f;
             if (_loopLeft > 0f)

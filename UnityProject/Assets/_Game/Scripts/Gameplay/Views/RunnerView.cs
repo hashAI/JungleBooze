@@ -1,6 +1,8 @@
 using JungleBooze.Gameplay.Runner;
 using JungleBooze.Gameplay.Session;
 using UnityEngine;
+using UnityEngine.Animations;
+using UnityEngine.Playables;
 
 namespace JungleBooze.Gameplay.Views
 {
@@ -36,8 +38,32 @@ namespace JungleBooze.Gameplay.Views
         private const float ShoulderHeightM = 1.3f;
         private const float FlightLeanDeg = 18f;
 
+        // Real model (optional). Loaded from Resources; when absent the gray-box shapes are built instead.
+        private const string ModelResourcePath = "Characters/Pista/Pista";
+        private const string ClipResourcePrefix = "Characters/Pista/Pista_";
+        private const float ClipBlendSeconds = 0.08f;
+
+        private static readonly string[] ClipNames = { "run", "jump", "slide", "stumble", "idle" };
+
+        private enum CharPose
+        {
+            Run = 0,
+            Jump = 1,
+            Slide = 2,
+            Stumble = 3,
+            Idle = 4,
+        }
+
         private RunnerConfig _runnerConfig;
         private RunnerPresentationConfig _presentation;
+        private GameObject _visual;
+        private PlayableGraph _graph;
+        private AnimationMixerPlayable _mixer;
+        private readonly AnimationClipPlayable[] _clipPlayables = new AnimationClipPlayable[5];
+        private readonly bool[] _clipLoaded = new bool[5];
+        private readonly float[] _clipWeights = new float[5];
+        private bool _graphReady;
+        private CharPose _pose = CharPose.Idle;
         private Transform _model;
         private Transform _shadow;
         private GameObject _arms;
@@ -61,6 +87,209 @@ namespace JungleBooze.Gameplay.Views
             _model = new GameObject("PistaModel").transform;
             _model.SetParent(transform, false);
 
+            if (!TryBuildModel())
+            {
+                BuildGrayBox(kit);
+            }
+
+            _shadow = kit.Create(
+                PrimitiveType.Cylinder,
+                "BlobShadow",
+                transform,
+                StylePalette.BlobShadow,
+                new Vector3(0f, ShadowLiftM, 0f),
+                new Vector3(ShadowWidthM, 0.002f, ShadowDepthM));
+        }
+
+        /// <summary>True when the real Pista model was found and is in use (false: gray-box fallback).</summary>
+        public bool UsesModel => _visual != null;
+
+        private void OnDestroy()
+        {
+            if (_graph.IsValid())
+            {
+                _graph.Destroy();
+            }
+        }
+
+        /// <summary>
+        /// Instantiates the Pista prefab from Resources and fits it to the standing hitbox height with its pivot at the
+        /// feet. Returns false (and builds nothing) when the asset is missing. Setup-time only.
+        /// </summary>
+        private bool TryBuildModel()
+        {
+            GameObject prefab = Resources.Load<GameObject>(ModelResourcePath);
+            if (prefab == null)
+            {
+                return false;
+            }
+
+            _visual = Instantiate(prefab, _model);
+            _visual.name = "PistaVisual";
+            _visual.transform.localPosition = Vector3.zero;
+            _visual.transform.localRotation = Quaternion.identity;
+            FitToHeight(_visual, _runnerConfig.StandingHeightM);
+            BuildAnimationGraph();
+            return true;
+        }
+
+        /// <summary>
+        /// Scales <paramref name="visual"/> so its renderers are <paramref name="heightM"/> tall, with the lowest point
+        /// at y = 0 and the horizontal center at x = z = 0 of the parent. Shared with the companion view.
+        /// </summary>
+        internal static void FitToHeight(GameObject visual, float heightM)
+        {
+            Renderer[] renderers = visual.GetComponentsInChildren<Renderer>();
+            if (renderers.Length == 0)
+            {
+                return;
+            }
+
+            Bounds bounds = renderers[0].bounds;
+            for (int i = 1; i < renderers.Length; i++)
+            {
+                bounds.Encapsulate(renderers[i].bounds);
+            }
+
+            if (bounds.size.y <= 0.0001f)
+            {
+                return;
+            }
+
+            Transform t = visual.transform;
+            float scale = heightM / bounds.size.y;
+            t.localScale = t.localScale * scale;
+            Vector3 offset = new Vector3(bounds.center.x - t.position.x, bounds.min.y - t.position.y, bounds.center.z - t.position.z);
+            t.localPosition = -offset * scale;
+        }
+
+        private void BuildAnimationGraph()
+        {
+            Animator animator = _visual.GetComponentInChildren<Animator>();
+            if (animator == null)
+            {
+                animator = _visual.AddComponent<Animator>();
+            }
+
+            animator.applyRootMotion = false;
+            animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+
+            _graph = PlayableGraph.Create("PistaAnimation");
+            _graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
+            _mixer = AnimationMixerPlayable.Create(_graph, ClipNames.Length);
+            bool any = false;
+            for (int i = 0; i < ClipNames.Length; i++)
+            {
+                AnimationClip clip = Resources.Load<AnimationClip>(ClipResourcePrefix + ClipNames[i]);
+                if (clip == null)
+                {
+                    continue;
+                }
+
+                _clipPlayables[i] = AnimationClipPlayable.Create(_graph, clip);
+                _graph.Connect(_clipPlayables[i], 0, _mixer, i);
+                _mixer.SetInputWeight(i, 0f);
+                _clipLoaded[i] = true;
+                any = true;
+            }
+
+            if (!any)
+            {
+                _graph.Destroy();
+                return;
+            }
+
+            AnimationPlayableOutput output = AnimationPlayableOutput.Create(_graph, "Pista", animator);
+            output.SetSourcePlayable(_mixer);
+            _graph.Play();
+            _graphReady = true;
+        }
+
+        private CharPose ChoosePose(GameSession session, RunnerState current)
+        {
+            if (current.IsDead || _dead || _stumbleLeft > 0f)
+            {
+                return CharPose.Stumble;
+            }
+
+            if (session.Phase == SessionPhase.Ready || session.Phase == SessionPhase.Menu)
+            {
+                return CharPose.Idle;
+            }
+
+            switch (current.Locomotion)
+            {
+                case Locomotion.Sliding:
+                    return CharPose.Slide;
+                case Locomotion.Running:
+                    return CharPose.Run;
+                default:
+                    return CharPose.Jump;
+            }
+        }
+
+        private int ResolveClip(CharPose pose)
+        {
+            int index = (int)pose;
+            if (_clipLoaded[index])
+            {
+                return index;
+            }
+
+            // Fall back to the run clip, then to any clip that exists.
+            if (_clipLoaded[(int)CharPose.Run])
+            {
+                return (int)CharPose.Run;
+            }
+
+            for (int i = 0; i < _clipLoaded.Length; i++)
+            {
+                if (_clipLoaded[i])
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        private void UpdateAnimation(GameSession session, RunnerState current, float dt)
+        {
+            if (!_graphReady)
+            {
+                return;
+            }
+
+            CharPose wanted = ChoosePose(session, current);
+            if (wanted != _pose)
+            {
+                _pose = wanted;
+                int entered = ResolveClip(wanted);
+                if (entered >= 0 && wanted != CharPose.Run && wanted != CharPose.Idle)
+                {
+                    // One-shot clips restart on entry.
+                    _clipPlayables[entered].SetTime(0.0);
+                }
+            }
+
+            int active = ResolveClip(_pose);
+            float k = dt <= 0f ? 0f : 1f - Mathf.Exp(-dt / ClipBlendSeconds);
+            for (int i = 0; i < _clipWeights.Length; i++)
+            {
+                if (!_clipLoaded[i])
+                {
+                    continue;
+                }
+
+                _clipWeights[i] += ((i == active ? 1f : 0f) - _clipWeights[i]) * k;
+                _mixer.SetInputWeight(i, _clipWeights[i]);
+            }
+
+            _graph.Evaluate(dt);
+        }
+
+        private void BuildGrayBox(GrayBoxKit kit)
+        {
             float bodyDiameter = BodyRadiusM * 2f;
             kit.Create(
                 PrimitiveType.Capsule,
@@ -130,14 +359,6 @@ namespace JungleBooze.Gameplay.Views
                 new Vector3(0f, ShoulderHeightM + armLength * 0.5f, 0f),
                 new Vector3(0.42f, armLength, 0.12f)).gameObject;
             _arms.SetActive(false);
-
-            _shadow = kit.Create(
-                PrimitiveType.Cylinder,
-                "BlobShadow",
-                transform,
-                StylePalette.BlobShadow,
-                new Vector3(0f, ShadowLiftM, 0f),
-                new Vector3(ShadowWidthM, 0.002f, ShadowDepthM));
         }
 
         public void BeginRun(GameSession session)
@@ -207,7 +428,10 @@ namespace JungleBooze.Gameplay.Views
             }
 
             float widen = 1f + (SlideWidenFactor - 1f) * (1f - _squash) / (1f - _runnerConfig.SlidingHeightM / _runnerConfig.StandingHeightM);
-            _model.localScale = new Vector3(widen, _squash, widen);
+            if (_visual == null)
+            {
+                _model.localScale = new Vector3(widen, _squash, widen);
+            }
 
             // Lane bump wobble: a half-sine push toward the blocked side; the camera does not move.
             float wobble = 0f;
@@ -224,7 +448,7 @@ namespace JungleBooze.Gameplay.Views
 
             // Run bob from distance (no clock needed, freezes with the simulation).
             float bob = 0f;
-            if (current.Locomotion == Locomotion.Running)
+            if (_visual == null && current.Locomotion == Locomotion.Running)
             {
                 bob = BobHeightM * Mathf.Abs(Mathf.Sin((float)(z % (BobStrideM * 2.0)) * Mathf.PI / BobStrideM));
             }
@@ -243,7 +467,7 @@ namespace JungleBooze.Gameplay.Views
             transform.localPosition = new Vector3(x, 0f, (float)z);
             // On a vine, or held by the wrists during the companion's Lift (no swing angle then).
             bool carried = current.Locomotion == Locomotion.Carried || current.Locomotion == Locomotion.Lifted;
-            if (_arms.activeSelf != carried)
+            if (_arms != null && _arms.activeSelf != carried)
             {
                 _arms.SetActive(carried);
             }
@@ -262,17 +486,22 @@ namespace JungleBooze.Gameplay.Views
             }
             else
             {
-                _model.localPosition = new Vector3(wobble, y + bob + StumbleHopM * stumble, 0f);
+                // The real model plays its own stumble and fall animations; the gray-box tips and hops instead.
+                bool gray = _visual == null;
+                _model.localPosition = new Vector3(wobble, y + bob + (gray ? StumbleHopM * stumble : 0f), 0f);
                 float lean = current.InVineFlight ? FlightLeanDeg : 0f;
-                _model.localRotation = _dead
+                _model.localRotation = gray && _dead
                     ? Quaternion.Euler(DeathTiltDeg, 0f, 0f)
-                    : Quaternion.Euler(StumbleTiltDeg * stumble + lean, 0f, 0f);
+                    : Quaternion.Euler((gray ? StumbleTiltDeg * stumble : 0f) + lean, 0f, 0f);
             }
 
             float apex = _runnerConfig.JumpApexHeightM > 0f ? _runnerConfig.JumpApexHeightM : 1f;
             float shadowScale = Mathf.Lerp(1f, 0.5f, Mathf.Clamp01(y / apex));
             _shadow.localScale = new Vector3(ShadowWidthM * shadowScale, 0.002f, ShadowDepthM * shadowScale);
             _shadow.gameObject.SetActive(y > -0.05f);
+
+            bool frozen = session.Phase == SessionPhase.Paused || session.InHitPause;
+            UpdateAnimation(session, current, frozen ? 0f : realDeltaSeconds);
         }
     }
 }
