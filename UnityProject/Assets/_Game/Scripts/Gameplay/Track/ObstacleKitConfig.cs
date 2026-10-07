@@ -102,6 +102,20 @@ namespace JungleBooze.Gameplay.Track
             return new ObstacleKitConfig(values);
         }
 
+        /// <summary>
+        /// Test hook: converts without the range checks, so fixtures can use values outside the design ranges
+        /// (for example a late mover trigger that pushes a mover into HERO's side, AC-209).
+        /// </summary>
+        internal static ObstacleKitConfig FromDesignValuesUnchecked(ObstacleKitDesignValues values)
+        {
+            if (values == null)
+            {
+                throw new ArgumentNullException(nameof(values));
+            }
+
+            return new ObstacleKitConfig(values);
+        }
+
         public static ObstacleKitConfig CreateDefault()
         {
             return FromDesignValues(ObstacleKitDesignValues.CreateDefault());
