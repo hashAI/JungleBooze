@@ -1,0 +1,240 @@
+# Play the First Playable on your Mac
+
+This guide takes you from a clean Mac to playing the game in the Unity editor, running the automated tests, and
+(optionally) putting the game on your iPhone. No programming needed. Plan about 1 to 2 hours, mostly waiting for
+downloads.
+
+Written for: MacBook with Apple M4 chip, 24 GB memory. Owner: tech-architect. Technical background: ADR 0003
+(`docs/adr/0003-first-playable-bootstrap.md`).
+
+---
+
+## What you need
+
+| Item | Why | Notes |
+|---|---|---|
+| About 40 GB free disk space | Unity (~15 GB with iOS support), the project cache (~5 GB), Xcode (~15 GB, only for the iPhone step) | Check in Apple menu > About This Mac > More Info > Storage |
+| A Unity account (free) | Unity Hub needs it to install and license the editor | Unity Personal is free and is what we use |
+| Access to the GitHub repository `hashAI/JungleBooze` | To download the project | Same GitHub account you use for this project |
+| Optional: an iPhone, its cable, a free Apple ID, Xcode 26 | Only for "Play on your iPhone" | The phone needs iOS 15 or later |
+
+---
+
+## Step 1: Install Unity Hub
+
+1. Go to **unity.com/download** and download **Unity Hub for macOS**.
+2. Open the downloaded file and drag **Unity Hub** into **Applications**. Start it.
+3. Sign in with your Unity account (or create one).
+4. If the Hub asks about a license, choose **Get a free Personal license**. (You can also do this later in
+   Unity Hub > Settings (gear icon) > Licenses > Add > Get a free personal license.)
+
+## Step 2: Install Unity 6.3 LTS with iOS Build Support
+
+The project is pinned to the **Unity 6.3 LTS** line. The file `UnityProject/ProjectSettings/ProjectVersion.txt`
+says `6000.3.0f1`. Any newer patch of the same line (`6000.3.something`) is fine and preferred, because patches only
+fix bugs.
+
+1. In Unity Hub, click **Installs** (left side) > **Install Editor**.
+2. On the **Official releases** tab, pick the newest version that starts with **6000.3** (shown as
+   **Unity 6.3 (LTS)**). Use **at least 6000.3.8f1**: earlier 6.3 versions lack a fix Apple will require for iPhone
+   apps.
+   - Do **not** pick 6000.0, 6000.4, 6000.5 or newer streams.
+   - If you see a choice of chip, pick **Apple silicon**.
+   - Only if the team asks for an exact version: open the **Archive** tab, click "download archive", find the
+     version under Unity 6.3, and click **Install** (it opens in the Hub).
+3. On the **Add modules** screen, tick **iOS Build Support**. You can skip everything else
+   (Documentation is optional). Click **Install**.
+4. Wait until the install finishes (20 to 40 minutes).
+
+Write down the exact version you installed (for example `6000.3.12f1`). The team will ask for it if anything goes
+wrong.
+
+## Step 3: Download the project
+
+The easiest way is **GitHub Desktop** (free; it also handles the large-file storage the project uses).
+
+1. Download it from **desktop.github.com**, drag it into Applications, start it, and sign in to GitHub.
+2. **File > Clone repository**, pick `hashAI/JungleBooze`, choose a folder you can find again (for example
+   `Documents/Projects`), and click **Clone**.
+3. At the top, click **Current branch** and select the branch the team named in its message (also listed in
+   `docs/STATUS.md`).
+4. To get the newest version later: click **Fetch origin**, then **Pull origin**. Close Unity before pulling.
+
+<details>
+<summary>Alternative: Terminal</summary>
+
+```bash
+xcode-select --install          # installs git if it is missing (skip if already installed)
+brew install git-lfs && git lfs install   # needs Homebrew (brew.sh); large-file support
+git clone https://github.com/hashAI/JungleBooze.git
+cd JungleBooze
+git checkout <branch name from the team>
+git pull                        # later, to update
+```
+</details>
+
+## Step 4: Open the project
+
+1. In Unity Hub, click **Projects** > **Add** (top right) > **Add project from disk**.
+2. Select the **`UnityProject`** folder inside the `JungleBooze` folder (not `JungleBooze` itself). Click **Open**.
+3. If the Hub shows a version warning (the project says 6000.3.0f1, you installed a newer 6000.3), click the version
+   next to the project and pick the 6000.3 version you installed. If Unity asks whether to upgrade or continue, choose
+   **Continue** / **Change version**. This is a safe patch update.
+4. Click the project to open it. **The first open takes 5 to 15 minutes**: Unity downloads packages and builds its
+   cache in `UnityProject/Library`. Later opens take under a minute.
+
+### What happens during the first open
+
+These dialogs are expected. Answer as shown:
+
+| Dialog | Answer | What it does |
+|---|---|---|
+| Input System: "...native platform backends for the new input system are not enabled... Do you want to enable the backends?" | **Yes** | Turns on keyboard, mouse and touch input. Unity restarts by itself. |
+| "JungleBooze project setup" with a list of changes and "Restart now?" | **Restart now** | Our setup script (see below). The restart makes the input change take effect. |
+| "JungleBooze project setup" with a list and an OK button | **OK** | Same script; nothing needed a restart. |
+| "Enter Safe Mode?" | **Enter Safe Mode** | Means the code did not compile. Go to **Troubleshooting > Compile errors**. |
+
+The setup script (menu **JungleBooze > Setup > Run Project Setup**) does this once, automatically:
+
+- Sets input handling to support keyboard, mouse and touch (needs the one restart).
+- Creates the mobile graphics settings (`Assets/_Game/Config/Rendering/URP-Mobile.asset`) and turns them on.
+- Sets the iPhone basics: portrait only, iPhone only, minimum iOS 15, a placeholder app name "Jungle Runner" and
+  placeholder bundle id `com.pistaduko.junglerunner`. The real name and id are your decision later.
+- Creates the game scene `Assets/_Game/Scenes/Run.unity`, adds it to the build list, and opens it.
+- Writes `ProjectSettings/JungleBoozeSetup.txt` so it does not run again. A summary also appears in the
+  **Console** window (Window > General > Console), lines starting with `[JungleBooze setup]`.
+
+If you never saw the setup dialog, run it yourself from the menu bar: **JungleBooze > Setup > Run Project Setup**.
+
+## Step 5: Play
+
+1. Make sure the **Run** scene is open: the title bar shows "Run". If not, in the **Project** window go to
+   `Assets > _Game > Scenes` and double-click **Run**.
+   The scene looks empty before Play. That is normal: the game builds the track, character and HUD when it starts.
+   A "No cameras rendering" message in the Game view before Play is also normal.
+2. Make the Game view phone-shaped: click the **Game** tab, open the aspect drop-down (it may say "Free Aspect"),
+   and pick a portrait size. If none exists, click **+** and add **1170 x 2532** (iPhone portrait), type
+   "Fixed Resolution".
+3. Press **Play** (the triangle at the top center). **Click once inside the Game view** so it receives the keyboard.
+4. Press **Play** again to stop. Anything you change while playing is undone when you stop.
+
+### Controls
+
+Placeholder: the presentation stage of First Playable (stage C) finalizes this table; the team will update it.
+
+| Action | Keyboard (editor) | Mouse (editor) | Touch (iPhone) |
+|---|---|---|---|
+| Move one lane left | Left arrow or A | Drag left | Swipe left |
+| Move one lane right | Right arrow or D | Drag right | Swipe right |
+| Jump | Up arrow, W or Space | Drag up | Swipe up |
+| Slide | Down arrow or S | Drag down | Swipe down |
+| Restart after Game Over | (to be confirmed) | Click **Restart** | Tap **Restart** |
+
+## Step 6: Run the automated tests
+
+1. Menu **Window > General > Test Runner**.
+2. Click the **EditMode** tab, then **Run All**.
+3. Every test should get a green tick. A red cross means a failing test: click it, copy the message at the bottom
+   of the Test Runner window, and send it to the team.
+4. Optional: the **PlayMode** tab has a few more tests; they take longer.
+
+## Step 7 (after the first successful open): send the generated settings back
+
+Unity created settings files that should be saved in the repository so everyone, including the automatic test
+server, uses the same settings. In GitHub Desktop:
+
+1. Open the **Changes** tab. You will see new or changed files under `UnityProject/ProjectSettings/`,
+   `UnityProject/Packages/packages-lock.json`, `UnityProject/Assets/_Game/Config/Rendering/`,
+   `UnityProject/Assets/_Game/Scenes/`, and a few `UnityProject/Assets/*.asset` files from the graphics package.
+2. Type a summary such as `Add project settings from first open` and click **Commit to (branch)**, then
+   **Push origin**.
+
+If you would rather not, just tell the team; they can explain or guide you through it.
+
+---
+
+## Optional: play on your iPhone (free Apple ID)
+
+You need **Xcode 26** (free in the Mac App Store; about 15 GB; it may ask you to update macOS first) and your
+iPhone's cable. A free Apple ID is enough for your own phone. Limits of a free Apple ID: the app stops opening after
+**7 days** (just build again), and at most 3 such apps per phone.
+
+### A. Prepare the iPhone (once)
+1. Connect the iPhone to the Mac with the cable. On the phone, tap **Trust** and enter the passcode.
+2. Turn on **Developer Mode** (iOS 16 or later): iPhone **Settings > Privacy & Security > Developer Mode** > on.
+   The phone restarts and asks you to confirm. (The option appears only after the phone has been connected to Xcode
+   once; if you don't see it, do step C first and come back.)
+
+### B. Export the Xcode project from Unity
+1. In Unity: **File > Build Profiles**. Select **iOS** in the list and click **Switch Platform** (several minutes the
+   first time).
+2. Check that **Scene List** contains `Assets/_Game/Scenes/Run` with its tick on.
+3. Click **Build**. Create and choose the folder `UnityProject/Builds/iOS` (git ignores this folder). Wait until
+   Unity finishes; Finder opens the folder.
+
+### C. Sign and run with Xcode
+1. Double-click **`Unity-iPhone.xcodeproj`** in that folder to open it in Xcode.
+2. **Xcode > Settings > Accounts** > **+** > **Apple ID**, and sign in.
+3. In the left column click the blue **Unity-iPhone** project icon, then the **Unity-iPhone** target, then the
+   **Signing & Capabilities** tab:
+   - Tick **Automatically manage signing**.
+   - **Team**: choose "*Your Name* (Personal Team)".
+   - If Xcode says the bundle identifier is not available, change **Bundle Identifier** to something unique,
+     for example `com.pistaduko.junglerunner.yourname`.
+4. At the top of the window, choose your iPhone as the run destination (next to "Unity-iPhone").
+5. Press the **Run** button (triangle). The first build takes a few minutes.
+6. The first time, the iPhone refuses to open the app ("Untrusted Developer"). On the phone:
+   **Settings > General > VPN & Device Management** > your Apple ID under "Developer App" > **Trust**. Then tap the
+   app icon (named "Jungle Runner").
+
+---
+
+## Troubleshooting
+
+### Compile errors on first open ("Enter Safe Mode?", red errors in the Console)
+The game code did not compile on your Unity version. This is the most likely first-open problem, because the code
+was written without a Unity editor available. It is not your fault and you cannot break anything.
+
+1. Click **Enter Safe Mode** (or **Ignore**; both are fine).
+2. Send the team the complete log file. In Finder press **Cmd+Shift+G**, paste `~/Library/Logs/Unity/`, and send
+   **`Editor.log`** (attach the file; it is plain text).
+3. Also send the Unity version (Unity menu > **About Unity**) and the Console's first red error: open
+   **Window > General > Console**, click the first red line, and copy the text shown in the lower half
+   (select it and press Cmd+C).
+4. Quit Unity. After the team pushes a fix: **Pull origin** in GitHub Desktop and open the project again.
+
+### Package errors ("An error occurred while resolving packages", "Cannot find package")
+1. Check the internet connection and that you are signed in to Unity Hub.
+2. Quit Unity. Delete the folder `UnityProject/Library` (it is only a cache and is rebuilt). Open the project again.
+3. If one package keeps failing, send `Editor.log` (see above) and the text of the error. As a workaround the team
+   may ask you to open **Window > Package Manager**, select that package, and click **Update** to the version Unity
+   suggests.
+
+### Everything is pink (or black) when playing
+Pink means the graphics settings and the materials do not match.
+1. Check **Edit > Project Settings > Graphics**: **Default Render Pipeline** should say **URP-Mobile**.
+   If it is empty, run **JungleBooze > Setup > Run Project Setup**, then press Play again.
+2. Still pink: use **JungleBooze > Setup > Fallback: Use Built-in Renderer** and press Play. Tell the team which of
+   the two worked and send `Editor.log`.
+
+### The input restart prompt, or keyboard does nothing
+- If Unity asks to enable the input backends or to restart: answer **Yes / Restart now**.
+- If you clicked No: **Edit > Project Settings > Player > Other Settings > Active Input Handling** > **Both**, then
+  let Unity restart.
+- Keys do nothing while playing: click once inside the Game view (it needs focus), then try again.
+
+### The setup dialog never appeared
+Run **JungleBooze > Setup > Run Project Setup** from the menu bar. If the **JungleBooze** menu is missing, the code
+did not compile: see "Compile errors".
+
+### Pressing Play shows an empty or blue screen and nothing happens
+Make sure the **Run** scene is open (Step 5.1). Then look in the Console for red errors and send them with
+`Editor.log`.
+
+### Xcode problems
+- "Signing for Unity-iPhone requires a development team": pick your Personal Team (Step C.3).
+- "Failed to register bundle identifier": change the bundle identifier as in Step C.3.
+- "Could not launch ... Untrusted Developer": trust the developer on the phone (Step C.6).
+- "Developer Mode disabled": Step A.2.
+- Build errors in Xcode: copy the red error lines (or use Xcode's **Report navigator**, last build, "Export") and send
+  them to the team.

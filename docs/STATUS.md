@@ -19,13 +19,15 @@ _Last updated: 2026-10-07_
 6. Optionally build to their iPhone via Xcode with a free Apple ID (steps in the same doc).
 Not in FP1 (comes right after): vine swinging, Duko, power-ups, menus/shop, real art, audio.
 
+**Notes for stage C:** the Run scene is empty, so the runtime bootstrap creates the portrait camera and a directional light and only acts in the scene named "Run". Don't use `Shader.Find`; clone the material from `GameObject.CreatePrimitive` and set `.color`. Prefer `InputSystemUIInputModule`. Warnings are errors. Replace the placeholder controls table in `docs/PLAY_FIRST_BUILD.md`.
+
 **FP1 plan (stages; tick as they land):**
 - [ ] A1 gameplay-engineer: movement simulation (spec 001 minus collisions) + EditMode tests
 - [ ] A2 game-designer: spec 002 (track, obstacles, coins)
 - [ ] A3 balance-simulator: Python reference model of spec 001 + golden traces (the only code we can execute here)
 - [ ] B gameplay-engineer: collisions + track/obstacles/coins simulation (specs 001 + 002) + tests
 - [ ] C gameplay/ui-engineer: Unity presentation layer: auto-built scene, gray-box views, camera, input adapter, HUD, game over/restart, default config assets
-- [ ] D tech-architect: minimal ProjectSettings + `docs/PLAY_FIRST_BUILD.md` (Mac setup, play, run tests, build to iPhone)
+- [x] D tech-architect: first-open bootstrap (`Assets/_Game/Editor/Setup/ProjectBootstrap.cs`, ADR 0003) + `docs/PLAY_FIRST_BUILD.md`
 - [ ] E code-reviewer: compile-correctness and logic review of everything; fixes applied
 - [ ] F qa-engineer: test plan + owner play-test script
 
@@ -39,7 +41,7 @@ and commit after every agent report.
 | producer | not used yet | (the coordinating session does this role for now) | this file | — |
 | game-designer | **working** | FP1 stage A2: spec 002 track, obstacles, coins (Jungle chunk library) | `docs/specs/002-track-obstacles-coins.md` | Spec 003: vine swinging |
 | balance-simulator | **working** | FP1 stage A3: Python reference model of spec 001, unit tests, S1–S9 report, golden traces | `tools/sim/`, `docs/sim-reports/` | Fairness fuzzing for spec 002 |
-| tech-architect | **working** | FP1 stage D: first-open bootstrap (editor setup script, ADR 0003), package check, `docs/PLAY_FIRST_BUILD.md` | `Scripts/Editor/Setup/`, `docs/adr/0003-*`, `docs/PLAY_FIRST_BUILD.md` | Roslyn analyzers |
+| tech-architect | done (stage D) | First-open bootstrap: URP mobile asset, input set to Both, iOS basics (placeholder bundle id `com.pistaduko.junglerunner`, iOS 15, portrait), empty Run scene in build list; Mac play guide | `Assets/_Game/Editor/Setup/`, `docs/adr/0003-first-playable-bootstrap.md`, `docs/PLAY_FIRST_BUILD.md` | Add EditMode tests for `ProjectSetupRules`; Roslyn analyzers |
 | gameplay-engineer | **working** | FP1 stage A1: movement simulation (spec 001 minus collisions) + EditMode tests | `Scripts/Gameplay/Runner/`, `Scripts/Gameplay/Config/`, `Tests/EditMode/Gameplay/` | Stage B: collisions + track/obstacles/coins |
 | ui-engineer | waiting | — | — | Week 4: menus, shop |
 | art-director | done | Style guide and prompts updated with names Pista/Duko and the chest-band sash | `design/STYLE_GUIDE.md`, `design/prompts/` | Generate concept images once an image API key exists |
@@ -75,12 +77,14 @@ If a new session finds an agent marked **working** but no matching output or com
 1. Ads and prices: deferred to week 4 (tracking already decided: none).
 
 ## Assumptions waiting for owner review (`[ASSUMED]`)
+- Placeholder app name "Jungle Runner" and bundle id `com.pistaduko.junglerunner`; minimum iOS 15.0; portrait, iPhone only; URP for FP1 with a built-in fallback menu.
 - Stumble rule: clipping an obstacle's side is a stumble, the second stumble ends the run (spec 001). Judge at G3.
 - Macaw cheer call-out word is "Shiny!" / "Wow!".
 - Portrait only; daily calendar pauses instead of resetting; Assist ("Lift") by double tap; shield doesn't save from chasms.
 - Coins are gold with a turquoise gem center so they read against gold scenery.
 
 ## Not yet verified
+- Stage D bootstrap script: APIs checked by hand against Unity/URP source, not compiled. `-warnaserror+` is on, so any warning breaks the build.
 - Style guide draw-call and triangle estimates (78/120 draws, ~137k/150k tris) need the benchmark scene.
 - Image prompts are untested (no image API key).
 - **Nothing has been compiled.** The cloud container has no Unity or .NET. First real check: opening the project on the owner's Mac, or the GitHub test workflow once the secrets exist.
@@ -89,6 +93,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Log
 Newest first. One line per event.
+- 2026-10-07: Stage D done (tech-architect): bootstrap script, ADR 0003, Mac play guide.
 - 2026-10-07: Launched FP1 stages A1, A2, A3 and D in parallel. Background checkpoint commits every 10 minutes.
 - 2026-10-07: Worker restart wiped uncommitted work; gameplay-engineer, game-designer (spec 002), balance-simulator and qa-engineer were interrupted with nothing saved. Owner set the autonomous First Playable mandate. Restarting in smaller stages.
 - 2026-10-06: Owner set focus on building and testing. Stopped release-engineer (work so far committed). Launched balance-simulator (reference model) and qa-engineer (test plan).

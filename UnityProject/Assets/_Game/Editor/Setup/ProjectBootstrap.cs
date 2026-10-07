@@ -7,6 +7,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
+using Debug = UnityEngine.Debug;
 
 namespace JungleBooze.Editor.Setup
 {
@@ -44,6 +45,7 @@ namespace JungleBooze.Editor.Setup
         private const string MenuBuiltIn = "JungleBooze/Setup/Fallback: Use Built-in Renderer";
         private const string DialogTitle = "JungleBooze project setup";
         private const string UrpPackageFolder = "Packages/com.unity.render-pipelines.universal";
+        private const string AutoRunSessionKey = "JungleBooze.Setup.AutoRunThisSession";
 
         // Values of PlayerSettings.activeInputHandler: 0 = Input Manager (Old), 1 = Input System (New), 2 = Both.
         private const string ActiveInputHandlerProperty = "activeInputHandler";
@@ -57,6 +59,12 @@ namespace JungleBooze.Editor.Setup
             }
 
             if (ProjectSetupRules.ParseMarkerVersion(ReadMarker()) >= SetupVersion)
+            {
+                return;
+            }
+
+            // At most one automatic attempt per editor session, so a failing step does not nag after every compile.
+            if (SessionState.GetBool(AutoRunSessionKey, false))
             {
                 return;
             }
@@ -114,6 +122,7 @@ namespace JungleBooze.Editor.Setup
                 return;
             }
 
+            SessionState.SetBool(AutoRunSessionKey, true);
             Run(true);
         }
 
@@ -207,7 +216,7 @@ namespace JungleBooze.Editor.Setup
 
         private static UnityEngine.Object FindPlayerSettingsObject()
         {
-            PlayerSettings[] loaded = Resources.FindObjectsOfTypeAll<PlayerSettings>();
+            PlayerSettings[] loaded = UnityEngine.Resources.FindObjectsOfTypeAll<PlayerSettings>();
             if (loaded != null && loaded.Length > 0)
             {
                 return loaded[0];
