@@ -244,7 +244,7 @@ namespace JungleBooze.Gameplay.Path
             double lastBreathS = startS;
             double limit = _tuning.ClearingEveryM + ClearingTolerance;
 
-            for (int i = 0; i < count; i++)
+            for (int i = 1; i < count; i++)
             {
                 RouteBeatKind kind = samples[i].Beat;
                 double s = startS + (i * ds);

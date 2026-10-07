@@ -112,10 +112,13 @@ namespace JungleBooze.App
 
             // Spec 003 T3: the route every view places itself on. Straight (identity) unless RouteTuning.DebugRoute is on
             // or, in dev builds, F4 switched the next run to the curved debug route. Rebuilt from the run seed on every BeginRun.
-            RouteTuning routeTuning = RouteTuning.CreateDefault();
+            // Spec 003 T2: RouteTuning.UseGeneratedRoute (default off; dev menu JungleBooze > Route) swaps in the seeded RouteGenerator.
+            RouteTuning routeTuning = RouteTuning.LoadOrDefault();
             var routeSource = new SelectableRouteSource { Curved = routeTuning.DebugRoute };
-            var pathFrame = new PathFrame(routeTuning, routeSource);
-            var pathFrameView = new PathFrameRunView(pathFrame, Debug.isDebugBuild ? routeSource : null);
+            var routeChunks = new SessionRouteChunkSource();
+            bool generatedRoute = routeTuning.UseGeneratedRoute;
+            var pathFrame = new PathFrame(routeTuning, generatedRoute ? (IRouteSource)new RouteGenerator(routeTuning, routeChunks) : routeSource);
+            var pathFrameView = new PathFrameRunView(pathFrame, Debug.isDebugBuild && !generatedRoute ? routeSource : null);
 
             // Camera (portrait follow camera, spec 001 section 10).
             var cameraObject = new GameObject("RunCamera");
@@ -245,6 +248,7 @@ namespace JungleBooze.App
                 presentation.ToSessionTimings(),
                 sessionSeed,
                 startAtMenu ? SessionPhase.Menu : SessionPhase.Ready);
+            routeChunks.Bind(session);
 
             // GDD 15 companion (meter, Lift, call-outs) and GDD 14.4 Continue rules.
             session.RecordDistanceM = save.BestDistanceM;

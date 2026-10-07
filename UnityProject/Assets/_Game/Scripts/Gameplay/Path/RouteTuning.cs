@@ -25,8 +25,8 @@ namespace JungleBooze.Gameplay.Path
         [SerializeField] private float _sampleSpacingM = 1f;
         [SerializeField] private float _behindM = 40f;
 
-        [Tooltip("[ASSUMED] 120, not the spec's 200: the track commits 190 m and the route needs ReadAheadM (70) of notice before it builds.")]
-        [SerializeField] private float _aheadM = 120f;
+        [Tooltip("[ASSUMED] 115, not the spec's 200: the track commits 190 m and the route needs ReadAheadM (70) of notice before it builds (5 m slack).")]
+        [SerializeField] private float _aheadM = 115f;
 
         [Header("Floating origin (section 3.1)")]
         [SerializeField] private bool _floatingOriginEnabled = false;

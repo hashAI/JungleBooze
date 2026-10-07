@@ -10,8 +10,13 @@ namespace JungleBooze.Gameplay.Path
     /// </summary>
     public sealed class SessionRouteChunkSource : IRouteChunkSource
     {
-        private readonly GameSession _session;
         private readonly TrackSimulation _fixedTrack;
+        private GameSession _session;
+
+        /// <summary>No session yet: reports no chunks until <see cref="Bind"/> is called (the session is created after the route).</summary>
+        public SessionRouteChunkSource()
+        {
+        }
 
         public SessionRouteChunkSource(GameSession session)
         {
@@ -23,6 +28,12 @@ namespace JungleBooze.Gameplay.Path
             _fixedTrack = track ?? throw new System.ArgumentNullException(nameof(track));
         }
 
+        /// <summary>Follows the world of <paramref name="session"/> from now on.</summary>
+        public void Bind(GameSession session)
+        {
+            _session = session ?? throw new System.ArgumentNullException(nameof(session));
+        }
+
         private TrackSimulation CurrentTrack
         {
             get
@@ -30,6 +41,11 @@ namespace JungleBooze.Gameplay.Path
                 if (_fixedTrack != null)
                 {
                     return _fixedTrack;
+                }
+
+                if (_session == null)
+                {
+                    return null;
                 }
 
                 var world = _session.World as TrackRunWorld;
