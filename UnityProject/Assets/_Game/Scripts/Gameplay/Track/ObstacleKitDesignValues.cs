@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace JungleBooze.Gameplay.Track
@@ -6,6 +7,7 @@ namespace JungleBooze.Gameplay.Track
     /// <c>ObstacleKit</c> in designer units (spec 002 section 3.2). Hitboxes never differ between worlds.
     /// Field defaults are the spec start values.
     /// </summary>
+    [Serializable]
     public sealed class ObstacleKitDesignValues
     {
         public ObstacleShape LowBarrier = new ObstacleShape(2.04f, 0.6f, 0.0f, 0.8f);

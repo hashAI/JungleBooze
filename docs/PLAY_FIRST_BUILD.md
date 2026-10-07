@@ -120,15 +120,30 @@ If you never saw the setup dialog, run it yourself from the menu bar: **JungleBo
 
 ### Controls
 
-Placeholder: the presentation stage of First Playable (stage C) finalizes this table; the team will update it.
+When you press Play, Pista stands at the start and the screen says **"Swipe or press a key to run"**. Your first
+key press, click or swipe only starts the run; it does not move her.
 
 | Action | Keyboard (editor) | Mouse (editor) | Touch (iPhone) |
 |---|---|---|---|
+| Start the run (from the prompt) | Any movement key, Space or Enter | Click anywhere in the Game view | Tap or swipe |
 | Move one lane left | Left arrow or A | Drag left | Swipe left |
 | Move one lane right | Right arrow or D | Drag right | Swipe right |
 | Jump | Up arrow, W or Space | Drag up | Swipe up |
 | Slide | Down arrow or S | Drag down | Swipe down |
-| Restart after Game Over | (to be confirmed) | Click **Restart** | Tap **Restart** |
+| Pause | P or Esc | Click the **pause** button (top right) | Tap the **pause** button (top right) |
+| Resume (3-2-1 countdown, then the run continues) | P or Esc | Click **Resume** | Tap **Resume** |
+| Game Over: run again on a new track | Space, Enter or R | Click **Run again** | Tap **Run again** |
+| Game Over: run the same track again | T | Click **Same track** | Tap **Same track** |
+| End the run now (testing aid, development builds only) | K | — | — |
+
+Notes:
+- A "drag" means: hold the left mouse button, move quickly (within a quarter second) at least a few millimeters,
+  then let go. Short, quick drags work best, like a swipe on the phone.
+- The Game Over buttons ignore presses for the first 0.4 seconds, so a late swipe cannot restart by accident.
+- The game also pauses by itself when Unity's Game view loses focus (for example when you click another window).
+  Press P or click **Resume** to continue.
+- Until the obstacle stage is merged the track is endless flat ground with nothing to hit, so use **K** to see the
+  Game Over screen.
 
 ## Step 6: Run the automated tests
 

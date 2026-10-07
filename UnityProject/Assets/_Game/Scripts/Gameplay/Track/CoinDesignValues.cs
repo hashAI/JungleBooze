@@ -1,8 +1,10 @@
+using System;
 using System.Collections.Generic;
 
 namespace JungleBooze.Gameplay.Track
 {
     /// <summary><c>CoinTuning</c> in designer units (spec 002 section 3.4). Defaults are the spec start values.</summary>
+    [Serializable]
     public sealed class CoinDesignValues
     {
         public int CoinValue = 1;

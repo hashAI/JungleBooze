@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace JungleBooze.Gameplay.Track
@@ -7,6 +8,7 @@ namespace JungleBooze.Gameplay.Track
     /// tier weights of section 7.3 (from <see cref="JungleChunkLibraryDefaults"/>). Validation that needs the chunk
     /// library and the speed curve happens in <see cref="DifficultyTiersConfig.Build"/>.
     /// </summary>
+    [Serializable]
     public sealed class DifficultyTiersDesignValues
     {
         /// <summary>

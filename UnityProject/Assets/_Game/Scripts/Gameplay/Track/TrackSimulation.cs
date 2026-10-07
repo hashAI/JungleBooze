@@ -1,0 +1,702 @@
+using System;
+using JungleBooze.Core;
+using JungleBooze.Gameplay.Runner;
+
+namespace JungleBooze.Gameplay.Track
+{
+    /// <summary>
+    /// The generated track of one run (spec 002 sections 4.4, 5.5, 6, 8.2 and 8.6): fixed-capacity rings of
+    /// chunks, obstacles and coins, filled ahead of HERO by the <see cref="TrackGenerator"/> and emptied behind him.
+    /// Implements <see cref="ITrackQuery"/> (the spec's <c>ChunkTrackQuery</c>): ground and gaps, obstacle boxes
+    /// (movers at their current position, with the previous position for the relative-motion sweep) and the next
+    /// gap edge. Advanced once per tick by <see cref="Update"/> (step 7a); queries never change state.
+    /// No allocation after construction.
+    /// </summary>
+    public sealed class TrackSimulation : ITrackQuery
+    {
+        /// <summary>Coins one chunk may hold (scratch buffer size).</summary>
+        public const int MaxCoinsPerChunk = 256;
+
+        /// <summary>Tolerance for the mover trigger distance (float tuning against double distances).</summary>
+        private const double MoverTriggerToleranceM = 1e-4;
+
+        private readonly TrackConfig _config;
+        private readonly ObstacleKitConfig _kit;
+        private readonly CoinConfig _coinConfig;
+        private readonly ChunkLibrary _library;
+        private readonly SpeedCurve _curve;
+        private readonly RunnerConfig _runner;
+        private readonly TrackGenerator _generator;
+
+        private readonly FixedRing<ChunkInstance> _chunks;
+        private readonly FixedRing<ObstacleInstance> _obstacles;
+        private readonly FixedRing<CoinInstance> _coins;
+
+        private readonly float[] _scratchX = new float[MaxCoinsPerChunk];
+        private readonly float[] _scratchY = new float[MaxCoinsPerChunk];
+        private readonly double[] _scratchZ = new double[MaxCoinsPerChunk];
+        private readonly int[] _order = new int[MaxCoinsPerChunk];
+
+        private readonly float _halfWidth;
+        private readonly float _laneHalf;
+        private readonly float _moverStepM;
+        private readonly int _moverTicks;
+
+        private int _nextObstacleId;
+        private int _nextCoinId;
+        private int _nextChunkSerial;
+        private double _generatedEndZ;
+        private int _enteredSerial;
+        private int _currentTier;
+        private int _currentChunkIndex;
+        private bool _hasReset;
+
+        public TrackSimulation(
+            TrackConfig config,
+            ObstacleKitConfig kit,
+            CoinConfig coins,
+            ChunkLibrary library,
+            DifficultyTiersConfig tiers,
+            SpeedCurve curve,
+            RunnerConfig runner)
+        {
+            _config = config ?? throw new ArgumentNullException(nameof(config));
+            _kit = kit ?? throw new ArgumentNullException(nameof(kit));
+            _coinConfig = coins ?? throw new ArgumentNullException(nameof(coins));
+            _library = library ?? throw new ArgumentNullException(nameof(library));
+            _curve = curve ?? throw new ArgumentNullException(nameof(curve));
+            _runner = runner ?? throw new ArgumentNullException(nameof(runner));
+            if (runner.LaneCount != LaneMasks.LaneCount)
+            {
+                throw new ArgumentException("The track supports exactly " + LaneMasks.LaneCount + " lanes.", nameof(runner));
+            }
+
+            _generator = new TrackGenerator(config, library, tiers, curve);
+            _chunks = new FixedRing<ChunkInstance>(config.MaxActiveChunks);
+            _obstacles = new FixedRing<ObstacleInstance>(config.MaxActiveObstacles);
+            _coins = new FixedRing<CoinInstance>(config.MaxActiveCoins);
+
+            _halfWidth = runner.PlayerHitboxWidthM * 0.5f;
+            _laneHalf = runner.LaneWidthM * 0.5f;
+            _moverStepM = (float)(kit.MoverLateralSpeedMps * RunnerConfig.TickSeconds);
+            _moverTicks = Math.Max(1, (int)Math.Ceiling(runner.LaneWidthM / (kit.MoverLateralSpeedMps * RunnerConfig.TickSeconds) - 1e-6));
+            _currentChunkIndex = -1;
+        }
+
+        public TrackConfig Config => _config;
+
+        public ObstacleKitConfig Kit => _kit;
+
+        public CoinConfig CoinConfig => _coinConfig;
+
+        public ChunkLibrary Library => _library;
+
+        public RunnerConfig RunnerConfig => _runner;
+
+        public TrackGenerator Generator => _generator;
+
+        /// <summary>End z of the last generated chunk.</summary>
+        public double GeneratedEndZ => _generatedEndZ;
+
+        /// <summary>Tier of the chunk HERO's centre is in (1 before the first tick).</summary>
+        public int CurrentTier => _currentTier;
+
+        /// <summary>Library index of the chunk HERO's centre is in (-1 before the first tick).</summary>
+        public int CurrentChunkIndex => _currentChunkIndex;
+
+        /// <summary>Ticks a mover needs for one lane (30 with the start values).</summary>
+        public int MoverMoveTicks => _moverTicks;
+
+        public int ChunkCount => _chunks.Count;
+
+        public int ObstacleCount => _obstacles.Count;
+
+        public int CoinCount => _coins.Count;
+
+        public int ChunkCapacity => _chunks.Capacity;
+
+        public int ObstacleCapacity => _obstacles.Capacity;
+
+        public int CoinCapacity => _coins.Capacity;
+
+        /// <summary>Highest ring fill levels this run (pool sizing, AC-220).</summary>
+        public int ChunkHighWaterMark => _chunks.HighWaterMark;
+
+        public int ObstacleHighWaterMark => _obstacles.HighWaterMark;
+
+        public int CoinHighWaterMark => _coins.HighWaterMark;
+
+        /// <summary>Items dropped because a ring was full. Non-zero is an error in development builds.</summary>
+        public int ChunkOverflowCount { get; private set; }
+
+        public int ObstacleOverflowCount { get; private set; }
+
+        public int CoinOverflowCount { get; private set; }
+
+        /// <summary>Next obstacle id to be assigned (ids start at 1 each run).</summary>
+        public int NextObstacleId => _nextObstacleId;
+
+        /// <summary>Next coin id to be assigned (ids start at 1 each run).</summary>
+        public int NextCoinId => _nextCoinId;
+
+        /// <summary>Chunks generated this run (serials start at 1).</summary>
+        public int GeneratedChunkCount => _nextChunkSerial - 1;
+
+        /// <summary>Active chunk <paramref name="index"/>, 0 = oldest. Read-only view of the ring.</summary>
+        public ref readonly ChunkInstance GetChunk(int index)
+        {
+            return ref _chunks[index];
+        }
+
+        /// <summary>Active obstacle <paramref name="index"/>, 0 = oldest (lowest id, smallest z).</summary>
+        public ref readonly ObstacleInstance GetObstacle(int index)
+        {
+            return ref _obstacles[index];
+        }
+
+        /// <summary>Active coin <paramref name="index"/>, 0 = oldest (lowest id, smallest z).</summary>
+        public ref readonly CoinInstance GetCoin(int index)
+        {
+            return ref _coins[index];
+        }
+
+        /// <summary>Writable coin access for the coin pickup step (same assembly only).</summary>
+        internal ref CoinInstance CoinAt(int index)
+        {
+            return ref _coins[index];
+        }
+
+        /// <summary>
+        /// Starts a new run: clears every ring, id counter and generator state, then generates the start chunk and
+        /// the chunks after it until <c>generateAheadM</c> is covered (spec 8.2: before tick 0).
+        /// <paramref name="trackStream"/> is the run's forked <see cref="RandomStreamIds.TrackGeneration"/> stream.
+        /// </summary>
+        public void Reset(IRandom trackStream)
+        {
+            _chunks.Clear();
+            _obstacles.Clear();
+            _coins.Clear();
+            _nextObstacleId = 1;
+            _nextCoinId = 1;
+            _nextChunkSerial = 1;
+            _generatedEndZ = 0.0;
+            _enteredSerial = 0;
+            _currentTier = 1;
+            _currentChunkIndex = -1;
+            ChunkOverflowCount = 0;
+            ObstacleOverflowCount = 0;
+            CoinOverflowCount = 0;
+            _generator.Reset(trackStream);
+            _hasReset = true;
+            GenerateAhead(0.0);
+        }
+
+        /// <summary>
+        /// Step 7a (spec 002 section 13.3): generate ahead, despawn behind, mover triggers and motion,
+        /// <c>ChunkEntered</c>/<c>TierChanged</c>. Events go to <paramref name="runner"/>'s event buffer
+        /// (null = no events, for tests). No allocation.
+        /// </summary>
+        public void Update(in RunnerTickInfo info, RunnerSimulation runner)
+        {
+            if (!_hasReset)
+            {
+                throw new InvalidOperationException("Call Reset before the first update.");
+            }
+
+            GenerateAhead(info.Z);
+            DespawnBehind(info.Z);
+            UpdateMovers(info, runner);
+            UpdateEnteredChunks(info, runner);
+        }
+
+        /// <summary>Generates chunks until the generated track reaches <paramref name="heroZ"/> + generateAheadM.</summary>
+        public void GenerateAhead(double heroZ)
+        {
+            double target = heroZ + _config.GenerateAheadM;
+            while (_generatedEndZ < target)
+            {
+                SpawnNextChunk();
+            }
+        }
+
+        /// <summary>Ring position of the active chunk that contains <paramref name="z"/>, or -1.</summary>
+        public int FindChunkAt(double z)
+        {
+            for (int i = _chunks.Count - 1; i >= 0; i--)
+            {
+                ref ChunkInstance c = ref _chunks[i];
+                if (z >= c.StartZ && z < c.EndZ)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        // ---- ITrackQuery ----
+
+        public bool HasGround(float x, double zMin, double zMax)
+        {
+            float xMin = x - _halfWidth;
+            float xMax = x + _halfWidth;
+            for (int i = 0; i < _obstacles.Count; i++)
+            {
+                ref ObstacleInstance o = ref _obstacles[i];
+                if (o.Z > zMax)
+                {
+                    break;
+                }
+
+                if (o.Archetype != ObstacleArchetype.Gap)
+                {
+                    continue;
+                }
+
+                // Ground is missing for z in [near, near + length): the footprint is unsupported only when it lies
+                // entirely inside that range and entirely inside the gap's lanes (partial support counts as ground).
+                if (zMin >= o.Z && zMax < o.Z + o.GapLengthM)
+                {
+                    int lo = LaneMasks.Lowest(o.LaneMask);
+                    int hi = LaneMasks.Highest(o.LaneMask);
+                    float gx0 = lo == 0 ? float.NegativeInfinity : _runner.LaneCenterX(lo) - _laneHalf;
+                    float gx1 = hi == LaneMasks.LaneCount - 1 ? float.PositiveInfinity : _runner.LaneCenterX(hi) + _laneHalf;
+                    if (xMin > gx0 && xMax < gx1)
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        public int GetBoxes(double zMin, double zMax, Span<ObstacleBox> buffer)
+        {
+            int count = 0;
+            for (int i = 0; i < _obstacles.Count; i++)
+            {
+                ref ObstacleInstance o = ref _obstacles[i];
+                if (o.Z > zMax)
+                {
+                    break;
+                }
+
+                if (o.Archetype == ObstacleArchetype.Gap || o.BackZ < zMin)
+                {
+                    continue;
+                }
+
+                ObstacleShape s = _kit.GetShape(o.Archetype);
+                float half = s.WidthM * 0.5f;
+                if (o.Archetype == ObstacleArchetype.Mover)
+                {
+                    if (count >= buffer.Length)
+                    {
+                        return count;
+                    }
+
+                    buffer[count++] = new ObstacleBox
+                    {
+                        Id = o.Id,
+                        Archetype = o.Archetype,
+                        Lane = o.FromLane,
+                        XMin = o.MoverX - half,
+                        XMax = o.MoverX + half,
+                        XMinPrev = o.MoverXPrev - half,
+                        XMaxPrev = o.MoverXPrev + half,
+                        YMin = s.BottomM,
+                        YMax = s.TopM,
+                        ZMin = o.Z,
+                        ZMax = o.BackZ,
+                    };
+                    continue;
+                }
+
+                for (int lane = 0; lane < LaneMasks.LaneCount; lane++)
+                {
+                    if (!LaneMasks.Contains(o.LaneMask, lane))
+                    {
+                        continue;
+                    }
+
+                    if (count >= buffer.Length)
+                    {
+                        return count;
+                    }
+
+                    float cx = _runner.LaneCenterX(lane);
+                    buffer[count++] = ObstacleBox.Static(o.Id, o.Archetype, (byte)lane, cx - half, cx + half, s.BottomM, s.TopM, o.Z, o.BackZ);
+                }
+            }
+
+            return count;
+        }
+
+        public bool TryGetNextGapEdge(int lane, double fromZ, out double nearEdge, out float length)
+        {
+            for (int i = 0; i < _obstacles.Count; i++)
+            {
+                ref ObstacleInstance o = ref _obstacles[i];
+                if (o.Archetype != ObstacleArchetype.Gap || o.Z < fromZ || !LaneMasks.Contains(o.LaneMask, lane))
+                {
+                    continue;
+                }
+
+                nearEdge = o.Z;
+                length = o.GapLengthM;
+                return true;
+            }
+
+            nearEdge = 0.0;
+            length = 0f;
+            return false;
+        }
+
+        /// <summary>
+        /// Stable hash of the whole track state: rings, id counters, generator (AC-242, AC-247). Allocation-free.
+        /// </summary>
+        public ulong ComputeStateHash()
+        {
+            ulong h = StableHash.Seed;
+            h = StableHash.Mix(h, _nextObstacleId);
+            h = StableHash.Mix(h, _nextCoinId);
+            h = StableHash.Mix(h, _nextChunkSerial);
+            h = StableHash.Mix(h, _generatedEndZ);
+            h = StableHash.Mix(h, _enteredSerial);
+            h = StableHash.Mix(h, _currentTier);
+            h = StableHash.Mix(h, _currentChunkIndex);
+            h = _generator.ComputeStateHash(h);
+            h = StableHash.Mix(h, _chunks.Count);
+            for (int i = 0; i < _chunks.Count; i++)
+            {
+                ref ChunkInstance c = ref _chunks[i];
+                h = StableHash.Mix(h, c.Serial);
+                h = StableHash.Mix(h, c.ChunkIndex);
+                h = StableHash.Mix(h, c.Mirrored);
+                h = StableHash.Mix(h, c.StartZ);
+                h = StableHash.Mix(h, (int)c.Tier);
+                h = StableHash.Mix(h, c.IsSeamFallback);
+            }
+
+            h = StableHash.Mix(h, _obstacles.Count);
+            for (int i = 0; i < _obstacles.Count; i++)
+            {
+                ref ObstacleInstance o = ref _obstacles[i];
+                h = StableHash.Mix(h, o.Id);
+                h = StableHash.Mix(h, (int)o.Archetype);
+                h = StableHash.Mix(h, (int)o.LaneMask);
+                h = StableHash.Mix(h, o.Z);
+                h = StableHash.Mix(h, (int)o.Phase);
+                h = StableHash.Mix(h, o.MoverX);
+                h = StableHash.Mix(h, o.MoverXPrev);
+                h = StableHash.Mix(h, o.MoverTicks);
+            }
+
+            h = StableHash.Mix(h, _coins.Count);
+            for (int i = 0; i < _coins.Count; i++)
+            {
+                h = MixCoin(h, _coins[i]);
+            }
+
+            return h;
+        }
+
+        /// <summary>Hash of the coin layout only (positions and ids of every active coin), for determinism tests.</summary>
+        public ulong ComputeCoinLayoutHash(ulong h)
+        {
+            for (int i = 0; i < _coins.Count; i++)
+            {
+                ref CoinInstance c = ref _coins[i];
+                h = StableHash.Mix(h, c.Id);
+                h = StableHash.Mix(h, c.X);
+                h = StableHash.Mix(h, c.Y);
+                h = StableHash.Mix(h, c.Z);
+            }
+
+            return h;
+        }
+
+        private static ulong MixCoin(ulong h, in CoinInstance c)
+        {
+            h = StableHash.Mix(h, c.Id);
+            h = StableHash.Mix(h, c.X);
+            h = StableHash.Mix(h, c.Y);
+            h = StableHash.Mix(h, c.Z);
+            h = StableHash.Mix(h, c.Collected);
+            return StableHash.Mix(h, c.Resolved);
+        }
+
+        // ---- Generation ----
+
+        private void SpawnNextChunk()
+        {
+            double startZ = _generatedEndZ;
+            ChunkPick pick = _generator.NextChunk(startZ);
+            ChunkData data = _library[pick.ChunkIndex];
+            int serial = _nextChunkSerial++;
+
+            var chunk = new ChunkInstance
+            {
+                Serial = serial,
+                ChunkIndex = pick.ChunkIndex,
+                Mirrored = pick.Mirrored,
+                Kind = data.Kind,
+                StartZ = startZ,
+                LengthM = data.LengthM,
+                Tier = (byte)pick.Tier,
+                IsSeamFallback = pick.IsSeamFallback,
+            };
+
+            chunk.FirstObstacleId = data.ObstacleCount > 0 ? _nextObstacleId : 0;
+            chunk.ObstacleCount = data.ObstacleCount;
+            for (int i = 0; i < data.ObstacleCount; i++)
+            {
+                ObstaclePlacement p = data.GetObstacle(i);
+                if (pick.Mirrored)
+                {
+                    p = p.Mirrored();
+                }
+
+                AddObstacle(p, startZ, serial);
+            }
+
+            int n = 0;
+            for (int i = 0; i < data.CoinPatternCount; i++)
+            {
+                CoinPattern pattern = data.GetCoinPattern(i);
+                if (pick.Mirrored)
+                {
+                    pattern = pattern.Mirrored();
+                }
+
+                double arcSpeed = _curve.Evaluate(startZ + pattern.ZCenter);
+                n += CoinLayout.Generate(pattern, startZ, arcSpeed, _coinConfig, _runner, _scratchX, _scratchY, _scratchZ, n);
+            }
+
+            SortScratchByZ(n);
+            chunk.FirstCoinId = n > 0 ? _nextCoinId : 0;
+            chunk.CoinCount = n;
+            for (int k = 0; k < n; k++)
+            {
+                int s = _order[k];
+                AddCoin(_scratchX[s], _scratchY[s], _scratchZ[s], serial);
+            }
+
+            if (!_chunks.TryAdd(chunk))
+            {
+                ChunkOverflowCount++;
+            }
+
+            _generatedEndZ = startZ + data.LengthM;
+        }
+
+        private void AddObstacle(in ObstaclePlacement p, double startZ, int serial)
+        {
+            var o = new ObstacleInstance
+            {
+                Id = _nextObstacleId++,
+                Archetype = p.Archetype,
+                LaneMask = p.LaneMask,
+                Z = startZ + p.Zc,
+                ChunkSerial = serial,
+                Phase = MoverPhase.Idle,
+            };
+
+            if (p.Archetype == ObstacleArchetype.Gap)
+            {
+                o.GapLengthM = p.GapLengthM;
+                o.DepthM = p.GapLengthM;
+                o.FromLane = (byte)LaneMasks.Lowest(p.LaneMask);
+                o.ToLane = (byte)LaneMasks.Highest(p.LaneMask);
+            }
+            else if (p.Archetype == ObstacleArchetype.Mover)
+            {
+                int from = LaneMasks.Lowest(p.LaneMask);
+                o.DepthM = _kit.Mover.DepthM;
+                o.FromLane = (byte)from;
+                o.ToLane = (byte)p.MoverToLane;
+                o.MoverX = _runner.LaneCenterX(from);
+                o.MoverXPrev = o.MoverX;
+            }
+            else
+            {
+                o.DepthM = _kit.GetShape(p.Archetype).DepthM;
+                o.FromLane = (byte)LaneMasks.Lowest(p.LaneMask);
+                o.ToLane = (byte)LaneMasks.Highest(p.LaneMask);
+            }
+
+            if (!_obstacles.TryAdd(o))
+            {
+                ObstacleOverflowCount++;
+            }
+        }
+
+        private void AddCoin(float x, float y, double z, int serial)
+        {
+            var c = new CoinInstance
+            {
+                Id = _nextCoinId++,
+                X = x,
+                Y = y,
+                Z = z,
+                Lane = (byte)CoinLayout.NearestLane(x, _runner),
+                ChunkSerial = serial,
+            };
+
+            if (!_coins.TryAdd(c))
+            {
+                CoinOverflowCount++;
+            }
+        }
+
+        /// <summary>Stable insertion sort of the scratch coins by z into <see cref="_order"/>.</summary>
+        private void SortScratchByZ(int n)
+        {
+            for (int i = 0; i < n; i++)
+            {
+                int item = i;
+                int j = i - 1;
+                while (j >= 0 && _scratchZ[_order[j]] > _scratchZ[item])
+                {
+                    _order[j + 1] = _order[j];
+                    j--;
+                }
+
+                _order[j + 1] = item;
+            }
+        }
+
+        // ---- Per-tick update ----
+
+        private void DespawnBehind(double heroZ)
+        {
+            double limit = heroZ - _config.DespawnBehindM;
+            while (_obstacles.Count > 0 && _obstacles[0].BackZ < limit)
+            {
+                _obstacles.RemoveFirst();
+            }
+
+            float coinBack = _coinConfig.CoinVisualRadiusM;
+            while (_coins.Count > 0 && _coins[0].Z + coinBack < limit)
+            {
+                _coins.RemoveFirst();
+            }
+
+            while (_chunks.Count > 0 && _chunks[0].EndZ < limit)
+            {
+                _chunks.RemoveFirst();
+            }
+        }
+
+        private void UpdateMovers(in RunnerTickInfo info, RunnerSimulation runner)
+        {
+            double heroFront = info.FrontZ;
+            double lead = _kit.MoverTriggerLeadS * info.Speed + MoverTriggerToleranceM;
+            for (int i = 0; i < _obstacles.Count; i++)
+            {
+                ref ObstacleInstance o = ref _obstacles[i];
+                if (o.Archetype != ObstacleArchetype.Mover)
+                {
+                    continue;
+                }
+
+                o.MoverXPrev = o.MoverX;
+                switch (o.Phase)
+                {
+                    case MoverPhase.Idle:
+                        if (o.Z - heroFront <= lead)
+                        {
+                            o.Phase = MoverPhase.Moving;
+                            o.MoverTicks = 0;
+                            Emit(runner, new RunnerEvent
+                            {
+                                Type = RunnerEventType.MoverStarted,
+                                Tick = info.Tick,
+                                EntityId = o.Id,
+                                Lane = o.FromLane,
+                                Value = o.ToLane,
+                                Dir = (sbyte)(o.ToLane > o.FromLane ? 1 : -1),
+                                Archetype = (byte)ObstacleArchetype.Mover,
+                            });
+                        }
+
+                        break;
+
+                    case MoverPhase.Moving:
+                        o.MoverTicks++;
+                        float fromX = _runner.LaneCenterX(o.FromLane);
+                        float toX = _runner.LaneCenterX(o.ToLane);
+                        if (o.MoverTicks >= _moverTicks)
+                        {
+                            o.MoverX = toX;
+                            o.Phase = MoverPhase.Settled;
+                            Emit(runner, new RunnerEvent
+                            {
+                                Type = RunnerEventType.MoverSettled,
+                                Tick = info.Tick,
+                                EntityId = o.Id,
+                                Lane = o.ToLane,
+                                Archetype = (byte)ObstacleArchetype.Mover,
+                            });
+                        }
+                        else
+                        {
+                            float dir = toX > fromX ? 1f : -1f;
+                            o.MoverX = fromX + dir * _moverStepM * o.MoverTicks;
+                        }
+
+                        break;
+                }
+            }
+        }
+
+        private void UpdateEnteredChunks(in RunnerTickInfo info, RunnerSimulation runner)
+        {
+            for (int i = 0; i < _chunks.Count; i++)
+            {
+                ref ChunkInstance c = ref _chunks[i];
+                if (c.Serial <= _enteredSerial)
+                {
+                    continue;
+                }
+
+                if (info.Z < c.StartZ)
+                {
+                    break;
+                }
+
+                _enteredSerial = c.Serial;
+                _currentChunkIndex = c.ChunkIndex;
+                Emit(runner, new RunnerEvent
+                {
+                    Type = RunnerEventType.ChunkEntered,
+                    Tick = info.Tick,
+                    EntityId = c.Serial,
+                    Lane = c.Tier,
+                    Value = (short)c.ChunkIndex,
+                    Flags = TrackEventCodes.PackChunkFlags(c.Mirrored, c.Kind),
+                });
+
+                if (c.Tier != _currentTier)
+                {
+                    _currentTier = c.Tier;
+                    Emit(runner, new RunnerEvent
+                    {
+                        Type = RunnerEventType.TierChanged,
+                        Tick = info.Tick,
+                        Value = c.Tier,
+                    });
+                }
+            }
+        }
+
+        private static void Emit(RunnerSimulation runner, in RunnerEvent e)
+        {
+            if (runner != null)
+            {
+                runner.EmitExternal(e);
+            }
+        }
+    }
+}

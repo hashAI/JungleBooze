@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace JungleBooze.Gameplay.Track
@@ -7,6 +8,7 @@ namespace JungleBooze.Gameplay.Track
     /// fields into one of these. Field defaults are the spec start values. The chunk library is passed separately
     /// (it is its own asset).
     /// </summary>
+    [Serializable]
     public sealed class TrackDesignValues
     {
         public float GenerateAheadM = 150f;

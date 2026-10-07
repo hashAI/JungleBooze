@@ -1,8 +1,10 @@
+using System;
 using System.Collections.Generic;
 
 namespace JungleBooze.Gameplay.Track
 {
     /// <summary><c>RunFlowTuning</c> (spec 002 section 3.7). Defaults are the spec start values.</summary>
+    [Serializable]
     public sealed class RunFlowDesignValues
     {
         public bool StartOnFirstInput = true;

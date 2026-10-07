@@ -1,6 +1,9 @@
+using System;
+
 namespace JungleBooze.Gameplay.Track
 {
     /// <summary>One authored row of <c>DifficultyTiers</c> (spec 002 section 3.3). Tier numbers are 1-based by position.</summary>
+    [Serializable]
     public sealed class DifficultyTierDesign
     {
         public float FromM;

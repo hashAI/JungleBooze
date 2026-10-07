@@ -1,8 +1,10 @@
+using System;
 using System.Collections.Generic;
 
 namespace JungleBooze.Gameplay.Track
 {
     /// <summary><c>ScoreTuning</c> (spec 002 section 3.5). Defaults are the spec start values.</summary>
+    [Serializable]
     public sealed class ScoreDesignValues
     {
         public int PointsPerMeter = 1;

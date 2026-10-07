@@ -1,5 +1,6 @@
 using System.Collections;
 using JungleBooze.App;
+using JungleBooze.Core;
 using JungleBooze.Gameplay.Session;
 using JungleBooze.UI.Hud;
 using NUnit.Framework;
@@ -63,7 +64,24 @@ namespace JungleBooze.Tests.PlayMode
             Assert.IsNotNull(light);
             Assert.AreEqual(LightType.Directional, light.type);
 
-            Assert.IsNotNull(FindInScene<HudView>(_scene), "The HUD is created.");
+            HudView hud = FindInScene<HudView>(_scene);
+            Assert.IsNotNull(hud, "The HUD is created.");
+
+            // Ready: HERO waits at the start with the prompt; nothing steps, no pause button (spec 002 12.1).
+            yield return null;
+            yield return null;
+            Assert.AreEqual(SessionPhase.Ready, driver.Session.Phase);
+            Assert.AreEqual(0L, driver.Session.Runner.NextTick);
+            Assert.IsTrue(hud.ReadyPromptVisible);
+            Assert.IsFalse(hud.PauseButtonVisible);
+
+            // The first key only starts the run; it is not passed to the simulation.
+            int startLane = driver.Session.Runner.Current.TargetLane;
+            driver.InputAdapter.InjectCommand(InputCommand.MoveLeft);
+            yield return null;
+            Assert.AreEqual(SessionPhase.Running, driver.Session.Phase);
+            Assert.IsFalse(hud.ReadyPromptVisible);
+            Assert.IsTrue(hud.PauseButtonVisible);
 
             // The loop runs: frames advance the simulation and the camera follows HERO forward.
             for (int i = 0; i < 30; i++)
@@ -71,10 +89,11 @@ namespace JungleBooze.Tests.PlayMode
                 yield return null;
             }
 
+            Assert.AreEqual(startLane, driver.Session.Runner.Current.TargetLane, "The starting key was not a lane change.");
             if (driver.Session.Phase == SessionPhase.Running)
             {
                 Assert.Greater(driver.Session.Runner.NextTick, 0L);
-                Assert.Greater(camera.transform.position.z, -6.5f + (float)driver.Session.DistanceM - 1f);
+                Assert.Greater(camera.transform.position.z, (float)driver.Session.DistanceM - 6.5f - 1f);
             }
         }
 

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace JungleBooze.Gameplay.Track
@@ -7,6 +8,7 @@ namespace JungleBooze.Gameplay.Track
     /// (stage C2); the simulation never reads it. Mutable on purpose like the other design-value classes; views
     /// should treat it as read-only. Defaults are the spec start values and the pool sizes of section 8.6.
     /// </summary>
+    [Serializable]
     public sealed class TrackPresentationConfig
     {
         public float ViewSpawnAheadM = 95f;
