@@ -13,10 +13,17 @@ namespace JungleBooze.App
     /// from the pause menu (Restart or Home) [ASSUMED: coins collected before quitting are kept]. Each record is
     /// written to disk right away. <see cref="RecordIfEnded"/> is called every frame and does not allocate unless
     /// it records.
+    /// A run that is still going can be banked early with <see cref="BankProgress"/> (app sent to the background,
+    /// coins paid for a continue): its coins go into the wallet and the best score is raised, but the run is not
+    /// counted yet. The final record adds only the coins not banked before, so nothing is ever counted twice.
     /// </summary>
     public sealed class RunResultRecorder
     {
         private int _recordedRunNumber;
+        private int _bankedRunNumber;
+        private int _bankedCoins;
+        private bool _savePending;
+        private long _bestBeforeBank;
         private MetaProgress _meta;
         private RunEventCounter _counter;
 
@@ -45,7 +52,18 @@ namespace JungleBooze.App
                 return false;
             }
 
-            return Record(session);
+            // The write waits one frame (FlushPending) so the Game Over frame does not stall on the disk.
+            return Record(session, true);
+        }
+
+        /// <summary>Writes a save that was held back by the last Game Over record. Call once per frame, first thing.</summary>
+        public void FlushPending()
+        {
+            if (_savePending)
+            {
+                _savePending = false;
+                Save.SaveIfDirty();
+            }
         }
 
         /// <summary>
@@ -60,10 +78,55 @@ namespace JungleBooze.App
                 return false;
             }
 
-            return Record(session);
+            return Record(session, false);
         }
 
-        private bool Record(GameSession session)
+        /// <summary>Coins of the current run that are not in the wallet yet (0 once the run is recorded).</summary>
+        public int UnbankedCoins(GameSession session)
+        {
+            if (session == null || _recordedRunNumber == session.RunNumber)
+            {
+                return 0;
+            }
+
+            int coins = session.Coins - (_bankedRunNumber == session.RunNumber ? _bankedCoins : 0);
+            return coins > 0 ? coins : 0;
+        }
+
+        /// <summary>
+        /// Banks a run in progress: coins into the wallet, best score raised, written to disk. Does not count the run
+        /// and may be called again; a run at the Ready prompt, behind the menu or already recorded is ignored.
+        /// Returns true if it banked.
+        /// </summary>
+        public bool BankProgress(GameSession session)
+        {
+            SessionPhase phase = session.Phase;
+            if (phase == SessionPhase.Ready || phase == SessionPhase.Menu || _recordedRunNumber == session.RunNumber)
+            {
+                return false;
+            }
+
+            if (_bankedRunNumber != session.RunNumber)
+            {
+                _bankedRunNumber = session.RunNumber;
+                _bankedCoins = 0;
+                _bestBeforeBank = Save.BestScore;
+            }
+
+            int coins = session.Coins;
+            int delta = coins - _bankedCoins;
+            double distance = session.DistanceM;
+            Save.BankRunProgress(session.Score, distance > 0.0 ? (long)distance : 0L, delta > 0 ? delta : 0);
+            if (coins > _bankedCoins)
+            {
+                _bankedCoins = coins;
+            }
+
+            Save.Save();
+            return true;
+        }
+
+        private bool Record(GameSession session, bool deferSave)
         {
             if (_recordedRunNumber == session.RunNumber)
             {
@@ -72,9 +135,24 @@ namespace JungleBooze.App
 
             _recordedRunNumber = session.RunNumber;
             double distance = session.DistanceM;
-            Save.RecordRun(session.Score, distance > 0.0 ? (long)distance : 0L, session.Coins);
+            bool banked = _bankedRunNumber == session.RunNumber;
+            Save.RecordRun(
+                session.Score,
+                distance > 0.0 ? (long)distance : 0L,
+                session.Coins,
+                banked ? _bankedCoins : 0,
+                banked ? _bestBeforeBank : -1L);
             _meta?.ApplyRun(BuildStats(session));
-            Save.Save();
+            if (deferSave)
+            {
+                _savePending = true;
+            }
+            else
+            {
+                _savePending = false;
+                Save.Save();
+            }
+
             return true;
         }
 

@@ -138,7 +138,7 @@ namespace JungleBooze.Gameplay.Track
             PowerUps.Reset();
             PowerUps.Bind(Track);
             Scoring.Reset();
-            Runner = new RunnerSimulation(_runnerConfig, _curve, Track, null, _setup.Vines)
+            Runner = new RunnerSimulation(_runnerConfig, _curve, Track, null, _setup.Vines, _setup.Track.EventBufferCapacity)
             {
                 StepHooks = this,
                 ContactHooks = PowerUps,

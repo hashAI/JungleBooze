@@ -43,6 +43,7 @@ namespace JungleBooze.Gameplay.Views
         private const float ModelFlapBobM = 0.04f;
         private const float ModelPoseSmoothSeconds = 0.1f;
         private const float ModelClipBlendSeconds = 0.12f;
+        private const float ClipWeightSnapEpsilon = 0.001f;
 
         /// <summary>
         /// Facing fix for the imported Duko model, in degrees about Y (default 0). If he flies backward or sideways in
@@ -223,6 +224,12 @@ namespace JungleBooze.Gameplay.Views
                 }
 
                 _clipWeights[i] += ((i == active ? 1f : 0f) - _clipWeights[i]) * k;
+                if (_clipWeights[i] < ClipWeightSnapEpsilon)
+                {
+                    // A clip that is blended out costs nothing once its weight is exactly zero.
+                    _clipWeights[i] = 0f;
+                }
+
                 _mixer.SetInputWeight(i, _clipWeights[i]);
             }
 

@@ -90,6 +90,16 @@ namespace JungleBooze.Gameplay.Views
         private float _time;
         private TrackRunWorld _world;
 
+        /// <summary>
+        /// Reduce Motion (from the save, live): no speed lines and no shard bursts. Starts from the config's value
+        /// and is overridden by the bootstrap with the save's setting.
+        /// </summary>
+        public bool ReduceMotion
+        {
+            get => _reduceMotion;
+            set => _reduceMotion = value;
+        }
+
         public void Init(GrayBoxKit kit, RunnerConfig runnerConfig, RunnerPresentationConfig presentation, float viewDistanceM)
         {
             _runnerConfig = runnerConfig;
@@ -497,6 +507,12 @@ namespace JungleBooze.Gameplay.Views
 
         private void SpawnPendingShards(Vector3 hero)
         {
+            if (_reduceMotion)
+            {
+                _pendingCount = 0;
+                return;
+            }
+
             for (int p = 0; p < _pendingCount; p++)
             {
                 bool shield = _pendingShield[p];

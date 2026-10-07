@@ -172,7 +172,8 @@ namespace JungleBooze.Gameplay.Runner
             SpeedCurve speedCurve,
             ITrackQuery track = null,
             IHeadroomQuery headroom = null,
-            VineConfig vines = null)
+            VineConfig vines = null,
+            int minEventBufferCapacity = 0)
         {
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _curve = speedCurve ?? throw new ArgumentNullException(nameof(speedCurve));
@@ -180,7 +181,8 @@ namespace JungleBooze.Gameplay.Runner
 
             // Null = derive headroom from the track's obstacle boxes (spec 001 6.4.5). Tests may override it.
             _headroom = headroom;
-            _events = new RunnerEventBuffer(config.EventBufferCapacity);
+            // The track world asks for its larger buffer so Died/Landed/Vine events are never lost in a busy frame.
+            _events = new RunnerEventBuffer(Math.Max(config.EventBufferCapacity, minEventBufferCapacity));
             _vines = vines ?? VineConfig.CreateDefault();
             _vineTrack = _track as IVineTrackQuery;
             _fallGravity = config.GravityMps2;

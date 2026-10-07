@@ -33,6 +33,8 @@ namespace JungleBooze.Gameplay.Session
         private double _gameOverElapsed;
         private double _continueElapsed;
         private double _bestBeforeRun;
+        private double _bestBeforeDeath;
+        private bool _lastRunWasBestBeforeDeath;
 
         public GameSession(
             RunnerConfig config,
@@ -238,6 +240,10 @@ namespace JungleBooze.Gameplay.Session
                 return false;
             }
 
+            // The death never happened: drop its event (views must not play it) and its session best.
+            Runner.Events.RemoveAll(RunnerEventType.Died);
+            BestDistanceM = _bestBeforeDeath;
+            LastRunWasBest = _lastRunWasBestBeforeDeath;
             Companion?.OnRevived();
             _deathElapsed = 0.0;
             _time.ClearAccumulator();
@@ -467,6 +473,8 @@ namespace JungleBooze.Gameplay.Session
         {
             _deathElapsed = 0.0;
             double distance = DistanceM;
+            _bestBeforeDeath = BestDistanceM;
+            _lastRunWasBestBeforeDeath = LastRunWasBest;
 
             // Against the best before this run, so a second death after a Continue is judged the same way.
             LastRunWasBest = distance > _bestBeforeRun;

@@ -12,7 +12,7 @@ namespace JungleBooze.Gameplay.Tutorial
     /// swipe down; a coin trail; the first vine; the Assist), slowing the game to 30% until the player acts. A death
     /// is undone at once (<see cref="GameSession.RescueInTutorial"/>) with a gentle hint. Runs at the tutorial speed
     /// until it ends with "You're on your own!". Skippable once it has been completed before (replay from Settings).
-    /// Plain C#: the run driver applies <see cref="TimeScale"/> and calls <see cref="TryTakeRescue"/>; the UI reads
+    /// Plain C#: the run driver applies <see cref="TimeScale"/> and checks <see cref="WantsRescue"/>; the UI reads
     /// <see cref="Hint"/> and <see cref="Gesture"/>. No allocations per frame.
     /// </summary>
     public sealed class TutorialDirector : IRunView
@@ -29,9 +29,6 @@ namespace JungleBooze.Gameplay.Tutorial
         private bool _actionSeen;
         private bool _doneSeen;
         private bool _vineGrabbed;
-        private bool _rescuePending;
-        private DeathCause _rescueCause;
-        private ObstacleArchetype _rescueArchetype;
 
         /// <summary>Raised once when the tutorial ends by finishing or by Skip (not when a run is abandoned).</summary>
         public event Action Finished;
@@ -111,20 +108,14 @@ namespace JungleBooze.Gameplay.Tutorial
             }
         }
 
-        /// <summary>True once after a death that should be undone; the driver then calls the session's rescue.</summary>
-        public bool TryTakeRescue()
-        {
-            if (!Active || !_rescuePending)
-            {
-                return false;
-            }
-
-            _rescuePending = false;
-            return true;
-        }
+        /// <summary>
+        /// True while a death must be undone at once (GDD 12). The driver checks it right after the frame's steps,
+        /// before the events go to the views, so the Died event never plays.
+        /// </summary>
+        public bool WantsRescue => Active;
 
         /// <summary>The driver undid the death: show the gentle hint for what killed HERO and go on.</summary>
-        public void OnRescued()
+        public void OnRescued(DeathCause cause, ObstacleArchetype archetype)
         {
             if (!Active)
             {
@@ -132,19 +123,19 @@ namespace JungleBooze.Gameplay.Tutorial
             }
 
             TutorialHint hint = TutorialHint.RescueLateral;
-            if (_rescueCause == DeathCause.Fell)
+            if (cause == DeathCause.Fell)
             {
                 hint = TutorialHint.RescueJump;
             }
-            else if (_rescueCause == DeathCause.MissedVine)
+            else if (cause == DeathCause.MissedVine)
             {
                 hint = TutorialHint.RescueVine;
             }
-            else if (_rescueArchetype == ObstacleArchetype.LowBarrier)
+            else if (archetype == ObstacleArchetype.LowBarrier)
             {
                 hint = TutorialHint.RescueJump;
             }
-            else if (_rescueArchetype == ObstacleArchetype.HighBarrier)
+            else if (archetype == ObstacleArchetype.HighBarrier)
             {
                 hint = TutorialHint.RescueSlide;
             }
@@ -173,12 +164,6 @@ namespace JungleBooze.Gameplay.Tutorial
 
             switch (e.Type)
             {
-                case RunnerEventType.Died:
-                    _rescuePending = true;
-                    _rescueCause = (DeathCause)e.Value;
-                    _rescueArchetype = (ObstacleArchetype)e.Archetype;
-                    break;
-
                 case RunnerEventType.LaneChangeStarted:
                     if (Hint == TutorialHint.Lateral && !_actionSeen)
                     {
@@ -555,9 +540,6 @@ namespace JungleBooze.Gameplay.Tutorial
             _actionSeen = false;
             _doneSeen = false;
             _vineGrabbed = false;
-            _rescuePending = false;
-            _rescueCause = DeathCause.None;
-            _rescueArchetype = ObstacleArchetype.None;
             _lessonBackZ = 0.0;
             _lessonVineZ = 0.0;
             _hintEndTick = 0L;

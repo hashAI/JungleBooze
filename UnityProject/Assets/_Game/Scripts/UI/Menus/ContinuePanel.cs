@@ -117,7 +117,7 @@ namespace JungleBooze.UI.Menus
             }
 
             _priceCoin.SetActive(!free);
-            long coins = save != null ? save.TotalCoins : 0L;
+            long coins = commands.ContinueCoinsAvailable;
             _wallet.text = MenuStrings.ContinueWallet + ": " + coins.ToString(CultureInfo.InvariantCulture);
             _shownSeconds = -1;
             _shownBar = -1f;

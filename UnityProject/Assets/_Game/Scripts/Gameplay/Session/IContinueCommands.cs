@@ -9,8 +9,14 @@ namespace JungleBooze.Gameplay.Session
         /// <summary>Coin price of the next continue in this run.</summary>
         int NextContinueCost { get; }
 
-        /// <summary>The wallet holds enough coins for <see cref="NextContinueCost"/>.</summary>
+        /// <summary>
+        /// The wallet plus the coins collected in this run hold enough for <see cref="NextContinueCost"/>
+        /// (owner decision: current-run coins count).
+        /// </summary>
         bool CanAffordContinue { get; }
+
+        /// <summary>Coins the player can spend on a continue now: the wallet plus this run's coins not banked yet.</summary>
+        long ContinueCoinsAvailable { get; }
 
         /// <summary>Continue with the free first-session continue if it is offered, otherwise by paying coins.</summary>
         bool ContinueRun();

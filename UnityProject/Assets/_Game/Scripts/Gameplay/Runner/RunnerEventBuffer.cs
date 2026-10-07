@@ -58,6 +58,31 @@ namespace JungleBooze.Gameplay.Runner
             Count++;
         }
 
+        /// <summary>
+        /// Drops every unread event of <paramref name="type"/>, keeping the order of the rest (the tutorial rescue
+        /// removes the Died event of an undone death). Returns how many were dropped. No allocations.
+        /// </summary>
+        public int RemoveAll(RunnerEventType type)
+        {
+            int length = _items.Length;
+            int kept = 0;
+            for (int i = 0; i < Count; i++)
+            {
+                RunnerEvent item = _items[(_start + i) % length];
+                if (item.Type == type)
+                {
+                    continue;
+                }
+
+                _items[(_start + kept) % length] = item;
+                kept++;
+            }
+
+            int removed = Count - kept;
+            Count = kept;
+            return removed;
+        }
+
         /// <summary>Marks every event as read.</summary>
         public void Clear()
         {

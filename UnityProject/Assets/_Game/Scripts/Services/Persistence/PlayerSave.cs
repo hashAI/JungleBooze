@@ -274,10 +274,38 @@ namespace JungleBooze.Services.Persistence
         }
 
         /// <summary>
+        /// Banks a run that is still going (app sent to the background, or coins spent on a continue): adds
+        /// <paramref name="coins"/> to the wallet and raises the best score and distance. Does not count the run;
+        /// <see cref="RecordRun"/> does that later. Does not write; call <see cref="Save"/> after.
+        /// </summary>
+        public void BankRunProgress(long score, long distanceM, int coins)
+        {
+            if (score > _data.bestScore)
+            {
+                _data.bestScore = score;
+            }
+
+            if (distanceM > _data.bestDistanceM)
+            {
+                _data.bestDistanceM = distanceM;
+            }
+
+            if (coins > 0)
+            {
+                _data.totalCoins = _data.totalCoins > long.MaxValue - coins ? long.MaxValue : _data.totalCoins + coins;
+            }
+
+            _dirty = true;
+        }
+
+        /// <summary>
         /// Records one finished (or abandoned) run: adds its coins to the wallet, updates the best score and
         /// distance, counts the run. Does not write; call <see cref="Save"/> after.
+        /// <paramref name="coinsAlreadyBanked"/>: coins of this run already added by <see cref="BankRunProgress"/>
+        /// (only the rest is added). <paramref name="bestScoreBeforeRun"/>: the best score before the run's first
+        /// banking, for the "new best" stamp; negative = use the current best.
         /// </summary>
-        public RunRecord RecordRun(long score, long distanceM, int coins)
+        public RunRecord RecordRun(long score, long distanceM, int coins, int coinsAlreadyBanked = 0, long bestScoreBeforeRun = -1L)
         {
             if (score < 0L)
             {
@@ -294,7 +322,7 @@ namespace JungleBooze.Services.Persistence
                 coins = 0;
             }
 
-            long previousBest = _data.bestScore;
+            long previousBest = bestScoreBeforeRun >= 0L ? bestScoreBeforeRun : _data.bestScore;
             if (score > _data.bestScore)
             {
                 _data.bestScore = score;
@@ -305,7 +333,12 @@ namespace JungleBooze.Services.Persistence
                 _data.bestDistanceM = distanceM;
             }
 
-            _data.totalCoins = _data.totalCoins > long.MaxValue - coins ? long.MaxValue : _data.totalCoins + coins;
+            int toAdd = coins - (coinsAlreadyBanked > 0 ? coinsAlreadyBanked : 0);
+            if (toAdd > 0)
+            {
+                _data.totalCoins = _data.totalCoins > long.MaxValue - toAdd ? long.MaxValue : _data.totalCoins + toAdd;
+            }
+
             if (_data.runsPlayed < int.MaxValue)
             {
                 _data.runsPlayed++;

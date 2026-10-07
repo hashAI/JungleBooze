@@ -8,7 +8,8 @@ namespace JungleBooze.Gameplay.Controls
     /// GDD 5.1). Plain C#, real time, no allocations.
     /// <list type="bullet">
     /// <item>A swipe is recognized on the sample where the pointer is at least the threshold away from its start
-    /// point, if that sample is within the swipe window of the touch-down.</item>
+    /// point, if that sample is within the swipe window of that point. The window rolls: when it expires without a
+    /// swipe, the start point moves to the current sample, so slow movement never blocks a later quick swipe.</item>
     /// <item>Direction = dominant axis; an exact tie goes horizontal (configurable).</item>
     /// <item>After a swipe, the same touch re-arms: the next swipe needs the re-arm distance from the point where
     /// the last one was recognized, in a new direction. Dragging on in the same direction moves that point along.
@@ -67,19 +68,23 @@ namespace JungleBooze.Gameplay.Controls
                 return InputCommand.None;
             }
 
+            bool rearmed = _lastSwipe != InputCommand.None;
+            if (!rearmed && timeSeconds - _originTime > _windowSeconds + TimeEpsilon)
+            {
+                // Rolling window: a touch that has gone on longer than the swipe window starts measuring again from
+                // here, so a slow drag followed by a quick flick still swipes (the flick is judged on its own).
+                _originX = xPt;
+                _originY = yPt;
+                _originTime = timeSeconds;
+                return InputCommand.None;
+            }
+
             float dx = xPt - _originX;
             float dy = yPt - _originY;
-            bool rearmed = _lastSwipe != InputCommand.None;
             float needed = rearmed ? _rearmPt : _thresholdPt;
 
             if (dx * dx + dy * dy < needed * needed)
             {
-                return InputCommand.None;
-            }
-
-            if (!rearmed && timeSeconds - _originTime > _windowSeconds + TimeEpsilon)
-            {
-                // Too slow for the first swipe of this touch (GDD 5.1). The touch stays tracked but never swipes.
                 return InputCommand.None;
             }
 

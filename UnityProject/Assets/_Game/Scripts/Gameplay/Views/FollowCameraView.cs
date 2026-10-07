@@ -29,6 +29,12 @@ namespace JungleBooze.Gameplay.Views
 
         public Camera Camera => _camera;
 
+        /// <summary>
+        /// Reduce Motion (from the save, live): no stumble shake, no swing tilt and no FOV swing. Starts from the
+        /// config's value; the bootstrap overrides it with the save's setting. The shared config asset is never written.
+        /// </summary>
+        public bool ReduceMotion { get; set; }
+
         /// <summary>Smoothed lateral follow value (tests: AC-56).</summary>
         public float FollowX => _camX;
 
@@ -36,6 +42,7 @@ namespace JungleBooze.Gameplay.Views
         {
             _camera = targetCamera;
             _config = config;
+            ReduceMotion = config.ReduceMotion;
             _camera.fieldOfView = config.CameraFovDeg;
         }
 
@@ -55,7 +62,7 @@ namespace JungleBooze.Gameplay.Views
 
         public void OnRunnerEvent(in RunnerEvent e)
         {
-            if (e.Type == RunnerEventType.Stumbled && !_config.ReduceMotion)
+            if (e.Type == RunnerEventType.Stumbled && !ReduceMotion)
             {
                 _shakeLeft = _config.StumbleShakeMs / 1000f;
             }
@@ -81,6 +88,11 @@ namespace JungleBooze.Gameplay.Views
 
             float shakeX = 0f;
             float shakeSeconds = _config.StumbleShakeMs / 1000f;
+            if (ReduceMotion)
+            {
+                _shakeLeft = 0f;
+            }
+
             if (_shakeLeft > 0f && shakeSeconds > 0f)
             {
                 _shakeClock += realDeltaSeconds;
@@ -91,7 +103,7 @@ namespace JungleBooze.Gameplay.Views
 
             RunnerState state = runner.Current;
             bool swinging = state.Locomotion == Locomotion.Carried || state.InVineFlight;
-            float swingTarget = swinging && !_config.ReduceMotion ? 1f : 0f;
+            float swingTarget = swinging && !ReduceMotion ? 1f : 0f;
             float blendSeconds = _config.SwingCameraBlendMs / 1000f;
             if (realDeltaSeconds > 0f)
             {

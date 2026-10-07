@@ -10,7 +10,9 @@ namespace JungleBooze.Gameplay.Views
     /// lays pooled primitive pieces over the live boxes, one piece per occupied lane. Bodies are dark wood or stone;
     /// hazard red appears only as the archetype's marker band, always next to an ink band (never color-only). Pieces
     /// are sized from the kit's <see cref="ObstacleShape"/>, so what you see is the hitbox. Gaps are drawn by
-    /// <see cref="GapView"/>. No allocations after <see cref="Init"/>.
+    /// <see cref="GapView"/>. Each piece keeps its slot for as long as its obstacle (and lane) stays in view, found by
+    /// obstacle id, so pieces are not toggled or re-laid out as other obstacles come and go.
+    /// No allocations after <see cref="Init"/>.
     /// </summary>
     public sealed class ObstacleView : MonoBehaviour, IRunView
     {
@@ -32,14 +34,21 @@ namespace JungleBooze.Gameplay.Views
             public MeshRenderer SphereRenderer;
             public GameObject[] Art;
             public int ObstacleId;
+            public int Lane;
+            public bool Live;
+            public int Stamp;
         }
 
         private const int ArchetypeSlots = 8;
+
+        /// <summary>Largest per-axis factor the boulder art may be scaled up by to fill its box.</summary>
+        private const float MaxArtFit = 2.5f;
 
         private RunnerConfig _runnerConfig;
         private float _viewDistanceM;
         private Piece[] _pieces;
         private int _shown;
+        private int _frame;
         private TrackSimulation _track;
         private Material _bodyMaterial;
         private Material _moverMaterial;
@@ -53,10 +62,10 @@ namespace JungleBooze.Gameplay.Views
         /// </summary>
         public bool IsDrawn(int obstacleId)
         {
-            for (int i = 0; _pieces != null && i < _shown; i++)
+            for (int i = 0; _pieces != null && i < _pieces.Length; i++)
             {
                 Piece piece = _pieces[i];
-                if (piece.ObstacleId != obstacleId || !piece.Root.activeInHierarchy)
+                if (!piece.Live || piece.ObstacleId != obstacleId || !piece.Root.activeInHierarchy)
                 {
                     continue;
                 }
@@ -148,13 +157,86 @@ namespace JungleBooze.Gameplay.Views
                 return;
             }
 
+            if (kind == ObstacleArchetype.Mover)
+            {
+                FitArtToBox(art);
+            }
+
             art.gameObject.SetActive(false);
             piece.Art[(int)kind] = art.gameObject;
+        }
+
+        /// <summary>
+        /// Visual only [ASSUMED]: scales the boulder art UP (never down, at most <see cref="MaxArtFit"/>) so its
+        /// mesh bounds fill the unit box that the body transform stretches to the hitbox, and centres it there. The
+        /// simulation box is untouched. Setup-time only.
+        /// </summary>
+        private static void FitArtToBox(Transform art)
+        {
+            Transform space = art.parent;
+            if (space == null)
+            {
+                return;
+            }
+
+            bool has = false;
+            Bounds total = default;
+            MeshFilter[] filters = art.GetComponentsInChildren<MeshFilter>(true);
+            for (int i = 0; i < filters.Length; i++)
+            {
+                Mesh mesh = filters[i].sharedMesh;
+                if (mesh == null || mesh.vertexCount == 0)
+                {
+                    continue;
+                }
+
+                Bounds mb = mesh.bounds;
+                for (int corner = 0; corner < 8; corner++)
+                {
+                    var local = new Vector3(
+                        mb.center.x + ((corner & 1) == 0 ? -mb.extents.x : mb.extents.x),
+                        mb.center.y + ((corner & 2) == 0 ? -mb.extents.y : mb.extents.y),
+                        mb.center.z + ((corner & 4) == 0 ? -mb.extents.z : mb.extents.z));
+                    Vector3 p = space.InverseTransformPoint(filters[i].transform.TransformPoint(local));
+                    if (!has)
+                    {
+                        total = new Bounds(p, Vector3.zero);
+                        has = true;
+                    }
+                    else
+                    {
+                        total.Encapsulate(p);
+                    }
+                }
+            }
+
+            Vector3 size = total.size;
+            if (!has || !(size.x > 0.01f) || !(size.y > 0.01f) || !(size.z > 0.01f))
+            {
+                return;
+            }
+
+            var fit = new Vector3(
+                Mathf.Clamp(1f / size.x, 1f, MaxArtFit),
+                Mathf.Clamp(1f / size.y, 1f, MaxArtFit),
+                Mathf.Clamp(1f / size.z, 1f, MaxArtFit));
+            art.localScale = Vector3.Scale(art.localScale, fit);
+            art.localPosition = art.localPosition - Vector3.Scale(total.center, fit);
         }
 
         public void BeginRun(GameSession session)
         {
             _track = (session.World as TrackRunWorld)?.Track;
+            for (int i = 0; _pieces != null && i < _pieces.Length; i++)
+            {
+                // New run: ids start over, so no piece may carry a slot from the last one.
+                if (_pieces[i].Live)
+                {
+                    _pieces[i].Live = false;
+                    _pieces[i].Root.SetActive(false);
+                }
+            }
+
             Render(session, 1f, 0f);
         }
 
@@ -169,7 +251,7 @@ namespace JungleBooze.Gameplay.Views
                 return;
             }
 
-            int used = 0;
+            _frame++;
             if (_track != null)
             {
                 RunnerSimulation runner = session.Runner;
@@ -177,7 +259,7 @@ namespace JungleBooze.Gameplay.Views
                 double minZ = heroZ - BehindM;
                 double maxZ = heroZ + _viewDistanceM;
                 int count = _track.ObstacleCount;
-                for (int i = 0; i < count && used < PieceCapacity; i++)
+                for (int i = 0; i < count; i++)
                 {
                     ref readonly ObstacleInstance o = ref _track.GetObstacle(i);
                     if (o.Z > maxZ)
@@ -200,26 +282,89 @@ namespace JungleBooze.Gameplay.Views
                     if (o.Archetype == ObstacleArchetype.Mover)
                     {
                         float x = Mathf.Lerp(o.MoverXPrev, o.MoverX, alpha);
-                        Place(_pieces[used++], o, shape, x);
+                        PlaceSlot(o, -1, shape, x);
                         continue;
                     }
 
-                    for (int lane = 0; lane < LaneMasks.LaneCount && used < PieceCapacity; lane++)
+                    for (int lane = 0; lane < LaneMasks.LaneCount; lane++)
                     {
                         if (LaneMasks.Contains(o.LaneMask, lane))
                         {
-                            Place(_pieces[used++], o, shape, _runnerConfig.LaneCenterX(lane));
+                            PlaceSlot(o, lane, shape, _runnerConfig.LaneCenterX(lane));
                         }
                     }
                 }
             }
 
-            for (int i = used; i < _shown; i++)
+            // Whatever was not claimed this frame has left the view.
+            int live = 0;
+            for (int i = 0; i < _pieces.Length; i++)
             {
-                _pieces[i].Root.SetActive(false);
+                Piece piece = _pieces[i];
+                if (!piece.Live)
+                {
+                    continue;
+                }
+
+                if (piece.Stamp != _frame)
+                {
+                    piece.Live = false;
+                    piece.Root.SetActive(false);
+                    continue;
+                }
+
+                live++;
             }
 
-            _shown = used;
+            _shown = live;
+        }
+
+        /// <summary>
+        /// Finds the piece already showing (obstacle id, lane) and updates it; otherwise takes a free piece (not yet
+        /// claimed this frame, preferably hidden). Drops the obstacle when all pieces are taken.
+        /// </summary>
+        private void PlaceSlot(in ObstacleInstance o, int lane, ObstacleShape shape, float x)
+        {
+            Piece found = null;
+            Piece free = null;
+            Piece reusable = null;
+            for (int i = 0; i < _pieces.Length; i++)
+            {
+                Piece piece = _pieces[i];
+                if (piece.Live && piece.ObstacleId == o.Id && piece.Lane == lane)
+                {
+                    found = piece;
+                    break;
+                }
+
+                if (piece.Stamp == _frame)
+                {
+                    continue;
+                }
+
+                if (!piece.Live)
+                {
+                    if (free == null)
+                    {
+                        free = piece;
+                    }
+                }
+                else if (reusable == null)
+                {
+                    reusable = piece;
+                }
+            }
+
+            Piece target = found ?? free ?? reusable;
+            if (target == null)
+            {
+                return;
+            }
+
+            target.Live = true;
+            target.Lane = lane;
+            target.Stamp = _frame;
+            Place(target, o, shape, x);
         }
 
         private static void Place(Piece piece, in ObstacleInstance o, ObstacleShape shape, float x)

@@ -42,6 +42,7 @@ namespace JungleBooze.Gameplay.Views
         private const string ModelResourcePath = "Characters/Pista/Pista";
         private const string ClipResourcePrefix = "Characters/Pista/Pista_";
         private const float ClipBlendSeconds = 0.08f;
+        private const float ClipWeightSnapEpsilon = 0.001f;
 
         /// <summary>
         /// Facing fix for the imported models, in degrees about Y (default 0). If Pista or Duko runs backward or
@@ -313,6 +314,12 @@ namespace JungleBooze.Gameplay.Views
                 }
 
                 _clipWeights[i] += ((i == active ? 1f : 0f) - _clipWeights[i]) * k;
+                if (_clipWeights[i] < ClipWeightSnapEpsilon)
+                {
+                    // A clip that is blended out costs nothing once its weight is exactly zero.
+                    _clipWeights[i] = 0f;
+                }
+
                 _mixer.SetInputWeight(i, _clipWeights[i]);
             }
 

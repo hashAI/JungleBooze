@@ -249,6 +249,25 @@ If you would rather not, just tell the team; they can explain or guide you throu
 
 ---
 
+## Verify on the Mac after the review and smoothness pass (2026-10-07, all uncompiled)
+Compile first (warnings are errors), then check these by hand and report what fails:
+1. First run, first mistake: the tutorial rescues you with no death sound and no dead pose (a hint appears instead).
+2. Swipe slowly, then flick: a flick after a slow drag still swipes. Tapping Pause or a menu button never moves Pista.
+3. Settings: only Music, Sound effects and Reduce motion show (Haptics is hidden on purpose). Turn Reduce motion on
+   during a run: no vine slow-motion, no camera tilt or shake, no shards or speed lines (applies at once).
+4. Die, then look at the Continue screen: the "Your coins" number is the wallet plus this run's coins, and Continue is
+   enabled when that covers the price. After Continue, Game Over and the main menu show a wallet without double counting.
+5. Press Home during a run, wait, force-quit, relaunch: the run's coins and best score are saved.
+6. Leave the app for a minute during the Continue offer or a pause: the timer did not burn.
+7. Obstacles: walk a long run and watch for flicker or missing obstacles (pieces now keep a slot per obstacle id). The
+   boulder art should fill its box better (visual only; its hitbox is unchanged).
+8. Smoothness: on an iPhone 11 / SE 2 development build, check the Profiler steps per frame (expect 1) and compare with
+   GPU skinning on (Player settings) and the renderer intermediate texture on Auto (URP-Mobile-Renderer). Hitch hunt at
+   the first coin, obstacle, vine, power-up, gateway and restart; the prewarm (RunPrewarm) runs behind the main menu.
+   If you see a one-frame flash or a "Camera.Render" warning at startup, send it: the off-screen prewarm is the
+   riskiest new piece.
+9. Console (Development build): no per-gateway "World segment" lines in a release build; no "event buffer overflow" errors.
+
 ## Optional: play on your iPhone (free Apple ID)
 
 You need **Xcode 26** (free in the Mac App Store; about 15 GB; it may ask you to update macOS first) and your

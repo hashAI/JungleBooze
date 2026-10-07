@@ -200,6 +200,20 @@ namespace JungleBooze.Gameplay.Views
             }
         }
 
+        /// <summary>
+        /// Puts the glyphs of the release stamps ("PERFECT", "GOOD", ...) into the font texture now (setup time), so the
+        /// first release does not stall. Same size and style as the stamp text.
+        /// </summary>
+        public void PrewarmFont()
+        {
+            if (_stamp == null || _stamp.font == null)
+            {
+                return;
+            }
+
+            _stamp.font.RequestCharactersInTexture("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 !?+-.", _stamp.fontSize, FontStyle.Bold);
+        }
+
         public void BeginRun(GameSession session)
         {
             _track = (session.World as TrackRunWorld)?.Track;

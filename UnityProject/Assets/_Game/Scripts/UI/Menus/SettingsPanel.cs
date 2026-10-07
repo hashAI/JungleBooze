@@ -11,7 +11,7 @@ namespace JungleBooze.UI.Menus
     /// Settings (GDD 19 and 20; placeholder look): music and sound-effect volume sliders in 10% steps, haptics
     /// on/off and Reduce Motion on/off, and Back. Changes go straight into <see cref="PlayerSave"/>; Back writes
     /// the save if anything changed. On/off states are shown as text ("On"/"Off") and fill color, so they never
-    /// rely on color alone. Audio and haptics arrive later; their settings are stored now.
+    /// rely on color alone. The haptics row is hidden until haptics exist; its setting is stored already.
     /// Later rows from GDD 19 (Companion voice, left-handed, color-blind mode, replay tutorial, Restore Purchases,
     /// privacy policy, credits) go here when those features exist.
     /// </summary>
@@ -25,6 +25,12 @@ namespace JungleBooze.UI.Menus
         private const int RowFontSize = 20;
         private const int ToggleFontSize = 20;
         private const int BackFontSize = 24;
+
+        /// <summary>
+        /// No haptics are implemented yet (no native plugin): the toggle stays hidden so it never promises something
+        /// that does nothing. Flip to true when a haptics service consumes <see cref="PlayerSave.HapticsEnabled"/>.
+        /// </summary>
+        private static readonly bool HapticsAvailable = false;
 
         private static readonly string[] PercentStrings = BuildPercentStrings();
 
@@ -61,11 +67,18 @@ namespace JungleBooze.UI.Menus
             _sfx = MenuFactory.CreateSlider(panel, "SfxSlider", top, new Vector2(ContentWidthPt, 44f), new Vector2(0f, -190f), VolumeSteps);
             _sfx.onValueChanged.AddListener(OnSfxChanged);
 
-            _haptics = CreateToggleRow(panel, "Haptics", font, MenuStrings.Haptics, -252f, OnHapticsClicked);
-            _reduceMotion = CreateToggleRow(panel, "ReduceMotion", font, MenuStrings.ReduceMotion, -316f, OnReduceMotionClicked);
+            float rowY = -252f;
+            if (HapticsAvailable)
+            {
+                _haptics = CreateToggleRow(panel, "Haptics", font, MenuStrings.Haptics, rowY, OnHapticsClicked);
+                rowY -= 64f;
+            }
+
+            _reduceMotion = CreateToggleRow(panel, "ReduceMotion", font, MenuStrings.ReduceMotion, rowY, OnReduceMotionClicked);
+            rowY -= 60f;
 
             _replayTutorial = MenuFactory.NeutralButton(
-                panel, "ReplayTutorialButton", font, MenuStrings.ReplayTutorial, ToggleFontSize, top, new Vector2(ContentWidthPt, 48f), new Vector2(0f, -376f), OnReplayTutorialClicked);
+                panel, "ReplayTutorialButton", font, MenuStrings.ReplayTutorial, ToggleFontSize, top, new Vector2(ContentWidthPt, 48f), new Vector2(0f, rowY), OnReplayTutorialClicked);
             _replayTutorialLabel = _replayTutorial.GetComponentInChildren<Text>();
 
             BackButton = MenuFactory.NeutralButton(
@@ -76,6 +89,7 @@ namespace JungleBooze.UI.Menus
 
         public Button BackButton { get; }
 
+        /// <summary>The haptics toggle; null while haptics are not implemented (hidden).</summary>
         public Button HapticsButton => _haptics;
 
         public Button ReduceMotionButton => _reduceMotion;
@@ -154,7 +168,11 @@ namespace JungleBooze.UI.Menus
             _sfx.SetValueWithoutNotify(sfx);
             _musicValue.text = PercentStrings[music];
             _sfxValue.text = PercentStrings[sfx];
-            ShowToggle(_haptics, _save.HapticsEnabled);
+            if (_haptics != null)
+            {
+                ShowToggle(_haptics, _save.HapticsEnabled);
+            }
+
             ShowToggle(_reduceMotion, _save.ReduceMotion);
             _replayTutorialLabel.text = _save.TutorialReplayRequested ? MenuStrings.TutorialQueued : MenuStrings.ReplayTutorial;
         }
@@ -190,7 +208,7 @@ namespace JungleBooze.UI.Menus
 
         private void OnHapticsClicked()
         {
-            if (_save != null)
+            if (_save != null && _haptics != null)
             {
                 _save.HapticsEnabled = !_save.HapticsEnabled;
                 ShowToggle(_haptics, _save.HapticsEnabled);

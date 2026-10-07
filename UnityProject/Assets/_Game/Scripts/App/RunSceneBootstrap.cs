@@ -227,9 +227,6 @@ namespace JungleBooze.App
                 sessionSeed,
                 startAtMenu ? SessionPhase.Menu : SessionPhase.Ready);
 
-            // GDD 7.3 step 3: the vine "hang" slow-down is off with Reduce Motion.
-            session.VineHangSlowdown = !presentation.ReduceMotion;
-
             // GDD 15 companion (meter, Lift, call-outs) and GDD 14.4 Continue rules.
             session.RecordDistanceM = save.BestDistanceM;
             session.ConfigureCompanion(companionConfig);
@@ -268,7 +265,20 @@ namespace JungleBooze.App
             tutorialObject.transform.SetParent(root.transform, false);
             TutorialView tutorialView = tutorialObject.AddComponent<TutorialView>();
             tutorialView.Build(tutorial, Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"), save.ReduceMotion);
-            save.SettingsChanged += () => tutorialView.SetReduceMotion(save.ReduceMotion);
+
+            // Reduce Motion (owner decision, [ASSUMED] one switch): the SAVE value drives it, live. Off: vine slow-mo,
+            // camera tilt / shake / FOV swing, shards and speed lines, and the tutorial hand. The shared config asset
+            // is never written.
+            Action applyReduceMotion = () =>
+            {
+                bool reduce = save.ReduceMotion;
+                session.VineHangSlowdown = !reduce;
+                cameraView.ReduceMotion = reduce;
+                powerUpView.ReduceMotion = reduce;
+                tutorialView.SetReduceMotion(reduce);
+            };
+            applyReduceMotion();
+            save.SettingsChanged += applyReduceMotion;
             driver.AttachTutorial(tutorial);
 
             // Audio: pooled playback (Resources/RunAudioCatalog), volumes follow the save's settings.
@@ -302,12 +312,28 @@ namespace JungleBooze.App
 
             driver.Init(session, input, views.ToArray(), kit);
 
+            // Performance audit #3 / #4: glyphs and pooled pieces are prepared behind the main menu, not at first use.
+            var prewarm = root.AddComponent<RunPrewarm>();
+            prewarm.Begin(
+                session,
+                camera,
+                new[]
+                {
+                    ground.transform, gaps.transform, obstacles.transform, hazardView.transform, vineView.transform,
+                    coinView.transform, powerUpView.transform, worldView.transform, runnerView.transform, companionView.transform,
+                },
+                worldView,
+                vineView);
+
             if (Debug.isDebugBuild)
             {
                 Debug.Log("[JungleBooze] Run started. Seed " + session.RunSeed + ". Config: " + configs.Source + ".");
             }
 
-            LogAssetReport();
+            if (Debug.isDebugBuild)
+            {
+                LogAssetReport();
+            }
 
             return driver;
         }

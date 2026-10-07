@@ -39,6 +39,14 @@ namespace JungleBooze.App
         private HudView _hud;
         private MetaProgress _progress;
         private TutorialDirector _tutorial;
+        private double _snapResidual;
+        private bool _resetFrameDelta;
+
+        /// <summary>Longest real frame time the run loop accepts (s): a backgrounded or stalled app never burns timers.</summary>
+        private const double MaxRealDeltaSeconds = 0.1;
+
+        /// <summary>A frame within this of one simulation step is snapped to exactly one step (s), so 60 Hz runs 1 step per frame.</summary>
+        private const double SnapToleranceSeconds = 0.0015;
 
         public GameSession Session => _session;
 
@@ -58,7 +66,16 @@ namespace JungleBooze.App
             _views = views ?? throw new ArgumentNullException(nameof(views));
             _kit = kit;
             _input.GameplayEnabled = _session.Phase == SessionPhase.Running;
+
+            // A press on a button never counts as gameplay input (review item 6).
+            HudFactory.ButtonPressed -= OnUiButtonPressed;
+            HudFactory.ButtonPressed += OnUiButtonPressed;
             BeginViews();
+        }
+
+        private void OnUiButtonPressed()
+        {
+            _input?.Reset();
         }
 
         /// <summary>The save recorder, if attached.</summary>
@@ -195,13 +212,30 @@ namespace JungleBooze.App
         /// <summary>Coin price of the next continue in this run.</summary>
         public int NextContinueCost => _session == null ? 0 : _session.ContinueRules.CostFor(_session.ContinuesUsed);
 
-        /// <summary>The wallet holds enough coins for the next continue.</summary>
-        public bool CanAffordContinue
+        /// <summary>
+        /// Coins that can pay for a continue: the wallet plus this run's coins that are not banked yet
+        /// ([ASSUMED] owner decision: current-run coins count).
+        /// </summary>
+        public long ContinueCoinsAvailable
         {
             get
             {
                 PlayerSave save = _recorder?.Save;
-                return save != null && save.TotalCoins >= NextContinueCost;
+                if (save == null)
+                {
+                    return 0L;
+                }
+
+                return save.TotalCoins + _recorder.UnbankedCoins(_session);
+            }
+        }
+
+        /// <summary>The wallet plus this run's coins hold enough for the next continue.</summary>
+        public bool CanAffordContinue
+        {
+            get
+            {
+                return _recorder != null && ContinueCoinsAvailable >= NextContinueCost;
             }
         }
 
@@ -239,6 +273,8 @@ namespace JungleBooze.App
             }
             else
             {
+                // Bank this run's coins into the wallet first (the final record adds only the rest), then pay.
+                _recorder.BankProgress(_session);
                 save.TrySpendCoinsOnContinue(cost);
             }
 
@@ -335,6 +371,12 @@ namespace JungleBooze.App
                 return;
             }
 
+            // The save write of last frame's Game Over happens here, not on the Game Over frame itself.
+            _recorder?.FlushPending();
+
+            double dt = FrameDelta(realDeltaSeconds);
+            realDeltaSeconds = (float)dt;
+
             // Input is read before the frame's steps (spec 001 12.6). Gameplay input only while running.
             _input.GameplayEnabled = _session.Phase == SessionPhase.Running;
             _input.Poll(realTimeSeconds);
@@ -364,19 +406,23 @@ namespace JungleBooze.App
             }
 
             // GDD 12: the game slows to 30% while the tutorial waits for the player's swipe.
-            double advanceSeconds = realDeltaSeconds;
+            double advanceSeconds = dt;
             if (_tutorial != null && _tutorial.Active && _session.Phase == SessionPhase.Running)
             {
                 advanceSeconds *= _tutorial.TimeScale;
             }
 
             _session.Advance(advanceSeconds);
-            if (_tutorial != null && _tutorial.Active && _session.Phase == SessionPhase.Dying)
+            if (_tutorial != null && _tutorial.WantsRescue && _session.Phase == SessionPhase.Dying)
             {
-                // GDD 12: no deaths in the tutorial; the run goes on after a gentle hint.
-                if (_tutorial.TryTakeRescue() && _session.RescueInTutorial())
+                // GDD 12: no deaths in the tutorial; the run goes on after a gentle hint. Done here, before the events
+                // reach the views, so the Died event is dropped and no death sound or pose ever plays.
+                RunnerSimulation dead = _session.Runner;
+                DeathCause cause = dead.DeathCause;
+                ObstacleArchetype archetype = dead.DeathArchetype;
+                if (_session.RescueInTutorial())
                 {
-                    _tutorial.OnRescued();
+                    _tutorial.OnRescued(cause, archetype);
                     _input.Reset();
                 }
             }
@@ -397,11 +443,55 @@ namespace JungleBooze.App
             Tick(Time.unscaledDeltaTime, Time.unscaledTimeAsDouble);
         }
 
+        /// <summary>
+        /// Real frame time for this frame: clamped to <see cref="MaxRealDeltaSeconds"/>, and snapped to exactly one
+        /// simulation step when within <see cref="SnapToleranceSeconds"/> of it (so a 60 Hz display runs one step
+        /// per frame, no judder). The difference is kept as a small residual (never above the tolerance) and added
+        /// to the next frame, so the clock does not drift from real time. No allocations.
+        /// </summary>
+        private double FrameDelta(float realDeltaSeconds)
+        {
+            const double Step = RunnerConfig.TickSeconds;
+            double d = realDeltaSeconds;
+            if (_resetFrameDelta)
+            {
+                // First frame after the app came back: its delta covers the whole time away.
+                _resetFrameDelta = false;
+                _snapResidual = 0.0;
+                return Step;
+            }
+
+            if (!(d > 0.0))
+            {
+                return 0.0;
+            }
+
+            if (d > MaxRealDeltaSeconds)
+            {
+                d = MaxRealDeltaSeconds;
+            }
+
+            double withResidual = d + _snapResidual;
+            double diff = withResidual - Step;
+            if (diff <= SnapToleranceSeconds && diff >= -SnapToleranceSeconds)
+            {
+                _snapResidual = diff;
+                return Step;
+            }
+
+            _snapResidual = 0.0;
+            return withResidual > 0.0 ? withResidual : 0.0;
+        }
+
         private void OnApplicationPause(bool pauseStatus)
         {
             if (pauseStatus)
             {
                 OnBackgrounded();
+            }
+            else
+            {
+                _resetFrameDelta = true;
             }
         }
 
@@ -410,6 +500,10 @@ namespace JungleBooze.App
             if (!hasFocus)
             {
                 OnBackgrounded();
+            }
+            else
+            {
+                _resetFrameDelta = true;
             }
         }
 
@@ -428,11 +522,25 @@ namespace JungleBooze.App
                 Pause();
             }
 
+            if (_session != null && _recorder != null)
+            {
+                // A force-quit while away must not lose the run's coins and best score: bank them now (the recorder
+                // keeps it exactly-once, the rest is added when the run really ends).
+                _recorder.RecordIfEnded(_session);
+                SessionPhase phase = _session.Phase;
+                if (phase == SessionPhase.Paused || phase == SessionPhase.Running || phase == SessionPhase.Countdown
+                    || phase == SessionPhase.ContinueOffer)
+                {
+                    _recorder.BankProgress(_session);
+                }
+            }
+
             _recorder?.Save.SaveIfDirty();
         }
 
         private void OnDestroy()
         {
+            HudFactory.ButtonPressed -= OnUiButtonPressed;
             _kit?.Dispose();
             _kit = null;
         }

@@ -140,6 +140,21 @@ namespace JungleBooze.Gameplay.Views
             _gate.gameObject.SetActive(false);
         }
 
+        /// <summary>
+        /// Puts every glyph of the gateway titles into the font texture now (setup time), so the first gateway does
+        /// not stall while the font builds them. Same size and style as the gate text.
+        /// </summary>
+        public void PrewarmFont()
+        {
+            if (_gateText == null || _gateText.font == null || _worldNames == null)
+            {
+                return;
+            }
+
+            string chars = string.Join(string.Empty, _worldNames).ToUpperInvariant();
+            _gateText.font.RequestCharactersInTexture(chars, TextFontSize, FontStyle.Bold);
+        }
+
         public void BeginRun(GameSession session)
         {
             _track = (session.World as TrackRunWorld)?.Track;
@@ -219,9 +234,13 @@ namespace JungleBooze.Gameplay.Views
                 _segment = segment;
                 if (wasInRun)
                 {
-                    Debug.Log("[JungleBooze] World segment " + segment + " (" + worlds.KindOfSegment(segment)
-                        + (worlds.IsDuskSegment(segment) ? ", dusk" : string.Empty) + ") at "
-                        + z.ToString("F0", System.Globalization.CultureInfo.InvariantCulture) + " m.");
+                    if (Debug.isDebugBuild)
+                    {
+                        Debug.Log("[JungleBooze] World segment " + segment + " (" + worlds.KindOfSegment(segment)
+                            + (worlds.IsDuskSegment(segment) ? ", dusk" : string.Empty) + ") at "
+                            + z.ToString("F0", System.Globalization.CultureInfo.InvariantCulture) + " m.");
+                    }
+
                     SegmentChanged?.Invoke(segment);
                 }
             }
