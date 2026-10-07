@@ -38,6 +38,7 @@ namespace JungleBooze.Gameplay.Views
         public const string TreeTrunk = "Tree_Trunk";
         public const string TreeBranch = "Tree_Branch";
         public const string VineLiana = "Vine_Liana";
+        public const string VineCreeper = "Vine_Creeper";
         public const string VineTuft = "Vine_Tuft";
 
         // Stateless scenery (ScenerySystem, spec 003 section 11). Missing means a generated gray-box shape.
@@ -66,7 +67,7 @@ namespace JungleBooze.Gameplay.Views
         public static readonly string[] AllNames =
         {
             LowBarrier, HighBarrier, FullBlock, Boulder, ThornPatch, StrikeColumn, Coin, Magnet, Shield, Boost,
-            PathTile, RavineEdge, VineBranch, Signpost, TreeA, TreeB, Bush, TreeTrunk, TreeBranch, VineLiana, VineTuft, WallA, WallB, WallC,
+            PathTile, RavineEdge, VineBranch, Signpost, TreeA, TreeB, Bush, TreeTrunk, TreeBranch, VineLiana, VineCreeper, VineTuft, WallA, WallB, WallC,
             FernCluster, Rock, Root,
         };
 

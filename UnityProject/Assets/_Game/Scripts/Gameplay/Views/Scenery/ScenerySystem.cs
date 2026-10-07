@@ -29,7 +29,7 @@ namespace JungleBooze.Gameplay.Views
         private static readonly string[] ArtNames =
         {
             EnvironmentArt.TreeA, EnvironmentArt.TreeB, EnvironmentArt.TreeTrunk, EnvironmentArt.Bush, EnvironmentArt.FernCluster,
-            EnvironmentArt.Rock, EnvironmentArt.Root, EnvironmentArt.VineLiana, null,
+            EnvironmentArt.Rock, EnvironmentArt.Root, EnvironmentArt.VineCreeper, null,
         };
 
         private static readonly SceneryShape[] Shapes =
@@ -59,7 +59,7 @@ namespace JungleBooze.Gameplay.Views
         private static readonly Color Stone = new Color32(0x8A, 0x7B, 0x68, 0xFF);
 
         /// <summary>The scenery vines are dimmed so the one live grab vine stays the brightest strand (art plan section 1).</summary>
-        private static readonly Color VineDim = new Color(0.55f, 0.62f, 0.55f, 1f);
+        private static readonly Color VineDim = new Color(0.95f, 0.97f, 0.95f, 1f);
 
         private static readonly Vector3 DrawBoundsSize = new Vector3(600f, 600f, 600f);
 

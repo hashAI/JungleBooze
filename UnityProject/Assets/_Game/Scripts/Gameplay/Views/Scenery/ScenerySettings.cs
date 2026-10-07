@@ -101,7 +101,7 @@ namespace JungleBooze.Gameplay.Views
         public float[] WorldDensity = { 1f, 0.85f, 0.55f, 0.7f };
 
         /// <summary>Horizontal reach of each model at scale 1 (m), by <see cref="SceneryModel"/>; includes buttress roots, canopy, lean. [ASSUMED] for the art.</summary>
-        public float[] FootprintUnitM = { 2.2f, 2.2f, 3.6f, 0.9f, 0.7f, 0.8f, 0.8f, 0.3f, 0.5f };
+        public float[] FootprintUnitM = { 2.2f, 2.2f, 3.6f, 0.9f, 0.7f, 0.85f, 1.0f, 0.3f, 0.5f };
 
         /// <summary>Triangles of the full mesh per model (nominal, for the budget tests; the run counts real meshes). [ASSUMED]</summary>
         public int[] NominalNearTriangles = { 1500, 1500, 2200, 500, 300, 150, 150, 420, 2 };
