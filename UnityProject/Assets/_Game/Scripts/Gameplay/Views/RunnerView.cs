@@ -24,6 +24,9 @@ namespace JungleBooze.Gameplay.Views
         private const float ShadowDepthM = 0.6f;
         private const float ShadowLiftM = 0.012f;
         private const float DeathTiltDeg = 75f;
+        private const float StumbleSeconds = 0.35f;
+        private const float StumbleHopM = 0.2f;
+        private const float StumbleTiltDeg = 20f;
 
         private RunnerConfig _runnerConfig;
         private RunnerPresentationConfig _presentation;
@@ -33,6 +36,7 @@ namespace JungleBooze.Gameplay.Views
         private float _wobbleLeft;
         private float _wobbleDir;
         private bool _dead;
+        private float _stumbleLeft;
 
         /// <summary>Rendered position of HERO's feet (after interpolation, before wobble and bob).</summary>
         public Vector3 RenderedFeetPosition { get; private set; }
@@ -122,6 +126,7 @@ namespace JungleBooze.Gameplay.Views
             _wobbleLeft = 0f;
             _wobbleDir = 0f;
             _dead = false;
+            _stumbleLeft = 0f;
             if (_model != null)
             {
                 _model.localRotation = Quaternion.identity;
@@ -137,6 +142,10 @@ namespace JungleBooze.Gameplay.Views
                 case RunnerEventType.LaneBlocked:
                     _wobbleLeft = _presentation.LaneBumpWobbleMs / 1000f;
                     _wobbleDir = e.Dir;
+                    break;
+
+                case RunnerEventType.Stumbled:
+                    _stumbleLeft = StumbleSeconds;
                     break;
 
                 case RunnerEventType.Died:
@@ -194,9 +203,22 @@ namespace JungleBooze.Gameplay.Views
                 bob = BobHeightM * Mathf.Abs(Mathf.Sin((float)(z % (BobStrideM * 2.0)) * Mathf.PI / BobStrideM));
             }
 
+            // Stumble: a short hop and forward lurch (no tint: hazard red is banned on the hero).
+            float stumble = 0f;
+            if (_stumbleLeft > 0f)
+            {
+                stumble = Mathf.Sin((1f - _stumbleLeft / StumbleSeconds) * Mathf.PI);
+                if (!session.InHitPause)
+                {
+                    _stumbleLeft -= realDeltaSeconds;
+                }
+            }
+
             transform.localPosition = new Vector3(x, 0f, (float)z);
-            _model.localPosition = new Vector3(wobble, y + bob, 0f);
-            _model.localRotation = _dead ? Quaternion.Euler(DeathTiltDeg, 0f, 0f) : Quaternion.identity;
+            _model.localPosition = new Vector3(wobble, y + bob + StumbleHopM * stumble, 0f);
+            _model.localRotation = _dead
+                ? Quaternion.Euler(DeathTiltDeg, 0f, 0f)
+                : Quaternion.Euler(StumbleTiltDeg * stumble, 0f, 0f);
 
             float apex = _runnerConfig.JumpApexHeightM > 0f ? _runnerConfig.JumpApexHeightM : 1f;
             float shadowScale = Mathf.Lerp(1f, 0.5f, Mathf.Clamp01(y / apex));

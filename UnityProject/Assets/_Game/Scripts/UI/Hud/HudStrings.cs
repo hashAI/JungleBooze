@@ -15,6 +15,10 @@ namespace JungleBooze.UI.Hud
         public const string ReadyPromptKeyboard = "Swipe or press a key to run";
         public const string ReadyPromptTouch = "Swipe or tap to run";
 
+        // In-run call-outs.
+        public const string Stumble = "Stumble!";
+        public const string NearMiss = "Near miss!";
+
         // Game Over panel (spec 002 12.1 and 12.4).
         public const string GameOver = "Game Over";
         public const string Distance = "Distance";

@@ -15,7 +15,7 @@ namespace JungleBooze.Gameplay.Track
     /// <para>Random streams: the root generator is seeded with the run seed and forked once with
     /// <see cref="RandomStreamIds.TrackGeneration"/> at setup; the generator is the only user of that stream.</para>
     /// </summary>
-    public sealed class TrackRunWorld : IRunWorld, IRunnerStepHooks
+    public sealed class TrackRunWorld : IRunWorld, IRunWorldSummary, IRunnerStepHooks
     {
         private readonly TrackRunSetup _setup;
         private RunnerConfig _runnerConfig;
@@ -59,6 +59,14 @@ namespace JungleBooze.Gameplay.Track
                 DeathInfo d = Death;
                 return d.HasDied ? _setup.Skin.GetCauseText(d) : string.Empty;
             }
+        }
+
+        /// <summary>Score of this run (<see cref="IRunWorldSummary"/>).</summary>
+        public long Score => Totals.Score;
+
+        public string DescribeDeath(DeathCause cause, ObstacleArchetype archetype, bool afterStumble)
+        {
+            return _setup.Skin.GetCauseText(cause, archetype, afterStumble);
         }
 
         public RunnerSimulation CreateRunner(RunnerConfig config, SpeedCurve speedCurve)

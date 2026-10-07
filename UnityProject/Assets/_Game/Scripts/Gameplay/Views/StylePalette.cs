@@ -22,6 +22,18 @@ namespace JungleBooze.Gameplay.Views
         public static readonly Color CoinRim = Hex(0xC9, 0x8A, 0x12);
         public static readonly Color CoinGem = Hex(0x2E, 0xC4, 0xB6);
 
+        // 2.1 Hazard red: hazards only (always paired with ink stripes or an ink edge).
+        public static readonly Color HazardRed = Hex(0xD7, 0x26, 0x3D);
+
+        /// <summary>Gray-box hazard bodies: darker and less saturated than the path (section 4.1).</summary>
+        public static readonly Color HazardWood = Hex(0x5A, 0x46, 0x36);
+
+        /// <summary>Gray-box mover (rolling boulder) body: dark stone.</summary>
+        public static readonly Color HazardStone = Hex(0x6B, 0x5F, 0x52);
+
+        /// <summary>Ravine void on the ground: ink.</summary>
+        public static readonly Color Void = Ink;
+
         // 2.3 Pista ("Mapcloth").
         public static readonly Color PistaMapCloth = Hex(0xEF, 0xE0, 0xBD);
         public static readonly Color PistaMapLines = Hex(0x8A, 0x5A, 0x2B);

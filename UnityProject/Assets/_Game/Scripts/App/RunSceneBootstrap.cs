@@ -1,6 +1,7 @@
 using System;
 using JungleBooze.Gameplay.Controls;
 using JungleBooze.Gameplay.Session;
+using JungleBooze.Gameplay.Track;
 using JungleBooze.Gameplay.Views;
 using JungleBooze.UI.Hud;
 using UnityEngine;
@@ -23,6 +24,9 @@ namespace JungleBooze.App
 
         /// <summary>Camera far plane in m: past the fog end so fogged geometry fades instead of clipping.</summary>
         private const float CameraFarClipM = 160f;
+
+        /// <summary>Coin pool size when the world is not the track world.</summary>
+        private const int CoinViewFallbackPool = 64;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void OnAfterFirstSceneLoad()
@@ -91,6 +95,24 @@ namespace JungleBooze.App
             GroundView ground = groundObject.AddComponent<GroundView>();
             ground.Init(kit, configs.Runner, presentation.FogEndM);
 
+            // Stage C2: ravines, obstacles and coins from the generated track.
+            IRunWorldFactory worldFactory = CreateWorldFactory(configs);
+            TrackRunSetup trackSetup = (worldFactory as TrackRunWorldFactory)?.Setup;
+            var gapObject = new GameObject("Gaps");
+            gapObject.transform.SetParent(root.transform, false);
+            GapView gaps = gapObject.AddComponent<GapView>();
+            gaps.Init(kit, configs.Runner, presentation.FogEndM);
+
+            var obstacleObject = new GameObject("Obstacles");
+            obstacleObject.transform.SetParent(root.transform, false);
+            ObstacleView obstacles = obstacleObject.AddComponent<ObstacleView>();
+            obstacles.Init(kit, configs.Runner, presentation.FogEndM);
+
+            var coinObject = new GameObject("Coins");
+            coinObject.transform.SetParent(root.transform, false);
+            CoinView coinView = coinObject.AddComponent<CoinView>();
+            coinView.Init(kit, trackSetup != null ? trackSetup.Track.MaxActiveCoins : CoinViewFallbackPool, presentation.FogEndM);
+
             var runnerObject = new GameObject("Pista");
             runnerObject.transform.SetParent(root.transform, false);
             RunnerView runnerView = runnerObject.AddComponent<RunnerView>();
@@ -102,7 +124,7 @@ namespace JungleBooze.App
                 configs.Runner,
                 configs.SpeedCurve,
                 input,
-                CreateWorldFactory(configs),
+                worldFactory,
                 presentation.ToSessionTimings(),
                 sessionSeed);
 
@@ -114,7 +136,7 @@ namespace JungleBooze.App
             HudView hud = hudObject.AddComponent<HudView>();
             hud.Build(driver, Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"));
 
-            driver.Init(session, input, new IRunView[] { ground, runnerView, cameraView, hud }, kit);
+            driver.Init(session, input, new IRunView[] { ground, gaps, obstacles, coinView, runnerView, cameraView, hud }, kit);
 
             if (Debug.isDebugBuild)
             {
@@ -125,14 +147,12 @@ namespace JungleBooze.App
         }
 
         /// <summary>
-        /// THE SWAP POINT for the run world. First Playable stage C1 runs on endless flat ground
-        /// (<see cref="FlatRunWorldFactory"/>). Stage C2 returns the track world factory from
-        /// <c>Scripts/Gameplay/Track</c> here (built from the track configs added to <see cref="RunConfigSet"/>),
-        /// and adds the track, obstacle and coin views to the driver's view list in <see cref="Build"/>.
+        /// THE SWAP POINT for the run world: the generated track world (spec 002) built from the default track
+        /// configs. [ASSUMED] The track config assets are not loaded yet; the in-code start values are used.
         /// </summary>
         private static IRunWorldFactory CreateWorldFactory(RunConfigSet configs)
         {
-            return new FlatRunWorldFactory();
+            return new TrackRunWorldFactory();
         }
 
         /// <summary>Session seed from the wall clock. Seeds pick the run; the simulation itself never reads the clock.</summary>

@@ -7,7 +7,7 @@ Decisions themselves live in `design/DECISIONS.md`; the plan lives in `docs/AGEN
 _Last updated: 2026-10-07 (06:50 UTC)_
 
 ## Current milestone
-**▶ ACTIVE (2026-10-07): owner wants a playable version, focus only on that. Owner said: no compile-review passes, just write the code; the owner compiles on the Mac and sends errors back.** Plan: C2 (wire track + views) now, then hand over `docs/PLAY_FIRST_BUILD.md`. Tests stay deferred.
+**FIRST PLAYABLE WRITTEN (2026-10-07), not yet compiled.** Owner's next step: open `UnityProject/` in Unity 6.3 per `docs/PLAY_FIRST_BUILD.md`, press Play in the Run scene, and send back any red errors. Fix those first.
 
 **Goal: First Playable (FP1). Autonomous mandate: no owner questions until it's done.** Release/store work is paused.
 
@@ -36,7 +36,7 @@ compiler on the Mac is the fastest way to find remaining errors; fix whatever th
 - [x] B2 gameplay-engineer: track simulation (generator, TrackSimulation as ITrackQuery, coin layout, scoring, TrackRunWorld/Factory, RunSession lifecycle, config assets, .meta files). Tests deferred by owner; 4 track test files written but never run
 - [ ] B3 gameplay-engineer: chunk fairness validator (spec 002 §11) as an EditMode test + editor menu
 - [x] C1 ui-engineer: presentation (bootstrap, session with Ready/Dying/GameOver, Run again/Same track, input, gray-box views, HUD, PlayMode tests). Swap point for C2: `RunSceneBootstrap.CreateWorldFactory`.
-- [ ] C2 ui-engineer: swap in `TrackRunWorldFactory`, add track/obstacle/coin views, resolve `RunSession` vs `GameSession` overlap
+- [x] C2 ui-engineer: track world wired in; obstacle, ravine and coin views; score HUD; stumble/near-miss feedback. GameSession stays the lifecycle (RunSession unused)
 - [x] D tech-architect: first-open bootstrap (`Assets/_Game/Editor/Setup/ProjectBootstrap.cs`, ADR 0003) + `docs/PLAY_FIRST_BUILD.md`
 - [ ] E code-reviewer: compile-correctness and logic review of everything; fixes applied (an early run was stopped by the owner to save tokens)
 - [ ] F qa-engineer: test plan + owner play-test script
@@ -53,7 +53,7 @@ and commit after every agent report.
 | balance-simulator | done (A3) | Python reference model, golden traces, S1–S9 report (`docs/sim-reports/2026-10-07-spec001.md`) | `tools/sim/`, `docs/sim-reports/` | Fairness fuzzing for spec 002; recommendations R1–R6 go to game-designer |
 | tech-architect | done (stage D) | First-open bootstrap: URP mobile asset, input set to Both, iOS basics (placeholder bundle id `com.pistaduko.junglerunner`, iOS 15, portrait), empty Run scene in build list; Mac play guide | `Assets/_Game/Editor/Setup/`, `docs/adr/0003-first-playable-bootstrap.md`, `docs/PLAY_FIRST_BUILD.md` | Add EditMode tests for `ProjectSetupRules`; Roslyn analyzers |
 | gameplay-engineer | done (B1, B2) | Collisions and track code finished; not compiled | `Scripts/Gameplay/Runner/`, `Scripts/Gameplay/Track/`, `Config/Track/` | Deferred tests (track AC-208–248), B3 validator — after owner review |
-| ui-engineer | **working** | C2: swap in TrackRunWorldFactory, obstacle/coin/ground views, HUD score, stumble feedback | `Scripts/Gameplay/Views`, `Scripts/App`, `Scripts/UI/Hud` | Fix whatever errors the owner sends from Unity |
+| ui-engineer | done (C2) | Track wired into the Run scene with gray-box views and HUD | `Scripts/Gameplay/Views`, `Scripts/App`, `Scripts/UI/Hud` | Fix errors the owner sends from Unity |
 | art-director | done | Style guide and prompts updated with names Pista/Duko and the chest-band sash | `design/STYLE_GUIDE.md`, `design/prompts/` | Generate concept images once an image API key exists |
 | asset-pipeline | waiting | — | — | Needs an image/3D generation API key from the owner |
 | audio-director | waiting | — | — | Week 5. Note: the macaw speaks a few words, so voice lines and localization are needed |
@@ -110,6 +110,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Log
 Newest first. One line per event.
+- 2026-10-07: Stage C2 done. First playable (track, obstacles, ravines, coins, HUD) is written; waiting for the owner to open it in Unity and report errors.
 - 2026-10-07: Owner declined compile-review agents ("just write code"). Launched only C2.
 - 2026-10-07: Owner lifted the pause: "give me a playable version, just focus on that". Launching C2 + two compile-fix passes.
 - 2026-10-07: Stage B2 done (track code, no new tests). All agents finished. Project is paused for the owner's code review.

@@ -142,8 +142,15 @@ Notes:
 - The Game Over buttons ignore presses for the first 0.4 seconds, so a late swipe cannot restart by accident.
 - The game also pauses by itself when Unity's Game view loses focus (for example when you click another window).
   Press P or click **Resume** to continue.
-- Until the obstacle stage is merged the track is endless flat ground with nothing to hit, so use **K** to see the
-  Game Over screen.
+- The track is generated from a seed: dark wooden barriers (jump over the low ones, slide under the hanging
+  ones), tall blocks (change lane), a rolling boulder that shifts one lane, and ravines (dark gaps in the ground,
+  marked by a red and black strip before the edge; jump across them). Gold coins with a turquoise gem float in lines
+  and arcs; run through them to collect them.
+- The first hit is a **stumble** (Pista hops, the screen flashes orange, "Stumble!" appears); a second hit while
+  still dazed, or falling into a ravine, ends the run. The Game Over screen names what got you.
+- Top-left shows distance and score, top-right the coin count. "Near miss!" appears when you graze an obstacle.
+- **Run again** uses a new track; **Same track** replays the same seed (same obstacles and coins). Use **K**
+  (development builds) to end a run on purpose.
 
 ## Step 6: Run the automated tests
 

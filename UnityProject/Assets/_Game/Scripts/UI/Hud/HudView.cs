@@ -38,6 +38,10 @@ namespace JungleBooze.UI.Hud
         private const int SmallFontSize = 15;
         private const int MaxDistanceDigits = 6;
         private const int MaxCoinDigits = 5;
+        private const int MaxScoreDigits = 8;
+        private const float FlashSeconds = 0.25f;
+        private const float FlashAlpha = 0.3f;
+        private const float ToastSeconds = 0.8f;
         private const float GameOverWidthPt = 320f;
         private const float GameOverHeightPt = 520f;
         private const float RowWidthPt = 260f;
@@ -70,6 +74,11 @@ namespace JungleBooze.UI.Hud
         private Button _runAgainButton;
         private Button _sameTrackButton;
         private Button _resumeButton;
+        private Image _flash;
+        private Text _toast;
+        private DigitCounter _score;
+        private float _flashLeft;
+        private float _toastLeft;
         private SessionPhase _shownPhase = NoPhase;
         private int _shownCountdown = -1;
         private bool _shownLock = true;
@@ -126,6 +135,10 @@ namespace JungleBooze.UI.Hud
             _dim = HudFactory.CreateImage(transform, "Dim", StylePalette.Dim, true);
             HudFactory.Stretch(_dim.rectTransform, 0f);
 
+            // Stumble flash: a brief pulp-orange wash (never hazard red, style guide 2.1).
+            _flash = HudFactory.CreateImage(transform, "Flash", new Color(StylePalette.PulpOrange.r, StylePalette.PulpOrange.g, StylePalette.PulpOrange.b, 0f), false);
+            HudFactory.Stretch(_flash.rectTransform, 0f);
+
             RectTransform safe = HudFactory.CreateRect(transform, "SafeArea");
             HudFactory.Stretch(safe, 0f);
             safe.gameObject.AddComponent<SafeAreaFitter>();
@@ -137,6 +150,18 @@ namespace JungleBooze.UI.Hud
             RectTransform distanceRect = (RectTransform)_distance.transform;
             HudFactory.Stretch(distanceRect, 0f);
             distanceRect.offsetMin = new Vector2(10f, 0f);
+
+            // Score, under the distance (shown for worlds that keep score).
+            Image scorePanel = HudFactory.CreatePanel(
+                safe, "ScorePanel", StylePalette.Parchment, new Vector2(0f, 1f), new Vector2(150f, 36f), new Vector2(MarginPt, -(MarginPt + TopBarHeightPt + 6f)));
+            Text scoreLabel = HudFactory.CreateText(scorePanel.transform, "Label", font, SmallFontSize, StylePalette.Ink, none, TextAnchor.MiddleLeft);
+            HudFactory.Stretch(scoreLabel.rectTransform, 0f);
+            scoreLabel.rectTransform.offsetMin = new Vector2(10f, 0f);
+            scoreLabel.text = HudStrings.Score;
+            _score = CreateCounter(scorePanel.transform, "Score", font, 20, MaxScoreDigits, null, false);
+            RectTransform scoreRect = (RectTransform)_score.transform;
+            HudFactory.Stretch(scoreRect, 0f);
+            scoreRect.offsetMin = new Vector2(62f, 0f);
 
             // Pause button, top-right corner.
             _pauseButton = HudFactory.CreateButton(
@@ -181,6 +206,11 @@ namespace JungleBooze.UI.Hud
             _readyPrompt.text = HudStrings.ReadyPromptKeyboard;
 #endif
 
+            // Stumble / near-miss call-out, below the upper-center area.
+            _toast = HudFactory.CreateText(safe, "Toast", font, 30, StylePalette.PulpOrange, StylePalette.Ink, TextAnchor.MiddleCenter);
+            HudFactory.Place(_toast.rectTransform, new Vector2(0.5f, 0.62f), new Vector2(300f, 50f), Vector2.zero);
+            _toast.gameObject.SetActive(false);
+
             BuildPauseMenu(safe, font, commands, none);
 
             // Countdown 3-2-1.
@@ -198,11 +228,35 @@ namespace JungleBooze.UI.Hud
             _shownPhase = NoPhase;
             _shownCountdown = -1;
             _shownLock = true;
+            _flashLeft = 0f;
+            _toastLeft = 0f;
+            if (_toast != null)
+            {
+                _toast.gameObject.SetActive(false);
+                _flash.color = new Color(_flash.color.r, _flash.color.g, _flash.color.b, 0f);
+            }
+
             Render(session, 1f, 0f);
         }
 
         public void OnRunnerEvent(in RunnerEvent e)
         {
+            if (_toast == null)
+            {
+                return;
+            }
+
+            if (e.Type == RunnerEventType.Stumbled)
+            {
+                _flashLeft = FlashSeconds;
+                _toastLeft = ToastSeconds;
+                _toast.text = HudStrings.Stumble;
+            }
+            else if (e.Type == RunnerEventType.NearMiss)
+            {
+                _toastLeft = ToastSeconds;
+                _toast.text = HudStrings.NearMiss;
+            }
         }
 
         public void Render(GameSession session, float alpha, float realDeltaSeconds)
@@ -221,6 +275,12 @@ namespace JungleBooze.UI.Hud
 
             _distance.SetValue(MetersOf(session.DistanceM));
             _coins.SetValue(session.Coins);
+            if (session.World is IRunWorldSummary summary)
+            {
+                _score.SetValue(ClampToInt(summary.Score));
+            }
+
+            UpdateCallouts(session.Phase == SessionPhase.Paused ? 0f : realDeltaSeconds);
 
             SessionPhase phase = session.Phase;
             if (phase != _shownPhase)
@@ -287,6 +347,33 @@ namespace JungleBooze.UI.Hud
                     return HudStrings.CauseFell;
                 default:
                     return HudStrings.CauseEnded;
+            }
+        }
+
+        private static int ClampToInt(long value)
+        {
+            return value < 0L ? 0 : (value > int.MaxValue ? int.MaxValue : (int)value);
+        }
+
+        private void UpdateCallouts(float dt)
+        {
+            if (_flashLeft > 0f)
+            {
+                _flashLeft -= dt;
+                float a = Mathf.Clamp01(_flashLeft / FlashSeconds) * FlashAlpha;
+                Color c = _flash.color;
+                c.a = a;
+                _flash.color = c;
+            }
+
+            if (_toastLeft > 0f)
+            {
+                _toastLeft -= dt;
+                bool on = _toastLeft > 0f;
+                if (_toast.gameObject.activeSelf != on)
+                {
+                    _toast.gameObject.SetActive(on);
+                }
             }
         }
 
