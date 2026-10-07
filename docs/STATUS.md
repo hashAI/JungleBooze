@@ -119,12 +119,13 @@ If a new session finds an agent marked **working** but no matching output or com
 - Style guide draw-call and triangle estimates (78/120 draws, ~137k/150k tris) need the benchmark scene.
 - Image prompts were used (OpenAI `gpt-image-2`); macaw recolors exist but the locked 3D input is original take 1.
 - Core, Services, Gameplay, UI, App, and Editor compiled clean on the owner's Mac with Unity 6000.3.25f1 csc and warnings as errors (2026-10-07). Test assemblies were not judged in that headless pass (nunit/mscorlib mismatch).
-- AudioPlayback is not spawned in the Run scene yet, so Play is still silent.
+- Audio is wired into the Run scene (RunAudioView, music per phase, UI taps) but NOT compiled: no Unity in the cloud container. Compile-check on the Mac first.
 - Unity editor version `6000.3.0f1` and package versions weren't checked against Unity's registry.
 - Hand-made `.meta` files and asmdefs are unconfirmed until Unity opens the project.
 
 ## Log
 Newest first. One line per event.
+- 2026-10-07: Audio wired into the Run scene (RunAudioView; catalog moved to Audio/Resources; fixed `Stumble`->`Stumbled` in RunAudioCues). Not compiled. [ASSUMED] Jungle A is run music. Launched asset-pipeline for Meshy hero + macaw models (cap ~300 credits). Another session (branch claude/nifty-hawking-uk9zpl) is doing Batches 3-4; expect merge conflicts in STATUS.md and RunSceneBootstrap views array.
 - 2026-10-07: **Owner: finish up; use original macaw (take 1 violet/orange).** Recolors color1–4 are on disk unused. Audio files generated (SFX regenerated; Duko voice recovered from ElevenLabs history; 3 Jungle loops + menu + sting). Playback code exists, not wired into the Run scene. Updating STATUS, committing Batch 2 (power-ups, Duko/continue, audio, concepts), pushing.
 - 2026-10-07: Power-ups compile-check clean (Core, Services, Gameplay, UI, App, Editor; warnings as errors). Test assemblies were not judged: the headless nunit reference wants mscorlib, which is a compiler-setup mismatch, not a game-code error. [ASSUMED] coyote counts as air; slowdown still smashes obstacles. Macaw recolors and audio still running. Not committed yet.
 - 2026-10-07: Power-ups agent finished. Views spawned in RunSceneBootstrap; Speed Boost holds its ending and vine sections until the boost is over. RunSceneBootstrapTests view count was already stale (expects 4).

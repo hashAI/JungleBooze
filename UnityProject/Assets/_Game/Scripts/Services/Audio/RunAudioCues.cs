@@ -53,7 +53,7 @@ namespace JungleBooze.Services.Audio
                 case CoinCollected:
                     cue = new AudioCue(AudioClipId.Coin, CoinPitch(entityId), CoinGain(entityId), false);
                     return true;
-                case Stumble:
+                case Stumbled:
                     cue = new AudioCue(AudioClipId.Stumble, 1f, 1f, false);
                     return true;
                 case NearMiss:

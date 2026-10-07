@@ -7,6 +7,7 @@ using JungleBooze.Gameplay.Session;
 using JungleBooze.Gameplay.Track;
 using JungleBooze.Gameplay.Views;
 using JungleBooze.Gameplay.Vine;
+using JungleBooze.Services.Audio;
 using JungleBooze.Services.Persistence;
 using JungleBooze.UI.Hud;
 using JungleBooze.UI.Menus;
@@ -228,7 +229,10 @@ namespace JungleBooze.App
             ContinueView continueView = continueObject.AddComponent<ContinueView>();
             continueView.Build(driver, Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"), save);
 
-            driver.Init(session, input, new IRunView[] { ground, gaps, obstacles, hazardView, vineView, coinView, powerUpView, runnerView, companionView, cameraView, hud, companionHud, continueView }, kit);
+            // Audio: pooled playback (music, SFX, Duko voice) following the save's volume settings.
+            var audioView = new RunAudioView(CreateAudio(root.transform, save));
+
+            driver.Init(session, input, new IRunView[] { audioView, ground, gaps, obstacles, hazardView, vineView, coinView, powerUpView, runnerView, companionView, cameraView, hud, companionHud, continueView }, kit);
 
             if (Debug.isDebugBuild)
             {
@@ -250,6 +254,16 @@ namespace JungleBooze.App
             PowerUpConfig powerUps = RunConfigLoader.LoadPowerUps();
             HazardConfig hazards = RunConfigLoader.LoadHazards();
             return new TrackRunWorldFactory(TrackRunSetup.CreateDefault(vines, powerUps, hazards));
+        }
+
+        private static AudioPlayback CreateAudio(Transform parent, PlayerSave save)
+        {
+            var audioObject = new GameObject("Audio");
+            audioObject.transform.SetParent(parent, false);
+            AudioPlayback audio = audioObject.AddComponent<AudioPlayback>();
+            audio.SetCatalog(Resources.Load<AudioCatalog>("RunAudioCatalog"));
+            audio.Bind(save);
+            return audio;
         }
 
         private static bool IsRunScene(Scene scene)

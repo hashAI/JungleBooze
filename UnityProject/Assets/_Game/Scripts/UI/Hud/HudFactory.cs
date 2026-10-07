@@ -12,6 +12,16 @@ namespace JungleBooze.UI.Hud
     /// </summary>
     public static class HudFactory
     {
+        /// <summary>Raised after any button made here is pressed (audio tap sound hooks in without the UI knowing about audio).</summary>
+        public static event System.Action ButtonPressed;
+
+        private static readonly UnityAction NotifyPressedAction = NotifyPressed;
+
+        private static void NotifyPressed()
+        {
+            ButtonPressed?.Invoke();
+        }
+
         public const float BorderPt = 3f;
         public const float ShadowPt = 4f;
 
@@ -143,6 +153,7 @@ namespace JungleBooze.UI.Hud
             navigation.mode = Navigation.Mode.None;
             button.navigation = navigation;
 
+            button.onClick.AddListener(NotifyPressedAction);
             if (onClick != null)
             {
                 button.onClick.AddListener(onClick);

@@ -3,7 +3,7 @@ using UnityEngine;
 namespace JungleBooze.Services.Audio
 {
     /// <summary>
-    /// Clip references for <see cref="AudioPlayback"/>. Assigned in <c>Assets/_Game/Audio/RunAudioCatalog.asset</c>.
+    /// Clip references for <see cref="AudioPlayback"/>. Assigned in <c>Assets/_Game/Audio/Resources/RunAudioCatalog.asset</c> (loaded at run start by the bootstrap).
     /// </summary>
     [CreateAssetMenu(fileName = "RunAudioCatalog", menuName = "JungleBooze/Audio/Run Audio Catalog")]
     public sealed class AudioCatalog : ScriptableObject
