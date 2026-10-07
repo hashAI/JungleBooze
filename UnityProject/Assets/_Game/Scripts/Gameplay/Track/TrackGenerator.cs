@@ -1,6 +1,7 @@
 using System;
 using JungleBooze.Core;
 using JungleBooze.Gameplay.Runner;
+using JungleBooze.Gameplay.Vine;
 
 namespace JungleBooze.Gameplay.Track
 {
@@ -12,6 +13,10 @@ namespace JungleBooze.Gameplay.Track
     /// every breather run), exactly 2 per normal pick attempt (<c>NextInt</c> over the pool weight, then
     /// <c>NextFloat</c> for the mirror, always drawn) and exactly 2 per breather pick (<c>NextInt</c> over the
     /// breather count, then the mirror draw). The start chunk and the seam fallback draw nothing.</para>
+    /// <para>Vine sections (GDD 7.2, 7.5) use their own stream (<see cref="RandomStreamIds.VineSchedule"/>), so they
+    /// never shift the track stream: 1 draw per section interval (at <see cref="Reset"/> and after every vine
+    /// section), 2 per vine pick (<c>NextInt</c> over the eligible vine chunks, then the mirror draw). Without a
+    /// vine stream no vine section is ever placed and generation is exactly the FP1 generation.</para>
     /// </summary>
     public sealed class TrackGenerator
     {
@@ -37,8 +42,15 @@ namespace JungleBooze.Gameplay.Track
         private double _breatherRunLengthM;
         private double _breatherRunRequiredM;
 
-        public TrackGenerator(TrackConfig config, ChunkLibrary library, DifficultyTiersConfig tiers, SpeedCurve curve)
+        private readonly VineConfig _vines;
+        private IRandom _vineRng;
+        private double _vineElapsedS;
+        private double _vineDueS;
+
+        public TrackGenerator(
+            TrackConfig config, ChunkLibrary library, DifficultyTiersConfig tiers, SpeedCurve curve, VineConfig vines = null)
         {
+            _vines = vines ?? VineConfig.CreateDefault();
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _library = library ?? throw new ArgumentNullException(nameof(library));
             _tiers = tiers ?? throw new ArgumentNullException(nameof(tiers));
@@ -96,13 +108,37 @@ namespace JungleBooze.Gameplay.Track
         /// <summary>The current breather interval (s).</summary>
         public double BreatherDueSeconds => _breatherDueS;
 
+        /// <summary>Vine sections picked so far.</summary>
+        public int VinePickCount { get; private set; }
+
+        /// <summary>Planned run time since the last vine section (or the run start) (s).</summary>
+        public double VineElapsedSeconds => _vineElapsedS;
+
+        /// <summary>Planned run time after which the next vine section is placed (s).</summary>
+        public double VineDueSeconds => _vineDueS;
+
         /// <summary>
         /// Starts a new run on <paramref name="trackStream"/> (the forked <see cref="RandomStreamIds.TrackGeneration"/>
         /// stream). Clears all generator state and draws the first breather interval.
         /// </summary>
         public void Reset(IRandom trackStream)
         {
+            Reset(trackStream, null);
+        }
+
+        /// <summary>
+        /// Like <see cref="Reset(IRandom)"/>, with the run's forked <see cref="RandomStreamIds.VineSchedule"/> stream.
+        /// Null (or vines disabled in the config) = no vine sections.
+        /// </summary>
+        public void Reset(IRandom trackStream, IRandom vineStream)
+        {
             _rng = trackStream ?? throw new ArgumentNullException(nameof(trackStream));
+            _vineRng = _vines.Enabled ? vineStream : null;
+            _vineElapsedS = 0.0;
+            VinePickCount = 0;
+            _vineDueS = _vineRng != null
+                ? _vineRng.NextFloat(_vines.FirstSectionMinS, _vines.FirstSectionMaxS)
+                : double.PositiveInfinity;
             _historyCount = 0;
             _historyNext = 0;
             for (int i = 0; i < _history.Length; i++)
@@ -144,15 +180,29 @@ namespace JungleBooze.Gameplay.Track
             {
                 _startEmitted = true;
                 Remember(_startIndex, false);
-                return new ChunkPick(_startIndex, false, tier, false);
+                return CountVineTime(new ChunkPick(_startIndex, false, tier, false), startZ);
             }
 
             if (_breatherPending || _inBreatherRun)
             {
-                return PickBreather(startZ, tier);
+                return CountVineTime(PickBreather(startZ, tier), startZ);
             }
 
-            return PickNormal(startZ, tierIndex, tier);
+            if (_vineRng != null && _vineElapsedS >= _vineDueS)
+            {
+                int vine = PickVine(startZ, tier, out bool vineMirrored);
+                if (vine >= 0)
+                {
+                    // Spec 002 seam rule: vine chunks are compatible with everything (not Normal).
+                    Remember(vine, vineMirrored);
+                    VinePickCount++;
+                    _vineElapsedS = 0.0;
+                    _vineDueS = _vineRng.NextFloat(_vines.SectionIntervalMinS, _vines.SectionIntervalMaxS);
+                    return new ChunkPick(vine, vineMirrored, tier, false);
+                }
+            }
+
+            return CountVineTime(PickNormal(startZ, tierIndex, tier), startZ);
         }
 
         /// <summary>Stable hash of the generator state (AC-242, AC-247).</summary>
@@ -176,7 +226,69 @@ namespace JungleBooze.Gameplay.Track
             h = StableHash.Mix(h, _breatherRunRequiredM);
             h = StableHash.Mix(h, SeamFallbackCount);
             h = StableHash.Mix(h, PickAttemptCount);
+            h = StableHash.Mix(h, _vineElapsedS);
+            h = StableHash.Mix(h, _vineDueS);
+            h = StableHash.Mix(h, VinePickCount);
             return h;
+        }
+
+        /// <summary>Adds the planned run time of a picked chunk to the vine clock.</summary>
+        private ChunkPick CountVineTime(ChunkPick pick, double startZ)
+        {
+            _vineElapsedS += _library[pick.ChunkIndex].LengthM / PlannedSpeed(startZ);
+            return pick;
+        }
+
+        /// <summary>
+        /// Picks a vine chunk eligible for the tier (and for chasms, the distance) uniformly with the vine stream.
+        /// Returns -1 (no draws) when none is eligible; the section then waits for the next chunk.
+        /// </summary>
+        private int PickVine(double startZ, int tier, out bool mirrored)
+        {
+            mirrored = false;
+            int eligible = 0;
+            for (int i = 0; i < _library.Count; i++)
+            {
+                if (IsVineEligible(_library[i], startZ, tier))
+                {
+                    eligible++;
+                }
+            }
+
+            if (eligible == 0)
+            {
+                return -1;
+            }
+
+            int r = _vineRng.NextInt(0, eligible); // draw 1
+            bool mirror = _vineRng.NextFloat() < _config.MirrorChance; // draw 2, always drawn
+            for (int i = 0; i < _library.Count; i++)
+            {
+                if (!IsVineEligible(_library[i], startZ, tier))
+                {
+                    continue;
+                }
+
+                if (r == 0)
+                {
+                    mirrored = mirror && _library[i].AllowMirror;
+                    return i;
+                }
+
+                r--;
+            }
+
+            return -1;
+        }
+
+        private bool IsVineEligible(ChunkData chunk, double startZ, int tier)
+        {
+            if (chunk.Kind != ChunkKind.Vine || chunk.VineCount == 0 || tier < chunk.MinTier || tier > chunk.MaxTier)
+            {
+                return false;
+            }
+
+            return !chunk.HasChasmVine || startZ >= _vines.ChasmVinesFromM;
         }
 
         private ChunkPick PickNormal(double startZ, int tierIndex, int tier)

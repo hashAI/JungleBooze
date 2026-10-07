@@ -1,6 +1,7 @@
 using System;
 using JungleBooze.Core;
 using JungleBooze.Gameplay.Runner;
+using JungleBooze.Gameplay.Vine;
 
 namespace JungleBooze.Gameplay.Track
 {
@@ -10,10 +11,21 @@ namespace JungleBooze.Gameplay.Track
     /// Implements <see cref="ITrackQuery"/> (the spec's <c>ChunkTrackQuery</c>): ground and gaps, obstacle boxes
     /// (movers at their current position, with the previous position for the relative-motion sweep) and the next
     /// gap edge. Advanced once per tick by <see cref="Update"/> (step 7a); queries never change state.
+    /// Also holds the vines of vine sections (<see cref="IVineTrackQuery"/>, GDD 7) and the bonus coins a vine
+    /// release throws along the launch arc (coin shower and Perfect ring, GDD 7.3 step 4).
     /// No allocation after construction.
     /// </summary>
-    public sealed class TrackSimulation : ITrackQuery
+    public sealed class TrackSimulation : ITrackQuery, IVineTrackQuery
     {
+        /// <summary>Height of a bonus coin above HERO's feet on the launch arc (about the chest, so it is picked up).</summary>
+        private const float BonusCoinBodyOffsetM = 0.9f;
+
+        /// <summary>Bonus coins start this long into the flight, after HERO has left the vine.</summary>
+        private const double BonusCoinStartS = 0.12;
+
+        /// <summary>Bonus coins cover the flight up to this fraction of its length.</summary>
+        private const double BonusCoinEndFraction = 0.8;
+
         /// <summary>Coins one chunk may hold (scratch buffer size).</summary>
         public const int MaxCoinsPerChunk = 256;
 
@@ -24,6 +36,11 @@ namespace JungleBooze.Gameplay.Track
         private readonly ObstacleKitConfig _kit;
         private readonly CoinConfig _coinConfig;
         private readonly ChunkLibrary _library;
+        private readonly VineConfig _vines;
+        private readonly FixedRing<VineInstance> _vineRing;
+        private readonly CoinInstance[] _bonusCoins;
+        private int _bonusCoinCount;
+        private int _nextVineId;
         private readonly SpeedCurve _curve;
         private readonly RunnerConfig _runner;
         private readonly TrackGenerator _generator;
@@ -58,7 +75,8 @@ namespace JungleBooze.Gameplay.Track
             ChunkLibrary library,
             DifficultyTiersConfig tiers,
             SpeedCurve curve,
-            RunnerConfig runner)
+            RunnerConfig runner,
+            VineConfig vines = null)
         {
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _kit = kit ?? throw new ArgumentNullException(nameof(kit));
@@ -71,7 +89,10 @@ namespace JungleBooze.Gameplay.Track
                 throw new ArgumentException("The track supports exactly " + LaneMasks.LaneCount + " lanes.", nameof(runner));
             }
 
-            _generator = new TrackGenerator(config, library, tiers, curve);
+            _vines = vines ?? VineConfig.CreateDefault();
+            _generator = new TrackGenerator(config, library, tiers, curve, _vines);
+            _vineRing = new FixedRing<VineInstance>(_vines.MaxActiveVines);
+            _bonusCoins = new CoinInstance[_vines.MaxBonusCoins];
             _chunks = new FixedRing<ChunkInstance>(config.MaxActiveChunks);
             _obstacles = new FixedRing<ObstacleInstance>(config.MaxActiveObstacles);
             _coins = new FixedRing<CoinInstance>(config.MaxActiveCoins);
@@ -92,6 +113,19 @@ namespace JungleBooze.Gameplay.Track
         public ChunkLibrary Library => _library;
 
         public RunnerConfig RunnerConfig => _runner;
+
+        public VineConfig VineConfig => _vines;
+
+        /// <summary>Live vines (oldest first, sorted by z).</summary>
+        public int VineCount => _vineRing.Count;
+
+        /// <summary>Items dropped because the vine ring or the bonus coin buffer was full.</summary>
+        public int VineOverflowCount { get; private set; }
+
+        public int BonusCoinOverflowCount { get; private set; }
+
+        /// <summary>Live bonus coins from vine releases (separate from the chunk coin ring).</summary>
+        public int BonusCoinCount => _bonusCoinCount;
 
         public TrackGenerator Generator => _generator;
 
@@ -160,6 +194,24 @@ namespace JungleBooze.Gameplay.Track
             return ref _coins[index];
         }
 
+        /// <summary>Live vine <paramref name="index"/>, 0 = oldest.</summary>
+        public ref readonly VineInstance GetVine(int index)
+        {
+            return ref _vineRing[index];
+        }
+
+        /// <summary>Bonus coin <paramref name="index"/> (vine coin shower / ring).</summary>
+        public ref readonly CoinInstance GetBonusCoin(int index)
+        {
+            return ref _bonusCoins[index];
+        }
+
+        /// <summary>Writable bonus coin access for the coin pickup step (same assembly only).</summary>
+        internal ref CoinInstance BonusCoinAt(int index)
+        {
+            return ref _bonusCoins[index];
+        }
+
         /// <summary>Writable coin access for the coin pickup step (same assembly only).</summary>
         internal ref CoinInstance CoinAt(int index)
         {
@@ -173,6 +225,20 @@ namespace JungleBooze.Gameplay.Track
         /// </summary>
         public void Reset(IRandom trackStream)
         {
+            Reset(trackStream, null);
+        }
+
+        /// <summary>
+        /// Like <see cref="Reset(IRandom)"/>, with the run's forked <see cref="RandomStreamIds.VineSchedule"/> stream
+        /// (null = no vine sections).
+        /// </summary>
+        public void Reset(IRandom trackStream, IRandom vineStream)
+        {
+            _vineRing.Clear();
+            _bonusCoinCount = 0;
+            _nextVineId = 1;
+            VineOverflowCount = 0;
+            BonusCoinOverflowCount = 0;
             _chunks.Clear();
             _obstacles.Clear();
             _coins.Clear();
@@ -186,7 +252,7 @@ namespace JungleBooze.Gameplay.Track
             ChunkOverflowCount = 0;
             ObstacleOverflowCount = 0;
             CoinOverflowCount = 0;
-            _generator.Reset(trackStream);
+            _generator.Reset(trackStream, vineStream);
             _hasReset = true;
             GenerateAhead(0.0);
         }
@@ -333,6 +399,102 @@ namespace JungleBooze.Gameplay.Track
             return count;
         }
 
+        public int GetVines(double zMin, double zMax, Span<VineAnchor> buffer)
+        {
+            int count = 0;
+            for (int i = 0; i < _vineRing.Count; i++)
+            {
+                ref VineInstance v = ref _vineRing[i];
+                if (v.Z > zMax)
+                {
+                    break;
+                }
+
+                if (v.Z < zMin)
+                {
+                    continue;
+                }
+
+                if (count >= buffer.Length)
+                {
+                    return count;
+                }
+
+                buffer[count++] = new VineAnchor
+                {
+                    Id = v.Id,
+                    Group = v.ChunkSerial,
+                    Row = v.Row,
+                    Lane = v.Lane,
+                    Z = v.Z,
+                    OverChasm = v.OverChasm,
+                };
+            }
+
+            return count;
+        }
+
+        /// <summary>
+        /// Throws the bonus coins of a vine release along HERO's launch arc (GDD 7.3 step 4, 7.5): Good = a trail of
+        /// <c>GoodCoins</c>; Perfect = a trail plus a ring of <c>PerfectRingCoins</c> around the arc's apex. Auto
+        /// throws none. Positions follow the runner's launch (start, vertical speed, gravity, forward speed), so HERO
+        /// flies through them. Called at step 11a of the release tick, before pickups. No allocation.
+        /// </summary>
+        public void SpawnVineBonusCoins(VineReleaseGrade grade, RunnerSimulation runner)
+        {
+            int total = _vines.CoinsFor(grade);
+            if (total <= 0 || runner == null)
+            {
+                return;
+            }
+
+            double y0 = runner.LaunchStartY;
+            double vy = runner.LaunchVelocityYMps;
+            double g = runner.LaunchGravityMps2 > 0.0 ? runner.LaunchGravityMps2 : 1.0;
+            double v = runner.LaunchForwardSpeedMps;
+            double z0 = runner.LaunchStartZ;
+            double flight = runner.LaunchFlightSeconds;
+            float x = _runner.LaneCenterX(runner.LaunchLane);
+
+            int ring = grade == VineReleaseGrade.Perfect ? Math.Min(_vines.PerfectRingCoins, total) : 0;
+            int trail = total - ring;
+            double t0 = BonusCoinStartS;
+            double t1 = flight * BonusCoinEndFraction;
+            if (t1 < t0)
+            {
+                t1 = t0;
+            }
+
+            for (int k = 0; k < trail; k++)
+            {
+                double t = trail > 1 ? t0 + (t1 - t0) * k / (trail - 1) : t0;
+                AddBonusCoin(x, (float)(y0 + vy * t - 0.5 * g * t * t) + BonusCoinBodyOffsetM, z0 + v * t);
+            }
+
+            if (ring > 0)
+            {
+                double ta = vy / g;
+                if (ta < t0)
+                {
+                    ta = t0;
+                }
+
+                if (ta > t1)
+                {
+                    ta = t1;
+                }
+
+                float cy = (float)(y0 + vy * ta - 0.5 * g * ta * ta) + BonusCoinBodyOffsetM;
+                double cz = z0 + v * ta;
+                float r = _vines.RingRadiusM;
+                for (int k = 0; k < ring; k++)
+                {
+                    double a = 2.0 * Math.PI * k / ring;
+                    AddBonusCoin(x + (float)(r * Math.Cos(a)), cy + (float)(r * Math.Sin(a)), cz);
+                }
+            }
+        }
+
         public bool TryGetNextGapEdge(int lane, double fromZ, out double nearEdge, out float length)
         {
             for (int i = 0; i < _obstacles.Count; i++)
@@ -397,6 +559,24 @@ namespace JungleBooze.Gameplay.Track
             for (int i = 0; i < _coins.Count; i++)
             {
                 h = MixCoin(h, _coins[i]);
+            }
+
+            h = StableHash.Mix(h, _nextVineId);
+            h = StableHash.Mix(h, _vineRing.Count);
+            for (int i = 0; i < _vineRing.Count; i++)
+            {
+                ref VineInstance v = ref _vineRing[i];
+                h = StableHash.Mix(h, v.Id);
+                h = StableHash.Mix(h, (int)v.Lane);
+                h = StableHash.Mix(h, (int)v.Row);
+                h = StableHash.Mix(h, v.Z);
+                h = StableHash.Mix(h, v.OverChasm);
+            }
+
+            h = StableHash.Mix(h, _bonusCoinCount);
+            for (int i = 0; i < _bonusCoinCount; i++)
+            {
+                h = MixCoin(h, _bonusCoins[i]);
             }
 
             return h;
@@ -472,6 +652,30 @@ namespace JungleBooze.Gameplay.Track
 
                 double arcSpeed = _curve.Evaluate(startZ + pattern.ZCenter);
                 n += CoinLayout.Generate(pattern, startZ, arcSpeed, _coinConfig, _runner, _scratchX, _scratchY, _scratchZ, n);
+            }
+
+            for (int i = 0; i < data.VineCount; i++)
+            {
+                VinePlacement vp = data.GetVine(i);
+                if (pick.Mirrored)
+                {
+                    vp = vp.Mirrored();
+                }
+
+                var vine = new VineInstance
+                {
+                    Id = _nextVineId++,
+                    Lane = (byte)vp.Lane,
+                    Row = (byte)vp.Row,
+                    Z = startZ + vp.Zc,
+                    OverChasm = vp.OverChasm,
+                    ChunkSerial = serial,
+                };
+
+                if (!_vineRing.TryAdd(vine))
+                {
+                    VineOverflowCount++;
+                }
             }
 
             SortScratchByZ(n);
@@ -550,6 +754,25 @@ namespace JungleBooze.Gameplay.Track
             }
         }
 
+        private void AddBonusCoin(float x, float y, double z)
+        {
+            if (_bonusCoinCount >= _bonusCoins.Length)
+            {
+                BonusCoinOverflowCount++;
+                return;
+            }
+
+            _bonusCoins[_bonusCoinCount++] = new CoinInstance
+            {
+                Id = _nextCoinId++,
+                X = x,
+                Y = y,
+                Z = z,
+                Lane = (byte)CoinLayout.NearestLane(x, _runner),
+                ChunkSerial = 0,
+            };
+        }
+
         /// <summary>Stable insertion sort of the scratch coins by z into <see cref="_order"/>.</summary>
         private void SortScratchByZ(int n)
         {
@@ -587,6 +810,29 @@ namespace JungleBooze.Gameplay.Track
             {
                 _chunks.RemoveFirst();
             }
+
+            while (_vineRing.Count > 0 && _vineRing[0].Z < limit)
+            {
+                _vineRing.RemoveFirst();
+            }
+
+            int write = 0;
+            for (int i = 0; i < _bonusCoinCount; i++)
+            {
+                if (_bonusCoins[i].Z + coinBack < limit)
+                {
+                    continue;
+                }
+
+                if (write != i)
+                {
+                    _bonusCoins[write] = _bonusCoins[i];
+                }
+
+                write++;
+            }
+
+            _bonusCoinCount = write;
         }
 
         private void UpdateMovers(in RunnerTickInfo info, RunnerSimulation runner)

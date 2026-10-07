@@ -23,7 +23,10 @@ namespace JungleBooze.Gameplay.Runner
 
         Dead = 6,
 
-        /// <summary>Hook for later specs (vine, companion). Not entered by this simulation yet.</summary>
+        /// <summary>
+        /// On a vine (GDD 7.3): position follows the swing arc, collisions cannot hurt, Jump releases, Move aims.
+        /// Also the hook for the companion's Lift (later).
+        /// </summary>
         Carried = 7,
     }
 }

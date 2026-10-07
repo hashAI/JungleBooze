@@ -41,5 +41,14 @@ namespace JungleBooze.Gameplay.Runner
 
         /// <summary>ScoreBonus: the bonus came from a completed coin streak.</summary>
         public const byte BonusStreak = 1 << 1;
+
+        /// <summary>ScoreBonus: the bonus came from a vine release.</summary>
+        public const byte BonusVine = 1 << 2;
+
+        /// <summary>VineGrabbed, VineMissed: a chasm lies under the vine.</summary>
+        public const byte VineOverChasm = 1 << 0;
+
+        /// <summary>VineReleased: the launch is guided into the next vine of the chain.</summary>
+        public const byte VineChained = 1 << 1;
     }
 }

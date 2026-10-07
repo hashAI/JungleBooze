@@ -23,6 +23,7 @@ namespace JungleBooze.Gameplay.Config
         [SerializeField] private bool _allowMirror = true;
         [SerializeField] private ObstaclePlacement[] _obstacles = new ObstaclePlacement[0];
         [SerializeField] private CoinPattern[] _coins = new CoinPattern[0];
+        [SerializeField] private VinePlacement[] _vines = new VinePlacement[0];
 
         public string Id => _id;
 
@@ -40,7 +41,8 @@ namespace JungleBooze.Gameplay.Config
                 _worldMask,
                 string.IsNullOrEmpty(_displayName) ? _id : _displayName,
                 _designNote,
-                _formatVersion);
+                _formatVersion,
+                _vines);
         }
 
         /// <summary>Overwrites every serialized field from <paramref name="chunk"/>. For editor tooling and tests.</summary>
@@ -66,6 +68,12 @@ namespace JungleBooze.Gameplay.Config
             for (int i = 0; i < _coins.Length; i++)
             {
                 _coins[i] = chunk.GetCoinPattern(i);
+            }
+
+            _vines = new VinePlacement[chunk.VineCount];
+            for (int i = 0; i < _vines.Length; i++)
+            {
+                _vines[i] = chunk.GetVine(i);
             }
         }
     }

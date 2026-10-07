@@ -35,6 +35,15 @@ namespace JungleBooze.Gameplay.Views
         public float RunAnimRateMin = 0.8f;
         public float RunAnimRateMax = 1.6f;
 
+        /// <summary>GDD 7.3 step 3: the camera pulls back to this FOV while swinging (and in the launch after).</summary>
+        public float SwingCameraFovDeg = 70f;
+
+        /// <summary>GDD 7.3 step 3: extra upward camera tilt while swinging (deg) [ASSUMED: tilt = pitch up].</summary>
+        public float SwingCameraTiltDeg = 8f;
+
+        /// <summary>Real-time smoothing of the swing camera in and out [ASSUMED].</summary>
+        public float SwingCameraBlendMs = 250f;
+
         /// <summary>Spec 001 section 8.3: 3-2-1 countdown of 1.5 s real time. [ASSUMED] lives in this asset.</summary>
         public float ResumeCountdownMs = 1500f;
 
@@ -44,7 +53,10 @@ namespace JungleBooze.Gameplay.Views
         /// </summary>
         public float GameOverInputLockMs = 400f;
 
-        /// <summary>Reduce Motion setting (no settings screen yet): turns off the stumble camera shake.</summary>
+        /// <summary>
+        /// Reduce Motion setting (no settings screen yet): turns off the stumble camera shake, the swing camera and
+        /// the vine "hang" slow-down.
+        /// </summary>
         public bool ReduceMotion;
 
         public static RunnerPresentationConfig CreateDefault()
@@ -89,6 +101,9 @@ namespace JungleBooze.Gameplay.Views
             CheckRange(errors, "stumbleShakeM", StumbleShakeM, 0f, 1f);
             CheckRange(errors, "runAnimReferenceSpeedMps", RunAnimReferenceSpeedMps, 1f, 50f);
             CheckRange(errors, "runAnimRateMin", RunAnimRateMin, 0.1f, RunAnimRateMax);
+            CheckRange(errors, "swingCameraFovDeg", SwingCameraFovDeg, 30f, 110f);
+            CheckRange(errors, "swingCameraTiltDeg", SwingCameraTiltDeg, -30f, 30f);
+            CheckRange(errors, "swingCameraBlendMs", SwingCameraBlendMs, 0f, 2000f);
             CheckRange(errors, "resumeCountdownMs", ResumeCountdownMs, 0f, 5000f);
             CheckRange(errors, "gameOverInputLockMs", GameOverInputLockMs, 0f, 2000f);
             return errors.Count == before;

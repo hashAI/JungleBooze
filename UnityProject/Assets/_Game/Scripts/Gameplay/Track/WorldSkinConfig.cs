@@ -23,7 +23,8 @@ namespace JungleBooze.Gameplay.Track
             string fullBlock,
             string mover,
             string gap,
-            string fellText)
+            string fellText,
+            string missedVineText = "Missed vine")
         {
             WorldName = worldName ?? string.Empty;
             _names[(int)ObstacleArchetype.None] = "obstacle";
@@ -33,6 +34,7 @@ namespace JungleBooze.Gameplay.Track
             _names[(int)ObstacleArchetype.Mover] = Require(mover, nameof(mover));
             _names[(int)ObstacleArchetype.Gap] = Require(gap, nameof(gap));
             FellText = Require(fellText, nameof(fellText));
+            MissedVineText = Require(missedVineText, nameof(missedVineText));
             for (int i = 0; i < ArchetypeSlots; i++)
             {
                 _hitTexts[i] = "Hit: " + _names[i];
@@ -44,6 +46,9 @@ namespace JungleBooze.Gameplay.Track
 
         /// <summary>Cause text for <see cref="DeathCause.Fell"/> ("Fell into a ravine" [ASSUMED wording]).</summary>
         public string FellText { get; }
+
+        /// <summary>Cause text for <see cref="DeathCause.MissedVine"/> (GDD 7.4: "Missed vine").</summary>
+        public string MissedVineText { get; }
 
         /// <summary>Jungle display names from spec 002 section 3.8.</summary>
         public static WorldSkinConfig CreateJungle()
@@ -73,6 +78,8 @@ namespace JungleBooze.Gameplay.Track
             {
                 case DeathCause.Fell:
                     return FellText;
+                case DeathCause.MissedVine:
+                    return MissedVineText;
                 case DeathCause.Hit:
                     return afterStumble ? _trippedTexts[Slot(archetype)] : _hitTexts[Slot(archetype)];
                 default:

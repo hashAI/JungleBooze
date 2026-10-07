@@ -73,7 +73,27 @@ namespace JungleBooze.Gameplay.Runner
         /// <summary>Value = streak length.</summary>
         CoinStreak = 22,
 
-        /// <summary>Value = points; Flags: BonusNearMiss or BonusStreak.</summary>
+        /// <summary>
+        /// Value = points; Flags: BonusNearMiss, BonusStreak or BonusVine (then Archetype holds the
+        /// <c>VineReleaseGrade</c>).
+        /// </summary>
         ScoreBonus = 23,
+
+        // ---- GDD 7 vine swinging. Append-only. ----
+
+        /// <summary>EntityId = vine id, Lane = vine lane, Value = vine row, Flags: VineOverChasm.</summary>
+        VineGrabbed = 24,
+
+        /// <summary>
+        /// EntityId = vine id, Lane = aimed (landing or next-vine) lane, Value = <c>VineReleaseGrade</c>,
+        /// Flags: VineChained (the launch is guided into the next vine).
+        /// </summary>
+        VineReleased = 25,
+
+        /// <summary>A vine row was passed without a grab. EntityId = vine id, Lane, Value = row, Flags: VineOverChasm.</summary>
+        VineMissed = 26,
+
+        /// <summary>Left/right on a vine. Lane = aimed lane, Dir, EntityId = aimed next vine id (0 = landing pad).</summary>
+        VineAimChanged = 27,
     }
 }

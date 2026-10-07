@@ -15,6 +15,7 @@ namespace JungleBooze.Gameplay.Track
 
         private readonly ObstaclePlacement[] _obstacles;
         private readonly CoinPattern[] _coins;
+        private readonly VinePlacement[] _vines;
 
         public ChunkData(
             string id,
@@ -28,7 +29,8 @@ namespace JungleBooze.Gameplay.Track
             WorldMask worldMask = WorldMask.All,
             string displayName = null,
             string designNote = null,
-            int formatVersion = CurrentFormatVersion)
+            int formatVersion = CurrentFormatVersion,
+            VinePlacement[] vines = null)
         {
             if (string.IsNullOrEmpty(id))
             {
@@ -52,6 +54,14 @@ namespace JungleBooze.Gameplay.Track
             FormatVersion = formatVersion;
             _obstacles = obstacles == null ? Array.Empty<ObstaclePlacement>() : (ObstaclePlacement[])obstacles.Clone();
             _coins = coins == null ? Array.Empty<CoinPattern>() : (CoinPattern[])coins.Clone();
+            _vines = vines == null ? Array.Empty<VinePlacement>() : (VinePlacement[])vines.Clone();
+            for (int i = 0; i < _vines.Length; i++)
+            {
+                if (_vines[i].OverChasm)
+                {
+                    HasChasmVine = true;
+                }
+            }
         }
 
         /// <summary>Stable unique id (<c>T1-01</c>), stored in replays and sim reports.</summary>
@@ -80,6 +90,17 @@ namespace JungleBooze.Gameplay.Track
         public int ObstacleCount => _obstacles.Length;
 
         public int CoinPatternCount => _coins.Length;
+
+        /// <summary>Vines of a vine section (GDD 7.2), sorted by <see cref="VinePlacement.Zc"/>. 0 for other kinds.</summary>
+        public int VineCount => _vines.Length;
+
+        /// <summary>True if any vine of the chunk hangs over a chasm (gated by <c>VineConfig.ChasmVinesFromM</c>).</summary>
+        public bool HasChasmVine { get; }
+
+        public VinePlacement GetVine(int index)
+        {
+            return _vines[index];
+        }
 
         public ObstaclePlacement GetObstacle(int index)
         {
@@ -127,8 +148,14 @@ namespace JungleBooze.Gameplay.Track
                 coins[i] = _coins[i].Mirrored();
             }
 
+            var vines = new VinePlacement[_vines.Length];
+            for (int i = 0; i < vines.Length; i++)
+            {
+                vines[i] = _vines[i].Mirrored();
+            }
+
             return new ChunkData(
-                Id, Kind, LengthM, MinTier, MaxTier, obstacles, coins, AllowMirror, WorldMask, DisplayName, DesignNote, FormatVersion);
+                Id, Kind, LengthM, MinTier, MaxTier, obstacles, coins, AllowMirror, WorldMask, DisplayName, DesignNote, FormatVersion, vines);
         }
 
         /// <summary>Stable hash of every field that affects the simulation (part of the config hash).</summary>
@@ -166,6 +193,19 @@ namespace JungleBooze.Gameplay.Track
                 h = StableHash.Mix(h, c.SpacingM);
                 h = StableHash.Mix(h, c.X);
                 h = StableHash.Mix(h, c.Y);
+            }
+
+            if (_vines.Length > 0)
+            {
+                h = StableHash.Mix(h, _vines.Length);
+                for (int i = 0; i < _vines.Length; i++)
+                {
+                    VinePlacement v = _vines[i];
+                    h = StableHash.Mix(h, v.Lane);
+                    h = StableHash.Mix(h, v.Zc);
+                    h = StableHash.Mix(h, v.Row);
+                    h = StableHash.Mix(h, v.OverChasm);
+                }
             }
 
             return h;

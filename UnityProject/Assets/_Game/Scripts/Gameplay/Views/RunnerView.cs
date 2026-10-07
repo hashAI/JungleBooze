@@ -8,7 +8,9 @@ namespace JungleBooze.Gameplay.Views
     /// Gray-box stand-in for Pista: a map-cloth capsule body with skin head and dark hair, the brown "X" on her back
     /// (two thin crossed cubes, facing the camera), the teal sash band below it, a satchel at the hip, and a flat
     /// blob shadow that shrinks with height. Squashes while sliding, wobbles toward the blocked side on a lane bump
-    /// (spec 001 10.8), bobs while running and tips over on death. Pivot at the feet. No allocations per frame.
+    /// (spec 001 10.8), bobs while running and tips over on death. On a vine (GDD 7.3) the arms reach up to the
+    /// hand hold and the body hangs from the hand along the pendulum angle; in the launch after a release she
+    /// leans forward. Pivot at the feet. No allocations per frame.
     /// </summary>
     public sealed class RunnerView : MonoBehaviour, IRunView
     {
@@ -28,10 +30,17 @@ namespace JungleBooze.Gameplay.Views
         private const float StumbleHopM = 0.2f;
         private const float StumbleTiltDeg = 20f;
 
+        /// <summary>Height of the vine hand hold above the feet (gray-box proportion; the vine view uses the same).</summary>
+        public const float HandAboveFeetM = 2.0f;
+
+        private const float ShoulderHeightM = 1.3f;
+        private const float FlightLeanDeg = 18f;
+
         private RunnerConfig _runnerConfig;
         private RunnerPresentationConfig _presentation;
         private Transform _model;
         private Transform _shadow;
+        private GameObject _arms;
         private float _squash = 1f;
         private float _wobbleLeft;
         private float _wobbleDir;
@@ -110,6 +119,17 @@ namespace JungleBooze.Gameplay.Views
                 StylePalette.PistaSatchelStrap,
                 new Vector3(BodyRadiusM + 0.04f, BodyHeightM * 0.5f, 0f),
                 new Vector3(0.05f, 0.3f, 0.08f));
+
+            // Arms raised to the hand hold, shown only while on a vine.
+            float armLength = HandAboveFeetM - ShoulderHeightM;
+            _arms = kit.Create(
+                PrimitiveType.Cube,
+                "ArmsUp",
+                _model,
+                StylePalette.PistaSkin,
+                new Vector3(0f, ShoulderHeightM + armLength * 0.5f, 0f),
+                new Vector3(0.42f, armLength, 0.12f)).gameObject;
+            _arms.SetActive(false);
 
             _shadow = kit.Create(
                 PrimitiveType.Cylinder,
@@ -215,10 +235,32 @@ namespace JungleBooze.Gameplay.Views
             }
 
             transform.localPosition = new Vector3(x, 0f, (float)z);
-            _model.localPosition = new Vector3(wobble, y + bob + StumbleHopM * stumble, 0f);
-            _model.localRotation = _dead
-                ? Quaternion.Euler(DeathTiltDeg, 0f, 0f)
-                : Quaternion.Euler(StumbleTiltDeg * stumble, 0f, 0f);
+            bool carried = current.Locomotion == Locomotion.Carried;
+            if (_arms.activeSelf != carried)
+            {
+                _arms.SetActive(carried);
+            }
+
+            if (carried)
+            {
+                // Hang from the hand: rotate about the hand hold by the pendulum angle (feet swing forward).
+                RunnerState previous = runner.Previous;
+                float angle = previous.Locomotion == Locomotion.Carried
+                    ? Mathf.Lerp(previous.SwingAngleRad, current.SwingAngleRad, alpha)
+                    : current.SwingAngleRad;
+                Quaternion hang = Quaternion.Euler(-angle * Mathf.Rad2Deg, 0f, 0f);
+                Vector3 hand = new Vector3(0f, HandAboveFeetM, 0f);
+                _model.localRotation = hang;
+                _model.localPosition = new Vector3(0f, y, 0f) + hand - hang * hand;
+            }
+            else
+            {
+                _model.localPosition = new Vector3(wobble, y + bob + StumbleHopM * stumble, 0f);
+                float lean = current.InVineFlight ? FlightLeanDeg : 0f;
+                _model.localRotation = _dead
+                    ? Quaternion.Euler(DeathTiltDeg, 0f, 0f)
+                    : Quaternion.Euler(StumbleTiltDeg * stumble + lean, 0f, 0f);
+            }
 
             float apex = _runnerConfig.JumpApexHeightM > 0f ? _runnerConfig.JumpApexHeightM : 1f;
             float shadowScale = Mathf.Lerp(1f, 0.5f, Mathf.Clamp01(y / apex));

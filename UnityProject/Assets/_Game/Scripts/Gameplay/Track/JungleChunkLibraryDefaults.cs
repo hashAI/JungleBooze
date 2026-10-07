@@ -27,6 +27,62 @@ namespace JungleBooze.Gameplay.Track
             return new ChunkLibrary(CreateChunks());
         }
 
+        /// <summary>
+        /// The 16 FP1 chunks followed by the vine sections (GDD 7.2). This is the library the game plays;
+        /// <see cref="CreateLibrary"/> stays the FP1 set so spec 002 checks keep their counts. Vine chunks are appended,
+        /// so every FP1 chunk keeps its index.
+        /// </summary>
+        public static ChunkLibrary CreateLibraryWithVines()
+        {
+            ChunkData[] fp1 = CreateChunks();
+            ChunkData[] vines = CreateVineChunks();
+            var all = new ChunkData[fp1.Length + vines.Length];
+            fp1.CopyTo(all, 0);
+            vines.CopyTo(all, fp1.Length);
+            return new ChunkLibrary(all);
+        }
+
+        /// <summary>
+        /// Vine sections (GDD 7.2): a 30 m approach with coins leading into the vine lane and no obstacles, the
+        /// vine row(s), then an empty landing pad long enough for the longest launch at top speed plus 1.0 s.
+        /// Picked by the vine schedule (<see cref="TrackGenerator"/>), never by tier weights. Tier gating uses
+        /// MinTier (GDD 11.2: chasm vines and 2-vine chains from tier 3, 3-vine chains from tier 4); chasm vines also
+        /// need <c>VineConfig.ChasmVinesFromM</c>. Chasms are 18 m: longer than any plain jump at top speed (about
+        /// 14.3 m with coyote time), shorter than the shortest vine release at the slowest chasm speed. They are a
+        /// vine-only gap size, outside the kit's 3–4 m ravines [ASSUMED]. Chains are always over ground: an auto
+        /// release only chains into safe vines (GDD 7.3 step 5), so a chasm under a chained vine could not be fair.
+        /// </summary>
+        public static ChunkData[] CreateVineChunks()
+        {
+            return new[]
+            {
+                VineSection("V-01", "Vine Clearing", 1, 110f, "One safe vine in the middle lane; coins lead the way.",
+                    new ObstaclePlacement[0],
+                    new[] { CoinPattern.Line(1, 6f, 28f), CoinPattern.Line(1, 76f, 104f) },
+                    new[] { VinePlacement.Safe(1, 34f) }),
+                VineSection("V-02", "Side Vine", 1, 110f, "A coin trail moves you to the side lane for a safe vine.",
+                    new ObstaclePlacement[0],
+                    new[] { CoinPattern.Trail(1, 0, 4f, 16f), CoinPattern.Line(0, 18f, 28f), CoinPattern.Line(0, 76f, 104f) },
+                    new[] { VinePlacement.Safe(0, 34f) }),
+                VineSection("V-03", "Chasm Vine", 3, 110f, "A chasm under the middle vine: grab it or fall.",
+                    new[] { ObstaclePlacement.Gap(All, 31f, 18f) },
+                    new[] { CoinPattern.Line(1, 6f, 26f), CoinPattern.Line(1, 76f, 104f) },
+                    new[] { VinePlacement.Chasm(1, 34f) }),
+                VineSection("V-04", "Chasm Side Vine", 3, 110f, "Coins lead to a side vine over a chasm.",
+                    new[] { ObstaclePlacement.Gap(All, 31f, 18f) },
+                    new[] { CoinPattern.Trail(1, 0, 4f, 16f), CoinPattern.Line(0, 18f, 26f), CoinPattern.Line(0, 76f, 104f) },
+                    new[] { VinePlacement.Chasm(0, 34f) }),
+                VineSection("V-05", "Twin Vines", 3, 150f, "Two safe vines; aim left during the first swing to chain.",
+                    new ObstaclePlacement[0],
+                    new[] { CoinPattern.Line(1, 6f, 28f), CoinPattern.Line(0, 120f, 146f) },
+                    new[] { VinePlacement.Safe(1, 34f, 0), VinePlacement.Safe(0, 78f, 1) }),
+                VineSection("V-06", "Vine Ladder", 4, 200f, "Three safe vines weaving across the lanes.",
+                    new ObstaclePlacement[0],
+                    new[] { CoinPattern.Line(1, 6f, 28f), CoinPattern.Line(1, 166f, 196f) },
+                    new[] { VinePlacement.Safe(1, 34f, 0), VinePlacement.Safe(2, 78f, 1), VinePlacement.Safe(1, 122f, 2) }),
+            };
+        }
+
         /// <summary>The 16 chunks in library order.</summary>
         public static ChunkData[] CreateChunks()
         {
@@ -159,6 +215,13 @@ namespace JungleBooze.Gameplay.Track
         private static ChunkData Normal(string id, string name, int minTier, string note, ObstaclePlacement[] obstacles, CoinPattern[] coins)
         {
             return new ChunkData(id, ChunkKind.Normal, 40f, minTier, 6, obstacles, coins, displayName: name, designNote: note);
+        }
+
+        private static ChunkData VineSection(
+            string id, string name, int minTier, float lengthM, string note, ObstaclePlacement[] obstacles, CoinPattern[] coins, VinePlacement[] vines)
+        {
+            return new ChunkData(
+                id, ChunkKind.Vine, lengthM, minTier, 6, obstacles, coins, displayName: name, designNote: note, vines: vines);
         }
 
         private static ChunkData Breather(string id, string name, string note, CoinPattern[] coins)

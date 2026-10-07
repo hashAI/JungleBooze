@@ -80,8 +80,9 @@ namespace JungleBooze.Gameplay.Track
                 _setup.Library,
                 _setup.GetTiers(speedCurve),
                 speedCurve,
-                config);
-            Scoring = new RunScoring(_setup.Coins, _setup.Score, config);
+                config,
+                _setup.Vines);
+            Scoring = new RunScoring(_setup.Coins, _setup.Score, config, _setup.Vines);
             ResetRun(Seed);
             return Runner;
         }
@@ -100,9 +101,11 @@ namespace JungleBooze.Gameplay.Track
 
             Seed = seed;
             RootRandom = new Pcg32Random(seed);
-            Track.Reset(RootRandom.Fork(RandomStreamIds.TrackGeneration));
+            IRandom trackStream = RootRandom.Fork(RandomStreamIds.TrackGeneration);
+            IRandom vineStream = _setup.Vines.Enabled ? RootRandom.Fork(RandomStreamIds.VineSchedule) : null;
+            Track.Reset(trackStream, vineStream);
             Scoring.Reset();
-            Runner = new RunnerSimulation(_runnerConfig, _curve, Track)
+            Runner = new RunnerSimulation(_runnerConfig, _curve, Track, null, _setup.Vines)
             {
                 StepHooks = this,
             };
@@ -122,6 +125,12 @@ namespace JungleBooze.Gameplay.Track
 
         public void OnCoinPickups(RunnerSimulation runner, in RunnerTickInfo info)
         {
+            if (info.VineRelease != JungleBooze.Gameplay.Vine.VineReleaseGrade.None)
+            {
+                // GDD 7.3 step 4: the coin shower / Perfect ring along the launch arc, before this tick's pickups.
+                Track.SpawnVineBonusCoins(info.VineRelease, runner);
+            }
+
             Scoring.OnCoinPickups(info, Track, runner);
         }
 

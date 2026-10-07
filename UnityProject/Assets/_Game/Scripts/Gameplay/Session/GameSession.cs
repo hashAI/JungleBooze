@@ -134,6 +134,12 @@ namespace JungleBooze.Gameplay.Session
             }
         }
 
+        /// <summary>
+        /// GDD 7.3 step 3: real time runs at the runner's <see cref="RunnerSimulation.PresentationTimeScale"/> during
+        /// the first moment of a vine swing. Off with Reduce Motion. Default on.
+        /// </summary>
+        public bool VineHangSlowdown { get; set; } = true;
+
         /// <summary>Commands passed to the last simulation step (tests and debug overlay).</summary>
         public InputCommand LastStepCommands { get; private set; }
 
@@ -155,7 +161,9 @@ namespace JungleBooze.Gameplay.Session
             switch (Phase)
             {
                 case SessionPhase.Running:
-                    stepsRun = RunSteps(_time.Accumulate(realDeltaSeconds));
+                    // GDD 7.3 step 3: the vine "hang" slows presentation; ticks themselves are unchanged.
+                    double scale = VineHangSlowdown ? Runner.PresentationTimeScale : 1.0;
+                    stepsRun = RunSteps(_time.Accumulate(realDeltaSeconds * scale));
                     break;
 
                 case SessionPhase.Countdown:

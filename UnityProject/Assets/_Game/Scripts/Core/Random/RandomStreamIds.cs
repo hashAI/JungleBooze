@@ -22,5 +22,11 @@ namespace JungleBooze.Core
 
         /// <summary>Cosmetic simulation-side randomness that must still replay identically.</summary>
         public const ulong Cosmetic = 5;
+
+        /// <summary>
+        /// Vine section timing and choice (GDD 7.5). Forked after <see cref="TrackGeneration"/>, so the track
+        /// stream is unchanged by vines.
+        /// </summary>
+        public const ulong VineSchedule = 6;
     }
 }

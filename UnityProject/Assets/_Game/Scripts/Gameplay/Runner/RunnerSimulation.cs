@@ -1,5 +1,6 @@
 using System;
 using JungleBooze.Core;
+using JungleBooze.Gameplay.Vine;
 
 namespace JungleBooze.Gameplay.Runner
 {
@@ -9,6 +10,11 @@ namespace JungleBooze.Gameplay.Runner
     /// stumble, daze, edge forgiveness, near-miss, invulnerability).
     /// One call to <see cref="Step(InputCommand)"/> = one 60 Hz tick, processed in the order of rule I8 as amended by
     /// spec 002 section 13.3 (hook points 7a, 11a, 11b in <see cref="IRunnerStepHooks"/>).
+    /// Vine swinging (GDD 7): when the track also implements <see cref="IVineTrackQuery"/>, an airborne HERO who
+    /// enters a vine's grab zone is <see cref="Locomotion.Carried"/> along the swing arc (safe from collisions);
+    /// Jump releases (graded by swing phase), Move aims at the next vine, Slide is kept for the landing. The
+    /// release is a launch on a ballistic arc (state <see cref="Locomotion.Falling"/> with the vine gravity),
+    /// guided into the next vine of a chain. Steps 9a (grab and passed-vine check) runs after step 9.
     /// Plain C#: no engine time, engine randomness or physics; no allocations per step.
     /// </summary>
     public sealed class RunnerSimulation
@@ -28,6 +34,18 @@ namespace JungleBooze.Gameplay.Runner
         /// <summary>Float tolerance for the near-miss threshold.</summary>
         private const double NearMissToleranceM = 1e-6;
 
+        /// <summary>Vines read from the track per query.</summary>
+        private const int VineBufferCapacity = 16;
+
+        /// <summary>A chained launch shorter than this is not guided (the target is practically reached).</summary>
+        private const double MinGuidedFlightS = 0.05;
+
+        /// <summary>Range behind HERO searched for the vine of a chasm he fell into ("Missed vine").</summary>
+        private const double MissedVineLookBackM = 40.0;
+
+        /// <summary>Range ahead of HERO searched for the vine of a chasm he fell into.</summary>
+        private const double MissedVineLookAheadM = 6.0;
+
         private const byte EngagedContact = 1;
         private const byte EngagedInvulnerable = 2;
 
@@ -35,6 +53,9 @@ namespace JungleBooze.Gameplay.Runner
         private readonly SpeedCurve _curve;
         private readonly ITrackQuery _track;
         private readonly IHeadroomQuery _headroom;
+        private readonly VineConfig _vines;
+        private readonly IVineTrackQuery _vineTrack;
+        private readonly VineAnchor[] _vineBuffer = new VineAnchor[VineBufferCapacity];
         private readonly RunnerEventBuffer _events;
         private readonly CommandOutcomeCounters _counters = new CommandOutcomeCounters();
 
@@ -101,11 +122,48 @@ namespace JungleBooze.Gameplay.Runner
 
         private TickOutcomes _lastOutcomes;
 
+        // ---- Vine state (GDD 7) ----
+        private double _airStartZ;
+        private double _fallGravity;
+        private int _swingVineId;
+        private int _swingGroup;
+        private int _swingRow;
+        private int _swingLane;
+        private bool _swingOverChasm;
+        private int _swingElapsed;
+        private float _swingGrabX;
+        private double _swingGrabY;
+        private int _aimLane;
+        private int _aimVineId;
+        private double _aimVineZ;
+        private bool _aimVineOverChasm;
+        private bool _releaseBuffered;
+        private long _releaseBufferedTick;
+        private int _chainPerfects;
+        private bool _launchedFromVine;
+        private VineReleaseGrade _lastReleaseGrade;
+        private VineReleaseGrade _releaseThisTick;
+        private float _releaseMultiplierThisTick;
+        private bool _grabbedThisTick;
+        private double _launchStartY;
+        private double _launchVelocityY;
+        private double _launchGravity;
+        private double _launchSpeed;
+        private double _launchStartZ;
+        private double _launchFlightS;
+        private int _launchLane;
+        private double _vineScanZ;
+        private int _grabbedGroup;
+        private int _grabbedRow;
+        private int _missedGroup;
+        private int _missedRow;
+
         public RunnerSimulation(
             RunnerConfig config,
             SpeedCurve speedCurve,
             ITrackQuery track = null,
-            IHeadroomQuery headroom = null)
+            IHeadroomQuery headroom = null,
+            VineConfig vines = null)
         {
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _curve = speedCurve ?? throw new ArgumentNullException(nameof(speedCurve));
@@ -114,6 +172,14 @@ namespace JungleBooze.Gameplay.Runner
             // Null = derive headroom from the track's obstacle boxes (spec 001 6.4.5). Tests may override it.
             _headroom = headroom;
             _events = new RunnerEventBuffer(config.EventBufferCapacity);
+            _vines = vines ?? VineConfig.CreateDefault();
+            _vineTrack = _track as IVineTrackQuery;
+            _fallGravity = config.GravityMps2;
+            _vineScanZ = double.NegativeInfinity;
+            _grabbedGroup = -1;
+            _grabbedRow = -1;
+            _missedGroup = -1;
+            _missedRow = -1;
 
             _targetLane = config.StartLane;
             _x = config.LaneCenterX(config.StartLane);
@@ -164,6 +230,42 @@ namespace JungleBooze.Gameplay.Runner
 
         /// <summary>Track, coin and score systems called at steps 7a, 11a and 11b (spec 002 13.3). Null = none.</summary>
         public IRunnerStepHooks StepHooks { get; set; }
+
+        /// <summary>Vine tuning used by this runner.</summary>
+        public VineConfig Vines => _vines;
+
+        /// <summary>
+        /// GDD 7.3 step 3 "hang": presentation runs at <c>HangTimeScale</c> for the first <c>HangMs</c> of a swing,
+        /// otherwise 1. The session multiplies real frame time by this (simulation ticks are unchanged).
+        /// </summary>
+        public double PresentationTimeScale =>
+            _locomotion == Locomotion.Carried && _swingElapsed < _vines.HangTicks ? _vines.HangTimeScale : 1.0;
+
+        /// <summary>A too-early release swipe is waiting (GDD 7.3 step 4).</summary>
+        public bool HasBufferedRelease => _releaseBuffered;
+
+        /// <summary>Perfect releases so far in the current chain (score multiplier level).</summary>
+        public int ChainPerfects => _chainPerfects;
+
+        /// <summary>Launch of the last vine release: feet height at release (m).</summary>
+        public double LaunchStartY => _launchStartY;
+
+        /// <summary>Launch of the last vine release: vertical speed (m/s).</summary>
+        public double LaunchVelocityYMps => _launchVelocityY;
+
+        /// <summary>Launch of the last vine release: gravity of the arc (m/s²).</summary>
+        public double LaunchGravityMps2 => _launchGravity;
+
+        /// <summary>Launch of the last vine release: forward speed at release (m/s).</summary>
+        public double LaunchForwardSpeedMps => _launchSpeed;
+
+        public double LaunchStartZ => _launchStartZ;
+
+        /// <summary>Planned flight time of the last launch (to the ground, or to the next vine of a chain) (s).</summary>
+        public double LaunchFlightSeconds => _launchFlightS;
+
+        /// <summary>Aimed lane of the last launch.</summary>
+        public int LaunchLane => _launchLane;
 
         public DeathCause DeathCause => _deathCause;
 
@@ -236,6 +338,9 @@ namespace JungleBooze.Gameplay.Runner
             _lastOutcomes = default;
             _stumbledThisTick = false;
             _nearMissesThisTick = 0;
+            _releaseThisTick = VineReleaseGrade.None;
+            _releaseMultiplierThisTick = 0f;
+            _grabbedThisTick = false;
 
             // HERO's box at the start of the tick, for the swept collision test (step 11).
             float xStart = _x;
@@ -293,6 +398,12 @@ namespace JungleBooze.Gameplay.Runner
                 _counters.Resolve(CommandOutcome.Buffered, CommandOutcome.Expired);
             }
 
+            if (_releaseBuffered && tick - _releaseBufferedTick > _vines.ReleaseBufferTicks)
+            {
+                _releaseBuffered = false;
+                _counters.Resolve(CommandOutcome.Buffered, CommandOutcome.Expired);
+            }
+
             // (5) Lateral command.
             if (left)
             {
@@ -343,8 +454,14 @@ namespace JungleBooze.Gameplay.Runner
             // (8) Lane tween and queued-move start.
             UpdateLaneMove(tick);
 
-            // (9) Vertical motion, ground check, landing and buffered fire.
+            // (9) Vertical motion, ground check, landing and buffered fire (and the vine swing).
             UpdateVertical(tick);
+
+            // (9a) Vine grab and passed vines (GDD 7.3 step 2, 7.4).
+            if (_vineTrack != null && _locomotion != Locomotion.Dead)
+            {
+                UpdateVines(tick);
+            }
 
             // (10) Slide timer.
             if (_locomotion == Locomotion.Sliding)
@@ -404,6 +521,8 @@ namespace JungleBooze.Gameplay.Runner
             _fallStartVelocity = 0.0;
             _fallStartTick = _tick - 1;
             _airStartTick = _tick - 1;
+            _airStartZ = _z;
+            _fallGravity = _config.GravityMps2;
             _slideOnLanding = false;
         }
 
@@ -461,6 +580,37 @@ namespace JungleBooze.Gameplay.Runner
                 h = Mix(h, (long)_engagedArchetype[i]);
             }
 
+            h = Mix(h, _airStartZ);
+            h = Mix(h, _fallGravity);
+            h = Mix(h, _swingVineId);
+            h = Mix(h, _swingGroup);
+            h = Mix(h, _swingRow);
+            h = Mix(h, _swingLane);
+            h = Mix(h, _swingOverChasm ? 1L : 0L);
+            h = Mix(h, _swingElapsed);
+            h = Mix(h, (double)_swingGrabX);
+            h = Mix(h, _swingGrabY);
+            h = Mix(h, _aimLane);
+            h = Mix(h, _aimVineId);
+            h = Mix(h, _aimVineZ);
+            h = Mix(h, _aimVineOverChasm ? 1L : 0L);
+            h = Mix(h, _releaseBuffered ? 1L : 0L);
+            h = Mix(h, _releaseBufferedTick);
+            h = Mix(h, _chainPerfects);
+            h = Mix(h, _launchedFromVine ? 1L : 0L);
+            h = Mix(h, (long)_lastReleaseGrade);
+            h = Mix(h, _launchStartY);
+            h = Mix(h, _launchVelocityY);
+            h = Mix(h, _launchGravity);
+            h = Mix(h, _launchSpeed);
+            h = Mix(h, _launchStartZ);
+            h = Mix(h, _launchFlightS);
+            h = Mix(h, _launchLane);
+            h = Mix(h, _vineScanZ);
+            h = Mix(h, _grabbedGroup);
+            h = Mix(h, _grabbedRow);
+            h = Mix(h, _missedGroup);
+            h = Mix(h, _missedRow);
             return h;
         }
 
@@ -528,6 +678,40 @@ namespace JungleBooze.Gameplay.Runner
             Array.Copy(source._engagedMinGap, _engagedMinGap, _engagedCount);
             Array.Copy(source._engagedFlags, _engagedFlags, _engagedCount);
             Array.Copy(source._engagedArchetype, _engagedArchetype, _engagedCount);
+            _airStartZ = source._airStartZ;
+            _fallGravity = source._fallGravity;
+            _swingVineId = source._swingVineId;
+            _swingGroup = source._swingGroup;
+            _swingRow = source._swingRow;
+            _swingLane = source._swingLane;
+            _swingOverChasm = source._swingOverChasm;
+            _swingElapsed = source._swingElapsed;
+            _swingGrabX = source._swingGrabX;
+            _swingGrabY = source._swingGrabY;
+            _aimLane = source._aimLane;
+            _aimVineId = source._aimVineId;
+            _aimVineZ = source._aimVineZ;
+            _aimVineOverChasm = source._aimVineOverChasm;
+            _releaseBuffered = source._releaseBuffered;
+            _releaseBufferedTick = source._releaseBufferedTick;
+            _chainPerfects = source._chainPerfects;
+            _launchedFromVine = source._launchedFromVine;
+            _lastReleaseGrade = source._lastReleaseGrade;
+            _releaseThisTick = source._releaseThisTick;
+            _releaseMultiplierThisTick = source._releaseMultiplierThisTick;
+            _grabbedThisTick = source._grabbedThisTick;
+            _launchStartY = source._launchStartY;
+            _launchVelocityY = source._launchVelocityY;
+            _launchGravity = source._launchGravity;
+            _launchSpeed = source._launchSpeed;
+            _launchStartZ = source._launchStartZ;
+            _launchFlightS = source._launchFlightS;
+            _launchLane = source._launchLane;
+            _vineScanZ = source._vineScanZ;
+            _grabbedGroup = source._grabbedGroup;
+            _grabbedRow = source._grabbedRow;
+            _missedGroup = source._missedGroup;
+            _missedRow = source._missedRow;
             _lastOutcomes = source._lastOutcomes;
             _counters.CopyFrom(source._counters);
             SpeedMultiplier = source.SpeedMultiplier;
@@ -594,6 +778,12 @@ namespace JungleBooze.Gameplay.Runner
                 _queuedDir = 0;
                 _counters.Resolve(CommandOutcome.Queued, CommandOutcome.Invalidated);
             }
+
+            if (_releaseBuffered)
+            {
+                _releaseBuffered = false;
+                _counters.Resolve(CommandOutcome.Buffered, CommandOutcome.Invalidated);
+            }
         }
 
         // ---- Lanes (section 5) ----
@@ -604,6 +794,12 @@ namespace JungleBooze.Gameplay.Runner
             if (_y < 0.0)
             {
                 return CommandOutcome.Ignored;
+            }
+
+            // GDD 7.3 step 3: on a vine, left/right aims at the next vine instead of moving.
+            if (_locomotion == Locomotion.Carried)
+            {
+                return ProcessAim(dir, tick);
             }
 
             // L2: during a stumble bounce, store the newest lateral command; it starts when the bounce ends.
@@ -834,6 +1030,9 @@ namespace JungleBooze.Gameplay.Runner
                     _bufferedJumpTick = tick;
                     return CommandOutcome.Buffered;
 
+                case Locomotion.Carried:
+                    return ProcessRelease(tick);
+
                 default:
                     return CommandOutcome.Ignored;
             }
@@ -873,6 +1072,11 @@ namespace JungleBooze.Gameplay.Runner
                 case Locomotion.FastFalling:
                     return CommandOutcome.AlreadyActive;
 
+                case Locomotion.Carried:
+                    // GDD 5.1: ignored on the vine, kept as a slide for the landing.
+                    _slideOnLanding = true;
+                    return CommandOutcome.Executed;
+
                 default:
                     return CommandOutcome.Ignored;
             }
@@ -901,6 +1105,8 @@ namespace JungleBooze.Gameplay.Runner
             _locomotion = Locomotion.Airborne;
             _jumpStartTick = tick;
             _airStartTick = tick;
+            _airStartZ = _z;
+            _launchedFromVine = false;
             _coyoteTicksLeft = 0;
             _slideOnLanding = false;
             _y = 0.0;
@@ -919,6 +1125,7 @@ namespace JungleBooze.Gameplay.Runner
             if (_locomotion == Locomotion.Coyote)
             {
                 _airStartTick = tick;
+                _airStartZ = _z;
                 _coyoteTicksLeft = 0;
             }
 
@@ -971,6 +1178,10 @@ namespace JungleBooze.Gameplay.Runner
 
                 case Locomotion.Falling:
                     UpdateFall(tick);
+                    break;
+
+                case Locomotion.Carried:
+                    UpdateSwing(tick);
                     break;
             }
         }
@@ -1029,7 +1240,7 @@ namespace JungleBooze.Gameplay.Runner
         {
             double previousY = _y;
             double t = (tick - _fallStartTick) * RunnerConfig.TickSeconds;
-            double y = _fallStartY + _fallStartVelocity * t - 0.5 * _config.GravityMps2 * t * t;
+            double y = _fallStartY + _fallStartVelocity * t - 0.5 * _fallGravity * t * t;
 
             if (previousY > 0.0 && y <= SurfaceEpsilonM)
             {
@@ -1041,7 +1252,7 @@ namespace JungleBooze.Gameplay.Runner
                 }
                 else
                 {
-                    BeginFall(tick, 0.0, _fallStartVelocity - _config.GravityMps2 * t);
+                    BeginFall(tick, 0.0, _fallStartVelocity - _fallGravity * t);
                 }
 
                 return;
@@ -1050,7 +1261,7 @@ namespace JungleBooze.Gameplay.Runner
             _y = y;
             if (_y <= -_config.FallDeathDepthM)
             {
-                Die(tick, DeathCause.Fell);
+                DieFalling(tick);
             }
         }
 
@@ -1060,6 +1271,7 @@ namespace JungleBooze.Gameplay.Runner
             _fallStartTick = tick;
             _fallStartY = startY;
             _fallStartVelocity = startVelocity;
+            _fallGravity = _config.GravityMps2;
             _y = startY;
         }
 
@@ -1099,6 +1311,9 @@ namespace JungleBooze.Gameplay.Runner
             bool slideOnLanding = _slideOnLanding;
             _slideOnLanding = false;
             _locomotion = Locomotion.Running;
+            _fallGravity = _config.GravityMps2;
+            _launchedFromVine = false;
+            _chainPerfects = 0;
 
             // Rule I3 first, then the pending slide from a fast-fall (6.2.3, 6.3.4).
             if (_bufferedJump)
@@ -1186,7 +1401,8 @@ namespace JungleBooze.Gameplay.Runner
 
         private void Die(long tick, DeathCause cause)
         {
-            Die(tick, cause, cause == DeathCause.Fell ? ObstacleArchetype.Gap : ObstacleArchetype.None, 0, false);
+            bool fall = cause == DeathCause.Fell || cause == DeathCause.MissedVine;
+            Die(tick, cause, fall ? ObstacleArchetype.Gap : ObstacleArchetype.None, 0, false);
         }
 
         private void Die(long tick, DeathCause cause, ObstacleArchetype archetype, int entityId, bool afterStumble)
@@ -1200,6 +1416,13 @@ namespace JungleBooze.Gameplay.Runner
             _moveActive = false;
             _bounceActive = false;
             _slideOnLanding = false;
+            _swingVineId = 0;
+            _launchedFromVine = false;
+            if (_releaseBuffered)
+            {
+                _releaseBuffered = false;
+                _counters.Resolve(CommandOutcome.Buffered, CommandOutcome.Invalidated);
+            }
 
             // Rule I5: the buffer and the lateral queue can no longer fire.
             if (_bufferedJump)
@@ -1223,6 +1446,370 @@ namespace JungleBooze.Gameplay.Runner
                 (short)cause,
                 entityId,
                 archetype);
+        }
+
+        // ---- Vines (GDD 7) ----
+
+        /// <summary>GDD 7.3 step 3: left/right on a vine aims at the next vine (the swinging lane ± 1).</summary>
+        private CommandOutcome ProcessAim(int dir, long tick)
+        {
+            int to = _aimLane + dir;
+            if (!IsValidLane(to) || Math.Abs(to - _swingLane) > 1)
+            {
+                EmitLaneBlocked(dir, tick);
+                return CommandOutcome.Bumped;
+            }
+
+            _aimLane = to;
+            RefreshAimTarget();
+            Emit(RunnerEventType.VineAimChanged, tick, (sbyte)dir, (byte)to, 0, 0, _aimVineId, ObstacleArchetype.None);
+            return CommandOutcome.Executed;
+        }
+
+        /// <summary>GDD 7.3 step 4: Jump on a vine releases; too early it is buffered for <c>ReleaseBufferMs</c>.</summary>
+        private CommandOutcome ProcessRelease(long tick)
+        {
+            VineReleaseGrade grade = _vines.GradeForSwingTick(_swingElapsed);
+            if (grade == VineReleaseGrade.None)
+            {
+                if (_releaseBuffered)
+                {
+                    _counters.Resolve(CommandOutcome.Buffered, CommandOutcome.Superseded);
+                }
+
+                _releaseBuffered = true;
+                _releaseBufferedTick = tick;
+                return CommandOutcome.Buffered;
+            }
+
+            ReleaseVine(tick, grade, true);
+            return CommandOutcome.Executed;
+        }
+
+        /// <summary>Step 9 while carried: advance the swing, settle onto the arc, fire a buffered or automatic release.</summary>
+        private void UpdateSwing(long tick)
+        {
+            _swingElapsed++;
+            float laneX = _config.LaneCenterX(_swingLane);
+            double arcY = _vines.SwingFeetYAt(_swingElapsed);
+            int blend = _vines.GrabBlendTicks;
+            if (_swingElapsed < blend)
+            {
+                double u = (double)_swingElapsed / blend;
+                u = 1.0 - (1.0 - u) * (1.0 - u);
+                _x = (float)(_swingGrabX + (laneX - _swingGrabX) * u);
+                _y = _swingGrabY + (arcY - _swingGrabY) * u;
+            }
+            else
+            {
+                _x = laneX;
+                _y = arcY;
+            }
+
+            RefreshAimTarget();
+
+            if (_releaseBuffered && _swingElapsed >= _vines.GoodStartTick)
+            {
+                _releaseBuffered = false;
+                _counters.Resolve(CommandOutcome.Buffered, CommandOutcome.Executed);
+                ReleaseVine(tick, _vines.GradeForSwingTick(_swingElapsed), false);
+                return;
+            }
+
+            if (_swingElapsed >= _vines.SwingTicks)
+            {
+                ReleaseVine(tick, VineReleaseGrade.Auto, false);
+            }
+        }
+
+        /// <summary>
+        /// Lets go of the vine (GDD 7.3 steps 4 and 5): a launch on a ballistic arc. If a next vine of the chain is
+        /// aimed at (and, for an auto release, is safe), the arc is guided so HERO arrives at its grab point:
+        /// gravity is solved from the flight time and clamped, then the vertical speed is solved again.
+        /// <paramref name="fromCommand"/>: released at step 6, so the arc already moves on this tick's step 9.
+        /// </summary>
+        private void ReleaseVine(long tick, VineReleaseGrade grade, bool fromCommand)
+        {
+            float multiplier = _vines.GetChainMultiplier(_chainPerfects);
+            if (grade == VineReleaseGrade.Perfect)
+            {
+                _chainPerfects++;
+            }
+
+            double y0 = _y;
+            double vy = _vines.LaunchSpeedFor(grade);
+            double g = _vines.LaunchGravityMps2;
+            double speed = _speed > 0.1 ? _speed : 0.1;
+            bool chained = _aimVineId != 0 && (grade != VineReleaseGrade.Auto || !_aimVineOverChasm);
+            double flight;
+            double guidedT = (_aimVineZ - _z) / speed;
+            if (chained && guidedT > MinGuidedFlightS)
+            {
+                double arrive = _vines.ChainArriveFeetM;
+                g = 2.0 * (y0 + vy * guidedT - arrive) / (guidedT * guidedT);
+                if (g < _vines.ChainGravityMinMps2)
+                {
+                    g = _vines.ChainGravityMinMps2;
+                }
+                else if (g > _vines.ChainGravityMaxMps2)
+                {
+                    g = _vines.ChainGravityMaxMps2;
+                }
+
+                vy = (arrive - y0 + 0.5 * g * guidedT * guidedT) / guidedT;
+                flight = guidedT;
+            }
+            else
+            {
+                flight = (vy + Math.Sqrt(vy * vy + 2.0 * g * (y0 > 0.0 ? y0 : 0.0))) / g;
+            }
+
+            int vineId = _swingVineId;
+            _releaseThisTick = grade;
+            _releaseMultiplierThisTick = multiplier;
+            _lastReleaseGrade = grade;
+            _launchStartY = y0;
+            _launchVelocityY = vy;
+            _launchGravity = g;
+            _launchSpeed = speed;
+            _launchStartZ = _z;
+            _launchFlightS = flight;
+            _launchLane = _aimLane;
+
+            _swingVineId = 0;
+            _swingElapsed = 0;
+            _locomotion = Locomotion.Falling;
+            _fallStartTick = fromCommand ? tick - 1 : tick;
+            _fallStartY = y0;
+            _fallStartVelocity = vy;
+            _fallGravity = g;
+            _airStartTick = tick;
+            _airStartZ = _z;
+            _launchedFromVine = true;
+
+            if (_aimLane != _targetLane)
+            {
+                StartLaneMove(_aimLane, _aimLane > _targetLane ? 1 : -1, tick, false, false);
+            }
+
+            Emit(
+                RunnerEventType.VineReleased,
+                tick,
+                0,
+                (byte)_aimLane,
+                chained ? RunnerEventFlags.VineChained : (byte)0,
+                (short)grade,
+                vineId,
+                ObstacleArchetype.None);
+        }
+
+        /// <summary>Step 9a: grab a vine when airborne inside its grab zone; report vines passed without a grab.</summary>
+        private void UpdateVines(long tick)
+        {
+            double halfDepth = _config.PlayerHitboxDepthM * 0.5;
+            double zoneHalf = _vines.GrabZoneLengthM * 0.5;
+
+            if (CanGrab())
+            {
+                int n = QueryVines(_z - halfDepth - zoneHalf, _z + halfDepth + zoneHalf);
+                float reachX = _vines.GrabZoneWidthM * 0.5f + _config.PlayerHitboxWidthM * 0.5f;
+                double top = _y + _config.StandingHeightM;
+                for (int i = 0; i < n; i++)
+                {
+                    VineAnchor v = _vineBuffer[i];
+                    if (v.Group == _grabbedGroup && v.Row <= _grabbedRow)
+                    {
+                        continue; // already swung on (or behind) in this section
+                    }
+
+                    if (Math.Abs(_x - _config.LaneCenterX(v.Lane)) >= reachX)
+                    {
+                        continue; // wrong lane
+                    }
+
+                    if (!(top > _vines.GrabZoneBottomM && _y < _vines.GrabZoneTopM))
+                    {
+                        continue;
+                    }
+
+                    if (!_launchedFromVine)
+                    {
+                        // A jump started up to GrabEarliness before HERO's front reached the zone counts.
+                        double zoneNear = v.Z - zoneHalf;
+                        double frontAtTakeoff = _airStartZ + halfDepth;
+                        if (zoneNear - frontAtTakeoff > _vines.GrabEarlinessS * _speed + 1e-6)
+                        {
+                            continue;
+                        }
+                    }
+
+                    GrabVine(tick, in v);
+                    break;
+                }
+            }
+
+            double passLimit = _z - halfDepth - zoneHalf;
+            if (passLimit > _vineScanZ)
+            {
+                int n = QueryVines(_vineScanZ, passLimit);
+                for (int i = 0; i < n; i++)
+                {
+                    VineAnchor v = _vineBuffer[i];
+                    if (!(v.Z > _vineScanZ) || v.Z > passLimit)
+                    {
+                        continue;
+                    }
+
+                    bool grabbedRow = v.Group == _grabbedGroup && v.Row == _grabbedRow;
+                    bool reported = v.Group == _missedGroup && v.Row == _missedRow;
+                    if (grabbedRow || reported || v.Id == _swingVineId)
+                    {
+                        continue;
+                    }
+
+                    _missedGroup = v.Group;
+                    _missedRow = v.Row;
+                    Emit(
+                        RunnerEventType.VineMissed,
+                        tick,
+                        0,
+                        (byte)v.Lane,
+                        v.OverChasm ? RunnerEventFlags.VineOverChasm : (byte)0,
+                        (short)v.Row,
+                        v.Id,
+                        ObstacleArchetype.None);
+                }
+
+                _vineScanZ = passLimit;
+            }
+        }
+
+        private bool CanGrab()
+        {
+            switch (_locomotion)
+            {
+                case Locomotion.Airborne:
+                    return true;
+                case Locomotion.FastFalling:
+                case Locomotion.Falling:
+                    return _y > 0.0;
+                default:
+                    return false;
+            }
+        }
+
+        private void GrabVine(long tick, in VineAnchor v)
+        {
+            // Rule I5: a buffered jump means something else on a vine; the lateral queue cannot fire either.
+            if (_bufferedJump)
+            {
+                _bufferedJump = false;
+                _counters.Resolve(CommandOutcome.Buffered, CommandOutcome.Invalidated);
+            }
+
+            if (_queuedDir != 0)
+            {
+                _queuedDir = 0;
+                _counters.Resolve(CommandOutcome.Queued, CommandOutcome.Invalidated);
+            }
+
+            if (!_launchedFromVine)
+            {
+                _chainPerfects = 0;
+            }
+
+            _moveActive = false;
+            _moveElapsed = 0;
+            _bounceActive = false;
+            _slideOnLanding = false;
+            _launchedFromVine = false;
+            _fallGravity = _config.GravityMps2;
+
+            _locomotion = Locomotion.Carried;
+            _swingVineId = v.Id;
+            _swingGroup = v.Group;
+            _swingRow = v.Row;
+            _swingLane = v.Lane;
+            _swingOverChasm = v.OverChasm;
+            _swingElapsed = 0;
+            _swingGrabX = _x;
+            _swingGrabY = _y;
+            _targetLane = v.Lane;
+            _aimLane = v.Lane;
+            _grabbedGroup = v.Group;
+            _grabbedRow = v.Row;
+            _grabbedThisTick = true;
+            RefreshAimTarget();
+
+            Emit(
+                RunnerEventType.VineGrabbed,
+                tick,
+                0,
+                (byte)v.Lane,
+                v.OverChasm ? RunnerEventFlags.VineOverChasm : (byte)0,
+                (short)v.Row,
+                v.Id,
+                ObstacleArchetype.None);
+        }
+
+        /// <summary>The next vine of the current section in the aimed lane (lowest later row), if any.</summary>
+        private void RefreshAimTarget()
+        {
+            _aimVineId = 0;
+            _aimVineZ = 0.0;
+            _aimVineOverChasm = false;
+            int n = QueryVines(_z, _z + _vines.ChainMaxReachM);
+            int bestRow = int.MaxValue;
+            for (int i = 0; i < n; i++)
+            {
+                VineAnchor v = _vineBuffer[i];
+                if (v.Group != _swingGroup || v.Row <= _swingRow || v.Lane != _aimLane || v.Row >= bestRow)
+                {
+                    continue;
+                }
+
+                bestRow = v.Row;
+                _aimVineId = v.Id;
+                _aimVineZ = v.Z;
+                _aimVineOverChasm = v.OverChasm;
+            }
+        }
+
+        private int QueryVines(double zMin, double zMax)
+        {
+            if (_vineTrack == null)
+            {
+                return 0;
+            }
+
+            int count = _vineTrack.GetVines(zMin, zMax, new Span<VineAnchor>(_vineBuffer));
+            if (count >= _vineBuffer.Length)
+            {
+                BoxBufferOverflowCount++;
+                count = _vineBuffer.Length;
+            }
+
+            return count;
+        }
+
+        /// <summary>
+        /// GDD 7.4: a fall into the chasm under a vine HERO did not swing on is a "Missed vine" death; any other fall
+        /// is <see cref="DeathCause.Fell"/>.
+        /// </summary>
+        private void DieFalling(long tick)
+        {
+            int n = QueryVines(_z - MissedVineLookBackM, _z + MissedVineLookAheadM);
+            for (int i = 0; i < n; i++)
+            {
+                VineAnchor v = _vineBuffer[i];
+                if (v.OverChasm && !(v.Group == _grabbedGroup && v.Row == _grabbedRow))
+                {
+                    Die(tick, DeathCause.MissedVine);
+                    return;
+                }
+            }
+
+            Die(tick, DeathCause.Fell);
         }
 
         // ---- Collisions (spec 001 section 9, spec 002 section 5) ----
@@ -1256,7 +1843,8 @@ namespace JungleBooze.Gameplay.Runner
             double zLo = (zStart < _z ? zStart : _z) - halfDepth;
             double zHi = (zStart > _z ? zStart : _z) + halfDepth;
             int count = QueryBoxes(zLo, zHi);
-            bool invulnerable = _invulnerableTicks > 0;
+            // GDD 7.3 step 3: nothing can hit HERO on a vine (same handling as invulnerability).
+            bool invulnerable = _invulnerableTicks > 0 || _locomotion == Locomotion.Carried;
             int contacts = 0;
 
             for (int i = 0; i < count; i++)
@@ -1531,6 +2119,9 @@ namespace JungleBooze.Gameplay.Runner
                 IsDead = _locomotion == Locomotion.Dead,
                 StumbledThisTick = _stumbledThisTick,
                 NearMissesThisTick = _nearMissesThisTick,
+                VineRelease = _releaseThisTick,
+                VineBonusMultiplier = _releaseMultiplierThisTick,
+                VineGrabbedThisTick = _grabbedThisTick,
             };
         }
 
@@ -1582,6 +2173,7 @@ namespace JungleBooze.Gameplay.Runner
                 jumpPhase = (float)((tick - _jumpStartTick) / (double)_config.JumpAirtimeTicks);
             }
 
+            bool carried = _locomotion == Locomotion.Carried;
             return new RunnerState
             {
                 Tick = tick,
@@ -1600,6 +2192,16 @@ namespace JungleBooze.Gameplay.Runner
                 InvulnerableTicks = _invulnerableTicks,
                 HitboxHeight = CurrentHitboxHeight(),
                 IsDead = _locomotion == Locomotion.Dead,
+                SwingPhase = carried ? (float)_vines.PhaseAt(_swingElapsed) : 0f,
+                SwingAngleRad = carried ? (float)_vines.SwingAngleAt(_swingElapsed) : 0f,
+                SwingTick = carried ? _swingElapsed : 0,
+                VineId = carried ? _swingVineId : 0,
+                VineLane = carried ? _swingLane : -1,
+                AimLane = carried ? _aimLane : -1,
+                AimVineId = carried ? _aimVineId : 0,
+                InVineFlight = _launchedFromVine && !carried && _locomotion != Locomotion.Dead,
+                LastReleaseGrade = _lastReleaseGrade,
+                ReleaseBuffered = _releaseBuffered,
             };
         }
 

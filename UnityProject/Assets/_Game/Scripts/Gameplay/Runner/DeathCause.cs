@@ -10,5 +10,8 @@ namespace JungleBooze.Gameplay.Runner
 
         /// <summary>Fell below the track surface past <see cref="RunnerConfig.FallDeathDepthM"/>.</summary>
         Fell = 2,
+
+        /// <summary>Fell into the chasm under a vine HERO did not swing on (GDD 7.4).</summary>
+        MissedVine = 3,
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using JungleBooze.Gameplay.Config;
 using JungleBooze.Gameplay.Controls;
 using JungleBooze.Gameplay.Runner;
+using JungleBooze.Gameplay.Vine;
 using JungleBooze.Gameplay.Views;
 using UnityEngine;
 
@@ -21,6 +22,7 @@ namespace JungleBooze.App
         public const string SpeedCurveName = "SpeedCurve";
         public const string InputTuningName = "InputTuning";
         public const string PresentationTuningName = "RunnerPresentationTuning";
+        public const string VineTuningName = "VineTuning";
 
         public static RunConfigSet Load()
         {
@@ -36,6 +38,23 @@ namespace JungleBooze.App
                 PresentationTuningName, a => ValidOrThrow(a.ToConfig()), RunnerPresentationConfig.CreateDefault, sources);
 
             return new RunConfigSet(runner, curve, input, presentation, string.Join(", ", sources));
+        }
+
+        /// <summary>
+        /// Vine tuning (GDD 7.5) from <c>Resources/VineTuning.asset</c> if present and valid, else the built-in
+        /// defaults. Kept out of <see cref="RunConfigSet"/> so the run config set stays unchanged.
+        /// </summary>
+        public static VineConfig LoadVines()
+        {
+            var sources = new List<string>(1);
+            VineConfig vines = LoadOrDefault<VineConfigAsset, VineConfig>(
+                VineTuningName, a => a.ToConfig(), VineConfig.CreateDefault, sources);
+            if (Debug.isDebugBuild)
+            {
+                Debug.Log("[JungleBooze] " + sources[0] + ".");
+            }
+
+            return vines;
         }
 
         private static TConfig LoadOrDefault<TAsset, TConfig>(

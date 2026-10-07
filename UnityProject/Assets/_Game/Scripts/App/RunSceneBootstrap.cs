@@ -3,6 +3,7 @@ using JungleBooze.Gameplay.Controls;
 using JungleBooze.Gameplay.Session;
 using JungleBooze.Gameplay.Track;
 using JungleBooze.Gameplay.Views;
+using JungleBooze.Gameplay.Vine;
 using JungleBooze.Services.Persistence;
 using JungleBooze.UI.Hud;
 using UnityEngine;
@@ -140,6 +141,17 @@ namespace JungleBooze.App
             ObstacleView obstacles = obstacleObject.AddComponent<ObstacleView>();
             obstacles.Init(kit, configs.Runner, presentation.FogEndM);
 
+            // GDD 7: vines (rope, glow, release ring, Perfect feedback).
+            var vineObject = new GameObject("Vines");
+            vineObject.transform.SetParent(root.transform, false);
+            VineView vineView = vineObject.AddComponent<VineView>();
+            vineView.Init(
+                kit,
+                configs.Runner,
+                trackSetup != null ? trackSetup.Vines : VineConfig.CreateDefault(),
+                presentation.FogEndM,
+                Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"));
+
             var coinObject = new GameObject("Coins");
             coinObject.transform.SetParent(root.transform, false);
             CoinView coinView = coinObject.AddComponent<CoinView>();
@@ -161,6 +173,9 @@ namespace JungleBooze.App
                 sessionSeed,
                 startAtMenu ? SessionPhase.Menu : SessionPhase.Ready);
 
+            // GDD 7.3 step 3: the vine "hang" slow-down is off with Reduce Motion.
+            session.VineHangSlowdown = !presentation.ReduceMotion;
+
             RunDriver driver = root.AddComponent<RunDriver>();
 
             // HUD.
@@ -170,7 +185,7 @@ namespace JungleBooze.App
             hud.Build(driver, Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"), save);
             driver.AttachMeta(new RunResultRecorder(save), hud);
 
-            driver.Init(session, input, new IRunView[] { ground, gaps, obstacles, coinView, runnerView, cameraView, hud }, kit);
+            driver.Init(session, input, new IRunView[] { ground, gaps, obstacles, vineView, coinView, runnerView, cameraView, hud }, kit);
 
             if (Debug.isDebugBuild)
             {
@@ -182,11 +197,12 @@ namespace JungleBooze.App
 
         /// <summary>
         /// THE SWAP POINT for the run world: the generated track world (spec 002) built from the default track
-        /// configs. [ASSUMED] The track config assets are not loaded yet; the in-code start values are used.
+        /// configs plus the vine sections (GDD 7), with the VineTuning asset if there is one. [ASSUMED] The track
+        /// config assets are not loaded yet; the in-code start values are used.
         /// </summary>
         private static IRunWorldFactory CreateWorldFactory(RunConfigSet configs)
         {
-            return new TrackRunWorldFactory();
+            return new TrackRunWorldFactory(TrackRunSetup.CreateDefault(RunConfigLoader.LoadVines()));
         }
 
         private static bool IsRunScene(Scene scene)

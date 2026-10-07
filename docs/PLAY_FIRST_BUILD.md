@@ -130,6 +130,10 @@ key press, click or swipe only starts the run; it does not move her.
 | Move one lane right | Right arrow or D | Drag right | Swipe right |
 | Jump | Up arrow, W or Space | Drag up | Swipe up |
 | Slide | Down arrow or S | Drag down | Swipe down |
+| Grab a vine | Jump (Up, W or Space) just before the glowing vine, in its lane | Drag up | Swipe up |
+| On a vine: let go (time it with the ring) | Up arrow, W or Space | Drag up | Swipe up |
+| On a vine: aim at the next vine / landing lane | Left / right arrow or A / D | Drag left / right | Swipe left / right |
+| On a vine: slide when you land | Down arrow or S | Drag down | Swipe down |
 | Pause | P or Esc | Click the **pause** button (top right) | Tap the **pause** button (top right) |
 | Resume (3-2-1 countdown, then the run continues) | P or Esc | Click **Resume** | Tap **Resume** |
 | Game Over: run again on a new track | Space, Enter or R | Click **Run again** | Tap **Run again** |
@@ -149,6 +153,19 @@ Notes:
 - The first hit is a **stumble** (Pista hops, the screen flashes orange, "Stumble!" appears); a second hit while
   still dazed, or falling into a ravine, ends the run. The Game Over screen names what got you.
 - Top-left shows distance and score, top-right the coin count. "Near miss!" appears when you graze an obstacle.
+- **Vines** (about 25–35 s into a run, then every 35–70 s): a yellow signpost at the path edge and a coin line
+  lead to a rope hanging over one lane, with a white glow and a pulsing gold ring at the grab point. Run in that
+  lane and jump just before it; Pista catches it by herself while in the air (a jump started up to 0.45 s before
+  it still counts). She swings forward for 1.4 seconds (the camera widens and the first moment runs a bit slower).
+  A ring around her hand fills up: let go when it reaches the **gold** part for a **PERFECT!** (+400, a high
+  launch through a ring of 25 coins and a gold trail); elsewhere in the second half is **GOOD** (+150, 10 coins);
+  letting go too early is remembered for 0.15 s; if you never let go she drops off at the end (+50, no coins).
+  Nothing can hit her on the vine.
+- Later in a run (from about 600 m) some vines hang over a **chasm** (a long dark gap): missing that vine ends the
+  run ("Missed vine"). A plain jump is too short to cross it. Vines over solid ground only cost you the bonus.
+- **Chains** (from about 600 m): two or three vines in a row. While swinging, swipe toward the lane of the next vine
+  (its glow grows when aimed at); a GOOD or PERFECT release then flies you straight to it. Each PERFECT in a chain
+  raises the bonus multiplier (x1, x1.5, x2).
 - **Run again** uses a new track; **Same track** replays the same seed (same obstacles and coins). Use **K**
   (development builds) to end a run on purpose.
 

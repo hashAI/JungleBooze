@@ -35,5 +35,14 @@ namespace JungleBooze.Gameplay.Track
 
         /// <summary>Library index of the chunk HERO is in (-1 before the first tick).</summary>
         public int CurrentChunkIndex;
+
+        /// <summary>Vines grabbed this run (missions: "Swing on 5 vines").</summary>
+        public int VinesGrabbed;
+
+        /// <summary>Vine releases this run (Auto, Good and Perfect).</summary>
+        public int VineReleases;
+
+        /// <summary>Perfect vine releases this run.</summary>
+        public int PerfectReleases;
     }
 }

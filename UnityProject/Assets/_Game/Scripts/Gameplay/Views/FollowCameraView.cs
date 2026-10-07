@@ -8,7 +8,9 @@ namespace JungleBooze.Gameplay.Views
     /// Portrait follow camera (spec 001 section 10): position (camX, camY + up, Z − behind), looking at
     /// (camX, lookAtHeight + camY, Z + lookAhead). camX smooth-damps toward lateralFollow × X, camY toward
     /// verticalFollow × Y, in real frame time. Slides do not move it; it follows interpolated state; stumble shake
-    /// (off with Reduce Motion). Freezes during the death hit-pause and hold because the simulation stops.
+    /// (off with Reduce Motion). Vine swing (GDD 7.3 step 3): while on a vine and in the launch after it, the FOV
+    /// eases to the swing FOV and the view tilts up (both off with Reduce Motion).
+    /// Freezes during the death hit-pause and hold because the simulation stops.
     /// No allocations per frame.
     /// </summary>
     public sealed class FollowCameraView : MonoBehaviour, IRunView
@@ -23,6 +25,7 @@ namespace JungleBooze.Gameplay.Views
         private float _velY;
         private float _shakeLeft;
         private float _shakeClock;
+        private float _swingBlend;
 
         public Camera Camera => _camera;
 
@@ -45,6 +48,8 @@ namespace JungleBooze.Gameplay.Views
             _velY = 0f;
             _shakeLeft = 0f;
             _shakeClock = 0f;
+            _swingBlend = 0f;
+            _camera.fieldOfView = _config.CameraFovDeg;
             Render(session, 1f, 0f);
         }
 
@@ -84,10 +89,28 @@ namespace JungleBooze.Gameplay.Views
                 shakeX = _config.StumbleShakeM * fade * Mathf.Sin(_shakeClock * ShakeFrequencyHz * 2f * Mathf.PI);
             }
 
+            RunnerState state = runner.Current;
+            bool swinging = state.Locomotion == Locomotion.Carried || state.InVineFlight;
+            float swingTarget = swinging && !_config.ReduceMotion ? 1f : 0f;
+            float blendSeconds = _config.SwingCameraBlendMs / 1000f;
+            if (realDeltaSeconds > 0f)
+            {
+                _swingBlend = blendSeconds > 0f
+                    ? Mathf.MoveTowards(_swingBlend, swingTarget, realDeltaSeconds / blendSeconds)
+                    : swingTarget;
+            }
+
+            float ease = _swingBlend * _swingBlend * (3f - 2f * _swingBlend);
+            _camera.fieldOfView = Mathf.Lerp(_config.CameraFovDeg, _config.SwingCameraFovDeg, ease);
+
             float zf = (float)z;
             Transform t = _camera.transform;
             t.position = new Vector3(_camX + shakeX, _camY + _config.CameraOffsetUpM, zf - _config.CameraOffsetBehindM);
             t.LookAt(new Vector3(_camX + shakeX, _config.CameraLookAtHeightM + _camY, zf + _config.CameraLookAheadM));
+            if (ease > 0f)
+            {
+                t.rotation = t.rotation * Quaternion.Euler(-_config.SwingCameraTiltDeg * ease, 0f, 0f);
+            }
         }
     }
 }

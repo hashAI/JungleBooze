@@ -49,6 +49,12 @@ namespace JungleBooze.Gameplay.Views
         public static readonly Color JungleFog = Hex(0xE9, 0xC9, 0x8A);
         public static readonly Color JungleSkyHorizon = Hex(0xFF, 0xE3, 0xA3);
 
+        /// <summary>Vine rope and canopy branch (gray-box; GDD 7.2). Darker than the jungle green so it reads on the sky.</summary>
+        public static readonly Color VineRope = Hex(0x4E, 0x6B, 0x2A);
+
+        /// <summary>Vine grab point glow core: near-white (GDD 7.2 "white core with a sun-gold pulse").</summary>
+        public static readonly Color VineGlowCore = Hex(0xFF, 0xFB, 0xEE);
+
         /// <summary>Second path tone so ground tiles visibly scroll (sun-bleached plank, section 5).</summary>
         public static readonly Color PathAlternate = Hex(0xE9, 0xD3, 0xA6);
 

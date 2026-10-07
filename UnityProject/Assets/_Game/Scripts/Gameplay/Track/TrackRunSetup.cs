@@ -1,5 +1,6 @@
 using System;
 using JungleBooze.Gameplay.Runner;
+using JungleBooze.Gameplay.Vine;
 
 namespace JungleBooze.Gameplay.Track
 {
@@ -22,8 +23,10 @@ namespace JungleBooze.Gameplay.Track
             ScoreConfig score,
             ChunkLibrary library,
             DifficultyTiersDesignValues tiers,
-            WorldSkinConfig skin = null)
+            WorldSkinConfig skin = null,
+            VineConfig vines = null)
         {
+            Vines = vines ?? VineConfig.CreateDefault();
             Track = track ?? throw new ArgumentNullException(nameof(track));
             Kit = kit ?? throw new ArgumentNullException(nameof(kit));
             Coins = coins ?? throw new ArgumentNullException(nameof(coins));
@@ -49,17 +52,30 @@ namespace JungleBooze.Gameplay.Track
 
         public WorldSkinConfig Skin { get; }
 
-        /// <summary>The FP1 defaults: spec 002 start values and the 16-chunk Jungle library.</summary>
+        /// <summary>Vine tuning (GDD 7.5): vine sections, swing, release, launch, vine score and coins.</summary>
+        public VineConfig Vines { get; }
+
+        /// <summary>
+        /// The defaults: spec 002 start values, the 16-chunk Jungle library plus the vine sections, and the GDD 7.5
+        /// vine values.
+        /// </summary>
         public static TrackRunSetup CreateDefault()
+        {
+            return CreateDefault(VineConfig.CreateDefault());
+        }
+
+        /// <summary>Like <see cref="CreateDefault()"/> with the given vine tuning (for example from the VineTuning asset).</summary>
+        public static TrackRunSetup CreateDefault(VineConfig vines)
         {
             return new TrackRunSetup(
                 TrackConfig.CreateDefault(),
                 ObstacleKitConfig.CreateDefault(),
                 CoinConfig.CreateDefault(),
                 ScoreConfig.CreateDefault(),
-                JungleChunkLibraryDefaults.CreateLibrary(),
+                JungleChunkLibraryDefaults.CreateLibraryWithVines(),
                 DifficultyTiersDesignValues.CreateDefault(),
-                WorldSkinConfig.CreateJungle());
+                WorldSkinConfig.CreateJungle(),
+                vines);
         }
 
         /// <summary>
@@ -92,6 +108,7 @@ namespace JungleBooze.Gameplay.Track
             h = StableHash.Mix(h, Score.ComputeHash());
             h = StableHash.Mix(h, Library.DataHash);
             h = StableHash.Mix(h, GetTiers(curve).ComputeHash());
+            h = StableHash.Mix(h, Vines.ComputeHash());
             return h;
         }
     }

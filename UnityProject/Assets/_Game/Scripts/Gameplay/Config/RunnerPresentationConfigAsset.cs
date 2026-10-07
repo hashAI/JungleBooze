@@ -40,6 +40,11 @@ namespace JungleBooze.Gameplay.Config
         [SerializeField] private float _runAnimRateMin = 0.8f;
         [SerializeField] private float _runAnimRateMax = 1.6f;
 
+        [Header("Vine swing camera")]
+        [SerializeField] private float _swingCameraFovDeg = 70f;
+        [SerializeField] private float _swingCameraTiltDeg = 8f;
+        [SerializeField] private float _swingCameraBlendMs = 250f;
+
         [Header("Pause")]
         [SerializeField] private float _resumeCountdownMs = 1500f;
 
@@ -71,6 +76,9 @@ namespace JungleBooze.Gameplay.Config
                 RunAnimReferenceSpeedMps = _runAnimReferenceSpeedMps,
                 RunAnimRateMin = _runAnimRateMin,
                 RunAnimRateMax = _runAnimRateMax,
+                SwingCameraFovDeg = _swingCameraFovDeg,
+                SwingCameraTiltDeg = _swingCameraTiltDeg,
+                SwingCameraBlendMs = _swingCameraBlendMs,
                 ResumeCountdownMs = _resumeCountdownMs,
                 GameOverInputLockMs = _gameOverInputLockMs,
             };

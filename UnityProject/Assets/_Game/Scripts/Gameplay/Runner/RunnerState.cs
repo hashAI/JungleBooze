@@ -47,5 +47,37 @@ namespace JungleBooze.Gameplay.Runner
         public float HitboxHeight { get; internal set; }
 
         public bool IsDead { get; internal set; }
+
+        // ---- Vine swinging (GDD 7) ----
+
+        /// <summary>Swing phase 0..1 while <see cref="Locomotion.Carried"/> on a vine; otherwise 0.</summary>
+        public float SwingPhase { get; internal set; }
+
+        /// <summary>Ticks since the grab while on a vine; otherwise 0.</summary>
+        public int SwingTick { get; internal set; }
+
+        /// <summary>Pendulum angle in radians (positive = swung forward) while on a vine.</summary>
+        public float SwingAngleRad { get; internal set; }
+
+        /// <summary>Id of the vine HERO is swinging on; 0 when not on a vine.</summary>
+        public int VineId { get; internal set; }
+
+        /// <summary>Lane of the vine HERO is swinging on; -1 when not on a vine.</summary>
+        public int VineLane { get; internal set; }
+
+        /// <summary>Aimed landing / next-vine lane while on a vine; -1 otherwise.</summary>
+        public int AimLane { get; internal set; }
+
+        /// <summary>Id of the next vine aimed at (0 = the landing pad) while on a vine.</summary>
+        public int AimVineId { get; internal set; }
+
+        /// <summary>In the air after a vine release, until landing or the next grab.</summary>
+        public bool InVineFlight { get; internal set; }
+
+        /// <summary>Grade of the most recent vine release this run (None before the first).</summary>
+        public JungleBooze.Gameplay.Vine.VineReleaseGrade LastReleaseGrade { get; internal set; }
+
+        /// <summary>A too-early release swipe is buffered.</summary>
+        public bool ReleaseBuffered { get; internal set; }
     }
 }

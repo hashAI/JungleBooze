@@ -48,6 +48,15 @@ namespace JungleBooze.Gameplay.Runner
         /// <summary>Number of <see cref="RunnerEventType.NearMiss"/> events emitted on this tick (score bonus).</summary>
         public int NearMissesThisTick;
 
+        /// <summary>Grade of a vine release on this tick; None if HERO did not let go of a vine.</summary>
+        public JungleBooze.Gameplay.Vine.VineReleaseGrade VineRelease;
+
+        /// <summary>Chain score multiplier of this tick's vine release (GDD 7.3 step 5).</summary>
+        public float VineBonusMultiplier;
+
+        /// <summary>HERO grabbed a vine on this tick.</summary>
+        public bool VineGrabbedThisTick;
+
         /// <summary>HERO's front face z (<see cref="Z"/> + <see cref="HalfDepth"/>), used by mover triggers.</summary>
         public double FrontZ => Z + HalfDepth;
     }

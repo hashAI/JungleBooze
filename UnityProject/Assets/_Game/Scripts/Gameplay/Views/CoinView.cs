@@ -8,7 +8,7 @@ namespace JungleBooze.Gameplay.Views
     /// <summary>
     /// Gray-box coins (style guide 7.2): pooled gold discs with a darker rim and a turquoise gem, 0.5 m across,
     /// spinning about the vertical axis at one turn per second. Polls the <see cref="TrackSimulation"/> coin ring
-    /// each frame; collected coins are hidden. No allocations after <see cref="Init"/>.
+    /// each frame, plus the vine bonus coins; collected coins are hidden. No allocations after <see cref="Init"/>.
     /// </summary>
     public sealed class CoinView : MonoBehaviour, IRunView
     {
@@ -101,13 +101,20 @@ namespace JungleBooze.Gameplay.Views
                         continue;
                     }
 
-                    Transform t = _coins[used++];
-                    t.localPosition = new Vector3(c.X, c.Y, (float)c.Z);
-                    t.localRotation = Quaternion.Euler(0f, _spinDeg + c.Id * PhasePerIdDeg, 0f);
-                    if (!t.gameObject.activeSelf)
+                    Place(used++, in c);
+                }
+
+                // Vine coin shower and Perfect ring (GDD 7.3 step 4).
+                int bonus = _track.BonusCoinCount;
+                for (int i = 0; i < bonus && used < _coins.Length; i++)
+                {
+                    ref readonly CoinInstance c = ref _track.GetBonusCoin(i);
+                    if (c.Collected || c.Z < minZ || c.Z > maxZ)
                     {
-                        t.gameObject.SetActive(true);
+                        continue;
                     }
+
+                    Place(used++, in c);
                 }
             }
 
@@ -117,6 +124,17 @@ namespace JungleBooze.Gameplay.Views
             }
 
             _shown = used;
+        }
+
+        private void Place(int slot, in CoinInstance c)
+        {
+            Transform t = _coins[slot];
+            t.localPosition = new Vector3(c.X, c.Y, (float)c.Z);
+            t.localRotation = Quaternion.Euler(0f, _spinDeg + c.Id * PhasePerIdDeg, 0f);
+            if (!t.gameObject.activeSelf)
+            {
+                t.gameObject.SetActive(true);
+            }
         }
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using JungleBooze.Gameplay.Runner;
+using JungleBooze.Gameplay.Vine;
 
 namespace JungleBooze.Gameplay.Track
 {
@@ -12,7 +13,10 @@ namespace JungleBooze.Gameplay.Track
     /// <item>Streak: consecutive collected coins. A <c>Stumbled</c> or a missed coin (HERO's back face passed
     /// <c>coin.z + pickupRadiusM</c> while the coin was uncollected and within half a lane width of HERO's x)
     /// resets it; reaching <c>streakLength</c> pays <c>coinStreakBonus</c> and resets it.</item>
-    /// <item>Score (11b, also on the death tick): distance from HERO's z plus near-miss and streak bonuses.</item>
+    /// <item>Score (11b, also on the death tick): distance from HERO's z plus near-miss, streak and vine release
+    /// bonuses (GDD 7.5: Good 150 / Perfect 400 / Auto 50 × the chain multiplier).</item>
+    /// <item>Vine bonus coins (coin shower and Perfect ring) are picked up like other coins and count in the
+    /// streak, but a bonus coin that is not collected never breaks the streak [ASSUMED].</item>
     /// </list>
     /// No allocation per tick.
     /// </summary>
@@ -23,14 +27,16 @@ namespace JungleBooze.Gameplay.Track
 
         private readonly CoinConfig _coins;
         private readonly ScoreConfig _score;
+        private readonly VineConfig _vines;
         private readonly float _missHalfWidth;
 
         private RunTotals _totals;
         private DeathInfo _death;
         private int _pendingStreakBonuses;
 
-        public RunScoring(CoinConfig coins, ScoreConfig score, RunnerConfig runner)
+        public RunScoring(CoinConfig coins, ScoreConfig score, RunnerConfig runner, VineConfig vines = null)
         {
+            _vines = vines ?? VineConfig.CreateDefault();
             _coins = coins ?? throw new ArgumentNullException(nameof(coins));
             _score = score ?? throw new ArgumentNullException(nameof(score));
             if (runner == null)
@@ -108,6 +114,27 @@ namespace JungleBooze.Gameplay.Track
                     }
                 }
             }
+
+            int bonus = track.BonusCoinCount;
+            for (int i = 0; i < bonus; i++)
+            {
+                ref CoinInstance c = ref track.BonusCoinAt(i);
+                if (c.Resolved)
+                {
+                    continue;
+                }
+
+                if (c.Z >= zLo && c.Z <= zHi && Math.Abs(c.X - info.X) <= reachX && c.Y >= yLo && c.Y <= yHi)
+                {
+                    Collect(ref c, info.Tick, runner);
+                    continue;
+                }
+
+                if (back > c.Z + r)
+                {
+                    c.Resolved = true;
+                }
+            }
         }
 
         /// <summary>Step 11b: distance, bonuses of this tick (near-misses, completed streaks), score, death info.</summary>
@@ -139,6 +166,32 @@ namespace JungleBooze.Gameplay.Track
             }
 
             _pendingStreakBonuses = 0;
+
+            if (info.VineGrabbedThisTick)
+            {
+                _totals.VinesGrabbed++;
+            }
+
+            if (info.VineRelease != VineReleaseGrade.None)
+            {
+                _totals.VineReleases++;
+                if (info.VineRelease == VineReleaseGrade.Perfect)
+                {
+                    _totals.PerfectReleases++;
+                }
+
+                int points = (int)Math.Round(_vines.ScoreFor(info.VineRelease) * (double)info.VineBonusMultiplier);
+                _totals.BonusScore += points;
+                Emit(runner, new RunnerEvent
+                {
+                    Type = RunnerEventType.ScoreBonus,
+                    Tick = info.Tick,
+                    Value = ClampShort(points),
+                    Flags = RunnerEventFlags.BonusVine,
+                    Archetype = (byte)info.VineRelease,
+                });
+            }
+
             _totals.DistanceM = info.Z > 0.0 ? info.Z : 0.0;
             _totals.Score = _score.ComputeScore(_totals.DistanceM, _totals.BonusScore);
             if (track != null)
@@ -166,6 +219,9 @@ namespace JungleBooze.Gameplay.Track
             h = StableHash.Mix(h, _totals.CoinsMissed);
             h = StableHash.Mix(h, _totals.Tier);
             h = StableHash.Mix(h, _totals.CurrentChunkIndex);
+            h = StableHash.Mix(h, _totals.VinesGrabbed);
+            h = StableHash.Mix(h, _totals.VineReleases);
+            h = StableHash.Mix(h, _totals.PerfectReleases);
             h = StableHash.Mix(h, _pendingStreakBonuses);
             h = StableHash.Mix(h, _death.HasDied);
             h = StableHash.Mix(h, (int)_death.Cause);
