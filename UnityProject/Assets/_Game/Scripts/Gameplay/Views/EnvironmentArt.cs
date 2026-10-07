@@ -33,12 +33,32 @@ namespace JungleBooze.Gameplay.Views
         public const string TreeB = "Foliage_TreeB";
         public const string Bush = "Foliage_Bush";
 
+        // Jungle wall segments (tools/blender/build_jungle_kit.py): pre-merged 12 m verge dressing, one draw call each.
+        public const string WallA = "Jungle_WallA";
+        public const string WallB = "Jungle_WallB";
+        public const string WallC = "Jungle_WallC";
+
+        /// <summary>The wall segment variants, in hash order.</summary>
+        public static readonly string[] JungleWalls = { WallA, WallB, WallC };
+
+        // Textures without a model (loaded by name + "_basecolor").
+        public const string TrailTexture = "Ground_Trail";
+        public const string FloorTexture = "Ground_JungleFloor";
+
+        /// <summary>Shared atlas of every model whose name starts with <see cref="AtlasPrefix"/>.</summary>
+        public const string JungleAtlas = "Jungle_Atlas";
+
+        private const string AtlasPrefix = "Jungle_";
+
         /// <summary>Every prefab name above, in one list (the start-of-run asset report walks it).</summary>
         public static readonly string[] AllNames =
         {
             LowBarrier, HighBarrier, FullBlock, Boulder, ThornPatch, StrikeColumn, Coin, Magnet, Shield, Boost,
-            PathTile, RavineEdge, VineBranch, Signpost, TreeA, TreeB, Bush,
+            PathTile, RavineEdge, VineBranch, Signpost, TreeA, TreeB, Bush, WallA, WallB, WallC,
         };
+
+        /// <summary>Every texture-only name above (the asset report walks it too).</summary>
+        public static readonly string[] AllTextureNames = { TrailTexture, FloorTexture, JungleAtlas };
 
         private const string BaseColorSuffix = "_basecolor";
 
@@ -123,8 +143,67 @@ namespace JungleBooze.Gameplay.Views
                 Object.Destroy(lights[i].gameObject);
             }
 
-            EnsureTexturedMaterials(instance, ResourcesFolder + prefabName + BaseColorSuffix, prefabName);
+            string textureKey = TextureKeyFor(prefabName);
+            EnsureTexturedMaterials(instance, ResourcesFolder + textureKey + BaseColorSuffix, textureKey);
             return instance.transform;
+        }
+
+        /// <summary>
+        /// Base color texture name for a model: <c>Jungle_*</c> models share <see cref="JungleAtlas"/>, every other
+        /// model has its own <c>&lt;name&gt;_basecolor</c>. The editor import remap uses the same rule.
+        /// </summary>
+        public static string TextureKeyFor(string prefabName)
+        {
+            return prefabName.StartsWith(AtlasPrefix, System.StringComparison.Ordinal) ? JungleAtlas : prefabName;
+        }
+
+        /// <summary>The texture <c>&lt;name&gt;_basecolor</c> from <c>Resources/EnvironmentArt</c>, or null.</summary>
+        public static Texture2D LoadTexture(string name)
+        {
+            return Resources.Load<Texture2D>(ResourcesFolder + name + BaseColorSuffix);
+        }
+
+        /// <summary>
+        /// A new lit material (clone of the active pipeline's primitive material; no shader lookup by name) with
+        /// <paramref name="texture"/> (may be null) and <paramref name="color"/>, matte, GPU instancing on.
+        /// The caller owns and destroys it. Setup-time only.
+        /// </summary>
+        public static Material CreateLitMaterial(string name, Texture2D texture, Color color)
+        {
+            Material template = GetTemplate();
+            if (template == null)
+            {
+                return null;
+            }
+
+            var material = new Material(template) { name = name, color = color, enableInstancing = true };
+            if (texture != null)
+            {
+                material.mainTexture = texture;
+                if (material.HasProperty("_BaseMap"))
+                {
+                    material.SetTexture("_BaseMap", texture);
+                }
+            }
+
+            if (material.HasProperty("_Smoothness"))
+            {
+                material.SetFloat("_Smoothness", 0f);
+            }
+
+            return material;
+        }
+
+        private static Material GetTemplate()
+        {
+            if (_template == null)
+            {
+                GameObject probe = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                _template = probe.GetComponent<MeshRenderer>().sharedMaterial;
+                Object.Destroy(probe);
+            }
+
+            return _template;
         }
 
         /// <summary>
@@ -176,32 +255,10 @@ namespace JungleBooze.Gameplay.Views
                 return null;
             }
 
-            if (_template == null)
-            {
-                GameObject probe = GameObject.CreatePrimitive(PrimitiveType.Quad);
-                _template = probe.GetComponent<MeshRenderer>().sharedMaterial;
-                Object.Destroy(probe);
-            }
-
-            if (_template == null)
+            Material material = CreateLitMaterial("EnvArt_" + materialKey, texture, Color.white);
+            if (material == null)
             {
                 return null;
-            }
-
-            var material = new Material(_template) { name = "EnvArt_" + materialKey, mainTexture = texture };
-            if (material.HasProperty("_BaseMap"))
-            {
-                material.SetTexture("_BaseMap", texture);
-            }
-
-            if (material.HasProperty("_BaseColor"))
-            {
-                material.SetColor("_BaseColor", Color.white);
-            }
-
-            if (material.HasProperty("_Smoothness"))
-            {
-                material.SetFloat("_Smoothness", 0f);
             }
 
             MaterialCache[materialKey] = material;
