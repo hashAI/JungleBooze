@@ -33,7 +33,7 @@ compiler on the Mac is the fastest way to find remaining errors; fix whatever th
 - [ ] B1 gameplay-engineer: collisions in the runner (spec 001 §9 + spec 002 changes), extended ITrackQuery, stumble/daze/near-miss + tests
 - [ ] B2 gameplay-engineer: track simulation (chunk data, 16-chunk library, seeded generator, coins, score, run lifecycle) + tests
 - [ ] B3 gameplay-engineer: chunk fairness validator (spec 002 §11) as an EditMode test + editor menu
-- [ ] C1 ui-engineer (running): presentation for movement; C2 later adds track/obstacle/coin views.
+- [x] C1 ui-engineer: presentation (bootstrap, session with Ready/Dying/GameOver, Run again/Same track, input, gray-box views, HUD, PlayMode tests). Swap point for C2: `RunSceneBootstrap.CreateWorldFactory`.
 - [ ] C gameplay/ui-engineer: Unity presentation layer: auto-built scene, gray-box views, camera, input adapter, HUD, game over/restart, default config assets
 - [x] D tech-architect: first-open bootstrap (`Assets/_Game/Editor/Setup/ProjectBootstrap.cs`, ADR 0003) + `docs/PLAY_FIRST_BUILD.md`
 - [ ] E code-reviewer: compile-correctness and logic review of everything; fixes applied
@@ -51,13 +51,13 @@ and commit after every agent report.
 | balance-simulator | done (A3) | Python reference model, golden traces, S1–S9 report (`docs/sim-reports/2026-10-07-spec001.md`) | `tools/sim/`, `docs/sim-reports/` | Fairness fuzzing for spec 002; recommendations R1–R6 go to game-designer |
 | tech-architect | done (stage D) | First-open bootstrap: URP mobile asset, input set to Both, iOS basics (placeholder bundle id `com.pistaduko.junglerunner`, iOS 15, portrait), empty Run scene in build list; Mac play guide | `Assets/_Game/Editor/Setup/`, `docs/adr/0003-first-playable-bootstrap.md`, `docs/PLAY_FIRST_BUILD.md` | Add EditMode tests for `ProjectSetupRules`; Roslyn analyzers |
 | gameplay-engineer | **working** (2 instances, resumed) | B1: collisions in `Runner/`. B2: generator, track world, coins, score, lifecycle in `Track/` | `Scripts/Gameplay/Runner/`, `Scripts/Gameplay/Track/`, `Tests/EditMode/` | B3: chunk fairness validator |
-| ui-engineer | **working** (resumed) | C1: finish presentation (Session, Views, Controls, App bootstrap, HUD), PlayMode tests, Run again / Same track, controls table | `Scripts/Gameplay/{Session,Views,Controls}`, `Scripts/App`, `Scripts/UI/Hud`, `Tests/` | C2: track/obstacle/coin views |
+| ui-engineer | done (C1) | Presentation layer + 3 PlayMode test files + controls table | `Scripts/Gameplay/{Session,Views,Controls}`, `Scripts/App`, `Scripts/UI/Hud`, `Tests/` | C2: swap in TrackRunWorldFactory, add track/obstacle/coin views, resolve RunSession vs GameSession overlap |
 | art-director | done | Style guide and prompts updated with names Pista/Duko and the chest-band sash | `design/STYLE_GUIDE.md`, `design/prompts/` | Generate concept images once an image API key exists |
 | asset-pipeline | waiting | — | — | Needs an image/3D generation API key from the owner |
 | audio-director | waiting | — | — | Week 5. Note: the macaw speaks a few words, so voice lines and localization are needed |
 | qa-engineer | waiting | — | — | FP1 stage F: test plan + owner play-test script |
 | performance-engineer | waiting | — | — | Benchmark scene (week 2+) |
-| code-reviewer | waiting | — | — | Review the spec 001 implementation |
+| code-reviewer | **working** | FP0 compile-correctness review of the presentation slice (Core, App, Session, Views, Controls, UI, Editor/Setup, presentation tests) | review report | Review Runner/ and Track/ when B1/B2 finish |
 | monetization-engineer | waiting | — | — | Week 4–5 |
 | appstore-compliance | done | Name check (Pista: low caution, Duko: clear; not legal clearance), 8 ranked app names, 17 early risks, checklist refreshed for current Apple rules (Xcode 26 / iOS 26 SDK) | `docs/compliance/2026-10-name-and-early-review.md`, `docs/APP_STORE_CHECKLIST.md` | Privacy manifest when SDKs are chosen; follow-ups: "report an ad" option, Declared Age Range API, CI check for the word "booze" |
 | release-engineer | paused (owner: build the game first) | Partial: build script, fastlane lanes, one-command build, setup guide (stopped mid-verification) | `fastlane/`, `tools/build/`, `docs/RELEASE.md`, `.github/workflows/build-ios.yml` | Resume later: finish and verify the Fastfile lanes |
@@ -103,6 +103,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Log
 Newest first. One line per event.
+- 2026-10-07: Stage C1 done (ui-engineer). Launched code-reviewer on the presentation slice for the FP0 preview. Known issue: Track/ files lack .meta files (B2 still running).
 - 2026-10-07: Stage A3 done (balance-simulator): reference model, 64 unit tests green, targets report with S4/S5 failing on bot profiles.
 - 2026-10-07: Owner wants to play progress ASAP. Added early preview FP0 (flat world) right after C1.
 - 2026-10-07 06:30 UTC: Usage limit hit ~01:10 and stopped all four agents; checkpoints had saved work up to 01:05. Resumed B1, B2, C1 and A3 from their saved files after the limit reset.

@@ -320,13 +320,13 @@ namespace JungleBooze.UI.Hud
         }
 
         /// <summary>A label (left) and value (right) row on the Game Over panel. Returns the value text.</summary>
-        private static Text CreateRow(Transform parent, string name, Font font, string label, float y, out RectTransform row, out Text labelText)
+        private static Text CreateRow(Transform parent, string name, Font font, string label, float y, out RectTransform row)
         {
             row = HudFactory.CreateRect(parent, name);
             HudFactory.Place(row, new Vector2(0.5f, 1f), new Vector2(RowWidthPt, RowHeightPt), new Vector2(0f, y));
             Color none = new Color(0f, 0f, 0f, 0f);
 
-            labelText = HudFactory.CreateText(row, "Label", font, RowFontSize, StylePalette.Ink, none, TextAnchor.MiddleLeft);
+            Text labelText = HudFactory.CreateText(row, "Label", font, RowFontSize, StylePalette.Ink, none, TextAnchor.MiddleLeft);
             HudFactory.Stretch(labelText.rectTransform, 0f);
             labelText.text = label;
 
@@ -399,9 +399,9 @@ namespace JungleBooze.UI.Hud
             _gameOverDistance = CreateCounter(panel, "FinalDistance", font, 44, MaxDistanceDigits, HudStrings.DistanceUnit, true);
             HudFactory.Place((RectTransform)_gameOverDistance.transform, new Vector2(0.5f, 1f), new Vector2(RowWidthPt, 56f), new Vector2(0f, -114f));
 
-            _coinsValue = CreateRow(panel, "CoinsRow", font, HudStrings.Coins, FirstRowYPt, out _, out _);
-            _scoreValue = CreateRow(panel, "ScoreRow", font, HudStrings.Score, FirstRowYPt - RowStepPt, out _scoreRow, out _);
-            _bestValue = CreateRow(panel, "BestRow", font, HudStrings.Best, FirstRowYPt - 2f * RowStepPt, out _bestRow, out _);
+            _coinsValue = CreateRow(panel, "CoinsRow", font, HudStrings.Coins, FirstRowYPt, out _);
+            _scoreValue = CreateRow(panel, "ScoreRow", font, HudStrings.Score, FirstRowYPt - RowStepPt, out _scoreRow);
+            _bestValue = CreateRow(panel, "BestRow", font, HudStrings.Best, FirstRowYPt - 2f * RowStepPt, out _bestRow);
 
             // "New best!" stamp on the panel's top-right corner (style guide 8.1: pulp orange, ink outline, rotated).
             _newBestStamp = HudFactory.CreateText(panel, "NewBestStamp", font, 22, StylePalette.PulpOrange, StylePalette.Ink, TextAnchor.MiddleCenter);
