@@ -507,14 +507,17 @@ namespace JungleBooze.Gameplay.Views
                     float r = last > first ? 1.2f : 1.0f;
                     float tx = (runL + runR) * 0.5f;
                     Pole(_rig.Body, flute, tx, 6.9f, (d * 0.5f) + r, r * 2f, 14f);
-                    if (last > first)
+                    if (!TryArt(ObstacleArtSlot.RootWeb, _rig.Body, new Vector3(tx, 0f, 0f), Quaternion.identity, Vector3.one))
                     {
-                        // Root web bridging the 0.36 m crack at the base, at most 0.12 m high.
-                        Box(_rig.Body, flute, tx, 0.04f, 0f, _i.LaneWidthM - w + 0.5f, 0.1f, d);
-                    }
+                        if (last > first)
+                        {
+                            // Root web bridging the 0.36 m crack at the base, at most 0.12 m high.
+                            Box(_rig.Body, flute, tx, 0.04f, 0f, _i.LaneWidthM - w + 0.5f, 0.1f, d);
+                        }
 
-                    Box(_rig.Body, flute, runL - 0.2f, 0.04f, -(d * 0.5f) + 0.3f, 0.6f, 0.1f, 0.4f);
-                    Box(_rig.Body, flute, runR + 0.2f, 0.04f, -(d * 0.5f) + 0.3f, 0.6f, 0.1f, 0.4f);
+                        Box(_rig.Body, flute, runL - 0.2f, 0.04f, -(d * 0.5f) + 0.3f, 0.6f, 0.1f, 0.4f);
+                        Box(_rig.Body, flute, runR + 0.2f, 0.04f, -(d * 0.5f) + 0.3f, 0.6f, 0.1f, 0.4f);
+                    }
                 }
 
                 Box(_rig.Context, leaf, (runL + runR) * 0.5f, 0.03f, -(d * 0.5f) - 0.5f, (runR - runL) * 0.9f, 0.06f, 0.7f);
@@ -768,6 +771,12 @@ namespace JungleBooze.Gameplay.Views
 
                 bool art = TryArt(ObstacleArtSlot.ThornCage, _rig.Body, new Vector3(cx, 0f, 0f), Quaternion.identity, new Vector3(_i.Variant.Mirror ? -1f : 1f, 1f, 1f));
                 bool legacy = !art && TryLegacy(ObstacleArtSlot.LegacyThorn, cx, (h - e) * 0.5f, 0f, w, h + e, d);
+                if (art)
+                {
+                    // The cane wall model is a second layer over the cage model.
+                    TryArt(ObstacleArtSlot.CaneWall, _rig.Body, new Vector3(cx, 0f, 0f), Quaternion.identity, new Vector3(_i.Variant.Mirror ? -1f : 1f, 1f, 1f));
+                }
+
                 if (!art && !legacy)
                 {
                     // Root cage and cane wall filling 2.04 x 4.0 x 2.2: front and sides are walls (G6).
@@ -840,6 +849,7 @@ namespace JungleBooze.Gameplay.Views
             }
 
             ContactPad(minX, maxX, d);
+            TryArt(ObstacleArtSlot.ThornLitter, _rig.Decals, new Vector3((minX + maxX) * 0.5f, DecalY, -(d * 0.5f) - 0.4f), Quaternion.identity, Vector3.one);
             Debris(minX, maxX, d, 4u);
         }
     }
