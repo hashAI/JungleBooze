@@ -2,7 +2,7 @@
 
 Usage (from tools/sim):
     python3 -I run_targets.py s1 [--n 10000] [--workers 4]   # long: oracle over 360k segments
-    python3 -I run_targets.py s2 | s3 | bots | s8 | s9
+    python3 -I run_targets.py s2 | s3 | bots | whatif | s8 | s9
     python3 -I run_targets.py report                          # writes docs/sim-reports/2026-10-07-spec001.md
     python3 -I run_targets.py all                             # everything, then report
 
@@ -298,7 +298,10 @@ MATRIX_SPEED = {1: 10.0, 2: 12.0, 3: 13.5, 4: 15.5, 5: 17.5, 6: 21.0}
 
 
 def _bot_run(setup, seed):
-    course = run_course(seed, setup["speed"], setup["tier"], setup["duration_s"],
+    cfg = None
+    if setup.get("cfg"):
+        cfg = RunnerConfig(fixed_speed_mps=setup["speed"], use_start_ramp=False, **setup["cfg"])
+    course = run_course(seed, setup["speed"], setup["tier"], setup["duration_s"], cfg=cfg,
                         gap_max=setup.get("gap_max", 4.0))
     bot = SkillBot(PROFILES[setup["bot"]], seed)
     plan = bot.plan(course)
@@ -419,6 +422,99 @@ def bots(workers=4, matrix_runs=300):
 
 
 # ---------------------------------------------------------------------------
+# What-if: candidate tuning changes, measured in the model only (nothing is applied to the game config)
+# ---------------------------------------------------------------------------
+WHATIF_VARIANTS = [
+    ("baseline", {}),
+    ("jumpAirtimeMs 650 (39 ticks)", {"jump_airtime_ms": 650.0}),
+    ("jumpAirtimeMs 700 (42 ticks)", {"jump_airtime_ms": 700.0}),
+]
+
+
+def _jump_window_cfg(speed, overrides, phases=10):
+    """S2a for a variant: min/max ticks of Jump input that clear a single low barrier."""
+    ns = []
+    for p in range(phases):
+        cfg = RunnerConfig(fixed_speed_mps=speed, use_start_ramp=False, **overrides)
+        z_front = 3.0 * speed + 0.5 + p / float(phases) * speed / 60.0
+        course = fixed_course(speed, [("single", z_front, {1: LOW_BARRIER})], start_lane=1, cfg=cfg)
+        r = make_runner(course)
+        while not r.dead and r.tick < 2000:
+            r.step()
+        contact = r.death["tick"]
+        base = make_runner(course)
+        n = 0
+        for _t in range(0, contact + 3):
+            rr = base.clone()
+            rr.step(JUMP)
+            if _clear(rr, course.end_z):
+                n += 1
+            base.step()
+        ns.append(n)
+    return min(ns), max(ns)
+
+
+def _s3_cfg(overrides, speed=21.0):
+    """S3 for a variant: oracle feasibility of two full-width low-barrier rows, spacing 0.45-0.90 s."""
+    oracle = OracleSolver(node_budget=300000, full_budget=300000)
+    allrow = {0: LOW_BARRIER, 1: LOW_BARRIER, 2: LOW_BARRIER}
+    worst = None
+    for k in range(10):
+        sp = round(0.45 + 0.05 * k, 2)
+        ok = 0
+        for p in range(5):
+            cfg = RunnerConfig(fixed_speed_mps=speed, use_start_ramp=False, **overrides)
+            z1 = 2.0 * speed + p / 5.0 * speed / 60.0
+            c = fixed_course(speed, [("row", z1, allrow), ("row", z1 + sp * speed, allrow)], cfg=cfg)
+            st, _, _ = oracle.solve(c)
+            ok += 1 if st == "solved" else 0
+        if ok < 5 and worst is None:
+            worst = sp
+    return worst  # None = feasible at every spacing tested
+
+
+def whatif(workers=4, runs=1000):
+    setups = []
+    for name, ov in WHATIF_VARIANTS:
+        setups.append(dict(target="S5", bot="average", speed=10.0, tier=1, duration_s=60, runs=runs, cfg=ov,
+                           variant=name))
+        setups.append(dict(target="S6", bot="new", speed=8.0, tier=1, duration_s=30, runs=runs, cfg=ov,
+                           variant=name))
+    jobs = []
+    for st in setups:
+        base = 7000000 + _seed_slot(st) * 100000  # same seeds as the S5 / S6 target runs
+        seeds = list(range(base, base + st["runs"]))
+        for k in range(0, len(seeds), 100):
+            jobs.append((st, seeds[k:k + 100]))
+    with Pool(workers) as pool:
+        out = pool.map(_bot_job, jobs)
+    per = {}
+    for (st, _), chunk in zip(jobs, out):
+        per.setdefault((st["variant"], st["target"]), (st, []))[1].extend(chunk)
+    rows = []
+    for name, ov in WHATIF_VARIANTS:
+        s5 = _summ(*per[(name, "S5")])
+        s6 = _summ(*per[(name, "S6")])
+        w8 = _jump_window_cfg(8.0, ov)
+        w10 = _jump_window_cfg(10.0, ov)
+        w21 = _jump_window_cfg(21.0, ov)
+        s3_first_fail = _s3_cfg(ov)
+        cfg = RunnerConfig(**ov)
+        rows.append(dict(variant=name, overrides=ov, jump_ticks=cfg.jump_airtime_ticks,
+                         gravity=cfg.gravity_mps2, jump_v0=cfg.jump_velocity_mps,
+                         s5_survive=s5["survive_rate"],
+                         s5_exec_deaths=s5["deaths"] - s5["deaths_error_injected"],
+                         s6_survive=s6["survive_rate"], s6_exec_deaths=s6["deaths"] - s6["deaths_error_injected"],
+                         s5_causes=s5["causes_execution"], s6_causes=s6["causes_execution"],
+                         jump_window_8=w8, jump_window_10=w10, jump_window_21=w21,
+                         s3_first_infeasible_spacing=s3_first_fail, runs=runs))
+        print(name, "S5 %.3f S6 %.3f win8 %s win10 %s win21 %s s3fail %s" % (
+            s5["survive_rate"], s6["survive_rate"], w8, w10, w21, s3_first_fail), flush=True)
+    _save("whatif", dict(rows=rows, config_hash=RunnerConfig().config_hash()))
+    return rows
+
+
+# ---------------------------------------------------------------------------
 # S8: determinism (record -> replay, with pauses)
 # ---------------------------------------------------------------------------
 def s8(n=1000):
@@ -479,6 +575,8 @@ if __name__ == "__main__":
         s3()
     if what in ("bots", "all"):
         bots(workers)
+    if what in ("whatif", "all"):
+        whatif(workers)
     if what in ("s8", "all"):
         s8()
     if what in ("s9", "all"):

@@ -21,6 +21,11 @@ Not in FP1 (comes right after): vine swinging, Duko, power-ups, menus/shop, real
 
 **Notes for stage C:** the Run scene is empty, so the runtime bootstrap creates the portrait camera and a directional light and only acts in the scene named "Run". Don't use `Shader.Find`; clone the material from `GameObject.CreatePrimitive` and set `.color`. Prefer `InputSystemUIInputModule`. Warnings are errors. Replace the placeholder controls table in `docs/PLAY_FIRST_BUILD.md`.
 
+**Early preview FP0 (owner asked to play progress ASAP):** as soon as C1 is done, a focused compile-correctness review of
+the flat-world slice (Core, Runner, Session, Views, Controls, App, UI/Hud) and fixes, then tell the owner to pull and press Play.
+FP0 = flat ground, lanes, jump, slide, pause, HUD, Game Over/restart. Obstacles and coins arrive with FP1. The owner's real
+compiler on the Mac is the fastest way to find remaining errors; fix whatever they send back first.
+
 **FP1 plan (stages; tick as they land):**
 - [x] A1 gameplay-engineer: movement simulation (spec 001 minus collisions) + EditMode tests (AC-01–14, 16–33, 45–46, 61–63; collisions deferred to B)
 - [x] A2 game-designer: spec 002 (track, obstacles, coins): 16 Jungle chunks, generator, coins/score, fairness rules, run lifecycle, AC-201–250
@@ -97,6 +102,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Log
 Newest first. One line per event.
+- 2026-10-07: Owner wants to play progress ASAP. Added early preview FP0 (flat world) right after C1.
 - 2026-10-07 06:30 UTC: Usage limit hit ~01:10 and stopped all four agents; checkpoints had saved work up to 01:05. Resumed B1, B2, C1 and A3 from their saved files after the limit reset.
 - 2026-10-07: Launched B1 (collisions) and B2 (track, coins, score, run lifecycle) in parallel.
 - 2026-10-07: Stage A2 done (game-designer): spec 002. Launching B1 (collisions) and B2 (track) in parallel.
