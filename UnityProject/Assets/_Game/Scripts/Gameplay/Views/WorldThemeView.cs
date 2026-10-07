@@ -7,22 +7,19 @@ using UnityEngine;
 namespace JungleBooze.Gameplay.Views
 {
     /// <summary>
-    /// Gray-box world themes (GDD 9, style guide section 5). Each frame it asks the <see cref="TrackSimulation"/> which
-    /// world HERO is in, blends the previous and next theme over the gateway chunk, and applies the result: camera and
-    /// fog color, ambient and key light, ground tiles and verges, obstacle bodies. It also stands a gray-box gateway
+    /// World themes (GDD 9, style guide section 5). Each frame it asks the <see cref="TrackSimulation"/> which
+    /// world HERO is in, blends the previous and next theme over the gateway chunk, and applies the result: camera,
+    /// sky and fog color, trilight ambient and key light, ground and verges, obstacle bodies. It also stands a gray-box gateway
     /// (two posts, a lintel and a banner with the world name) at every world switch. No UI: a banner or music
     /// crossfade can subscribe to <see cref="SegmentChanged"/>. Setup allocates; <see cref="Render"/> only touches
     /// materials, lights and render settings, and only while the blend changes.
     /// </summary>
     public sealed class WorldThemeView : MonoBehaviour, IRunView
     {
-        // The Run scene's key light (RunSceneBootstrap) sits at pitch 50 / yaw -30 for the Jungle theme (-25 / 25);
+        // The Run scene's key light sits at the look config's pitch / yaw for the Jungle theme (style guide -25 / 25);
         // other themes move it by the same difference.
-        private const float BaseKeyPitchDeg = 50f;
-        private const float BaseKeyYawDeg = -30f;
         private const float JungleKeyYawDeg = -25f;
         private const float JungleKeyPitchDeg = 25f;
-        private const float AmbientMix = 0.55f;
 
         // Gateway frame (gray-box, replaced by the real cave mouth, waterfall, rope bridge and temple gate).
         private const float PathMarginM = 0.6f;
@@ -38,6 +35,8 @@ namespace JungleBooze.Gameplay.Views
 
         private Camera _camera;
         private Light _keyLight;
+        private SkyView _sky;
+        private EnvironmentLookConfig _look;
         private GroundView _ground;
         private ObstacleView _obstacles;
         private TrackSimulation _track;
@@ -74,10 +73,14 @@ namespace JungleBooze.Gameplay.Views
             GrayBoxKit kit,
             RunnerConfig runnerConfig,
             Font font,
-            float viewDistanceM)
+            float viewDistanceM,
+            SkyView sky,
+            EnvironmentLookConfig look)
         {
             _camera = camera;
             _keyLight = keyLight;
+            _sky = sky;
+            _look = look ?? EnvironmentLookConfig.CreateDefault();
             _ground = ground;
             _obstacles = obstacles;
             _viewDistanceM = viewDistanceM;
@@ -233,15 +236,38 @@ namespace JungleBooze.Gameplay.Views
             }
 
             RenderSettings.fogColor = theme.Fog;
-            RenderSettings.ambientLight = Color.Lerp(theme.ShadowTint, theme.SkyHorizon, AmbientMix);
+            ApplyAmbient(theme, _look);
+            if (_sky != null)
+            {
+                _sky.ApplyTheme(theme);
+            }
+
             if (_keyLight != null)
             {
                 _keyLight.color = theme.KeyLight;
-                _keyLight.transform.localRotation = Quaternion.Euler(
-                    BaseKeyPitchDeg + (theme.KeyPitchDeg - JungleKeyPitchDeg),
-                    BaseKeyYawDeg + (theme.KeyYawDeg - JungleKeyYawDeg),
-                    0f);
+                _keyLight.transform.localRotation = KeyRotation(theme, _look);
             }
+        }
+
+        /// <summary>
+        /// Trilight ambient for a theme: a cool fill from above (shadow tint toward white) against the warm key, the
+        /// horizon between shadow tint and sky, the shadow tint from below. Allocation free.
+        /// </summary>
+        public static void ApplyAmbient(in WorldTheme theme, EnvironmentLookConfig look)
+        {
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
+            RenderSettings.ambientSkyColor = Color.Lerp(theme.ShadowTint, Color.white, look.AmbientSkyWhiteMix);
+            RenderSettings.ambientEquatorColor = Color.Lerp(theme.ShadowTint, theme.SkyHorizon, look.AmbientEquatorMix);
+            RenderSettings.ambientGroundColor = Color.Lerp(theme.ShadowTint, StylePalette.Ink, look.AmbientGroundInkMix);
+        }
+
+        /// <summary>Key light rotation for a theme: the look config's Jungle angles plus the theme's style guide offset.</summary>
+        public static Quaternion KeyRotation(in WorldTheme theme, EnvironmentLookConfig look)
+        {
+            return Quaternion.Euler(
+                look.KeyPitchDeg + (theme.KeyPitchDeg - JungleKeyPitchDeg),
+                look.KeyYawDeg + (theme.KeyYawDeg - JungleKeyYawDeg),
+                0f);
         }
 
         /// <summary>

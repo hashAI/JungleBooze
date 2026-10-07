@@ -124,13 +124,13 @@ namespace JungleBooze.Gameplay.Views
 
         private void OnDestroy()
         {
-            DestroyObject(_dome);
-            DestroyObject(_rings);
-            DestroyObject(_domeMaterial);
-            DestroyObject(_ringMaterial);
+            ReleaseObject(_dome);
+            ReleaseObject(_rings);
+            ReleaseObject(_domeMaterial);
+            ReleaseObject(_ringMaterial);
         }
 
-        private static void DestroyObject(Object o)
+        private static void ReleaseObject(Object o)
         {
             if (o != null)
             {

@@ -7,7 +7,8 @@ namespace JungleBooze.EnvironmentImport
     /// Import presets for the environment models in <c>Art/Environment/Resources/EnvironmentArt</c>. The run views load
     /// each FBX straight from Resources (no prefab build step). Models import as static meshes without cameras, lights
     /// or animation, and after import each FBX is remapped to a URP Simple Lit material made from its sibling
-    /// <c>&lt;Name&gt;_basecolor.png</c> (the same approach as the characters). Materials live in
+    /// <c>&lt;Name&gt;_basecolor.png</c> (the same approach as the characters); <c>Jungle_*</c> models share
+    /// <c>Jungle_Atlas_basecolor.png</c> and one <c>Jungle_Atlas_Mat</c>. Materials live in
     /// <c>Art/Environment/Materials</c>. Textures are ASTC and capped at 1024. If this never runs, the runtime
     /// fallback in <c>EnvironmentArt.cs</c> still builds a textured material.
     /// </summary>
@@ -53,6 +54,16 @@ namespace JungleBooze.EnvironmentImport
             var importer = (TextureImporter)assetImporter;
             importer.textureType = TextureImporterType.Default;
             importer.mipmapEnabled = true;
+            string file = System.IO.Path.GetFileNameWithoutExtension(assetPath);
+            if (file.StartsWith("Ground_Trail", System.StringComparison.Ordinal) || file.StartsWith("Ground_JungleFloor", System.StringComparison.Ordinal))
+            {
+                // Seen at a grazing angle the whole run: anisotropic filtering keeps the trail sharp. The trail
+                // repeats along V only (its U spans the path cross-section with the grassy edges).
+                importer.anisoLevel = 4;
+                importer.wrapModeU = file.StartsWith("Ground_Trail", System.StringComparison.Ordinal) ? TextureWrapMode.Clamp : TextureWrapMode.Repeat;
+                importer.wrapModeV = TextureWrapMode.Repeat;
+            }
+
             importer.maxTextureSize = MaxTextureSize;
             importer.textureCompression = TextureImporterCompression.Compressed;
             importer.SetPlatformTextureSettings(new TextureImporterPlatformSettings
@@ -75,7 +86,10 @@ namespace JungleBooze.EnvironmentImport
                 }
 
                 string file = System.IO.Path.GetFileNameWithoutExtension(path);
-                var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(Root + file + "_basecolor.png");
+
+                // Jungle_* wall segments share one atlas and one material (same rule as EnvironmentArt.TextureKeyFor).
+                string textureKey = file.StartsWith("Jungle_", System.StringComparison.Ordinal) ? "Jungle_Atlas" : file;
+                var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(Root + textureKey + "_basecolor.png");
                 var importer = AssetImporter.GetAtPath(path) as ModelImporter;
                 if (texture == null || importer == null || importer.GetExternalObjectMap().Count > 0)
                 {
@@ -99,7 +113,7 @@ namespace JungleBooze.EnvironmentImport
                     AssetDatabase.CreateFolder("Assets/_Game/Art/Environment", "Materials");
                 }
 
-                string matPath = MaterialsFolder + "/" + file + "_Mat.mat";
+                string matPath = MaterialsFolder + "/" + textureKey + "_Mat.mat";
                 var mat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
                 if (mat == null)
                 {
@@ -111,6 +125,7 @@ namespace JungleBooze.EnvironmentImport
                 mat.SetTexture("_BaseMap", texture);
                 mat.SetColor("_BaseColor", Color.white);
                 if (mat.HasProperty("_SpecColor")) { mat.SetColor("_SpecColor", Color.black); }
+                mat.enableInstancing = true;
                 EditorUtility.SetDirty(mat);
 
                 bool remapped = false;

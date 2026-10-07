@@ -35,6 +35,7 @@ namespace JungleBooze.App
         public const string CompanionTuningName = "CompanionTuning";
         public const string EconomyConfigName = "EconomyConfig";
         public const string MetaConfigName = "MetaConfig";
+        public const string EnvironmentLookName = "EnvironmentLook";
 
         public static RunConfigSet Load()
         {
@@ -153,6 +154,23 @@ namespace JungleBooze.App
             return config;
         }
 
+        /// <summary>
+        /// Environment look (ground, jungle walls, sky haze, key light, ambient) from <c>Resources/EnvironmentLook.asset</c>
+        /// if present and valid, else the built-in defaults.
+        /// </summary>
+        public static EnvironmentLookConfig LoadEnvironmentLook()
+        {
+            var sources = new List<string>(1);
+            EnvironmentLookConfig config = LoadOrDefault<EnvironmentLookConfigAsset, EnvironmentLookConfig>(
+                EnvironmentLookName, a => ValidOrThrow(a.ToConfig()), EnvironmentLookConfig.CreateDefault, sources);
+            if (Debug.isDebugBuild)
+            {
+                Debug.Log("[JungleBooze] " + sources[0] + ".");
+            }
+
+            return config;
+        }
+
         private static TConfig LoadOrDefault<TAsset, TConfig>(
             string resourceName, Func<TAsset, TConfig> convert, Func<TConfig> fallback, List<string> sources)
             where TAsset : ScriptableObject
@@ -179,6 +197,17 @@ namespace JungleBooze.App
         }
 
         private static InputConfig ValidOrThrow(InputConfig config)
+        {
+            var errors = new List<string>();
+            if (!config.Validate(errors))
+            {
+                throw new ArgumentException(string.Join(" ", errors));
+            }
+
+            return config;
+        }
+
+        private static EnvironmentLookConfig ValidOrThrow(EnvironmentLookConfig config)
         {
             var errors = new List<string>();
             if (!config.Validate(errors))

@@ -23,11 +23,27 @@ The simulation owns collision. Art is scaled by the view to the hitbox, so autho
 | Hazard_StrikeColumn | lane strike column | unit cube centered |
 | Pickup_Coin | coin | 0.5 m diameter, face toward +/-Z, turquoise gem center, centered |
 | Pickup_Magnet / Pickup_Shield / Pickup_Boost | power-up icons | about 1 m across, facing -Z, centered, glow baked in |
-| Ground_PathTile | path tile | 1 m wide x 1 m long (X,Z), top at y=0, scaled to path width x 12 m |
+| Ground_PathTile | (retired from the run: stretched 8.4 x 12 m it smeared; kept for reference) | 1 m wide x 1 m long (X,Z), top at y=0 |
 | Ground_RavineEdge | ravine lips | 1 m wide x 1 m deep, lip face at z=0, body toward -Z, top at y=0 |
 | Prop_VineBranch | vine branch | unit cube centered (scaled lane-wide, 0.35 m thick) |
 | Prop_Signpost | vine signpost | real size, base at y=0, about 2 m tall |
-| Foliage_TreeA / TreeB / Bush | verge dressing | real size, base at y=0, spaced 9 m along each verge |
+| Foliage_TreeA / TreeB / Bush | verge dressing fallback (only when no Jungle_Wall* exists) | real size, base at y=0, spaced 9 m along each verge |
+| Jungle_WallA / B / C | verge jungle walls, one 12 m segment per side per slot | x = 0 at the path edge, plants toward +x, ground at y=0, z -6..+6 m; built by `tools/blender/build_jungle_kit.py`; share `Jungle_Atlas_basecolor.png` |
 
-Budgets: props <= 1.5k tris (path tile <= 3k), shared atlas, textures <= 1024, ASTC. Style: design/STYLE_GUIDE.md
+Textures without a model (loaded by name, `<Name>_basecolor.png`):
+
+| Texture | Used by | Layout |
+|---|---|---|
+| Ground_Trail | GroundView trail strip (tinted by the world's Path color) | U = trail cross-section x -5.4..+5.4 m (clamped; path 4.2 m half width + grassy edge), V repeats every 6 m |
+| Ground_JungleFloor | GroundView floor strips (tinted by the world's Verge color) | repeats every 6 m in U and V |
+| Jungle_Atlas | every Jungle_* model | 1024 atlas: 4x4 cells of 256 px, swatch strip under the rock cell |
+
+Look pass (2026-10-07): trail + floor strips (3 draw calls), jungle walls (about 16 segments visible, one draw call
+and about 3.4k triangles each), `SkyView` gradient dome + far canopy rings (2 draw calls, drawn first, unfogged),
+trilight ambient, key light from the look config. Tuning: `EnvironmentLookConfig` (asset `Config/Resources/EnvironmentLook`).
+Rebuild: `python3 tools/assetgen/make_ground_textures.py <EnvironmentArt>` and
+`python3 tools/blender/build_jungle_kit.py Art/Environment/Models <EnvironmentArt>`. Preview without Unity:
+`python3 tools/blender/run_mock.py <EnvironmentArt> out.png [--before] [--world dusk]` (Previews/look_before.png, look_after.png).
+
+Budgets: props <= 1.5k tris (path tile <= 3k), wall segments <= 4k (a merged cluster of several props), shared atlas, textures <= 1024, ASTC. Style: design/STYLE_GUIDE.md
 (Inkbound Pulp, hazard red only on hazards with ink stripes, coin gem #2EC4B6). Generation: tools/assetgen/.

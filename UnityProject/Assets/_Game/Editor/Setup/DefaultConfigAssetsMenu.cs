@@ -39,6 +39,7 @@ namespace JungleBooze.Editor.Setup
             created += CreateIfMissing<CompanionConfigAsset>("CompanionTuning");
             created += CreateIfMissing<EconomyConfigAsset>("EconomyConfig");
             created += CreateIfMissing<MetaConfigAsset>("MetaConfig");
+            created += CreateIfMissing<EnvironmentLookConfigAsset>("EnvironmentLook");
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();

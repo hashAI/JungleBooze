@@ -15,7 +15,6 @@ using JungleBooze.UI.Hud;
 using JungleBooze.UI.Menus;
 using JungleBooze.UI.Tutorial;
 using UnityEngine;
-using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 
 namespace JungleBooze.App
@@ -106,7 +105,9 @@ namespace JungleBooze.App
             }
 
             RunnerPresentationConfig presentation = configs.Presentation;
-            ApplyLightingAndFog(presentation);
+            EnvironmentLookConfig look = RunConfigLoader.LoadEnvironmentLook();
+            WorldTheme startTheme = WorldThemes.Get(WorldKind.Jungle, false);
+            ApplyLightingAndFog(presentation, look, startTheme);
 
             // Camera (portrait follow camera, spec 001 section 10).
             var cameraObject = new GameObject("RunCamera");
@@ -122,22 +123,29 @@ namespace JungleBooze.App
             FollowCameraView cameraView = cameraObject.AddComponent<FollowCameraView>();
             cameraView.Init(camera, presentation);
 
-            // Key light (style guide section 5, Jungle; no realtime shadows, ADR 0001).
+            // Key light (style guide section 5, Jungle; angle and intensity from the look config). No realtime shadow
+            // maps (ADR 0001): plants carry painted blob shadows in their meshes, HERO has her blob shadow.
             var lightObject = new GameObject("KeyLight");
             lightObject.transform.SetParent(root.transform, false);
-            lightObject.transform.localRotation = Quaternion.Euler(50f, -30f, 0f);
+            lightObject.transform.localRotation = WorldThemeView.KeyRotation(startTheme, look);
             Light keyLight = lightObject.AddComponent<Light>();
             keyLight.type = LightType.Directional;
-            keyLight.color = StylePalette.JungleKeyLight;
-            keyLight.intensity = 1.1f;
+            keyLight.color = startTheme.KeyLight;
+            keyLight.intensity = look.KeyIntensity;
             keyLight.shadows = LightShadows.None;
 
-            // Gray-box world.
+            // Gradient sky and far canopy silhouettes around the camera (drawn first, unfogged).
+            var skyObject = new GameObject("Sky");
+            skyObject.transform.SetParent(root.transform, false);
+            SkyView sky = skyObject.AddComponent<SkyView>();
+            sky.Init(camera, look);
+
+            // Ground, trail and jungle walls (gray-box tiles when the art is missing).
             var kit = new GrayBoxKit();
             var groundObject = new GameObject("Ground");
             groundObject.transform.SetParent(root.transform, false);
             GroundView ground = groundObject.AddComponent<GroundView>();
-            ground.Init(kit, configs.Runner, presentation.FogEndM);
+            ground.Init(kit, configs.Runner, presentation.FogEndM, look);
 
             // Stage C2: ravines, obstacles and coins from the generated track.
             IRunWorldFactory worldFactory = CreateWorldFactory(configs);
@@ -192,7 +200,9 @@ namespace JungleBooze.App
                 kit,
                 configs.Runner,
                 Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"),
-                presentation.FogEndM);
+                presentation.FogEndM,
+                sky,
+                look);
 
             var runnerObject = new GameObject("Pista");
             runnerObject.transform.SetParent(root.transform, false);
@@ -305,6 +315,18 @@ namespace JungleBooze.App
                 report.Append(EnvironmentArt.AllNames[i]).Append('=').Append(EnvironmentArt.Exists(EnvironmentArt.AllNames[i]));
             }
 
+            report.Append(". Textures: ");
+            for (int i = 0; i < EnvironmentArt.AllTextureNames.Length; i++)
+            {
+                if (i > 0)
+                {
+                    report.Append(", ");
+                }
+
+                string name = EnvironmentArt.AllTextureNames[i];
+                report.Append(name).Append('=').Append(EnvironmentArt.LoadTexture(name) != null);
+            }
+
             Debug.Log(report.Append('.').ToString());
         }
 
@@ -334,14 +356,13 @@ namespace JungleBooze.App
             return (ulong)DateTime.UtcNow.Ticks;
         }
 
-        private static void ApplyLightingAndFog(RunnerPresentationConfig presentation)
+        private static void ApplyLightingAndFog(RunnerPresentationConfig presentation, EnvironmentLookConfig look, in WorldTheme theme)
         {
-            RenderSettings.ambientMode = AmbientMode.Flat;
-            RenderSettings.ambientLight = Color.Lerp(StylePalette.JungleShadowTint, StylePalette.JungleSkyHorizon, 0.55f);
+            WorldThemeView.ApplyAmbient(theme, look);
             RenderSettings.skybox = null;
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Linear;
-            RenderSettings.fogColor = StylePalette.JungleFog;
+            RenderSettings.fogColor = theme.Fog;
             RenderSettings.fogStartDistance = presentation.FogStartM;
             RenderSettings.fogEndDistance = presentation.FogEndM;
         }
