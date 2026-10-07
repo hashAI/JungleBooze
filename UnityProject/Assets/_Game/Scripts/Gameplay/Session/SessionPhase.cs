@@ -23,5 +23,11 @@ namespace JungleBooze.Gameplay.Session
         /// tap, swipe or key only starts the run; it is not passed to the simulation.
         /// </summary>
         Ready = 5,
+
+        /// <summary>
+        /// Main menu (GDD section 19, Home): a fresh run is set up behind the menu, HERO idle at the start. Nothing
+        /// steps. The Play button (or a confirm key) starts the run straight into <see cref="Running"/>.
+        /// </summary>
+        Menu = 6,
     }
 }

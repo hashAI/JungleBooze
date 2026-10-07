@@ -3,6 +3,7 @@ using JungleBooze.Gameplay.Controls;
 using JungleBooze.Gameplay.Session;
 using JungleBooze.Gameplay.Track;
 using JungleBooze.Gameplay.Views;
+using JungleBooze.Services.Persistence;
 using JungleBooze.UI.Hud;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -15,6 +16,9 @@ namespace JungleBooze.App
     /// the portrait follow camera, the key light, fog, the gray-box views, the HUD, the input adapter and the
     /// <see cref="GameSession"/>, and hands them to a <see cref="RunDriver"/>. Acts only when the active scene is
     /// named <see cref="RunSceneName"/>, so test scenes and later menu scenes are left alone.
+    /// The game itself (Play mode, device) starts at the main menu with the local save from
+    /// <c>Application.persistentDataPath</c>; <see cref="BootstrapIfRunScene"/> and the 3-argument
+    /// <see cref="Build(Scene, RunConfigSet, ulong)"/> keep the test setup: Ready prompt and an in-memory save.
     /// </summary>
     public static class RunSceneBootstrap
     {
@@ -31,13 +35,24 @@ namespace JungleBooze.App
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void OnAfterFirstSceneLoad()
         {
-            BootstrapIfRunScene(SceneManager.GetActiveScene());
+            Scene scene = SceneManager.GetActiveScene();
+            if (!IsRunScene(scene))
+            {
+                return;
+            }
+
+            // The game: main menu first, real save on the device.
+            PlayerSave save = PlayerSave.Load(new FileSaveStorage(Application.persistentDataPath));
+            Build(scene, RunConfigLoader.Load(), SeedFromClock(), save, true);
         }
 
-        /// <summary>Builds the run in <paramref name="scene"/> if it is named "Run". Returns the driver, or null.</summary>
+        /// <summary>
+        /// Builds the run in <paramref name="scene"/> if it is named "Run" (Ready prompt, in-memory save, for tests).
+        /// Returns the driver, or null.
+        /// </summary>
         public static RunDriver BootstrapIfRunScene(Scene scene)
         {
-            if (!scene.IsValid() || !string.Equals(scene.name, RunSceneName, StringComparison.Ordinal))
+            if (!IsRunScene(scene))
             {
                 return null;
             }
@@ -45,9 +60,26 @@ namespace JungleBooze.App
             return Build(scene, RunConfigLoader.Load(), SeedFromClock());
         }
 
-        /// <summary>Builds every run object into <paramref name="scene"/>. Tests call this with fixed configs and seed.</summary>
+        /// <summary>
+        /// Builds every run object into <paramref name="scene"/> starting at the Ready prompt with an in-memory save.
+        /// Tests call this with fixed configs and seed.
+        /// </summary>
         public static RunDriver Build(Scene scene, RunConfigSet configs, ulong sessionSeed)
         {
+            return Build(scene, configs, sessionSeed, PlayerSave.CreateInMemory(), false);
+        }
+
+        /// <summary>
+        /// Builds every run object into <paramref name="scene"/>. <paramref name="save"/> holds best score, wallet
+        /// and settings; <paramref name="startAtMenu"/>: true opens the main menu, false the Ready prompt.
+        /// </summary>
+        public static RunDriver Build(Scene scene, RunConfigSet configs, ulong sessionSeed, PlayerSave save, bool startAtMenu)
+        {
+            if (save == null)
+            {
+                throw new ArgumentNullException(nameof(save));
+            }
+
             if (configs == null)
             {
                 throw new ArgumentNullException(nameof(configs));
@@ -126,7 +158,8 @@ namespace JungleBooze.App
                 input,
                 worldFactory,
                 presentation.ToSessionTimings(),
-                sessionSeed);
+                sessionSeed,
+                startAtMenu ? SessionPhase.Menu : SessionPhase.Ready);
 
             RunDriver driver = root.AddComponent<RunDriver>();
 
@@ -134,7 +167,8 @@ namespace JungleBooze.App
             var hudObject = new GameObject("Hud", typeof(RectTransform));
             hudObject.transform.SetParent(root.transform, false);
             HudView hud = hudObject.AddComponent<HudView>();
-            hud.Build(driver, Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"));
+            hud.Build(driver, Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"), save);
+            driver.AttachMeta(new RunResultRecorder(save), hud);
 
             driver.Init(session, input, new IRunView[] { ground, gaps, obstacles, coinView, runnerView, cameraView, hud }, kit);
 
@@ -153,6 +187,11 @@ namespace JungleBooze.App
         private static IRunWorldFactory CreateWorldFactory(RunConfigSet configs)
         {
             return new TrackRunWorldFactory();
+        }
+
+        private static bool IsRunScene(Scene scene)
+        {
+            return scene.IsValid() && string.Equals(scene.name, RunSceneName, StringComparison.Ordinal);
         }
 
         /// <summary>Session seed from the wall clock. Seeds pick the run; the simulation itself never reads the clock.</summary>

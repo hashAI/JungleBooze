@@ -3,6 +3,7 @@ using JungleBooze.Gameplay.Controls;
 using JungleBooze.Gameplay.Runner;
 using JungleBooze.Gameplay.Session;
 using JungleBooze.Gameplay.Views;
+using JungleBooze.UI.Hud;
 using UnityEngine;
 
 namespace JungleBooze.App
@@ -13,6 +14,10 @@ namespace JungleBooze.App
     /// 60 Hz steps), hand the simulation's events to every view, then let every view render the interpolated state.
     /// Pauses on app background and focus loss (spec 001 8.1); never auto-resumes. Backgrounded while dying, it
     /// shows Game Over directly (spec 002 12.1). Game Over actions are ignored during the input lock.
+    /// Menus (GDD 19): Play starts the run behind the main menu, Home leaves a paused or finished run for the main
+    /// menu, Restart also works from the pause menu. With a <see cref="RunResultRecorder"/> attached, every run is
+    /// banked into the save once (at its end, or when left from the pause menu) and the save is flushed when the
+    /// app goes to the background.
     /// No allocations per frame (except the development-build error log on event-buffer overflow).
     /// </summary>
     public sealed class RunDriver : MonoBehaviour, IRunCommands
@@ -23,6 +28,8 @@ namespace JungleBooze.App
         private GrayBoxKit _kit;
         private RunnerSimulation _overflowRunner;
         private int _reportedOverflow;
+        private RunResultRecorder _recorder;
+        private HudView _hud;
 
         public GameSession Session => _session;
 
@@ -45,6 +52,59 @@ namespace JungleBooze.App
             BeginViews();
         }
 
+        /// <summary>The save recorder, if attached.</summary>
+        public RunResultRecorder Recorder => _recorder;
+
+        /// <summary>
+        /// Optional meta hooks: <paramref name="recorder"/> banks run results into the save; <paramref name="hud"/>
+        /// lets the keyboard Play (Space/Enter on the main menu) wait while Settings is open. Either may be null.
+        /// </summary>
+        public void AttachMeta(RunResultRecorder recorder, HudView hud)
+        {
+            _recorder = recorder;
+            _hud = hud;
+        }
+
+        /// <summary>Main menu "Play": the run set up behind the menu starts running. Ignored outside the menu.</summary>
+        public void Play()
+        {
+            if (_session == null || _session.Phase != SessionPhase.Menu)
+            {
+                return;
+            }
+
+            if (_session.Begin())
+            {
+                _input.Reset();
+                _input.GameplayEnabled = true;
+            }
+        }
+
+        /// <summary>
+        /// "Home" from the pause menu or Game Over (after the input lock): banks the run if needed, sets up a fresh
+        /// run behind the main menu and snaps every view to it. Ignored in other phases.
+        /// </summary>
+        public void GoHome()
+        {
+            if (_session == null)
+            {
+                return;
+            }
+
+            SessionPhase phase = _session.Phase;
+            bool allowed = phase == SessionPhase.Paused || (phase == SessionPhase.GameOver && !_session.GameOverInputLocked);
+            if (!allowed)
+            {
+                return;
+            }
+
+            _recorder?.RecordIfLeaving(_session);
+            _session.ReturnToMenu();
+            _input.Reset();
+            _input.GameplayEnabled = false;
+            BeginViews();
+        }
+
         public void Pause()
         {
             if (_session != null && _session.RequestPause())
@@ -58,7 +118,10 @@ namespace JungleBooze.App
             _session?.RequestResume();
         }
 
-        /// <summary>Game Over "Run again" (button, R, Space, Enter): new seed. Ignored outside Game Over and during the lock.</summary>
+        /// <summary>
+        /// Game Over "Play again" (button, R, Space, Enter) or pause menu "Restart": new seed. Ignored in other
+        /// phases and during the Game Over lock.
+        /// </summary>
         public void Restart()
         {
             TryRestart(false);
@@ -71,14 +134,26 @@ namespace JungleBooze.App
         }
 
         /// <summary>
-        /// Restarts from Game Over once the input lock is over: rebuilds the run scope in place (no scene reload),
-        /// clears input and snaps every view to the new run. Returns false if the restart was ignored.
+        /// Restarts from Game Over once the input lock is over, or from the pause menu: rebuilds the run scope in
+        /// place (no scene reload), clears input and snaps every view to the new run. Returns false if the restart
+        /// was ignored.
         /// </summary>
         public bool TryRestart(bool sameTrack)
         {
-            if (_session == null || _session.Phase != SessionPhase.GameOver || _session.GameOverInputLocked)
+            if (_session == null)
             {
                 return false;
+            }
+
+            bool fromPause = _session.Phase == SessionPhase.Paused;
+            if (!fromPause && (_session.Phase != SessionPhase.GameOver || _session.GameOverInputLocked))
+            {
+                return false;
+            }
+
+            if (fromPause)
+            {
+                _recorder?.RecordIfLeaving(_session);
             }
 
             if (sameTrack)
@@ -121,12 +196,18 @@ namespace JungleBooze.App
                 _session.Begin();
                 _input.GameplayEnabled = true;
             }
+            else if (_session.Phase == SessionPhase.Menu && confirm && (_hud == null || !_hud.SettingsVisible))
+            {
+                // Editor convenience: Space/Enter = Play. Taps and swipes never start a run from the menu.
+                Play();
+            }
             else if (_session.Phase == SessionPhase.GameOver && confirm)
             {
                 TryRestart(false);
             }
 
             _session.Advance(realDeltaSeconds);
+            _recorder?.RecordIfEnded(_session);
 
             DispatchEvents();
 
@@ -158,15 +239,22 @@ namespace JungleBooze.App
             }
         }
 
-        /// <summary>App backgrounded or lost focus: pause a running run; skip the rest of a death sequence.</summary>
+        /// <summary>
+        /// App backgrounded or lost focus: pause a running run; skip the rest of a death sequence (and bank it);
+        /// write unsaved settings or results.
+        /// </summary>
         private void OnBackgrounded()
         {
             if (_session != null && _session.CompleteDying())
             {
-                return;
+                _recorder?.RecordIfEnded(_session);
+            }
+            else
+            {
+                Pause();
             }
 
-            Pause();
+            _recorder?.Save.SaveIfDirty();
         }
 
         private void OnDestroy()

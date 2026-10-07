@@ -37,8 +37,14 @@ namespace JungleBooze.Gameplay.Session
             IInputProvider input,
             IRunWorldFactory worldFactory,
             SessionTimings timings,
-            ulong sessionSeed)
+            ulong sessionSeed,
+            SessionPhase startPhase = SessionPhase.Ready)
         {
+            if (startPhase != SessionPhase.Ready && startPhase != SessionPhase.Menu)
+            {
+                throw new ArgumentOutOfRangeException(nameof(startPhase), "A session starts in Ready or Menu.");
+            }
+
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _speedCurve = speedCurve ?? throw new ArgumentNullException(nameof(speedCurve));
             _input = input ?? throw new ArgumentNullException(nameof(input));
@@ -46,7 +52,7 @@ namespace JungleBooze.Gameplay.Session
             Timings = timings;
             _seedSource = new Pcg32Random(sessionSeed, SeedStreamId);
             _time = new FixedStepTimeSource(RunnerConfig.TicksPerSecond, MaxStepsPerFrame);
-            StartNewRun(NextSeed(), SessionPhase.Ready);
+            StartNewRun(NextSeed(), startPhase);
         }
 
         public RunnerConfig Config => _config;
@@ -99,6 +105,24 @@ namespace JungleBooze.Gameplay.Session
 
         /// <summary>Coins collected in this run (HUD).</summary>
         public int Coins => World.Coins;
+
+        /// <summary>
+        /// Score of this run (GDD 13.1): the world's score when it keeps one (<see cref="IRunWorldSummary"/>),
+        /// otherwise whole meters run. Never negative.
+        /// </summary>
+        public long Score
+        {
+            get
+            {
+                if (World is IRunWorldSummary summary)
+                {
+                    return summary.Score < 0L ? 0L : summary.Score;
+                }
+
+                double distance = DistanceM;
+                return distance > 0.0 ? (long)distance : 0L;
+            }
+        }
 
         /// <summary>Interpolation factor for views. Constant while nothing steps, so views hold still.</summary>
         public float InterpolationAlpha
@@ -166,11 +190,12 @@ namespace JungleBooze.Gameplay.Session
         }
 
         /// <summary>
-        /// Ready → Running: the first tap, swipe or key (spec 002 12.1). Returns false in any other phase.
+        /// Ready → Running: the first tap, swipe or key (spec 002 12.1). Menu → Running: the Play button (GDD 19).
+        /// Returns false in any other phase.
         /// </summary>
         public bool Begin()
         {
-            if (Phase != SessionPhase.Ready)
+            if (Phase != SessionPhase.Ready && Phase != SessionPhase.Menu)
             {
                 return false;
             }
@@ -250,6 +275,16 @@ namespace JungleBooze.Gameplay.Session
         public void RestartSameTrack()
         {
             StartNewRun(RunSeed, SessionPhase.Running);
+        }
+
+        /// <summary>
+        /// "Home" (pause menu or Game Over): drops the current run and sets up a fresh one (new seed) behind the main
+        /// menu in <see cref="SessionPhase.Menu"/>. Allowed from any phase; the run driver records the left run's
+        /// results first. Allocates the new run scope.
+        /// </summary>
+        public void ReturnToMenu()
+        {
+            StartNewRun(NextSeed(), SessionPhase.Menu);
         }
 
         /// <summary>

@@ -27,9 +27,9 @@ namespace JungleBooze.UI.Hud
         public const string Best = "Best";
         public const string NewBest = "New best!";
         public const string Seed = "Seed";
-        public const string RunAgain = "Run again";
+        public const string RunAgain = "Play again";
         public const string SameTrack = "Same track";
-        public const string GameOverKeyHint = "Space: run again    T: same track";
+        public const string GameOverKeyHint = "Space: play again    T: same track";
 
         // Generic cause lines, used until the track world names the obstacle (spec 002 12.4, [ASSUMED] wording).
         public const string CauseHit = "Hit an obstacle";
