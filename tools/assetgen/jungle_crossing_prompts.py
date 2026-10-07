@@ -13,7 +13,11 @@ Use: from jungle_crossing_prompts import ASSETS, MESHY_PROMPTS, PALETTES, CREDIT
 
 MESHY_MODEL = "meshy-6-lite"          # ~15 credits per preview+refine pair
 CREDITS_PER_PAIR = 15
-CREDITS_AVAILABLE = 550               # approx. balance on 2026-10-07; re-check /v1/balance before spending
+CREDITS_AVAILABLE = 465               # real balance per owner (2026-10-07); re-check /v1/balance before spending
+SLICE_CEILING = 300                   # HARD ceiling for the whole jungle-crossing slice (owner rule)
+MIN_RESERVE = 150                     # never go below this balance
+# Rules: one preview+refine pair per asset, NO re-rolls without owner approval, contact sheet (previews) before any variant spend.
+# Reuse first: the 17 existing props (Foliage_CanopyTree, TreeA/B, BigLeaf, FernClump, RockCluster, Prop_Signpost...) and one trunk module with recolours.
 TRI_SMALL, TRI_HERO = 1500, 3000
 
 STYLE = ("Inkbound Pulp style: stylized low-poly game prop, bold flat colors, two or three hard shading bands, "
@@ -63,13 +67,13 @@ ASSETS = {
  # Giant trees (modular: code stacks trunk segments, attaches a branch at a socket, scatters leaf clusters)
  "Tree_TrunkSeg":   dict(role="giant trunk module", route="blender", m=(3.0, 6.0, 3.0), tris=900, pivot="base centre, y=0; top ring at y=6, matches next seg",
                          fit="radius 1.5 m (+-20% by scale), sockets named Socket_Branch_L/R at y=3, bark bands vertical, 3 variants (A straight, B buttress base, C top taper)"),
- "Tree_Buttress":   dict(role="trunk base with buttress roots", route="both", m=(7.0, 4.0, 7.0), tris=1800, pivot="base centre",
+ "Tree_Buttress":   dict(role="trunk base with buttress roots", route="meshy (hero, 15 cr; Blender flare-root fallback if rejected, no re-roll)", m=(7.0, 4.0, 7.0), tris=1800, pivot="base centre",
                          fit="blends into Tree_TrunkSeg radius 1.5 at y=4; roots splay to 3.5 m; hero piece, one per tree start"),
  "Branch_Thick":    dict(role="swing branch (the main anchor)", route="blender", m=(8.0, 1.8, 1.0), tris=700, pivot="trunk end, local x=0, branch runs +X",
                          fit="1.0 m dia at trunk tapering to 0.5 m, slight upward arc 0.4 m, 2 side stubs, underside flat enough for vine anchor empties Anchor_0..2 every 2.5 m"),
  "Branch_Platform": dict(role="canopy platform (wide branch the path can run on in sky sections)", route="blender", m=(4.2, 1.2, 10.0), tris=1100, pivot="start centre top surface y=0, runs +Z",
                          fit="top 3.0 m walkable width w/ flat bark strip, roots/leaf tufts on edges only, matches path half-width 4.2 for edge dressing"),
- "Tree_Crown":      dict(role="far/mid crown silhouette", route="meshy", m=(18.0, 9.0, 18.0), tris=2500, pivot="trunk-top centre, y=0",
+ "Tree_Crown":      dict(role="far/mid crown silhouette", route="blender (reuse existing Foliage_CanopyTree, scaled/recoloured; Meshy only if owner rejects)", m=(18.0, 9.0, 18.0), tris=2500, pivot="trunk-top centre, y=0",
                          fit="umbrella crown wider than tall; used at 25-60 m distance only, fogged"),
  "Vine_Liana":      dict(role="main grab vine", route="blender", m=(0.5, 6.0, 0.5), tris=420, pivot="top (anchor) at y=0, hangs -Y; chain of 10 bones for sway",
                          fit="see VINES['liana'], tuft mesh child Vine_Tuft (0.45 m) at the bottom"),
@@ -141,13 +145,22 @@ BLENDER_SPECS = {
  "Ruin_Wall":      dict(method="stacked jittered boxes, 2 damage seeds"),
 }
 
-# --- Credit and production plan (Jungle only first slice) -----------------------------------------------------------------
+# --- Credit plan (hard ceiling 300 for the slice; reserve >= 150; balance 465) ---------------------------------------------
+# (asset, method, credits). One pair = 15. No re-rolls without owner approval.
 CREDIT_PLAN = {
-  "slice_jungle": [  # (order, asset, credits incl. 1 retry)
-     (1, "Tree_Buttress", 30), (2, "Root_Arch", 30), (3, "Trunk_Fallen", 30), (4, "Tree_Crown", 30),
+  "slice_jungle": [
+     ("Tree_Buttress", "meshy-6-lite pair", 15),
+     ("Root_Arch", "meshy-6-lite pair", 15),
+     ("Trunk_Fallen", "meshy-6-lite pair", 15),
+     ("Tree_TrunkSeg/Branch_Thick/Branch_Platform/Vine_*/Leaf_*/Strip_*/Rock_Ledge/Bridge_PlankSet/Tree_Crown(reuse)", "Blender procedural / existing props", 0),
   ],
-  "slice_jungle_total": 120,
-  "later_worlds": {"Cliff_Overhang": 30, "Cliff_Wall": 30, "Ruin_Pillar": 30, "Ruin_Arch": 30},
-  "later_total": 120,
-  "reserve": 310,  # 550 - 120 - 120; for re-rolls and Duko/Pista/prop fixes
+  "slice_jungle_total": 45,
+  "later_worlds": [("Cliff_Overhang", "meshy", 15), ("Ruin_Pillar", "meshy", 15), ("Ruin_Arch", "meshy", 15),
+                   ("Cliff_Wall", "Blender (strata boxes) first; Meshy only if rejected", 0)],
+  "later_total": 45,
+  "planned_total": 90,
+  "ceiling": 300,
+  "balance_after_planned": 375,     # 465 - 90
+  "reserve_floor": 150,
+  "unallocated_headroom": 210,      # ceiling 300 - planned 90; spendable only with owner approval (re-rolls, extra variants)
 }
