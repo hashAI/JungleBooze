@@ -65,6 +65,36 @@ namespace JungleBooze.Gameplay.Path
         [SerializeField] private float _ascentLengthM = 110f;
         [SerializeField] private float _ascentGradePct = 12f;
 
+        [Header("Canopy layers (T5, spec 7.2) [ASSUMED]")]
+        [Tooltip("Bit per WorldKind (Jungle 1, River 2, Mountains 4, Ruins 8) that gets canopy sections. 0 turns the layers off.")]
+        [SerializeField] private int _canopyWorldMask = 3;
+
+        [Tooltip("The first Ascent starts no sooner than the calm start plus this distance.")]
+        [SerializeField] private float _canopyFirstAfterCalmM = 400f;
+
+        [Tooltip("Distance from the start of one canopy section to the start of the next (seeded pick in this range).")]
+        [SerializeField] private float _canopyEveryMinM = 500f;
+        [SerializeField] private float _canopyEveryMaxM = 800f;
+
+        [Tooltip("Length of the High run between the Ascent and the Descent (seeded pick). A run that does not fit before the next gateway is skipped.")]
+        [SerializeField] private float _highRunMinM = 150f;
+        [SerializeField] private float _highRunMaxM = 400f;
+
+        [Tooltip("An Ascent only starts when the route is at least this straight (radius in m).")]
+        [SerializeField] private float _ascentRMinM = 200f;
+
+        [Tooltip("No High section starts within this distance after a world gateway (10 s at 21 m/s is 210; the rest covers where the chunk really falls).")]
+        [SerializeField] private float _gatewayClearAfterM = 250f;
+
+        [Tooltip("The Descent is finished this far before the next world gateway.")]
+        [SerializeField] private float _gatewayClearBeforeM = 60f;
+
+        [Tooltip("A High layer does not begin while a vine zone starts closer than this after the end of the Ascent (spec AC-325).")]
+        [SerializeField] private float _vineAfterAscentM = 30f;
+
+        [Tooltip("Mirror of the world schedule loop (WorldScheduleConfig default): length of each world in m. Gateway n lies at the sum of the first n entries, repeating.")]
+        [SerializeField] private float[] _worldSegmentLengthsM = { 1100f, 1200f, 1300f, 1400f };
+
         [Header("Beat lengths in m, indexed by RouteBeatKind (section 4.2)")]
         [SerializeField] private float[] _beatMinLengthM = CreateMinLengths();
         [SerializeField] private float[] _beatMaxLengthM = CreateMaxLengths();
@@ -131,6 +161,37 @@ namespace JungleBooze.Gameplay.Path
         public float CanopyLengthM => _canopyLengthM;
         public float AscentLengthM => _ascentLengthM;
         public float AscentGradePct => _ascentGradePct;
+        public float CanopyFirstAfterCalmM => _canopyFirstAfterCalmM;
+        public float CanopyEveryMinM => _canopyEveryMinM;
+        public float CanopyEveryMaxM => _canopyEveryMaxM;
+        public float HighRunMinM => _highRunMinM;
+        public float HighRunMaxM => _highRunMaxM;
+        public float AscentRMinM => _ascentRMinM;
+        public float GatewayClearAfterM => _gatewayClearAfterM;
+        public float GatewayClearBeforeM => _gatewayClearBeforeM;
+        public float VineAfterAscentM => _vineAfterAscentM;
+
+        /// <summary>Number of world segments in the gateway loop (0 = no gateway knowledge).</summary>
+        public int WorldSegmentCount => _worldSegmentLengthsM == null ? 0 : _worldSegmentLengthsM.Length;
+
+        /// <summary>Length of world segment <paramref name="index"/> in m (at least 1).</summary>
+        public float GetWorldSegmentLengthM(int index)
+        {
+            float v = _worldSegmentLengthsM != null && index >= 0 && index < _worldSegmentLengthsM.Length ? _worldSegmentLengthsM[index] : 1000f;
+            return v < 1f ? 1f : v;
+        }
+
+        /// <summary>True when <paramref name="world"/> gets canopy sections.</summary>
+        public bool CanopyAllowed(WorldKind world)
+        {
+            return (_canopyWorldMask & (1 << (int)world)) != 0;
+        }
+
+        /// <summary>Sets the canopy world mask on this instance (tests, tools): 0 = Floor layer only.</summary>
+        public void SetCanopyWorldMask(int mask)
+        {
+            _canopyWorldMask = mask;
+        }
 
         /// <summary>When true (T3) the views use the curved debug route instead of the straight one.</summary>
         public bool DebugRoute => _debugRoute;

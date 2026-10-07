@@ -99,6 +99,29 @@ namespace JungleBooze.Services.Audio
             }
         }
 
+        /// <summary>
+        /// Music bed of a world. <paramref name="worldKind"/> is <c>WorldKind</c> as a number (0 Jungle, 1 River,
+        /// 2 Mountains, 3 Ruins). [ASSUMED] Until world-specific music exists: Jungle A, River B, Mountains C,
+        /// Ruins A, Dusk Jungle B (all three loops are Jungle themes).
+        /// </summary>
+        public static AudioClipId WorldMusic(int worldKind, bool dusk)
+        {
+            if (dusk)
+            {
+                return AudioClipId.JungleThemeB;
+            }
+
+            switch (worldKind)
+            {
+                case 1:
+                    return AudioClipId.JungleThemeB;
+                case 2:
+                    return AudioClipId.JungleThemeC;
+                default:
+                    return AudioClipId.JungleThemeA;
+            }
+        }
+
         /// <summary>Five coin pitches from the coin id, about 0.92 to 1.13.</summary>
         public static float CoinPitch(int entityId)
         {

@@ -174,6 +174,22 @@ namespace JungleBooze.Gameplay.Track
             }
         }
 
+        /// <summary>
+        /// Dev aid (the run driver calls it in development builds only): starts a Speed Boost dash that covers about
+        /// <paramref name="meters"/> from the start, so the run can be fast-forwarded without dying (the boost smashes
+        /// obstacles, jumps gaps and holds vine sections). Only before the first tick. Release rules are untouched.
+        /// </summary>
+        public bool DevGrantBoostForDistance(double meters)
+        {
+            if (Track == null || Runner == null || Runner.NextTick != 0L || meters <= 0.0)
+            {
+                return false;
+            }
+
+            PowerUps.GrantStartBoost(TicksToCover(meters));
+            return true;
+        }
+
         /// <summary>Boosted-dash ticks needed to cover <paramref name="meters"/> from the start along the speed curve.</summary>
         private int TicksToCover(double meters)
         {

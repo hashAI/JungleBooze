@@ -127,6 +127,11 @@ namespace JungleBooze.Gameplay.Path
                 }
 
                 double gradePct = Math.Tan(sample.PitchRad) * 100.0;
+                if (!calm && (sample.Beat == RouteBeatKind.Ascent || sample.Beat == RouteBeatKind.Descent))
+                {
+                    gradeCap = Math.Max(gradeCap, _tuning.AscentGradePct);
+                }
+
                 if (Math.Abs(gradePct) > gradeCap + 0.05)
                 {
                     report.GradeViolations++;

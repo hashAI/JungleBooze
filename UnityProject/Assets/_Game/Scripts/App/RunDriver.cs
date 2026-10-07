@@ -156,8 +156,50 @@ namespace JungleBooze.App
             {
                 _input.Reset();
                 _input.GameplayEnabled = true;
-                StartTutorialIfDue();
+                if (!TryDevFastForward())
+                {
+                    StartTutorialIfDue();
+                }
             }
+        }
+
+        /// <summary>
+        /// Dev aid, development builds only (F5 = +300 m, F6 = +1000 m, see <see cref="DevStartDistance"/>): fast-forwards
+        /// the fixed steps of the run that has just begun to the chosen distance before the first frame is shown. The
+        /// simulation is not changed: a Speed Boost dash sized to the distance (shop Head Start mechanism) carries HERO
+        /// through obstacles and gaps and holds the vine sections, so nothing here can kill the run. Events of the
+        /// skipped steps are dropped; views are re-begun at the new position. The tutorial is skipped for such a run.
+        /// Returns true if it ran. Never does anything in release builds.
+        /// </summary>
+        private bool TryDevFastForward()
+        {
+            int meters = DevStartDistance.Meters;
+            if (!Debug.isDebugBuild || meters <= 0 || _session.Phase != SessionPhase.Running)
+            {
+                return false;
+            }
+
+            var world = _session.World as TrackRunWorld;
+            if (world == null || !world.DevGrantBoostForDistance(meters))
+            {
+                return false;
+            }
+
+            const double Chunk = RunnerConfig.TickSeconds * 5.5;
+            const int MaxIterations = 20000;
+            int iterations = 0;
+            while (_session.Phase == SessionPhase.Running && _session.Runner.Current.Z < meters && iterations < MaxIterations)
+            {
+                _session.Advance(Chunk);
+                _session.Runner.Events.Clear();
+                iterations++;
+            }
+
+            Debug.Log("[JungleBooze] Dev start: fast-forwarded to " + _session.Runner.Current.Z.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)
+                + " m (asked " + meters + " m, " + iterations + " frames of steps, phase " + _session.Phase + "). A Speed Boost carries HERO until it ends.");
+            _input.Reset();
+            BeginViews();
+            return true;
         }
 
         /// <summary>Brings the shop upgrades, armed start boosts and score multiplier into the run about to start.</summary>
@@ -356,7 +398,11 @@ namespace JungleBooze.App
             _input.Reset();
             _input.GameplayEnabled = true;
             BeginViews();
-            StartTutorialIfDue();
+            if (!TryDevFastForward())
+            {
+                StartTutorialIfDue();
+            }
+
             return true;
         }
 
@@ -390,6 +436,7 @@ namespace JungleBooze.App
                 // Spec 002 12.1: the first tap, swipe or key only starts the run (it was not queued).
                 _session.Begin();
                 _input.GameplayEnabled = true;
+                TryDevFastForward();
             }
             else if (_session.Phase == SessionPhase.Menu && confirm && (_hud == null || !_hud.SettingsVisible))
             {

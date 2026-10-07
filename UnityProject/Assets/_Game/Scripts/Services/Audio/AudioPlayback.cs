@@ -18,10 +18,21 @@ namespace JungleBooze.Services.Audio
         public const float ChatterCooldownSeconds = 8f;
         private const float VoiceDuck = 0.55f;
 
+        /// <summary>Music crossfade between worlds (s).</summary>
+        public const float MusicCrossfadeSeconds = 2f;
+
         [SerializeField] private AudioCatalog _catalog;
 
         private readonly AudioSource[] _sfx = new AudioSource[SfxVoiceCount];
-        private AudioSource _music;
+        // Two pooled music sources: one plays, the other takes over during a crossfade. No allocation after Awake.
+        private readonly AudioSource[] _music = new AudioSource[2];
+        private readonly float[] _musicWeight = new float[2];
+        private readonly AudioClipId[] _musicId = new AudioClipId[2];
+        private readonly float[] _musicResume = new float[256];
+        private int _musicCur;
+        private bool _fading;
+        private float _fadeInRate = 1f;
+        private float _fadeOutRate = 1f;
         private AudioSource _sting;
         private AudioSource _voice;
         private int _sfxCursor;
@@ -49,7 +60,8 @@ namespace JungleBooze.Services.Audio
 
         private void Awake()
         {
-            _music = CreateSource("Music", true, 64);
+            _music[0] = CreateSource("Music", true, 64);
+            _music[1] = CreateSource("Music2", true, 64);
             _sting = CreateSource("Sting", false, 32);
             _voice = CreateSource("Voice", false, 48);
             for (int i = 0; i < SfxVoiceCount; i++)
@@ -69,13 +81,33 @@ namespace JungleBooze.Services.Audio
         private void Update()
         {
             bool duck = _voice != null && _voice.isPlaying;
-            if (duck == _ducking)
+            bool changed = duck != _ducking;
+            _ducking = duck;
+            if (_fading)
             {
-                return;
+                AdvanceCrossfade(Time.unscaledDeltaTime);
+                changed = true;
             }
 
-            _ducking = duck;
-            ApplyMusicVolume();
+            if (changed)
+            {
+                ApplyMusicVolume();
+            }
+        }
+
+        private void AdvanceCrossfade(float dt)
+        {
+            int cur = _musicCur;
+            int prev = 1 - cur;
+            float wc = _musicWeight[cur] + (dt * _fadeInRate);
+            float wp = _musicWeight[prev] - (dt * _fadeOutRate);
+            _musicWeight[cur] = wc > 1f ? 1f : wc;
+            _musicWeight[prev] = wp < 0f ? 0f : wp;
+            if (_musicWeight[cur] >= 1f && _musicWeight[prev] <= 0f)
+            {
+                StopSlot(prev);
+                _fading = false;
+            }
         }
 
         /// <summary>Copies music and sound-effect volumes and keeps them in sync when settings change.</summary>
@@ -134,6 +166,76 @@ namespace JungleBooze.Services.Audio
             PlayMusic(AudioClipId.JungleThemeA);
         }
 
+        /// <summary>
+        /// Plays a world bed: starts it at once when no music is playing, otherwise crossfades from the current bed over
+        /// <see cref="MusicCrossfadeSeconds"/>. A bed that was left earlier in the run resumes from where it stopped
+        /// (see <see cref="ResetMusicMemory"/>). The same clip again changes nothing. No allocation.
+        /// </summary>
+        public void PlayWorldMusic(AudioClipId id)
+        {
+            if (_catalog == null || _music[0] == null || _music[1] == null)
+            {
+                return;
+            }
+
+            AudioClip clip = _catalog.Get(id);
+            if (clip == null)
+            {
+                return;
+            }
+
+            if (_sting != null && _sting.isPlaying)
+            {
+                _sting.Stop();
+            }
+
+            AudioSource current = _music[_musicCur];
+            if (current.clip == clip && current.isPlaying)
+            {
+                return;
+            }
+
+            if (!current.isPlaying)
+            {
+                StartImmediate(id, clip);
+                return;
+            }
+
+            // Crossfade. A fade that is still running is cut short: its outgoing source stops now, the incoming one
+            // (maybe partly faded in) becomes the outgoing one from its current weight.
+            int outgoing = _musicCur;
+            int incoming = 1 - outgoing;
+            if (_fading)
+            {
+                StopSlot(incoming);
+            }
+
+            _musicResume[(int)_musicId[outgoing]] = current.time;
+            float outStart = _musicWeight[outgoing] > 0.01f ? _musicWeight[outgoing] : 1f;
+            AudioSource next = _music[incoming];
+            next.clip = clip;
+            next.pitch = 1f;
+            float resume = _musicResume[(int)id];
+            next.time = resume > 0f && resume < clip.length ? resume : 0f;
+            _musicId[incoming] = id;
+            _musicWeight[incoming] = 0f;
+            _musicCur = incoming;
+            _fadeInRate = 1f / MusicCrossfadeSeconds;
+            _fadeOutRate = outStart / MusicCrossfadeSeconds;
+            _fading = true;
+            ApplyMusicVolume();
+            next.Play();
+        }
+
+        /// <summary>Forgets where each bed stopped. Call when a new run starts or on the menu.</summary>
+        public void ResetMusicMemory()
+        {
+            for (int i = 0; i < _musicResume.Length; i++)
+            {
+                _musicResume[i] = 0f;
+            }
+        }
+
         public void PlayGameOverSting()
         {
             if (_sting == null || _catalog == null)
@@ -156,11 +258,9 @@ namespace JungleBooze.Services.Audio
 
         public void StopMusic()
         {
-            if (_music != null)
-            {
-                _music.Stop();
-            }
-
+            _fading = false;
+            StopSlot(0);
+            StopSlot(1);
             if (_sting != null)
             {
                 _sting.Stop();
@@ -188,7 +288,7 @@ namespace JungleBooze.Services.Audio
 
         private void PlayMusic(AudioClipId id)
         {
-            if (_music == null || _catalog == null)
+            if (_music[0] == null || _music[1] == null || _catalog == null)
             {
                 return;
             }
@@ -204,16 +304,41 @@ namespace JungleBooze.Services.Audio
                 _sting.Stop();
             }
 
-            if (_music.clip == clip && _music.isPlaying)
+            AudioSource current = _music[_musicCur];
+            if (current.clip == clip && current.isPlaying && !_fading)
             {
                 ApplyMusicVolume();
                 return;
             }
 
-            _music.clip = clip;
-            _music.pitch = 1f;
+            StartImmediate(id, clip);
+        }
+
+        /// <summary>Starts <paramref name="clip"/> on the current source at full weight and silences the other.</summary>
+        private void StartImmediate(AudioClipId id, AudioClip clip)
+        {
+            _fading = false;
+            int other = 1 - _musicCur;
+            StopSlot(other);
+            AudioSource source = _music[_musicCur];
+            source.Stop();
+            source.clip = clip;
+            source.pitch = 1f;
+            float resume = _musicResume[(int)id];
+            source.time = resume > 0f && resume < clip.length ? resume : 0f;
+            _musicId[_musicCur] = id;
+            _musicWeight[_musicCur] = 1f;
             ApplyMusicVolume();
-            _music.Play();
+            source.Play();
+        }
+
+        private void StopSlot(int slot)
+        {
+            _musicWeight[slot] = 0f;
+            if (_music[slot] != null)
+            {
+                _music[slot].Stop();
+            }
         }
 
         private void PlayCue(AudioCue cue)
@@ -285,13 +410,14 @@ namespace JungleBooze.Services.Audio
 
         private void ApplyMusicVolume()
         {
-            if (_music == null)
-            {
-                return;
-            }
-
             float duck = _ducking ? VoiceDuck : 1f;
-            _music.volume = _musicVolume * duck;
+            for (int i = 0; i < _music.Length; i++)
+            {
+                if (_music[i] != null)
+                {
+                    _music[i].volume = _musicVolume * duck * _musicWeight[i];
+                }
+            }
         }
 
         private AudioSource CreateSource(string name, bool loop, int priority)

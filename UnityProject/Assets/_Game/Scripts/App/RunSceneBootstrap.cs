@@ -288,6 +288,12 @@ namespace JungleBooze.App
             TutorialView tutorialView = tutorialObject.AddComponent<TutorialView>();
             tutorialView.Build(tutorial, Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"), save.ReduceMotion);
 
+            // World title banner (GDD 9): shown when HERO enters another world; fades only with Reduce Motion.
+            var bannerObject = new GameObject("WorldBanner", typeof(RectTransform));
+            bannerObject.transform.SetParent(root.transform, false);
+            WorldBannerView worldBanner = bannerObject.AddComponent<WorldBannerView>();
+            worldBanner.Build(Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"), worldView, save.ReduceMotion);
+
             // Reduce Motion (owner decision, [ASSUMED] one switch): the SAVE value drives it, live. Off: vine slow-mo,
             // camera tilt / shake / FOV swing, shards and speed lines, and the tutorial hand. The shared config asset
             // is never written.
@@ -298,6 +304,7 @@ namespace JungleBooze.App
                 cameraView.ReduceMotion = reduce;
                 powerUpView.ReduceMotion = reduce;
                 tutorialView.SetReduceMotion(reduce);
+                worldBanner.SetReduceMotion(reduce);
             };
             applyReduceMotion();
             save.SettingsChanged += applyReduceMotion;
@@ -311,6 +318,8 @@ namespace JungleBooze.App
             audio.Bind(save);
             audioObject.AddComponent<UiTapAudioBinder>().Init(audio);
             var audioView = new RunAudioView(audio);
+            audioView.BindWorlds(worldView);
+            var chatterView = new DukoChatterView(audio, tutorial);
 
             // Dev aid (editor and development builds): F3 draws every simulation hitbox, and each stumble or death logs
             // which obstacle it was and whether anything was drawn for it. Last in the list, so it sees this frame's pieces.
@@ -334,9 +343,12 @@ namespace JungleBooze.App
                 routeLabel.Build(Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"), routeSource);
             }
 
+            // Dev aid: logs the kind and start metre of the route's first 8 beats. Not created in release builds.
+            DevRouteBeatLogView beatLog = Debug.isDebugBuild ? new DevRouteBeatLogView(pathFrame) : null;
+
             var views = new System.Collections.Generic.List<IRunView>
             {
-                pathFrameView, eventCounter, tutorial, audioView, ground, worldView, gaps, obstacles, hazardView, vineView, coinView, powerUpView, runnerView, companionView, cameraView, hud, companionHud, tutorialView, continueView,
+                pathFrameView, eventCounter, tutorial, audioView, chatterView, ground, worldView, gaps, obstacles, hazardView, vineView, coinView, powerUpView, runnerView, companionView, cameraView, hud, companionHud, tutorialView, worldBanner, continueView,
             };
             if (hitboxDebug != null)
             {
@@ -346,6 +358,11 @@ namespace JungleBooze.App
             if (routeLabel != null)
             {
                 views.Add(routeLabel);
+            }
+
+            if (beatLog != null)
+            {
+                views.Add(beatLog);
             }
 
             driver.Init(session, input, views.ToArray(), kit);

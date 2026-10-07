@@ -14,8 +14,12 @@ namespace JungleBooze.Gameplay.Path
     /// <see cref="RouteTuning.ReadAheadM"/> of the sample being built (which the caller keeps committed by not building
     /// beyond <c>CommittedEndS - ReadAheadM</c>), never of frame rate or of when samples are requested.
     /// Every beat pick makes the same six draws, so the stream position depends on the beat count only.</para>
-    /// <para>Presentation only; no allocation after construction. Layers (Ascent, Descent, High) are T5: those beats
-    /// are in the table with weight 0 and, if given a weight, are plain grade pulses on the Floor layer.</para>
+    /// <para>Layers (spec 003 section 7, T5): a canopy section is scheduled as the beats Ascent (Floor layer, a root
+    /// ramp), then a High run of ordinary beats on the Bough surface, then Descent (High layer, a limb ramp); see
+    /// <see cref="PlanLayer"/>. The schedule reads only the distance table, the Route stream and the chunk zones within
+    /// <see cref="RouteTuning.ReadAheadM"/>, and uses no extra draws, so every limit and the determinism rule still hold.
+    /// Ascent and Descent are never drawn from the weight table.</para>
+    /// <para>Presentation only; no allocation after construction.</para>
     /// </summary>
     public sealed class RouteGenerator : IRouteSource
     {
@@ -26,6 +30,18 @@ namespace JungleBooze.Gameplay.Path
         private const double RestoreFlipFactor = 0.9;
         private const double MaxBendTurnRad = 0.7;
         private const double Epsilon = 1e-9;
+
+        /// <summary>A High run with less than this left goes straight to the Descent; longer remainders truncate the next beat.</summary>
+        private const double MinTruncateM = 20.0;
+
+        private enum LayerPhase
+        {
+            Floor = 0,
+            Ascending = 1,
+            AwaitHigh = 2,
+            HighRun = 3,
+            Descending = 4,
+        }
 
         /// <summary>[ASSUMED] Percent of baseline grade per m/km of net elevation drift (tuned against the fuzz: River about -27 m, Mountains about +55 m per world).</summary>
         private const double BaselineGradePerDrift = 0.14;
@@ -73,6 +89,14 @@ namespace JungleBooze.Gameplay.Path
         private bool _glade;
         private bool _wasInZone;
         private double _calmUntilS;
+
+        private LayerPhase _phase;
+        private PathLayer _beatLayer;
+        private double _nextCanopyS;
+        private double _ascentStartY;
+        private double _highRiseM;
+        private double _highEndS;
+        private double _highLenM;
 
         public RouteGenerator(RouteTuning tuning, IRouteChunkSource chunks)
         {
@@ -147,6 +171,13 @@ namespace JungleBooze.Gameplay.Path
             _lastClearingEndS = startS;
             _glade = false;
             _wasInZone = false;
+            _phase = LayerPhase.Floor;
+            _beatLayer = PathLayer.Floor;
+            _nextCanopyS = double.NegativeInfinity;
+            _ascentStartY = 0.0;
+            _highRiseM = 0.0;
+            _highEndS = double.NegativeInfinity;
+            _highLenM = 0.0;
             EmergencyEaseCount = 0;
             LastEmergencyS = double.NegativeInfinity;
         }
@@ -161,6 +192,7 @@ namespace JungleBooze.Gameplay.Path
             bool emergency = false;
             RouteBeatKind tag = RouteBeatKind.Straight;
             PathSurface surface = PathSurface.Trail;
+            PathLayer layer = PathLayer.Floor;
             if (_first)
             {
                 _first = false;
@@ -170,7 +202,7 @@ namespace JungleBooze.Gameplay.Path
             }
             else
             {
-                Advance(s, out tag, out surface, out emergency);
+                Advance(s, out tag, out surface, out layer, out emergency);
             }
 
             double bankMaxDeg = _tuning.GetWorld(_world).BankMaxDeg;
@@ -193,14 +225,14 @@ namespace JungleBooze.Gameplay.Path
             sample.BankRad = (float)(bankDeg * DegToRad);
             sample.Curvature = (float)_kappa;
             sample.HalfWidthM = StraightRouteSource.HalfWidthM;
-            sample.Layer = PathLayer.Floor;
+            sample.Layer = layer;
             sample.Surface = surface;
             sample.Beat = tag;
             sample.BeatId = _beatId;
             sample.Emergency = emergency;
         }
 
-        private void Advance(double s, out RouteBeatKind tag, out PathSurface surface, out bool emergency)
+        private void Advance(double s, out RouteBeatKind tag, out PathSurface surface, out PathLayer layer, out bool emergency)
         {
             emergency = false;
             bool calm = s < _calmUntilS;
@@ -222,8 +254,10 @@ namespace JungleBooze.Gameplay.Path
                 }
 
                 _beatEnd = double.NegativeInfinity;
+                OnZone(zone.Kind, zone.EndS);
+                layer = zone.Kind != RouteBeatKind.Gateway && InHighLayer ? PathLayer.High : PathLayer.Floor;
                 tag = zone.Kind;
-                surface = PathSurface.Trail;
+                surface = layer == PathLayer.High ? PathSurface.Bough : PathSurface.Trail;
             }
             else
             {
@@ -244,6 +278,7 @@ namespace JungleBooze.Gameplay.Path
                 EvaluateBeat(s, calm, out kappaTarget, out gradeTarget);
                 tag = _beatKind;
                 surface = _beatSurface;
+                layer = _beatLayer;
             }
 
             double jerk = _kJerk;
@@ -315,6 +350,168 @@ namespace JungleBooze.Gameplay.Path
             _psiLowPass += (_psi - _psiLowPass) * _ds / LowPassM;
             PushYaw(_psi);
             _centerY += _tuning.GetWorld(_world).NetElevationPerKmM * 0.001 * _ds;
+        }
+
+        private bool InHighLayer => _phase == LayerPhase.HighRun || _phase == LayerPhase.Descending;
+
+        /// <summary>
+        /// A vine or gateway zone takes over the route. A zone that cuts an Ascent leaves the ramp as it is (the High
+        /// layer waits until the zone is over); one that cuts a Descent asks for a new Descent right after it; a
+        /// gateway always ends the section (the schedule keeps clear of gateways, this is only the safety net).
+        /// </summary>
+        private void OnZone(RouteBeatKind kind, double zoneEndS)
+        {
+            if (kind == RouteBeatKind.Gateway)
+            {
+                _phase = LayerPhase.Floor;
+                if (_nextCanopyS < zoneEndS)
+                {
+                    _nextCanopyS = zoneEndS;
+                }
+
+                return;
+            }
+
+            if (_phase == LayerPhase.Ascending)
+            {
+                _highRiseM = _y - _ascentStartY;
+                _phase = LayerPhase.AwaitHigh;
+            }
+            else if (_phase == LayerPhase.Descending)
+            {
+                _highRiseM = _y - _ascentStartY;
+                _highEndS = double.NegativeInfinity;
+                _phase = LayerPhase.HighRun;
+            }
+        }
+
+        /// <summary>The world gateways around <paramref name="s"/> from the loop table (negative / positive infinity when unknown).</summary>
+        private void GatewayAround(double s, out double previous, out double next)
+        {
+            previous = double.NegativeInfinity;
+            next = double.PositiveInfinity;
+            int n = _tuning.WorldSegmentCount;
+            if (n <= 0)
+            {
+                return;
+            }
+
+            double acc = 0.0;
+            for (int i = 0; i < 100000; i++)
+            {
+                acc += _tuning.GetWorldSegmentLengthM(i % n);
+                if (acc > s)
+                {
+                    next = acc;
+                    return;
+                }
+
+                previous = acc;
+            }
+        }
+
+        /// <summary>
+        /// The layer schedule (spec 003 section 7.2), run when a beat is picked outside a zone. Moves the phase along
+        /// (Ascent done, High entered, Descent done) and returns the beat to use: the drawn one, or Ascent or Descent.
+        /// <paramref name="plannedHighM"/> is set when it returns Ascent; <paramref name="remainingM"/> is the length
+        /// left in a High run (infinity outside one). Ascent and Descent only count once the caller commits them.
+        /// </summary>
+        private RouteBeatKind PlanLayer(double s, RouteBeatKind chosen, double dB, out double plannedHighM, out double remainingM)
+        {
+            plannedHighM = 0.0;
+            remainingM = double.PositiveInfinity;
+
+            if (_phase == LayerPhase.Ascending)
+            {
+                _highRiseM = _y - _ascentStartY;
+                _phase = LayerPhase.AwaitHigh;
+            }
+            else if (_phase == LayerPhase.Descending)
+            {
+                _phase = LayerPhase.Floor;
+            }
+
+            if (_phase == LayerPhase.AwaitHigh)
+            {
+                bool zoneSoon = _chunks != null && _chunks.TryFindZone(s, _tuning.VineAfterAscentM, out _);
+                if (!zoneSoon)
+                {
+                    _phase = LayerPhase.HighRun;
+                    _highEndS = s + _highLenM;
+                }
+            }
+
+            if (_phase == LayerPhase.HighRun)
+            {
+                double limit = _highEndS;
+                GatewayAround(s, out _, out double nextGateway);
+                double gatewayLimit = nextGateway - _tuning.GatewayClearBeforeM - _tuning.GetMaxLengthM(RouteBeatKind.Descent);
+                if (gatewayLimit < limit)
+                {
+                    limit = gatewayLimit;
+                }
+
+                remainingM = limit - s;
+                if (remainingM < MinTruncateM)
+                {
+                    return RouteBeatKind.Descent;
+                }
+
+                if (chosen == RouteBeatKind.Crossing || chosen == RouteBeatKind.Bridge)
+                {
+                    chosen = _lastKind == (int)RouteBeatKind.Straight && _run >= 2 ? RouteBeatKind.GentleBend : RouteBeatKind.Straight;
+                }
+
+                return chosen;
+            }
+
+            if (_phase == LayerPhase.Floor && CanStartCanopy(s, dB, out plannedHighM))
+            {
+                return RouteBeatKind.Ascent;
+            }
+
+            return chosen;
+        }
+
+        private bool CanStartCanopy(double s, double dB, out double plannedHighM)
+        {
+            plannedHighM = 0.0;
+            if (!_tuning.CanopyAllowed(_world) || s < _calmUntilS + _tuning.CanopyFirstAfterCalmM || s < _nextCanopyS)
+            {
+                return false;
+            }
+
+            if (Math.Abs(_kappa) > 1.0 / Math.Max(1.0, _tuning.AscentRMinM))
+            {
+                return false;
+            }
+
+            if (_chunks != null && _chunks.TryFindZone(s, _tuning.ReadAheadM, out _))
+            {
+                return false;
+            }
+
+            GatewayAround(s, out double previousGateway, out double nextGateway);
+            if (s < previousGateway + _tuning.GatewayClearAfterM)
+            {
+                return false;
+            }
+
+            double room = nextGateway - _tuning.GatewayClearBeforeM - s
+                - _tuning.GetMaxLengthM(RouteBeatKind.Ascent) - _tuning.GetMaxLengthM(RouteBeatKind.Descent);
+            double high = _tuning.HighRunMinM + (dB * Math.Max(0.0, _tuning.HighRunMaxM - _tuning.HighRunMinM));
+            if (room < high)
+            {
+                high = room;
+            }
+
+            if (high < _tuning.HighRunMinM)
+            {
+                return false;
+            }
+
+            plannedHighM = high;
+            return true;
         }
 
         private double Follow(double kappaTarget, double jerk)
@@ -402,6 +599,11 @@ namespace JungleBooze.Gameplay.Path
             }
 
             double gradeCap = calm ? Math.Min(world.GradeMaxPct, _tuning.CalmGradeMaxPct) : world.GradeMaxPct;
+            if (!calm && (_beatKind == RouteBeatKind.Ascent || _beatKind == RouteBeatKind.Descent))
+            {
+                gradeCap = Math.Max(gradeCap, _tuning.AscentGradePct);
+            }
+
             if (gradeTargetPct > gradeCap)
             {
                 gradeTargetPct = gradeCap;
@@ -434,6 +636,11 @@ namespace JungleBooze.Gameplay.Path
             }
 
             var kind = (RouteBeatKind)k;
+            if (kind == RouteBeatKind.Ascent || kind == RouteBeatKind.Descent)
+            {
+                return 0.0;
+            }
+
             double w = world.GetWeight(kind);
             if (w <= 0.0)
             {
@@ -486,10 +693,16 @@ namespace JungleBooze.Gameplay.Path
                 }
             }
 
+            double plannedHighM = 0.0;
+            double remainingM = double.PositiveInfinity;
             if (_glade)
             {
                 chosen = RouteBeatKind.Clearing;
                 _glade = false;
+            }
+            else
+            {
+                chosen = PlanLayer(s, chosen, dB, out plannedHighM, out remainingM);
             }
 
             double length = Math.Floor(_tuning.GetMinLengthM(chosen) + (dLength * (_tuning.GetMaxLengthM(chosen) - _tuning.GetMinLengthM(chosen))));
@@ -499,12 +712,18 @@ namespace JungleBooze.Gameplay.Path
                 length = Math.Floor(_tuning.GetMinLengthM(chosen) + (dLength * (_tuning.GetMaxLengthM(chosen) - _tuning.GetMinLengthM(chosen))));
             }
 
+            if (chosen != RouteBeatKind.Descent && remainingM < double.PositiveInfinity && length > remainingM)
+            {
+                length = Math.Floor(remainingM);
+            }
+
             double pRight = 0.5 - (0.5 * _psi / Math.Max(1e-6, _restoreRad));
             pRight = pRight < 0.1 ? 0.1 : (pRight > 0.9 ? 0.9 : pRight);
             double sign = dSign < pRight ? 1.0 : -1.0;
 
             double gradeCorridor = Math.Max(1.0, world.ElevationCorridorM);
-            double pUp = world.RiseBias + ((_centerY - _y) / gradeCorridor);
+            double highOffsetM = _phase == LayerPhase.AwaitHigh || _phase == LayerPhase.HighRun ? _highRiseM : 0.0;
+            double pUp = world.RiseBias + ((_centerY + highOffsetM - _y) / gradeCorridor);
             pUp = pUp < 0.05 ? 0.05 : (pUp > 0.95 ? 0.95 : pUp);
             double gradeSign = dGrade < pUp ? 1.0 : -1.0;
 
@@ -559,11 +778,26 @@ namespace JungleBooze.Gameplay.Path
                 case RouteBeatKind.Ascent:
                 case RouteBeatKind.Descent:
                 {
+                    bool layerBeat = chosen != RouteBeatKind.RiseFall;
                     double peak = Math.Min(
-                        gradeMax,
+                        layerBeat && !calm ? Math.Max(gradeMax, _tuning.AscentGradePct) : gradeMax,
                         Math.Min(0.95 * length / (Math.PI * _crestR), 0.95 * length / (Math.PI * _sagR)) * 100.0);
-                    double signed = chosen == RouteBeatKind.Ascent ? 1.0 : (chosen == RouteBeatKind.Descent ? -1.0 : gradeSign);
-                    amplitude = signed * peak * (0.5 + (0.5 * dA));
+                    if (chosen == RouteBeatKind.Ascent)
+                    {
+                        amplitude = peak;
+                    }
+                    else if (chosen == RouteBeatKind.Descent)
+                    {
+                        // Give back the height the High layer gained: a sine pulse of peak p over L drops 2 L p / pi.
+                        double rise = _y - _ascentStartY;
+                        double needed = rise > 0.0 ? rise * Math.PI / (2.0 * length) * 100.0 : 0.0;
+                        amplitude = -Math.Min(peak, needed);
+                    }
+                    else
+                    {
+                        amplitude = gradeSign * peak * (0.5 + (0.5 * dA));
+                    }
+
                     break;
                 }
 
@@ -605,6 +839,24 @@ namespace JungleBooze.Gameplay.Path
             {
                 _run = 1;
                 _lastKind = (int)chosen;
+            }
+
+            if (chosen == RouteBeatKind.Ascent)
+            {
+                _phase = LayerPhase.Ascending;
+                _ascentStartY = _y;
+                _highLenM = plannedHighM;
+                _nextCanopyS = s + _tuning.CanopyEveryMinM + (dA * Math.Max(0.0, _tuning.CanopyEveryMaxM - _tuning.CanopyEveryMinM));
+            }
+            else if (chosen == RouteBeatKind.Descent)
+            {
+                _phase = LayerPhase.Descending;
+            }
+
+            _beatLayer = InHighLayer ? PathLayer.High : PathLayer.Floor;
+            if (_beatLayer == PathLayer.High)
+            {
+                surface = PathSurface.Bough;
             }
 
             _beatId++;
