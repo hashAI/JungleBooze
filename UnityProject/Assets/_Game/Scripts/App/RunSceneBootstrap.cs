@@ -280,7 +280,27 @@ namespace JungleBooze.App
             audioObject.AddComponent<UiTapAudioBinder>().Init(audio);
             var audioView = new RunAudioView(audio);
 
-            driver.Init(session, input, new IRunView[] { eventCounter, tutorial, audioView, ground, worldView, gaps, obstacles, hazardView, vineView, coinView, powerUpView, runnerView, companionView, cameraView, hud, companionHud, tutorialView, continueView }, kit);
+            // Dev aid (editor and development builds): F3 draws every simulation hitbox, and each stumble or death logs
+            // which obstacle it was and whether anything was drawn for it. Last in the list, so it sees this frame's pieces.
+            HitboxDebugView hitboxDebug = null;
+            if (Debug.isDebugBuild)
+            {
+                var hitboxObject = new GameObject("HitboxDebug");
+                hitboxObject.transform.SetParent(root.transform, false);
+                hitboxDebug = hitboxObject.AddComponent<HitboxDebugView>();
+                hitboxDebug.Init(kit, configs.Runner, obstacles, hazardView);
+            }
+
+            var views = new System.Collections.Generic.List<IRunView>
+            {
+                eventCounter, tutorial, audioView, ground, worldView, gaps, obstacles, hazardView, vineView, coinView, powerUpView, runnerView, companionView, cameraView, hud, companionHud, tutorialView, continueView,
+            };
+            if (hitboxDebug != null)
+            {
+                views.Add(hitboxDebug);
+            }
+
+            driver.Init(session, input, views.ToArray(), kit);
 
             if (Debug.isDebugBuild)
             {
