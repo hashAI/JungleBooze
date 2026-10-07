@@ -6,5 +6,8 @@ namespace JungleBooze.Gameplay.Runner
         Timeout = 0,
         Jump = 1,
         Ledge = 2,
+
+        /// <summary>The companion's Lift picked HERO up (GDD 15.1).</summary>
+        Lift = 3,
     }
 }

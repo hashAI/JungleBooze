@@ -95,5 +95,29 @@ namespace JungleBooze.Gameplay.Runner
 
         /// <summary>Left/right on a vine. Lane = aimed lane, Dir, EntityId = aimed next vine id (0 = landing pad).</summary>
         VineAimChanged = 27,
+
+        // ---- GDD 15 companion and GDD 14.4 continue. Append-only; numbered from 60 so other features can append
+        // below without clashing. ----
+
+        /// <summary>Lift started (GDD 15.1). Lane = HERO's lane, Value = lift ticks planned.</summary>
+        CompanionLiftStarted = 60,
+
+        /// <summary>The descent of Lift started (last part of the lift). Lane = HERO's lane.</summary>
+        CompanionLiftDescending = 61,
+
+        /// <summary>Lift ended with touchdown. Lane = HERO's lane, Value = lift ticks actually flown.</summary>
+        CompanionLiftEnded = 62,
+
+        /// <summary>
+        /// A companion call-out (GDD 15.1). Value = <c>CompanionCalloutId</c> (language-neutral), Lane = the lane that
+        /// matters (255 = none), EntityId = the vine or obstacle id that triggered it (0 = none).
+        /// </summary>
+        CompanionCallout = 63,
+
+        /// <summary>The Assist meter just became full. Value = meter percent (100).</summary>
+        CompanionMeterFull = 64,
+
+        /// <summary>HERO was brought back by a Continue (GDD 14.4). Lane = respawn lane, Value = invulnerable ticks.</summary>
+        Revived = 65,
     }
 }

@@ -206,6 +206,47 @@ namespace JungleBooze.Gameplay.Track
             }
         }
 
+        /// <summary>Continue (GDD 14.4): HERO is alive again, so the next death is recorded afresh.</summary>
+        public void ClearDeath()
+        {
+            _death = new DeathInfo { ChunkIndex = -1 };
+        }
+
+        /// <summary>
+        /// Lift coin pull (GDD 15.1): collects every uncollected coin (chunk and vine bonus coins) whose z lies from
+        /// HERO's back face to <paramref name="aheadM"/> ahead of his centre, in every lane and at any height.
+        /// Called at step 11a while lifted, after the normal pickups. No allocation.
+        /// </summary>
+        public void CollectAhead(in RunnerTickInfo info, TrackSimulation track, RunnerSimulation runner, double aheadM)
+        {
+            double zLo = info.Z - info.HalfDepth;
+            double zHi = info.Z + aheadM;
+            int count = track.CoinCount;
+            for (int i = 0; i < count; i++)
+            {
+                ref CoinInstance c = ref track.CoinAt(i);
+                if (c.Z > zHi)
+                {
+                    break; // the ring is sorted by z
+                }
+
+                if (!c.Resolved && c.Z >= zLo)
+                {
+                    Collect(ref c, info.Tick, runner);
+                }
+            }
+
+            int bonus = track.BonusCoinCount;
+            for (int i = 0; i < bonus; i++)
+            {
+                ref CoinInstance c = ref track.BonusCoinAt(i);
+                if (!c.Resolved && c.Z >= zLo && c.Z <= zHi)
+                {
+                    Collect(ref c, info.Tick, runner);
+                }
+            }
+        }
+
         /// <summary>Stable hash of the scoring state (AC-242, AC-247).</summary>
         public ulong ComputeStateHash(ulong h)
         {

@@ -28,5 +28,11 @@ namespace JungleBooze.Gameplay.Runner
         /// Also the hook for the companion's Lift (later).
         /// </summary>
         Carried = 7,
+
+        /// <summary>
+        /// Carried by the companion during Lift (GDD 15.1): height follows the lift profile, collisions cannot hurt,
+        /// left/right still change lanes, Jump and Slide are ignored.
+        /// </summary>
+        Lifted = 8,
     }
 }

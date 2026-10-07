@@ -28,5 +28,11 @@ namespace JungleBooze.Core
         /// stream is unchanged by vines.
         /// </summary>
         public const ulong VineSchedule = 6;
+
+        /// <summary>
+        /// Companion choices that must replay identically (cheer variant, GDD 15.1). Numbered 16 so features added
+        /// in parallel can take 7 onward without a clash.
+        /// </summary>
+        public const ulong Companion = 16;
     }
 }

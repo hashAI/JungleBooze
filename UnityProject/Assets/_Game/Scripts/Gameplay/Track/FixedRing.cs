@@ -74,6 +74,26 @@ namespace JungleBooze.Gameplay.Track
             Count--;
         }
 
+        /// <summary>
+        /// Removes item <paramref name="index"/> (0 = oldest) and closes the hole, keeping the order of the rest.
+        /// O(n); for rare events (Continue, Lift touchdown), never per tick.
+        /// </summary>
+        public void RemoveAt(int index)
+        {
+            if ((uint)index >= (uint)Count)
+            {
+                throw new ArgumentOutOfRangeException(nameof(index));
+            }
+
+            for (int i = index; i < Count - 1; i++)
+            {
+                _items[(_head + i) % _items.Length] = _items[(_head + i + 1) % _items.Length];
+            }
+
+            _items[(_head + Count - 1) % _items.Length] = default;
+            Count--;
+        }
+
         public void Clear()
         {
             for (int i = 0; i < _items.Length; i++)

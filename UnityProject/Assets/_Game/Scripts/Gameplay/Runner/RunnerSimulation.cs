@@ -158,6 +158,14 @@ namespace JungleBooze.Gameplay.Runner
         private int _missedGroup;
         private int _missedRow;
 
+        // ---- Companion Lift state (GDD 15.1) ----
+        private LiftParameters _lift;
+        private int _liftElapsed;
+        private double _liftStartY;
+        private bool _liftDescending;
+        private int _liftDescentElapsed;
+        private double _liftDescentStartY;
+
         public RunnerSimulation(
             RunnerConfig config,
             SpeedCurve speedCurve,
@@ -197,6 +205,25 @@ namespace JungleBooze.Gameplay.Runner
         }
 
         public RunnerConfig Config => _config;
+
+        /// <summary>The track this runner queries (ground, boxes; vines if it also implements <see cref="IVineTrackQuery"/>).</summary>
+        public ITrackQuery Track => _track;
+
+        /// <summary>HERO is carried by the companion's Lift (GDD 15.1).</summary>
+        public bool IsLifted => _locomotion == Locomotion.Lifted;
+
+        /// <summary>Ticks flown in the current Lift (0 when not lifted).</summary>
+        public int LiftElapsedTicks => _locomotion == Locomotion.Lifted ? _liftElapsed : 0;
+
+        /// <summary>The current Lift is in its descent.</summary>
+        public bool IsLiftDescending => _locomotion == Locomotion.Lifted && _liftDescending;
+
+        /// <summary>
+        /// May a Lift start now? Not while dead, already lifted, on a vine (GDD 15.1: queued until landing) or below
+        /// the track surface (falling into a gap).
+        /// </summary>
+        public bool CanStartLift =>
+            _locomotion != Locomotion.Dead && _locomotion != Locomotion.Lifted && _locomotion != Locomotion.Carried && !(_y < 0.0);
 
         /// <summary>The tick the next <see cref="Step(InputCommand)"/> call will process.</summary>
         public long NextTick => _tick;
@@ -611,6 +638,16 @@ namespace JungleBooze.Gameplay.Runner
             h = Mix(h, _grabbedRow);
             h = Mix(h, _missedGroup);
             h = Mix(h, _missedRow);
+            h = Mix(h, _lift.TotalTicks);
+            h = Mix(h, _lift.RiseTicks);
+            h = Mix(h, _lift.DescentTicks);
+            h = Mix(h, _lift.GlideHeightM);
+            h = Mix(h, _lift.LandingInvulnerableTicks);
+            h = Mix(h, _liftElapsed);
+            h = Mix(h, _liftStartY);
+            h = Mix(h, _liftDescending ? 1L : 0L);
+            h = Mix(h, _liftDescentElapsed);
+            h = Mix(h, _liftDescentStartY);
             return h;
         }
 
@@ -712,6 +749,12 @@ namespace JungleBooze.Gameplay.Runner
             _grabbedRow = source._grabbedRow;
             _missedGroup = source._missedGroup;
             _missedRow = source._missedRow;
+            _lift = source._lift;
+            _liftElapsed = source._liftElapsed;
+            _liftStartY = source._liftStartY;
+            _liftDescending = source._liftDescending;
+            _liftDescentElapsed = source._liftDescentElapsed;
+            _liftDescentStartY = source._liftDescentStartY;
             _lastOutcomes = source._lastOutcomes;
             _counters.CopyFrom(source._counters);
             SpeedMultiplier = source.SpeedMultiplier;
@@ -1183,6 +1226,10 @@ namespace JungleBooze.Gameplay.Runner
                 case Locomotion.Carried:
                     UpdateSwing(tick);
                     break;
+
+                case Locomotion.Lifted:
+                    UpdateLift(tick);
+                    break;
             }
         }
 
@@ -1446,6 +1493,216 @@ namespace JungleBooze.Gameplay.Runner
                 (short)cause,
                 entityId,
                 archetype);
+        }
+
+        // ---- Companion Lift (GDD 15.1) and Continue (GDD 14.4) ----
+
+        /// <summary>
+        /// Starts a companion Lift now (between ticks; the next <see cref="Step(InputCommand)"/> is its first tick).
+        /// HERO rises to the glide height, is invulnerable, can still change lanes (Jump and Slide are ignored) and
+        /// is set down at the end; if there is no ground where the descent would end, the glide is extended until
+        /// there is. Returns false (nothing changes) when <see cref="CanStartLift"/> is false. No allocation.
+        /// </summary>
+        public bool TryStartLift(in LiftParameters parameters)
+        {
+            if (!CanStartLift || parameters.TotalTicks <= 0)
+            {
+                return false;
+            }
+
+            long tick = _tick;
+            if (_locomotion == Locomotion.Sliding)
+            {
+                _slideTicksLeft = 0;
+                Emit(RunnerEventType.SlideEnded, tick, 0, (byte)_targetLane, 0, (short)SlideEndReason.Lift);
+            }
+
+            // Rule I5: buffered actions belong to the ground; they cannot fire during Lift.
+            if (_bufferedJump)
+            {
+                _bufferedJump = false;
+                _counters.Resolve(CommandOutcome.Buffered, CommandOutcome.Invalidated);
+            }
+
+            if (_releaseBuffered)
+            {
+                _releaseBuffered = false;
+                _counters.Resolve(CommandOutcome.Buffered, CommandOutcome.Invalidated);
+            }
+
+            _lift = parameters;
+            if (_lift.DescentTicks < 1)
+            {
+                _lift.DescentTicks = 1;
+            }
+
+            if (_lift.DescentTicks > _lift.TotalTicks)
+            {
+                _lift.DescentTicks = _lift.TotalTicks;
+            }
+
+            if (_lift.RiseTicks < 1)
+            {
+                _lift.RiseTicks = 1;
+            }
+
+            _slideOnLanding = false;
+            _coyoteTicksLeft = 0;
+            _launchedFromVine = false;
+            _chainPerfects = 0;
+            _fallGravity = _config.GravityMps2;
+            _liftElapsed = 0;
+            _liftStartY = _y > 0.0 ? _y : 0.0;
+            _y = _liftStartY;
+            _liftDescending = false;
+            _liftDescentElapsed = 0;
+            _liftDescentStartY = 0.0;
+            _locomotion = Locomotion.Lifted;
+            Emit(RunnerEventType.CompanionLiftStarted, tick, 0, (byte)_targetLane, 0, (short)Math.Min(_lift.TotalTicks, short.MaxValue));
+            return true;
+        }
+
+        /// <summary>
+        /// Continue (GDD 14.4): brings a dead HERO back running at <paramref name="z"/> in <paramref name="lane"/>
+        /// with <paramref name="invulnerableTicks"/> of invulnerability. Clears the death, daze, buffers, lane moves,
+        /// vine and lift state; vines behind the respawn point are not reported as missed. Both snapshots are set to
+        /// the respawn state so views snap there. Returns false if HERO is not dead.
+        /// </summary>
+        public bool Revive(double z, int lane, int invulnerableTicks)
+        {
+            if (_locomotion != Locomotion.Dead)
+            {
+                return false;
+            }
+
+            if (lane < 0)
+            {
+                lane = 0;
+            }
+            else if (lane >= _config.LaneCount)
+            {
+                lane = _config.LaneCount - 1;
+            }
+
+            long tick = _tick;
+            _locomotion = Locomotion.Running;
+            _targetLane = lane;
+            _x = _config.LaneCenterX(lane);
+            _y = 0.0;
+            if (z > _z)
+            {
+                _z = z;
+            }
+
+            _moveActive = false;
+            _moveElapsed = 0;
+            _queuedDir = 0;
+            _bounceActive = false;
+            _bounceElapsed = 0;
+            _dazeTicksLeft = 0;
+            _slideTicksLeft = 0;
+            _coyoteTicksLeft = 0;
+            _bufferedJump = false;
+            _releaseBuffered = false;
+            _slideOnLanding = false;
+            _deathCause = DeathCause.None;
+            _deathArchetype = ObstacleArchetype.None;
+            _deathEntityId = 0;
+            _deathAfterStumble = false;
+            _engagedCount = 0;
+            _swingVineId = 0;
+            _swingElapsed = 0;
+            _launchedFromVine = false;
+            _chainPerfects = 0;
+            _fallGravity = _config.GravityMps2;
+            _liftElapsed = 0;
+            _liftDescending = false;
+            _liftDescentElapsed = 0;
+
+            double passLimit = _z - _config.PlayerHitboxDepthM * 0.5 - _vines.GrabZoneLengthM * 0.5;
+            if (passLimit > _vineScanZ)
+            {
+                _vineScanZ = passLimit;
+            }
+
+            _invulnerableTicks = Math.Max(0, invulnerableTicks);
+            Emit(RunnerEventType.Revived, tick, 0, (byte)lane, 0, (short)Math.Min(_invulnerableTicks, short.MaxValue));
+            Current = BuildSnapshot(tick - 1);
+            Previous = Current;
+            return true;
+        }
+
+        /// <summary>Step 9 during Lift: rise, glide, then descend once there is ground where the descent ends.</summary>
+        private void UpdateLift(long tick)
+        {
+            _liftElapsed++;
+            if (!_liftDescending)
+            {
+                int rise = _lift.RiseTicks;
+                if (_liftElapsed < rise)
+                {
+                    double u = (double)_liftElapsed / rise;
+                    u = 1.0 - (1.0 - u) * (1.0 - u);
+                    _y = _liftStartY + (_lift.GlideHeightM - _liftStartY) * u;
+                }
+                else
+                {
+                    _y = _lift.GlideHeightM;
+                }
+
+                if (_liftElapsed >= _lift.TotalTicks - _lift.DescentTicks)
+                {
+                    // GDD 15.1: a lift that would end over a gap or chasm glides on until there is ground.
+                    double landZ = _z + _speed * _lift.DescentTicks * RunnerConfig.TickSeconds;
+                    if (HasGroundAt(_config.LaneCenterX(_targetLane), landZ))
+                    {
+                        _liftDescending = true;
+                        _liftDescentElapsed = 0;
+                        _liftDescentStartY = _y;
+                        Emit(RunnerEventType.CompanionLiftDescending, tick, 0, (byte)_targetLane, 0, 0);
+                    }
+                }
+
+                return;
+            }
+
+            _liftDescentElapsed++;
+            int descent = _lift.DescentTicks;
+            if (_liftDescentElapsed < descent)
+            {
+                double u = (double)_liftDescentElapsed / descent;
+                double s = u * u * (3.0 - 2.0 * u);
+                _y = _liftDescentStartY * (1.0 - s);
+                return;
+            }
+
+            // Touchdown, or hover just above the surface until there is ground (a lane change over a gap).
+            _y = 0.0;
+            if (HasGroundUnderHero())
+            {
+                EndLift(tick);
+            }
+        }
+
+        private void EndLift(long tick)
+        {
+            _locomotion = Locomotion.Running;
+            _y = 0.0;
+            if (_invulnerableTicks < _lift.LandingInvulnerableTicks)
+            {
+                _invulnerableTicks = _lift.LandingInvulnerableTicks;
+            }
+
+            Emit(RunnerEventType.CompanionLiftEnded, tick, 0, (byte)_targetLane, 0, (short)Math.Min(_liftElapsed, short.MaxValue));
+            _liftElapsed = 0;
+            _liftDescending = false;
+            _liftDescentElapsed = 0;
+        }
+
+        private bool HasGroundAt(float x, double z)
+        {
+            double halfDepth = _config.PlayerHitboxDepthM * 0.5;
+            return _track.HasGround(x, z - halfDepth, z + halfDepth);
         }
 
         // ---- Vines (GDD 7) ----
@@ -1844,7 +2101,8 @@ namespace JungleBooze.Gameplay.Runner
             double zHi = (zStart > _z ? zStart : _z) + halfDepth;
             int count = QueryBoxes(zLo, zHi);
             // GDD 7.3 step 3: nothing can hit HERO on a vine (same handling as invulnerability).
-            bool invulnerable = _invulnerableTicks > 0 || _locomotion == Locomotion.Carried;
+            // GDD 15.1: nothing can hit HERO during Lift either.
+            bool invulnerable = _invulnerableTicks > 0 || _locomotion == Locomotion.Carried || _locomotion == Locomotion.Lifted;
             int contacts = 0;
 
             for (int i = 0; i < count; i++)

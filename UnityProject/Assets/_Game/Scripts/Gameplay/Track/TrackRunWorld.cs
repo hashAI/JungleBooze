@@ -1,5 +1,6 @@
 using System;
 using JungleBooze.Core;
+using JungleBooze.Gameplay.Companion;
 using JungleBooze.Gameplay.Runner;
 using JungleBooze.Gameplay.Session;
 
@@ -15,8 +16,22 @@ namespace JungleBooze.Gameplay.Track
     /// <para>Random streams: the root generator is seeded with the run seed and forked once with
     /// <see cref="RandomStreamIds.TrackGeneration"/> at setup; the generator is the only user of that stream.</para>
     /// </summary>
-    public sealed class TrackRunWorld : IRunWorld, IRunWorldSummary, IRunnerStepHooks
+    public sealed class TrackRunWorld : IRunWorld, IRunWorldSummary, IRunnerStepHooks, IRunWorldRecovery, ICompanionWorld
     {
+        /// <summary>Respawn search step and range for a Continue over a gap or chasm (m).</summary>
+        private const double RespawnSearchStepM = 0.25;
+        private const double RespawnSearchRangeM = 160.0;
+
+        /// <summary>Extra distance past the far edge of a gap before the respawn point [ASSUMED] (m).</summary>
+        private const double RespawnEdgeMarginM = 1.5;
+
+        /// <summary>The clear stretch starts this far behind the respawn point (removes the obstacle that killed HERO).</summary>
+        private const double ClearBehindM = 1.5;
+
+        /// <summary>Range searched behind / ahead of a vine-chasm death for the section's chasm vines (m).</summary>
+        private const double ChasmVineLookBackM = 60.0;
+        private const double ChasmVineLookAheadM = 80.0;
+
         private readonly TrackRunSetup _setup;
         private RunnerConfig _runnerConfig;
         private SpeedCurve _curve;
@@ -132,6 +147,101 @@ namespace JungleBooze.Gameplay.Track
             }
 
             Scoring.OnCoinPickups(info, Track, runner);
+
+            // GDD 15.1: during Lift the companion pulls in coins from all lanes ahead.
+            if (runner.IsLifted && LiftCoinPullAheadM > 0.0)
+            {
+                Scoring.CollectAhead(info, Track, runner, LiftCoinPullAheadM);
+            }
+        }
+
+        /// <summary>Lift coin pull range (<see cref="ICompanionWorld"/>); 0 until the session sets it.</summary>
+        public double LiftCoinPullAheadM { get; set; }
+
+        /// <summary>
+        /// Continue (GDD 14.4, <see cref="IRunWorldRecovery"/>): respawn where HERO died if there is ground, else on the
+        /// first ground ahead (after a "Missed vine" death: past the last chasm vine of that section, on the landing
+        /// pad); remove the killer and clear the stretch ahead; then revive the runner and forget the death.
+        /// </summary>
+        public bool Revive(RunnerSimulation runner, int invulnerableTicks, double clearSeconds)
+        {
+            if (runner == null || Track == null || !runner.Current.IsDead)
+            {
+                return false;
+            }
+
+            RunnerState state = runner.Current;
+            int lane = state.TargetLane;
+            double scanFrom = state.Z;
+            if (runner.DeathCause == DeathCause.MissedVine)
+            {
+                scanFrom = LastChasmVineZ(state.Z, scanFrom);
+            }
+
+            double depth = runner.Config.PlayerHitboxDepthM;
+            double ground = Track.FindGroundAhead(lane, scanFrom, depth, RespawnSearchStepM, RespawnSearchRangeM);
+            double respawnZ = scanFrom;
+            bool overGap = runner.DeathCause != DeathCause.Hit || ground > scanFrom + 1e-6;
+            if (overGap)
+            {
+                double edge = Track.FindGroundAhead(lane, ground + depth, depth, RespawnSearchStepM, RespawnSearchRangeM);
+                respawnZ = edge + depth + RespawnEdgeMarginM;
+            }
+
+            double clearM = SpeedAt(respawnZ) * (clearSeconds > 0.0 ? clearSeconds : 0.0);
+            ClearStretch(respawnZ - ClearBehindM, respawnZ + clearM);
+            if (!runner.Revive(respawnZ, lane, invulnerableTicks))
+            {
+                return false;
+            }
+
+            Scoring.ClearDeath();
+            return true;
+        }
+
+        public int ClearStretch(double fromZ, double toZ)
+        {
+            return Track == null ? 0 : Track.ClearObstacles(fromZ, toZ);
+        }
+
+        public double SpeedAt(double z)
+        {
+            return _curve == null ? 0.0 : _curve.Evaluate(z);
+        }
+
+        /// <summary>Z of the farthest chasm vine of the vine section around <paramref name="deathZ"/> (or <paramref name="fallback"/>).</summary>
+        private double LastChasmVineZ(double deathZ, double fallback)
+        {
+            int group = -1;
+            double nearest = double.PositiveInfinity;
+            int count = Track.VineCount;
+            for (int i = 0; i < count; i++)
+            {
+                ref readonly VineInstance v = ref Track.GetVine(i);
+                if (!v.OverChasm || v.Z < deathZ - ChasmVineLookBackM || v.Z > deathZ + ChasmVineLookAheadM)
+                {
+                    continue;
+                }
+
+                double d = Math.Abs(v.Z - deathZ);
+                if (d < nearest)
+                {
+                    nearest = d;
+                    group = v.ChunkSerial;
+                }
+            }
+
+            double last = fallback;
+            for (int i = 0; i < count; i++)
+            {
+                ref readonly VineInstance v = ref Track.GetVine(i);
+                if (v.ChunkSerial == group && v.OverChasm && v.Z > last)
+                {
+                    last = v.Z;
+                }
+            }
+
+            return last;
         }
 
         public void OnScore(RunnerSimulation runner, in RunnerTickInfo info)

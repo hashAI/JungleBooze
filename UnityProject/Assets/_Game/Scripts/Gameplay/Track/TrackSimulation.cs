@@ -495,6 +495,51 @@ namespace JungleBooze.Gameplay.Track
             }
         }
 
+        /// <summary>
+        /// Removes every obstacle and gap that overlaps [<paramref name="fromZ"/>, <paramref name="toZ"/>] (Continue
+        /// and Lift touchdown clear stretches, GDD 14.4 and 15.1). Views poll the ring, so removed pieces disappear on
+        /// the next frame. Returns how many were removed. No allocation; for rare events only.
+        /// </summary>
+        public int ClearObstacles(double fromZ, double toZ)
+        {
+            int removed = 0;
+            for (int i = _obstacles.Count - 1; i >= 0; i--)
+            {
+                ref ObstacleInstance o = ref _obstacles[i];
+                double back = o.Archetype == ObstacleArchetype.Gap ? o.Z + o.GapLengthM : o.BackZ;
+                if (o.Z <= toZ && back >= fromZ)
+                {
+                    _obstacles.RemoveAt(i);
+                    removed++;
+                }
+            }
+
+            return removed;
+        }
+
+        /// <summary>
+        /// Where the next stretch of solid ground in <paramref name="lane"/> starts at or after <paramref name="fromZ"/>
+        /// for a footprint of <paramref name="depthM"/>, searched in <paramref name="stepM"/> steps up to
+        /// <paramref name="maxSearchM"/> ahead (generating track as needed). Returns <paramref name="fromZ"/> if there
+        /// is ground there already.
+        /// </summary>
+        public double FindGroundAhead(int lane, double fromZ, double depthM, double stepM, double maxSearchM)
+        {
+            GenerateAhead(fromZ + maxSearchM);
+            float x = _runner.LaneCenterX(lane);
+            double half = depthM * 0.5;
+            double step = stepM > 0.01 ? stepM : 0.01;
+            for (double z = fromZ; z <= fromZ + maxSearchM; z += step)
+            {
+                if (HasGround(x, z - half, z + half))
+                {
+                    return z;
+                }
+            }
+
+            return fromZ + maxSearchM;
+        }
+
         public bool TryGetNextGapEdge(int lane, double fromZ, out double nearEdge, out float length)
         {
             for (int i = 0; i < _obstacles.Count; i++)
