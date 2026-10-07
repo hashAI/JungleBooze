@@ -141,8 +141,8 @@ namespace JungleBooze.Tests.EditMode.RouteFrame
             Assert.Greater(counts[(int)RouteBeatKind.GentleBend], 0);
             Assert.Greater(counts[(int)RouteBeatKind.SwingZone], 0);
             Assert.Greater(counts[(int)RouteBeatKind.Gateway], 0);
-            Assert.AreEqual(0, counts[(int)RouteBeatKind.Ascent], "Ascent is scheduled by T5, weight 0 until then");
-            Assert.AreEqual(0, counts[(int)RouteBeatKind.Descent], "Descent is scheduled by T5, weight 0 until then");
+            Assert.Greater(counts[(int)RouteBeatKind.Ascent], 0, "Ascent is scheduled by the layer schedule (T5)");
+            Assert.Greater(counts[(int)RouteBeatKind.Descent], 0, "Descent is scheduled by the layer schedule (T5)");
         }
 
         [Test]

@@ -168,6 +168,13 @@ namespace JungleBooze.App
             gaps.SetFrame(pathFrame);
             gaps.Init(kit, configs.Runner, presentation.FogEndM);
 
+            // Spec 003 section 7 (T5): the High layer skins the path as a canopy bough (hides the ground skin while it is under the runner).
+            var boughObject = new GameObject("Bough");
+            boughObject.transform.SetParent(root.transform, false);
+            BoughView bough = boughObject.AddComponent<BoughView>();
+            bough.SetFrame(pathFrame);
+            bough.Init(kit, configs.Runner, presentation.FogEndM, ground);
+
             var obstacleObject = new GameObject("Obstacles");
             obstacleObject.transform.SetParent(root.transform, false);
             ObstacleView obstacles = obstacleObject.AddComponent<ObstacleView>();
@@ -348,7 +355,7 @@ namespace JungleBooze.App
 
             var views = new System.Collections.Generic.List<IRunView>
             {
-                pathFrameView, eventCounter, tutorial, audioView, chatterView, ground, worldView, gaps, obstacles, hazardView, vineView, coinView, powerUpView, runnerView, companionView, cameraView, hud, companionHud, tutorialView, worldBanner, continueView,
+                pathFrameView, eventCounter, tutorial, audioView, chatterView, ground, worldView, gaps, bough, obstacles, hazardView, vineView, coinView, powerUpView, runnerView, companionView, cameraView, hud, companionHud, tutorialView, worldBanner, continueView,
             };
             if (hitboxDebug != null)
             {
@@ -374,7 +381,7 @@ namespace JungleBooze.App
                 camera,
                 new[]
                 {
-                    ground.transform, gaps.transform, obstacles.transform, hazardView.transform, vineView.transform,
+                    ground.transform, gaps.transform, bough.transform, obstacles.transform, hazardView.transform, vineView.transform,
                     coinView.transform, powerUpView.transform, worldView.transform, runnerView.transform, companionView.transform,
                 },
                 worldView,

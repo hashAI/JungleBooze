@@ -97,6 +97,7 @@ namespace JungleBooze.Gameplay.Path
         private double _highRiseM;
         private double _highEndS;
         private double _highLenM;
+        private double _ascentLenM;
 
         public RouteGenerator(RouteTuning tuning, IRouteChunkSource chunks)
         {
@@ -178,6 +179,7 @@ namespace JungleBooze.Gameplay.Path
             _highRiseM = 0.0;
             _highEndS = double.NegativeInfinity;
             _highLenM = 0.0;
+            _ascentLenM = 0.0;
             EmergencyEaseCount = 0;
             LastEmergencyS = double.NegativeInfinity;
         }
@@ -416,7 +418,7 @@ namespace JungleBooze.Gameplay.Path
         /// <paramref name="plannedHighM"/> is set when it returns Ascent; <paramref name="remainingM"/> is the length
         /// left in a High run (infinity outside one). Ascent and Descent only count once the caller commits them.
         /// </summary>
-        private RouteBeatKind PlanLayer(double s, RouteBeatKind chosen, double dB, out double plannedHighM, out double remainingM)
+        private RouteBeatKind PlanLayer(double s, RouteBeatKind chosen, double dLength, double dB, out double plannedHighM, out double remainingM)
         {
             plannedHighM = 0.0;
             remainingM = double.PositiveInfinity;
@@ -445,7 +447,7 @@ namespace JungleBooze.Gameplay.Path
             {
                 double limit = _highEndS;
                 GatewayAround(s, out _, out double nextGateway);
-                double gatewayLimit = nextGateway - _tuning.GatewayClearBeforeM - _tuning.GetMaxLengthM(RouteBeatKind.Descent);
+                double gatewayLimit = nextGateway - _tuning.GatewayClearBeforeM - _ascentLenM;
                 if (gatewayLimit < limit)
                 {
                     limit = gatewayLimit;
@@ -465,7 +467,7 @@ namespace JungleBooze.Gameplay.Path
                 return chosen;
             }
 
-            if (_phase == LayerPhase.Floor && CanStartCanopy(s, dB, out plannedHighM))
+            if (_phase == LayerPhase.Floor && CanStartCanopy(s, dLength, dB, out plannedHighM))
             {
                 return RouteBeatKind.Ascent;
             }
@@ -473,7 +475,7 @@ namespace JungleBooze.Gameplay.Path
             return chosen;
         }
 
-        private bool CanStartCanopy(double s, double dB, out double plannedHighM)
+        private bool CanStartCanopy(double s, double dLength, double dB, out double plannedHighM)
         {
             plannedHighM = 0.0;
             if (!_tuning.CanopyAllowed(_world) || s < _calmUntilS + _tuning.CanopyFirstAfterCalmM || s < _nextCanopyS)
@@ -497,8 +499,9 @@ namespace JungleBooze.Gameplay.Path
                 return false;
             }
 
-            double room = nextGateway - _tuning.GatewayClearBeforeM - s
-                - _tuning.GetMaxLengthM(RouteBeatKind.Ascent) - _tuning.GetMaxLengthM(RouteBeatKind.Descent);
+            // The Descent mirrors the Ascent's length, so the section needs the Ascent twice plus the High run.
+            double ascentLength = Math.Floor(_tuning.GetMinLengthM(RouteBeatKind.Ascent) + (dLength * (_tuning.GetMaxLengthM(RouteBeatKind.Ascent) - _tuning.GetMinLengthM(RouteBeatKind.Ascent))));
+            double room = nextGateway - _tuning.GatewayClearBeforeM - s - (2.0 * ascentLength);
             double high = _tuning.HighRunMinM + (dB * Math.Max(0.0, _tuning.HighRunMaxM - _tuning.HighRunMinM));
             if (room < high)
             {
@@ -702,7 +705,7 @@ namespace JungleBooze.Gameplay.Path
             }
             else
             {
-                chosen = PlanLayer(s, chosen, dB, out plannedHighM, out remainingM);
+                chosen = PlanLayer(s, chosen, dLength, dB, out plannedHighM, out remainingM);
             }
 
             double length = Math.Floor(_tuning.GetMinLengthM(chosen) + (dLength * (_tuning.GetMaxLengthM(chosen) - _tuning.GetMinLengthM(chosen))));
@@ -710,6 +713,11 @@ namespace JungleBooze.Gameplay.Path
             {
                 chosen = RouteBeatKind.Clearing;
                 length = Math.Floor(_tuning.GetMinLengthM(chosen) + (dLength * (_tuning.GetMaxLengthM(chosen) - _tuning.GetMinLengthM(chosen))));
+            }
+
+            if (chosen == RouteBeatKind.Descent && _ascentLenM > 0.0)
+            {
+                length = _ascentLenM;
             }
 
             if (chosen != RouteBeatKind.Descent && remainingM < double.PositiveInfinity && length > remainingM)
@@ -846,6 +854,7 @@ namespace JungleBooze.Gameplay.Path
                 _phase = LayerPhase.Ascending;
                 _ascentStartY = _y;
                 _highLenM = plannedHighM;
+                _ascentLenM = length;
                 _nextCanopyS = s + _tuning.CanopyEveryMinM + (dA * Math.Max(0.0, _tuning.CanopyEveryMaxM - _tuning.CanopyEveryMinM));
             }
             else if (chosen == RouteBeatKind.Descent)

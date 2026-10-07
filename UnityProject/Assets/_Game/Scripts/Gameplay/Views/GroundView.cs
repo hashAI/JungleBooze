@@ -80,6 +80,9 @@ namespace JungleBooze.Gameplay.Views
         private Transform[] _dressRoots;
         private long[] _dressIndex;
         private int _dressPerSide;
+        private GameObject _wallsParent;
+        private GameObject _dressParent;
+        private bool _skinHidden;
 
         /// <summary>Number of recycled gray-box path tiles (0 in trail mode).</summary>
         public int TileCount => _tiles == null ? 0 : _tiles.Length;
@@ -89,6 +92,42 @@ namespace JungleBooze.Gameplay.Views
 
         /// <summary>Number of recycled jungle wall segments (both sides; 0 when the wall art is missing).</summary>
         public int WallSegmentCount => _wallRoots == null ? 0 : _wallRoots.Length;
+
+        /// <summary>
+        /// Hides or shows the whole ground skin (trail, floor strips, tiles, walls, dressing) while the canopy bough
+        /// stands in for it (<see cref="BoughView"/>, spec 003 section 7). Cheap; call it only when the state changes.
+        /// </summary>
+        public void SetPathSkinHidden(bool hidden)
+        {
+            if (hidden == _skinHidden)
+            {
+                return;
+            }
+
+            _skinHidden = hidden;
+            if (_groundRoot != null)
+            {
+                _groundRoot.gameObject.SetActive(!hidden);
+            }
+
+            if (_tiles != null)
+            {
+                for (int i = 0; i < _tiles.Length; i++)
+                {
+                    _tiles[i].gameObject.SetActive(!hidden);
+                }
+            }
+
+            if (_wallsParent != null)
+            {
+                _wallsParent.SetActive(!hidden);
+            }
+
+            if (_dressParent != null)
+            {
+                _dressParent.SetActive(!hidden);
+            }
+        }
 
         /// <summary>The route the ground and the verges follow (spec 003). Call before <see cref="Init"/>; default is the straight route.</summary>
         public void SetFrame(PathFrame frame)
@@ -141,6 +180,7 @@ namespace JungleBooze.Gameplay.Views
         public void BeginRun(GameSession session)
         {
             _groundStep = long.MinValue;
+            SetPathSkinHidden(false);
             ResetIndices(_tileIndex);
             ResetIndices(_wallIndex);
             ResetIndices(_dressIndex);
@@ -515,6 +555,7 @@ namespace JungleBooze.Gameplay.Views
 
             var parent = new GameObject("JungleWalls").transform;
             parent.SetParent(transform, false);
+            _wallsParent = parent.gameObject;
             for (int i = 0; i < total; i++)
             {
                 Transform root = new GameObject("Wall" + i).transform;
@@ -650,6 +691,7 @@ namespace JungleBooze.Gameplay.Views
             _dressIndex = new long[total];
             var dressParent = new GameObject("Dressing").transform;
             dressParent.SetParent(transform, false);
+            _dressParent = dressParent.gameObject;
             for (int i = 0; i < total; i++)
             {
                 Transform root = new GameObject("Dress" + i).transform;
