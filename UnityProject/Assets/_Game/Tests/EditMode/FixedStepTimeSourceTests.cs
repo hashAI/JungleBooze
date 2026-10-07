@@ -78,6 +78,21 @@ namespace JungleBooze.Tests.EditMode
         }
 
         [Test]
+        public void ClearAccumulator_DropsPendingTime_KeepsTick()
+        {
+            var time = new FixedStepTimeSource(64, maxStepsPerFrame: 4);
+            time.Step();
+            time.Step();
+            time.Accumulate(0.75 / 64.0); // three quarters of a step pending
+            time.ClearAccumulator();
+
+            Assert.AreEqual(2L, time.Tick);
+            Assert.AreEqual(0f, time.InterpolationAlpha);
+            Assert.AreEqual(0, time.Accumulate(0.5 / 64.0)); // no leftover from before the clear
+            Assert.AreEqual(1, time.Accumulate(0.5 / 64.0));
+        }
+
+        [Test]
         public void Constructor_InvalidArguments_Throw()
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => new FixedStepTimeSource(0));

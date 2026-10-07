@@ -20,5 +20,11 @@ namespace JungleBooze.Core
 
         /// <summary>Double tap: activate the companion assist (GDD section 5.1).</summary>
         CompanionAssist = 1 << 4,
+
+        /// <summary>
+        /// Set by the run driver on the first simulation tick after a pause ends (spec 001 section 8).
+        /// The simulation clears the buffered jump and the queued lane move when it sees it.
+        /// </summary>
+        PauseResumed = 1 << 5,
     }
 }

@@ -91,6 +91,15 @@ namespace JungleBooze.Core
             Tick++;
         }
 
+        /// <summary>
+        /// Discards accumulated real time without touching <see cref="Tick"/> or <see cref="DroppedSeconds"/>.
+        /// Called when a pause countdown ends, so the next frame runs no catch-up steps (spec 001 section 8.4).
+        /// </summary>
+        public void ClearAccumulator()
+        {
+            _accumulator = 0.0;
+        }
+
         /// <summary>Resets the clock for a new run.</summary>
         public void Reset()
         {
