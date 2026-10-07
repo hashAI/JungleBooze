@@ -49,7 +49,7 @@ namespace JungleBooze.Gameplay.Views
         private float _viewDistanceM;
         private Piece[] _pieces;
         private int _shown;
-        private int _frame;
+        private int _renderStamp;
         private TrackSimulation _track;
         private PathFrame _frame;
         private Material _bodyMaterial;
@@ -260,7 +260,7 @@ namespace JungleBooze.Gameplay.Views
                 return;
             }
 
-            _frame++;
+            _renderStamp++;
             if (_track != null)
             {
                 RunnerSimulation runner = session.Runner;
@@ -315,7 +315,7 @@ namespace JungleBooze.Gameplay.Views
                     continue;
                 }
 
-                if (piece.Stamp != _frame)
+                if (piece.Stamp != _renderStamp)
                 {
                     piece.Live = false;
                     piece.Root.SetActive(false);
@@ -346,7 +346,7 @@ namespace JungleBooze.Gameplay.Views
                     break;
                 }
 
-                if (piece.Stamp == _frame)
+                if (piece.Stamp == _renderStamp)
                 {
                     continue;
                 }
@@ -372,7 +372,7 @@ namespace JungleBooze.Gameplay.Views
 
             target.Live = true;
             target.Lane = lane;
-            target.Stamp = _frame;
+            target.Stamp = _renderStamp;
             Place(target, o, shape, x);
         }
 
