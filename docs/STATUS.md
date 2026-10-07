@@ -7,7 +7,7 @@ Decisions themselves live in `design/DECISIONS.md`; the plan lives in `docs/AGEN
 _Last updated: 2026-10-07 (06:50 UTC)_
 
 ## Current milestone
-**▶ ACTIVE (2026-10-07): owner lifted the pause and asked for a playable version, focus only on that.** Plan: C2 (wire track + views) in parallel with compile-fix passes; then a compile-fix pass over the presentation code; then hand the owner `docs/PLAY_FIRST_BUILD.md`. Tests stay deferred. Reviewers now APPLY fixes.
+**▶ ACTIVE (2026-10-07): owner wants a playable version, focus only on that. Owner said: no compile-review passes, just write the code; the owner compiles on the Mac and sends errors back.** Plan: C2 (wire track + views) now, then hand over `docs/PLAY_FIRST_BUILD.md`. Tests stay deferred.
 
 **Goal: First Playable (FP1). Autonomous mandate: no owner questions until it's done.** Release/store work is paused.
 
@@ -53,7 +53,7 @@ and commit after every agent report.
 | balance-simulator | done (A3) | Python reference model, golden traces, S1–S9 report (`docs/sim-reports/2026-10-07-spec001.md`) | `tools/sim/`, `docs/sim-reports/` | Fairness fuzzing for spec 002; recommendations R1–R6 go to game-designer |
 | tech-architect | done (stage D) | First-open bootstrap: URP mobile asset, input set to Both, iOS basics (placeholder bundle id `com.pistaduko.junglerunner`, iOS 15, portrait), empty Run scene in build list; Mac play guide | `Assets/_Game/Editor/Setup/`, `docs/adr/0003-first-playable-bootstrap.md`, `docs/PLAY_FIRST_BUILD.md` | Add EditMode tests for `ProjectSetupRules`; Roslyn analyzers |
 | gameplay-engineer | done (B1, B2) | Collisions and track code finished; not compiled | `Scripts/Gameplay/Runner/`, `Scripts/Gameplay/Track/`, `Config/Track/` | Deferred tests (track AC-208–248), B3 validator — after owner review |
-| ui-engineer | done (C1) | Presentation layer + 3 PlayMode test files + controls table | `Scripts/Gameplay/{Session,Views,Controls}`, `Scripts/App`, `Scripts/UI/Hud`, `Tests/` | C2: swap in TrackRunWorldFactory, add track/obstacle/coin views, resolve RunSession vs GameSession overlap |
+| ui-engineer | **working** | C2: swap in TrackRunWorldFactory, obstacle/coin/ground views, HUD score, stumble feedback | `Scripts/Gameplay/Views`, `Scripts/App`, `Scripts/UI/Hud` | Fix whatever errors the owner sends from Unity |
 | art-director | done | Style guide and prompts updated with names Pista/Duko and the chest-band sash | `design/STYLE_GUIDE.md`, `design/prompts/` | Generate concept images once an image API key exists |
 | asset-pipeline | waiting | — | — | Needs an image/3D generation API key from the owner |
 | audio-director | waiting | — | — | Week 5. Note: the macaw speaks a few words, so voice lines and localization are needed |
@@ -110,6 +110,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Log
 Newest first. One line per event.
+- 2026-10-07: Owner declined compile-review agents ("just write code"). Launched only C2.
 - 2026-10-07: Owner lifted the pause: "give me a playable version, just focus on that". Launching C2 + two compile-fix passes.
 - 2026-10-07: Stage B2 done (track code, no new tests). All agents finished. Project is paused for the owner's code review.
 - 2026-10-07: Owner deferred tests; track agent redirected from writing tests to verifying code consistency and .meta files.
