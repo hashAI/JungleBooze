@@ -125,7 +125,7 @@ namespace JungleBooze.App
             cameraObject.tag = "MainCamera";
             Camera camera = cameraObject.AddComponent<Camera>();
             camera.clearFlags = CameraClearFlags.SolidColor;
-            camera.backgroundColor = StylePalette.JungleFog;
+            camera.backgroundColor = WorldThemeView.DepthFogColor(startTheme);
             camera.nearClipPlane = 0.3f;
             camera.farClipPlane = CameraFarClipM;
             camera.allowHDR = false;
@@ -490,7 +490,7 @@ namespace JungleBooze.App
             RenderSettings.skybox = null;
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Linear;
-            RenderSettings.fogColor = theme.Fog;
+            RenderSettings.fogColor = WorldThemeView.DepthFogColor(theme);
             RenderSettings.fogStartDistance = presentation.FogStartM;
             RenderSettings.fogEndDistance = presentation.FogEndM;
         }

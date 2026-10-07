@@ -39,6 +39,9 @@ namespace JungleBooze.Gameplay.Views
         /// <summary>Scale of the leaf tuft at a stub tip.</summary>
         public const float TuftScale = 0.7f;
 
+        /// <summary>A stub shorter than this (horizontal reach) is not made.</summary>
+        public const float MinStubReachM = 1.5f;
+
         /// <summary>Length of the Vine_Creeper art at scale 1 (the placer, the tests and the nominal bounds agree on it).</summary>
         public const float VineNativeLengthM = 6f;
 
@@ -440,7 +443,7 @@ namespace JungleBooze.Gameplay.Views
         /// A branch stub from a wall trunk reaching toward the path at 10.8 m or higher, a leaf tuft at its tip and (usually) a
         /// vine hanging from the tuft. The tip (with the tuft's reach) stops at most <see cref="ScenerySettings.StubOverhangM"/>
         /// inside the corridor edge, and at the edge itself in a vine section or on the inner side of a bend. Skipped when the
-        /// trunk is too far out to reach (less than 2 m of reach).
+        /// trunk is too far out to reach (less than 1.5 m of reach).
         /// </summary>
         private static void PlaceStub(
             in CellArgs a, int side, float edge, uint slot, float trunkLateral, double along, SceneryPiece[] buffer, ref int n)
@@ -472,7 +475,7 @@ namespace JungleBooze.Gameplay.Views
                 float yawRad = yawDeg * Mathf.Deg2Rad;
                 float cosYaw = Mathf.Cos(yawRad);
                 reach = Mathf.Min(wantedLength * cosTilt * cosYaw, allowed);
-                if (reach < 2f)
+                if (reach < MinStubReachM)
                 {
                     return;
                 }

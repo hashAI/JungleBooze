@@ -14,7 +14,8 @@ namespace JungleBooze.Gameplay.Views
     /// (run seed, Scenery stream, cell index, band), strictly outside the sight corridor, oriented through the
     /// <see cref="PathFrame"/> so they follow bends and slopes.
     /// <para>Drawing: no GameObjects per prop. Every piece is a matrix in a preallocated array of its model part; one
-    /// <c>Graphics.RenderMeshInstanced</c> call per (part, LOD) draws all of them (about 25 draw calls for everything).
+    /// <c>Graphics.RenderMeshInstanced</c> call per (part, LOD) draws all of them (about 35 to 45 draw calls for everything,
+    /// up to about 90k triangles: the dense corridor of rings described in <see cref="SceneryPlacer"/>).
     /// Cells are placed once when they enter the window and the arrays are refilled only when HERO crosses into a new
     /// cell (about every 0.5 s), nearest first, under the hard caps of <see cref="SceneryBudget"/>. Per-frame work is
     /// the draw calls only: no allocation.</para>

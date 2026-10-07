@@ -269,20 +269,36 @@ namespace JungleBooze.Gameplay.Views
             RenderGate(worlds, segment, z);
         }
 
+        /// <summary>
+        /// Share of the world's shadow tint mixed into its fog: the depth fog is a little deeper and more saturated than
+        /// the horizon haze, so a thick jungle wall fades into a colour with body, per world. [ASSUMED] 0.22.
+        /// </summary>
+        public const float DepthFogShadowMix = 0.22f;
+
+        /// <summary>Fog colour of a theme: its horizon fog toward its shadow tint by <see cref="DepthFogShadowMix"/>.</summary>
+        public static Color DepthFogColor(in WorldTheme theme)
+        {
+            return Color.Lerp(theme.Fog, theme.ShadowTint, DepthFogShadowMix);
+        }
+
         private void Apply(in WorldTheme theme)
         {
             _ground.ApplyTheme(theme);
             _obstacles.ApplyTheme(theme);
+
+            // Fog, camera background and the sky's horizon band share one colour so the horizon stays seamless.
+            WorldTheme fogged = theme;
+            fogged.Fog = DepthFogColor(theme);
             if (_camera != null)
             {
-                _camera.backgroundColor = theme.Fog;
+                _camera.backgroundColor = fogged.Fog;
             }
 
-            RenderSettings.fogColor = theme.Fog;
+            RenderSettings.fogColor = fogged.Fog;
             ApplyAmbient(theme, _look);
             if (_sky != null)
             {
-                _sky.ApplyTheme(theme);
+                _sky.ApplyTheme(fogged);
             }
 
             if (_keyLight != null)

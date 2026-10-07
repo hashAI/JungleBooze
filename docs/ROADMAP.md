@@ -5,7 +5,7 @@ Meshy credits are scarce (about 465 left): procedural Blender first; contact she
 
 ## Phase A: the crossing feels real (now)
 - T5 canopy layers (Ascent/High/Descent, bough surface, vines inside the canopy) on top of the route generator.
-- T8 scenery: stateless placer for trees, ferns, roots, light shafts along the route, using the procedural kit and existing foliage; densities within the perf budget (about 60k tris, 60 draws).
+- T8 scenery: stateless placer for trees, ferns, roots, light shafts along the route, using the procedural kit and existing foliage; densities within the perf budget (raised 2026-10-07 by owner direction for the dense corridor: about 90k tris, about 50 draws; spec 003 section 11.5 table is the old 60k/60 hint).
 - UX polish: world banner and music crossfade per world, Duko idle chatter, a dev start-distance option, route log.
 - Review follow-ups: boulder hitbox vs look (owner decision), coin instancing, remaining audit items.
 

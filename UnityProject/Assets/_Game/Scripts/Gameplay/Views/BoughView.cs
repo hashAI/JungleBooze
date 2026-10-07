@@ -30,8 +30,8 @@ namespace JungleBooze.Gameplay.Views
         private const float SkinLeadM = 20f;
         private const float BelowM = 24f;
         private const float PlaneSizeM = 700f;
-        private const int ShaftCount = 3;
-        private const float ShaftSpacingM = 50f;
+        private const int ShaftCount = 4;
+        private const float ShaftSpacingM = 40f;
         private const float ShaftWidthM = 3.4f;
         private const float ShaftHeightM = 36f;
         private const float ShaftCenterM = -6f;
