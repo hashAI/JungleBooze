@@ -32,6 +32,8 @@ defined in `.claude/agents/`. Read `docs/AGENT_PLAN.md` for the full plan.
    results before calling anything done.
    **Money is the exception: always ask the owner** before spending money or API credits, with the expected cost.
    Keep going on free work while a budget answer is pending.
+   **Never lower quality to save money.** If top-notch quality can't be reached within the approved budget or with
+   free tools, ask the owner for more budget (what it buys, expected cost, why cheaper options fall short).
    The old lane-based direction lives only in `archive/pre-aurelia/`. It must never leak back into the game.
    **Keep the owner updated with pictures:** send renders, previews and screenshots (SendUserFile) whenever there is
    something visual worth seeing, with a one-line caption.
