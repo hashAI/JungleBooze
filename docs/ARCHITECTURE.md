@@ -230,6 +230,8 @@ Adding any SDK: tech-architect checks license, binary size impact, `PrivacyInfo.
 > [ADR 0004](adr/0004-realistic-look-on-mobile.md), Decision 7, and replace the table below where they differ
 > (draw calls ≤ 250 main + ≤ 100 shadow, triangles ≤ 350k main + ≤ 150k shadow, resident memory ≤ 1.0 GB).
 > The recommended floor device moves to iPhone 12 (A14), provisional until the owner's on-device check (P0-E).
+> First measurement (2026-10-09, ADR 0004 "Measured"): the look test is over budget (≈850 draws, ≈0.75 M triangles
+> including shadows); per-segment plant merging and lighter plant meshes are the planned fixes.
 
 Hard limits (project rule 6). Measured on the **floor device** (to be confirmed by the owner; recommended iPhone XR/11-class, A12/A13) in a release IL2CPP build, by performance-engineer with the benchmark scene.
 

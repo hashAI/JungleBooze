@@ -51,6 +51,9 @@ namespace JungleBooze.Editor.LookTest
             m.EnableKeyword("_LAYERS_ON");
             SetLayer(m, "_Layer2", path, 1f / tile.y);
             SetLayer(m, "_Layer3", bed, 1f / tile.z);
+            m.SetColor("_BaseColor", _config.ForestFloorTint);
+            m.SetColor("_Layer2Color", _config.PathTint);
+            m.SetColor("_Layer3Color", _config.RiverBedTint);
             m.SetFloat("_VertexAO", 1f);
             m.SetFloat("_HeightBlend", 0.6f);
             m.SetFloat("_BlendDepth", 0.2f);
@@ -99,6 +102,10 @@ namespace JungleBooze.Editor.LookTest
             if (foliage)
             {
                 Foliage(m, set, 0.35f, 0.6f);
+            }
+            else if (set.Albedo != null)
+            {
+                m.SetColor("_BaseColor", _config.ScannedRockTint);
             }
 
             return Save(m);

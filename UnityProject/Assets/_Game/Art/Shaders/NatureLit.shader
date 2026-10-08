@@ -22,9 +22,11 @@ Shader "JungleBooze/Nature Lit"
 
         [Header(Layers by vertex color)]
         [Toggle(_LAYERS_ON)] _Layers("Blend Layers", Float) = 0
+        _Layer2Color("Layer 2 Tint", Color) = (1, 1, 1, 1)
         _Layer2Map("Layer 2 Albedo (vertex R)", 2D) = "white" {}
         [Normal] _Layer2BumpMap("Layer 2 Normal", 2D) = "bump" {}
         _Layer2ArmMap("Layer 2 ARM", 2D) = "white" {}
+        _Layer3Color("Layer 3 Tint", Color) = (1, 1, 1, 1)
         _Layer3Map("Layer 3 Albedo (vertex G)", 2D) = "white" {}
         [Normal] _Layer3BumpMap("Layer 3 Normal", 2D) = "bump" {}
         _Layer3ArmMap("Layer 3 ARM", 2D) = "white" {}
@@ -65,6 +67,8 @@ Shader "JungleBooze/Nature Lit"
             half _VertexAO;
             float4 _Layer2Map_ST;
             float4 _Layer3Map_ST;
+            half4 _Layer2Color;
+            half4 _Layer3Color;
             half _HeightBlend;
             half _BlendDepth;
             half _Cutoff;
@@ -217,7 +221,9 @@ Shader "JungleBooze/Nature Lit"
                 weights = max(weights - top, 0.0h);
                 weights /= max(weights.x + weights.y + weights.z, 0.0001h);
 
-                albedo = albedo * weights.x + albedo2 * weights.y + albedo3 * weights.z;
+                // Each layer has its own tint; _BaseColor tints layer 1 (applied below for every mode).
+                half3 baseTint = max(_BaseColor.rgb, half3(0.001h, 0.001h, 0.001h));
+                albedo = albedo * weights.x + (albedo2 * _Layer2Color.rgb / baseTint) * weights.y + (albedo3 * _Layer3Color.rgb / baseTint) * weights.z;
                 normalTS = normalize(normalTS * weights.x + normal2 * weights.y + normal3 * weights.z);
                 arm = arm * weights.x + arm2 * weights.y + arm3 * weights.z;
             #endif

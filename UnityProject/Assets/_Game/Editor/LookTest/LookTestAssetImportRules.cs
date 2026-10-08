@@ -100,6 +100,10 @@ namespace JungleBooze.Editor.LookTest
             importer.meshCompression = ModelImporterMeshCompression.Medium;
             importer.isReadable = false;
             importer.addCollider = false;
+
+            // Unity 6 import-time Mesh LOD (ADR 0004 follow-up): the dense CC0 scans get automatic simplified
+            // levels, chosen per renderer by screen size, so distant plants and rocks cost a fraction of LOD0.
+            importer.generateMeshLods = true;
         }
 
         private static void SetIos(TextureImporter importer, int maxSize, TextureImporterFormat format)

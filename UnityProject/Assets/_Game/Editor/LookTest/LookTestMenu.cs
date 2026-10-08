@@ -61,12 +61,13 @@ namespace JungleBooze.Editor.LookTest
             PlayerSettings.defaultInterfaceOrientation = UIOrientation.AutoRotation;
             PlayerSettings.allowedAutorotateToLandscapeLeft = true;
             PlayerSettings.allowedAutorotateToLandscapeRight = true;
-            PlayerSettings.allowedAutorotateToPortrait = false;
+            // Both orientations: the owner compares them on the phone by rotating it (ADR 0004 Decision 8).
+            PlayerSettings.allowedAutorotateToPortrait = true;
             PlayerSettings.allowedAutorotateToPortraitUpsideDown = false;
             PlayerSettings.enableFrameTimingStats = true;
             LookTestPipelineSetup.ApplyRealistic(LookTestSceneBuilder.EnsureConfig());
             AssetDatabase.SaveAssets();
-            Debug.Log(LogPrefix + "Build settings: LookTest is the first scene, landscape (left/right), URP-Realistic, Frame Timing Stats on.");
+            Debug.Log(LogPrefix + "Build settings: LookTest is the first scene, landscape + portrait (rotate the phone), URP-Realistic, Frame Timing Stats on.");
         }
 
         [MenuItem(Root + "Restore Run Build Settings", false, 21)]

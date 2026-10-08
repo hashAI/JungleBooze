@@ -19,6 +19,10 @@ namespace JungleBooze.App.LookTest
         [SerializeField] private float _runSpeedMps = 9f;
         [Tooltip("Vertical field of view for landscape, degrees.")]
         [SerializeField] private float _cameraFovDeg = 47f;
+        [Tooltip("Portrait screens: horizontal field of view, degrees (the vertical FOV grows to keep this width).")]
+        [SerializeField] private float _cameraPortraitHorizontalFovDeg = 42f;
+        [Tooltip("Portrait screens: look-at height, m (higher than landscape so the tall frame shows forest, not only path).")]
+        [SerializeField] private float _cameraPortraitLookAtHeightM = 3.4f;
         [SerializeField] private float _cameraOffsetBehindM = 5.5f;
         [SerializeField] private float _cameraOffsetUpM = 2.5f;
         [SerializeField] private float _cameraLookAheadM = 10f;
@@ -38,7 +42,7 @@ namespace JungleBooze.App.LookTest
         [Tooltip("A segment jumps ahead once its far end is this far behind the runner, m.")]
         [SerializeField] private float _recycleBehindM = 22f;
         [SerializeField] private int _seed = 20261008;
-        [SerializeField] private float _pathHalfWidthM = 4.8f;
+        [SerializeField] private float _pathHalfWidthM = 3f;
         [SerializeField] private float _groundHalfWidthM = 70f;
         [SerializeField] private float _groundStepZM = 1f;
         [Tooltip("Rise of the left forest slope per meter.")]
@@ -57,44 +61,56 @@ namespace JungleBooze.App.LookTest
         [SerializeField] private float _cliffEndZM = 182f;
         [SerializeField] private float _cliffHeightM = 16f;
         [SerializeField] private float _cliffSetbackM = 6f;
+        [Tooltip("Length over which the cliff rises from the ground at each end, m (long ramps read as a slope, not a wall end).")]
+        [SerializeField] private float _cliffRampM = 35f;
         [SerializeField] private float _waterfallZM = 135f;
         [SerializeField] private float _waterfallWidthM = 5f;
         [SerializeField] private float _waterfallFlowSpeed = 1.6f;
         [SerializeField] private int _mistParticles = 28;
 
         [Header("Scatter per loop (applies on Build Scene)")]
-        [SerializeField] private int _treeCount = 46;
+        [SerializeField] private int _treeCount = 110;
         [SerializeField] private float _trunkHeightMinM = 16f;
         [SerializeField] private float _trunkHeightMaxM = 30f;
         [SerializeField] private float _trunkRadiusMinM = 0.45f;
         [SerializeField] private float _trunkRadiusMaxM = 1.2f;
-        [SerializeField] private int _canopyCardsPerTree = 18;
-        [SerializeField] private float _canopyCardSizeM = 4.5f;
+        [SerializeField] private int _canopyCardsPerTree = 64;
+        [SerializeField] private float _canopyCardSizeM = 4f;
         [SerializeField] private int _boulderCount = 36;
-        [SerializeField] private int _heroRockCount = 4;
-        [SerializeField] private int _fernCount = 140;
-        [SerializeField] private int _plantCount = 46;
-        [SerializeField] private float _fernHeightMinM = 0.7f;
-        [SerializeField] private float _fernHeightMaxM = 1.4f;
-        [SerializeField] private float _plantHeightMinM = 0.6f;
-        [SerializeField] private float _plantHeightMaxM = 1.7f;
+        [SerializeField] private int _heroRockCount = 6;
+        [SerializeField] private int _fernCount = 420;
+        [SerializeField] private int _plantCount = 150;
+        [SerializeField] private float _fernHeightMinM = 0.9f;
+        [SerializeField] private float _fernHeightMaxM = 1.9f;
+        [SerializeField] private float _plantHeightMinM = 0.8f;
+        [SerializeField] private float _plantHeightMaxM = 2.2f;
         [Tooltip("Plants are culled below this fraction of screen height (single-level LODGroup).")]
         [SerializeField] private float _plantCullScreenFraction = 0.035f;
         [SerializeField] private float _rockCullScreenFraction = 0.015f;
         [SerializeField] private float _windStrengthM = 0.12f;
+        [Tooltip("Smaller trees (6-12 m) that fill the middle layer between undergrowth and canopy.")]
+        [SerializeField] private int _understoryTreeCount = 60;
+        [SerializeField] private float _understoryHeightMinM = 6f;
+        [SerializeField] private float _understoryHeightMaxM = 12f;
 
         [Header("CC0 assets (Poly Haven ids, see tools/assets/cc0_assets.json)")]
-        [SerializeField] private string _skyHdriId = "rainforest_trail";
-        [SerializeField] private string _forestFloorTextureId = "forest_leaves_02";
-        [SerializeField] private string _pathTextureId = "rocky_trail";
+        [SerializeField] private string _skyHdriId = "kloofendal_48d_partly_cloudy_puresky";
+        [SerializeField] private string _forestFloorTextureId = "leafy_grass";
+        [SerializeField] private string _pathTextureId = "forest_ground_05";
         [SerializeField] private string _riverBedTextureId = "ganges_river_pebbles";
         [SerializeField] private string _cliffTextureId = "rock_face_03";
         [SerializeField] private string _boulderTextureId = "mossy_rock";
         [SerializeField] private string _barkTextureId = "bark_brown_02";
         [SerializeField] private string _leafCardModelId = "island_tree_02";
         [SerializeField] private string _fernModelId = "fern_02";
-        [SerializeField] private string[] _plantModelIds = { "calathea_orbifolia_01", "anthurium_botany_01", "shrub_03" };
-        [SerializeField] private string[] _rockModelIds = { "rock_moss_set_01", "rock_07", "rock_09" };
+        [SerializeField] private string[] _plantModelIds = { "food_ginger_01", "anthurium_botany_01", "calathea_orbifolia_01", "shrub_sorrel_01" };
+        [SerializeField] private string[] _rockModelIds = { "rock_07", "rock_09" };
+        [Tooltip("Albedo tints (palette grading per layer): forest floor, path, river bed.")]
+        [SerializeField] private Color _forestFloorTint = new Color(0.46f, 0.60f, 0.36f, 1f);
+        [SerializeField] private Color _pathTint = new Color(0.95f, 0.86f, 0.76f, 1f);
+        [SerializeField] private Color _riverBedTint = new Color(0.9f, 0.95f, 0.9f, 1f);
+        [Tooltip("Albedo tint for scanned CC0 rocks (pulls pale scans toward the rootstone value, ART_DIRECTION 3.1).")]
+        [SerializeField] private Color _scannedRockTint = new Color(0.62f, 0.6f, 0.54f, 1f);
         [Tooltip("Meters per texture repeat on the ground layers (forest floor, path, river bed).")]
         [SerializeField] private Vector3 _groundTileM = new Vector3(4f, 5f, 2.5f);
         [SerializeField] private float _cliffTileM = 8f;
@@ -113,8 +129,8 @@ namespace JungleBooze.App.LookTest
         [SerializeField] private Color _fallbackSkyAmbient = new Color(0.55f, 0.66f, 0.72f, 1f);
         [SerializeField] private Color _fallbackEquatorAmbient = new Color(0.36f, 0.42f, 0.34f, 1f);
         [SerializeField] private Color _fallbackGroundAmbient = new Color(0.16f, 0.15f, 0.11f, 1f);
-        [SerializeField] private Color _fogColor = new Color(0.60f, 0.68f, 0.64f, 1f);
-        [SerializeField] private float _fogDensity = 0.011f;
+        [SerializeField] private Color _fogColor = new Color(0.56f, 0.70f, 0.70f, 1f);
+        [SerializeField] private float _fogDensity = 0.0075f;
 
         [Header("Render pipeline URP-Realistic (applies on Build Scene)")]
         [SerializeField] private bool _hdr = true;
@@ -140,8 +156,8 @@ namespace JungleBooze.App.LookTest
         [SerializeField] private float _vignetteIntensity = 0.2f;
 
         [Header("Water (applies on Build Scene)")]
-        [SerializeField] private Color _waterShallowColor = new Color(0.20f, 0.38f, 0.33f, 1f);
-        [SerializeField] private Color _waterDeepColor = new Color(0.04f, 0.12f, 0.11f, 1f);
+        [SerializeField] private Color _waterShallowColor = new Color(0.22f, 0.75f, 0.68f, 1f);
+        [SerializeField] private Color _waterDeepColor = new Color(0.07f, 0.40f, 0.43f, 1f);
         [SerializeField] private float _waterOpacity = 0.72f;
         [SerializeField] private float _waterNormalTilingPerM = 0.35f;
 
@@ -151,6 +167,10 @@ namespace JungleBooze.App.LookTest
 
         public float RunSpeedMps => _runSpeedMps;
         public float CameraFovDeg => _cameraFovDeg;
+
+        public float CameraPortraitHorizontalFovDeg => _cameraPortraitHorizontalFovDeg;
+
+        public float CameraPortraitLookAtHeightM => _cameraPortraitLookAtHeightM;
         public float CameraOffsetBehindM => _cameraOffsetBehindM;
         public float CameraOffsetUpM => _cameraOffsetUpM;
         public float CameraLookAheadM => _cameraLookAheadM;
@@ -181,6 +201,8 @@ namespace JungleBooze.App.LookTest
         public float CliffEndZM => _cliffEndZM;
         public float CliffHeightM => _cliffHeightM;
         public float CliffSetbackM => _cliffSetbackM;
+
+        public float CliffRampM => _cliffRampM;
         public float WaterfallZM => _waterfallZM;
         public float WaterfallWidthM => _waterfallWidthM;
         public float WaterfallFlowSpeed => _waterfallFlowSpeed;
@@ -204,6 +226,20 @@ namespace JungleBooze.App.LookTest
         public float PlantCullScreenFraction => _plantCullScreenFraction;
         public float RockCullScreenFraction => _rockCullScreenFraction;
         public float WindStrengthM => _windStrengthM;
+
+        public int UnderstoryTreeCount => _understoryTreeCount;
+
+        public float UnderstoryHeightMinM => _understoryHeightMinM;
+
+        public float UnderstoryHeightMaxM => _understoryHeightMaxM;
+
+        public Color ForestFloorTint => _forestFloorTint;
+
+        public Color PathTint => _pathTint;
+
+        public Color RiverBedTint => _riverBedTint;
+
+        public Color ScannedRockTint => _scannedRockTint;
 
         public string SkyHdriId => _skyHdriId;
         public string ForestFloorTextureId => _forestFloorTextureId;
@@ -263,6 +299,7 @@ namespace JungleBooze.App.LookTest
         {
             _runSpeedMps = Mathf.Clamp(_runSpeedMps, 1f, 40f);
             _cameraFovDeg = Mathf.Clamp(_cameraFovDeg, 30f, 100f);
+            _cameraPortraitHorizontalFovDeg = Mathf.Clamp(_cameraPortraitHorizontalFovDeg, 40f, 100f);
             _cameraFarClipM = Mathf.Max(_cameraFarClipM, 20f);
             _targetFrameRate = Mathf.Clamp(_targetFrameRate, 30, 120);
             _minRenderScale = Mathf.Clamp(_minRenderScale, 0.25f, 1f);

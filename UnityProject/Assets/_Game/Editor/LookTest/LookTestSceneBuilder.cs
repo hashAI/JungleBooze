@@ -420,7 +420,7 @@ namespace JungleBooze.Editor.LookTest
                 Vector3 position;
                 if (left)
                 {
-                    float x = -c.PathHalfWidthM - 2.5f - 40f * rng.NextFloat() * rng.NextFloat();
+                    float x = -c.PathHalfWidthM - 2.5f - 45f * Mathf.Pow(rng.NextFloat(), 1.4f);
                     position = new Vector3(x, shape.Height(x, z) - 0.3f, z);
                 }
                 else if (shape.CliffPresence(z) > 0.35f)
@@ -436,7 +436,7 @@ namespace JungleBooze.Editor.LookTest
                 else
                 {
                     float minX = shape.RiverCenterX(z) + c.RiverHalfWidthM * 1.6f;
-                    float x = minX + 30f * rng.NextFloat() * rng.NextFloat();
+                    float x = minX + 40f * Mathf.Pow(rng.NextFloat(), 1.4f);
                     position = new Vector3(x, shape.Height(x, z) - 0.3f, z);
                 }
 
@@ -446,13 +446,78 @@ namespace JungleBooze.Editor.LookTest
                 var tree = new GameObject("Tree").transform;
                 tree.SetParent(parent, false);
                 tree.localPosition = local;
-                tree.localRotation = Quaternion.Euler(0f, rng.NextFloat(0f, 360f), 0f);
+                // Trees near the path lean over it so crowns frame the run instead of lining it like an avenue.
+                float verge = Mathf.Abs(position.x) - c.PathHalfWidthM;
+                float lean = verge < 9f ? rng.NextFloat(4f, 13f) * (1f - verge / 9f) : rng.NextFloat(-3f, 3f);
+                float yaw = rng.NextFloat(0f, 360f);
+                tree.localRotation = Quaternion.Euler(0f, 0f, position.x < 0f ? -lean : lean) * Quaternion.Euler(0f, yaw, 0f);
                 tree.localScale = Vector3.one * (height / TrunkReferenceHeightM);
 
                 AddRenderer(tree, "Trunk", trunks[variant], bark, ShadowCastingMode.On);
                 AddRenderer(tree, "Crown", crowns[variant], leaves, ShadowCastingMode.On);
                 Add(tris, "Trees", LookTestMeshFactory.TriangleCount(trunks[variant]) + LookTestMeshFactory.TriangleCount(crowns[variant]));
                 placed++;
+            }
+
+            ScatterUnderstoryTrees(c, shape, groups, segLength, bark, leaves, variantRng, tris);
+        }
+
+        /// <summary>
+        /// Middle layer: slim 6-12 m trees with low, full crowns close to the path and the river bank, so the view is
+        /// framed by foliage at eye level instead of bare trunks.
+        /// </summary>
+        private static void ScatterUnderstoryTrees(
+            LookTestConfigAsset c, LookTestTerrainShape shape, SegmentGroups[] groups, float segLength,
+            Material bark, Material leaves, IRandom variantRng, SortedDictionary<string, long> tris)
+        {
+            const int variants = 4;
+            const float referenceHeight = 9f;
+            var trunks = new Mesh[variants];
+            var crowns = new Mesh[variants];
+            for (int v = 0; v < variants; v++)
+            {
+                Mesh trunk = LookTestMeshFactory.Trunk(variantRng, referenceHeight, Mathf.Lerp(0.12f, 0.22f, (v + 0.5f) / variants), c.BarkTileM);
+                trunk.name = "UnderTrunk_" + v;
+                trunks[v] = SaveMesh(trunk);
+                Mesh crown = LookTestMeshFactory.Crown(variantRng, referenceHeight, Mathf.Max(8, c.CanopyCardsPerTree / 2), c.CanopyCardSizeM * 0.6f);
+                crown.name = "UnderCrown_" + v;
+                crowns[v] = SaveMesh(crown);
+            }
+
+            var rng = new Pcg32Random((ulong)(uint)c.Seed, TreeStream + 50UL);
+            for (int i = 0; i < c.UnderstoryTreeCount; i++)
+            {
+                float z = rng.NextFloat(0f, c.LoopLengthM);
+                float x;
+                if (rng.Chance(0.6f))
+                {
+                    x = -c.PathHalfWidthM - rng.NextFloat(2.5f, 16f);
+                }
+                else
+                {
+                    float riverEdge = shape.RiverCenterX(z) - c.RiverHalfWidthM * 1.3f;
+                    if (riverEdge - (c.PathHalfWidthM + 2.5f) < 1f)
+                    {
+                        x = shape.RiverCenterX(z) + c.RiverHalfWidthM * rng.NextFloat(1.5f, 3f);
+                    }
+                    else
+                    {
+                        x = rng.NextFloat(c.PathHalfWidthM + 2.5f, riverEdge);
+                    }
+                }
+
+                var position = new Vector3(x, shape.Height(x, z) - 0.2f, z);
+                float height = rng.NextFloat(c.UnderstoryHeightMinM, c.UnderstoryHeightMaxM);
+                int variant = rng.NextInt(0, variants);
+                Transform parent = Place(groups, segLength, position, out Vector3 local).Trees;
+                var tree = new GameObject("UnderstoryTree").transform;
+                tree.SetParent(parent, false);
+                tree.localPosition = local;
+                tree.localRotation = Quaternion.Euler(rng.NextFloat(-4f, 4f), rng.NextFloat(0f, 360f), rng.NextFloat(-4f, 4f));
+                tree.localScale = Vector3.one * (height / referenceHeight);
+                AddRenderer(tree, "Trunk", trunks[variant], bark, ShadowCastingMode.On);
+                AddRenderer(tree, "Crown", crowns[variant], leaves, ShadowCastingMode.On);
+                Add(tris, "Trees (understory)", LookTestMeshFactory.TriangleCount(trunks[variant]) + LookTestMeshFactory.TriangleCount(crowns[variant]));
             }
         }
 
@@ -574,23 +639,23 @@ namespace JungleBooze.Editor.LookTest
         {
             float edge = c.PathHalfWidthM + clearance;
             float pick = rng.NextFloat();
-            if (pick < 0.45f)
+            if (pick < 0.4f)
             {
                 return -edge - 12f * rng.NextFloat() * rng.NextFloat();
             }
 
-            if (pick < 0.75f)
+            if (pick < 0.65f)
             {
                 float riverEdge = shape.RiverCenterX(z) - c.RiverHalfWidthM * 1.25f;
                 return Mathf.Lerp(edge, Mathf.Max(edge, riverEdge), rng.NextFloat());
             }
 
-            if (pick < 0.9f)
+            if (pick < 0.8f)
             {
                 return -edge - rng.NextFloat(6f, 30f);
             }
 
-            return shape.RiverCenterX(z) + c.RiverHalfWidthM * rng.NextFloat(1.4f, 3f);
+            return shape.RiverCenterX(z) + c.RiverHalfWidthM * rng.NextFloat(1.4f, 4.5f);
         }
 
         // ---------------------------------------------------------------- Model variants (CC0 FBX)
@@ -628,7 +693,7 @@ namespace JungleBooze.Editor.LookTest
                 for (int f = 0; f < filters.Length; f++)
                 {
                     Mesh mesh = filters[f].sharedMesh;
-                    if (mesh == null)
+                    if (mesh == null || IsLowerLod(filters[f].name))
                     {
                         continue;
                     }
@@ -653,6 +718,13 @@ namespace JungleBooze.Editor.LookTest
             }
 
             return result;
+        }
+
+        /// <summary>Scans that ship their own LOD chain (name_LOD1..3): only LOD0 is a variant; Mesh LOD handles distance.</summary>
+        internal static bool IsLowerLod(string meshName)
+        {
+            int index = meshName.LastIndexOf("_LOD", System.StringComparison.OrdinalIgnoreCase);
+            return index >= 0 && index + 4 < meshName.Length && meshName.Substring(index + 4) != "0";
         }
 
         /// <summary>
@@ -760,11 +832,11 @@ namespace JungleBooze.Editor.LookTest
             text.AppendLine("Triangles in the whole " + c.LoopLengthM + " m loop (the camera sees roughly half; plants and rocks are culled by distance):");
             foreach (KeyValuePair<string, long> pair in tris)
             {
-                text.AppendLine("  " + pair.Key + ": " + pair.Value.ToString("N0"));
+                text.AppendLine("  " + pair.Key + ": " + pair.Value.ToString("N0", System.Globalization.CultureInfo.InvariantCulture));
                 total += pair.Value;
             }
 
-            text.AppendLine("  Total: " + total.ToString("N0"));
+            text.AppendLine("  Total: " + total.ToString("N0", System.Globalization.CultureInfo.InvariantCulture));
             for (int i = 0; i < report.Count; i++)
             {
                 text.AppendLine(report[i]);

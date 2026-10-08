@@ -43,7 +43,7 @@ namespace JungleBooze.Editor.LookTest
             return 1f - Smooth(0f, widthM, d);
         }
 
-        /// <summary>0..1 cliff presence along z: rises over 15 m at both ends.</summary>
+        /// <summary>0..1 cliff presence along z: rises over the configured ramp length at both ends.</summary>
         public float CliffPresence(float z)
         {
             float start = _c.CliffStartZM;
@@ -53,7 +53,8 @@ namespace JungleBooze.Editor.LookTest
                 return 0f;
             }
 
-            return Smooth(start, start + 15f, z) * (1f - Smooth(end - 15f, end, z));
+            float ramp = Mathf.Min(_c.CliffRampM, (end - start) * 0.5f);
+            return Smooth(start, start + ramp, z) * (1f - Smooth(end - ramp, end, z));
         }
 
         /// <summary>x of the cliff foot: set back from the far river bank, close to the water at the waterfall.</summary>

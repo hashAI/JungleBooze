@@ -278,17 +278,28 @@ namespace JungleBooze.Editor.LookTest
             var uvs = new List<Vector2>(cards * 4);
             var colors = new List<Color>(cards * 4);
             var triangles = new List<int>(cards * 6);
-            var crownCenter = new Vector3(0f, trunkHeight - cardSize * 0.3f, 0f);
-            float spread = cardSize * 1.3f;
+            var crownCenter = new Vector3(0f, trunkHeight * 0.82f, 0f);
 
+            // Leaves grow in clumps at the ends of a few branches (a full, broken silhouette instead of one even
+            // layer). Clumps sit from about 55% of the height to the top, spreading wider higher up.
+            int clumps = Mathf.Max(3, cards / 9);
+            var clumpCenters = new Vector3[clumps];
+            for (int c = 0; c < clumps; c++)
+            {
+                float h = rng.NextFloat(0.55f, 1f);
+                float reach = trunkHeight * 0.26f * Mathf.Lerp(0.55f, 1f, h) * Mathf.Sqrt(rng.NextFloat(0.25f, 1f));
+                float a = rng.NextFloat(0f, 6.283f);
+                clumpCenters[c] = new Vector3(Mathf.Cos(a) * reach, trunkHeight * h, Mathf.Sin(a) * reach);
+            }
+
+            float spread = cardSize * 0.9f;
             for (int i = 0; i < cards; i++)
             {
                 // Lower cards hang further out (branches), upper cards cluster on top.
-                float u = rng.NextFloat();
+                Vector3 clump = clumpCenters[i % clumps];
                 float angle = rng.NextFloat(0f, 6.283f);
-                float radial = spread * Mathf.Sqrt(rng.NextFloat(0.1f, 1f));
-                float y = crownCenter.y + Mathf.Lerp(-cardSize * 0.8f, cardSize * 0.7f, u);
-                var center = new Vector3(Mathf.Cos(angle) * radial, y, Mathf.Sin(angle) * radial);
+                float radial = spread * Mathf.Sqrt(rng.NextFloat(0f, 1f));
+                var center = clump + new Vector3(Mathf.Cos(angle) * radial, rng.NextFloat(-0.45f, 0.45f) * cardSize, Mathf.Sin(angle) * radial);
                 float size = cardSize * rng.NextFloat(0.75f, 1.2f);
                 Quaternion orientation = Quaternion.Euler(rng.NextFloat(-70f, -25f), rng.NextFloat(0f, 360f), rng.NextFloat(-25f, 25f));
                 Vector3 right = orientation * Vector3.right * size * 0.5f;
@@ -311,7 +322,7 @@ namespace JungleBooze.Editor.LookTest
                     normals.Add(n);
                     tangents.Add(new Vector4(t.x, t.y, t.z, w));
                     uvs.Add(cornerUvs[k]);
-                    float ao = Mathf.Lerp(0.55f, 1f, Mathf.Clamp01((corners[k].y - crownCenter.y + cardSize) / (cardSize * 1.8f)));
+                    float ao = Mathf.Lerp(0.5f, 1f, Mathf.Clamp01((corners[k].y - trunkHeight * 0.5f) / (trunkHeight * 0.5f)));
                     colors.Add(new Color(0f, 0f, 0f, ao));
                 }
 

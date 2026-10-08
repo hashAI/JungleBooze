@@ -83,6 +83,9 @@ namespace JungleBooze.App.LookTest
             _label.text = "Measuring...";
         }
 
+        /// <summary>The overlay text as last shown (for the benchmark log).</summary>
+        public string LastReport => _label != null ? _label.text : string.Empty;
+
         /// <summary>Frames slower than the target frame time + 4 ms count as hitches.</summary>
         public void SetTargetFrameRate(int targetFrameRate)
         {

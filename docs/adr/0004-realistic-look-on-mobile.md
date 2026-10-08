@@ -175,7 +175,9 @@ Per device (estimates until measured in P0-E):
 
 ## Decision 8: Orientation for the look test
 
-**[ASSUMED] Landscape** (left and right) for the look test, as the blueprint recommends for wide traversal views. The
+**[ASSUMED] Landscape** (left and right) for the look test, as the blueprint recommends for wide traversal views.
+**Update 2026-10-09:** the look-test build now allows portrait too, so the owner can compare both on the phone (see
+"Measured" below). The
 portrait Run scene keeps working: `JungleBooze > Look Test > Use Look Test iOS Build Settings` switches the build to
 landscape with the look test first; `Restore Run Build Settings` switches back. The owner decides the final orientation.
 The look-test camera uses a 47° vertical field of view (equal to about 85° horizontal on a 19.5:9 screen).
@@ -197,6 +199,63 @@ Run for 10 minutes. Read the overlay at 1, 5 and 10 minutes: FPS, CPU main, GPU,
 triangles, memory. Then use the right-hand buttons one at a time (Post, Shadows, MSAA, HDR, Plants, Water, 30/60 fps,
 Scale) and note the GPU time change for each. Screenshots of the overlay are enough. Counters that show "n/a" in a
 release build (draws, triangles) are read once in a Development build.
+
+## Measured on the owner's Mac (2026-10-09, first real build)
+
+First time the look test was built, rendered and exported. Unity 6000.3.25f1, Xcode 27.0, Apple M4.
+
+**Pipeline.** `python3 tools/assets/fetch_cc0.py` (22 Poly Haven assets, ~100 MB) → headless
+`tools/ci/unity.sh method JungleBooze.Editor.LookTest.LookTestBatch.BuildScene` (sky bake works headless) →
+`...LookTestBatch.CaptureShots` (GPU render of the game camera, landscape 2532×1170 and portrait 1170×2532, to
+`/tmp/junglebooze-shots/`; must run without `-nographics`) → `...LookTestBatch.UseLookTestBuildSettings` →
+`...Build.BuildScript.BuildIos -buildTarget iOS -jbBundleId com.pistaduko.junglerunner -jbVersion 0.1.0 -jbBuildNumber 1 -jbOutput /tmp/jb-ios`
+→ `xcodebuild -scheme Unity-iPhone -configuration Release -destination generic/platform=iOS CODE_SIGNING_ALLOWED=NO`.
+
+| Item | Result |
+|---|---|
+| Scene build | Clean, no errors. Sky ambient/reflection bake succeeds headless |
+| iOS Xcode export (Release, IL2CPP, arm64) | Succeeded in 29 s |
+| Custom shaders on Metal | All four compiled, 0 errors. Nature Lit after stripping: 32 vertex / 48 fragment variants (ForwardLit), Water 4/4 |
+| `xcodebuild` generic iOS, unsigned | **BUILD SUCCEEDED** in 3 min 05 s; 0 errors; only deprecation warnings in Unity's own iOS trampoline |
+| `JungleRunner.app` | **207 MB** unpacked: UnityFramework 110 MB (unstripped, symbols in), Data 97 MB (textures 76 MB). 96 MB zipped (rough proxy for the App Store download) |
+| Textures in the build | 80 MB (ASTC). The sky cubemap is 32 MB: the importer made 1024-pixel faces, not the 512 planned above; kept because the sky is now the main backdrop (RGB9E5 at 512 looked soft) |
+| Triangles in the whole 200 m loop (LOD0) | ~1.49 M (ferns 0.49 M, plants 0.6 M; the CC0 plant scans are dense) |
+| Visible renderers / LOD0 triangles, landscape (CPU frustum + LODGroup count) | **560–700 renderers, 0.83–1.0 M triangles** per view; portrait 330–480 renderers, 0.37–0.63 M triangles |
+
+**Real render counters** (macOS development player of the same scene, `LookTestBatch.BuildMacBenchmarkPlayer`, run
+with `-jbBenchmark 30 -screen-width 2532 -screen-height 1170`; the player logs the overlay every 2 s and quits;
+Apple M4, native 2.96 MP, MSAA 4x, HDR, shadows; counters include the shadow pass):
+
+| Counter | Measured (typical, 30 s loop) | Budget (main + shadow) |
+|---|---|---|
+| Draw calls (= batches; SRP Batcher) | **810–930** (a few samples ~1.6–1.8 k, likely frames with an extra pass) | 250 + 100 |
+| SetPass calls | 35–38 | 40 |
+| Triangles | **0.71–0.81 M** (with Mesh LOD) | 350k + 150k |
+| CPU main / render thread | 2.5 / 2.2 ms on M4 | 8 / 8 ms on A14 |
+| GPU | 8.5–14 ms on M4 at 2.96 MP | 12 ms on A14 at 1.7 MP |
+| Frame rate | 60.0, 0 hitches, slowest 1% 17.8 ms (vsync) | 60 |
+
+**Over budget (honest):** draw calls are about 2.5× and triangles about 1.6× the budget. GPU 12 ms on an M4 scaled to
+an A14 at 1.7 MP (an M4 GPU is several times faster) means this vegetation density **will not hold 60 fps on an
+iPhone 12** as built; the device run (P0-E) gives the real number. The main GPU costs are expected to be alpha-tested
+foliage overdraw (≈170 trees of card crowns plus 420 ferns), MSAA 4x and the shadow pass. Fixes, in order: (1) merge each segment's small
+plants into one mesh per material at build time (segments move as whole units, so merging inside a segment is safe; this is
+not the static batching rejected above), (2) replace dense CC0 plant scans with purpose-made low-poly clumps (asset
+pipeline), (3) GPU Resident Drawer only if (1) is not enough (it needs Forward+).
+
+**Changes made while iterating on the look (screenshots reviewed each round):**
+- Visible sky: `kloofendal_48d_partly_cloudy_puresky` (open blue sky, cumulus). `rainforest_trail` showed a blurry photo
+  forest behind the 3D trees.
+- Ground: `leafy_grass` forest floor and `forest_ground_05` packed-soil trail, with per-layer tints in `Nature Lit`
+  (`_Layer2Color`, `_Layer3Color`); `forest_leaves_02` read as autumn, `rocky_trail` as a gravel road.
+- Trail 6 m wide (was 9.6 m). Water toward the palette turquoise. Fog lighter (exp² 0.0075) and bluer.
+- Trees: clumped crowns (64 cards from 55% of the height), 110 canopy trees, 60 understory trees (6–12 m); trees
+  near the path lean over it. Cliff ends ramp over 35 m (they read as a flat board at 15 m).
+- Plants: `food_ginger_01`, `shrub_sorrel_01` added; `shrub_03` (17k tris) dropped; `sweet_potato` rejected (the
+  model includes the tuber). Scanned rocks: only the `_LOD0` mesh of `rock_07`/`rock_09` is used, tinted toward
+  rootstone; `rock_moss_set_01` dropped.
+- Orientation: the look test now allows **landscape and portrait** (rotate the phone); the camera adapts its FOV
+  (portrait keeps a 42° horizontal FOV) and aims higher in portrait. Decision 8 stays `[ASSUMED]` until the owner picks.
 
 ## Options considered
 

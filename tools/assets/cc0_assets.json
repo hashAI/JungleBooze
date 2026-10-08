@@ -4,25 +4,174 @@
   "license": "CC0 1.0 Universal (public domain dedication)",
   "license_url": "https://polyhaven.com/license",
   "hdris": [
-    { "id": "rainforest_trail", "res": "2k", "role": "Sky and ambient/reflection lighting (default)" },
-    { "id": "kloofendal_48d_partly_cloudy_puresky", "res": "2k", "role": "Alternative open sky (A/B test of a brighter, higher-contrast sky)" }
+    {
+      "id": "rainforest_trail",
+      "res": "2k",
+      "role": "Reference only (forest ambient A/B); not shown: as a visible sky it reads as a blurry photo forest"
+    },
+    {
+      "id": "kloofendal_48d_partly_cloudy_puresky",
+      "res": "2k",
+      "role": "Visible sky and ambient/reflection lighting (default since 2026-10-09)"
+    }
   ],
   "textures": [
-    { "id": "forest_leaves_02", "res": "2k", "maps": ["Diffuse", "nor_gl", "arm"], "role": "Forest floor (ground layer 1)" },
-    { "id": "rocky_trail", "res": "2k", "maps": ["Diffuse", "nor_gl", "arm"], "role": "Running path (ground layer 2)" },
-    { "id": "ganges_river_pebbles", "res": "1k", "maps": ["Diffuse", "nor_gl", "arm"], "role": "River bed and banks (ground layer 3)" },
-    { "id": "rock_face_03", "res": "2k", "maps": ["Diffuse", "nor_gl", "arm"], "role": "Cliff behind the waterfall" },
-    { "id": "mossy_rock", "res": "1k", "maps": ["Diffuse", "nor_gl", "arm"], "role": "Procedural boulders" },
-    { "id": "bark_brown_02", "res": "1k", "maps": ["Diffuse", "nor_gl", "arm"], "role": "Tree trunks" }
+    {
+      "id": "ganges_river_pebbles",
+      "res": "1k",
+      "maps": [
+        "Diffuse",
+        "nor_gl",
+        "arm"
+      ],
+      "role": "River bed and banks (ground layer 3)"
+    },
+    {
+      "id": "rock_face_03",
+      "res": "2k",
+      "maps": [
+        "Diffuse",
+        "nor_gl",
+        "arm"
+      ],
+      "role": "Cliff behind the waterfall"
+    },
+    {
+      "id": "mossy_rock",
+      "res": "1k",
+      "maps": [
+        "Diffuse",
+        "nor_gl",
+        "arm"
+      ],
+      "role": "Procedural boulders"
+    },
+    {
+      "id": "bark_brown_02",
+      "res": "1k",
+      "maps": [
+        "Diffuse",
+        "nor_gl",
+        "arm"
+      ],
+      "role": "Tree trunks"
+    },
+    {
+      "id": "leafy_grass",
+      "res": "2k",
+      "maps": [
+        "Diffuse",
+        "nor_gl",
+        "arm"
+      ],
+      "role": "Green forest floor (ground layer 1, replaces the autumn forest_leaves_02 look)"
+    },
+    {
+      "id": "forest_ground_05",
+      "res": "2k",
+      "maps": [
+        "Diffuse",
+        "nor_gl",
+        "arm"
+      ],
+      "role": "Packed-soil running trail (ground layer 2)"
+    },
+    {
+      "id": "brown_mud_leaves_01",
+      "res": "1k",
+      "maps": [
+        "Diffuse",
+        "nor_gl",
+        "arm"
+      ],
+      "role": "Wet river bank mud (brief T-05)"
+    }
   ],
   "models": [
-    { "id": "fern_02", "res": "1k", "maps": ["Diffuse", "nor_gl", "arm", "Alpha"], "role": "Fern clumps (undergrowth); 6.2k tris for 4 clumps" },
-    { "id": "calathea_orbifolia_01", "res": "1k", "maps": ["Diffuse", "nor_gl", "arm", "Alpha"], "role": "Broad-leaf jungle plant; 16.7k tris" },
-    { "id": "anthurium_botany_01", "res": "1k", "maps": ["Diffuse", "nor_gl", "arm", "Alpha"], "role": "Broad-leaf plant; 4.1k tris" },
-    { "id": "shrub_03", "res": "1k", "maps": ["Diffuse", "nor_gl", "arm", "Alpha"], "role": "Low shrub; 17k tris" },
-    { "id": "rock_moss_set_01", "res": "1k", "maps": ["Diffuse", "nor_gl", "arm"], "role": "Mossy rock set (path-side hero rocks); 63k tris for the set" },
-    { "id": "rock_07", "res": "1k", "maps": ["Diffuse", "nor_gl", "arm"], "role": "Hero boulder; 28k tris, max 2 visible" },
-    { "id": "rock_09", "res": "1k", "maps": ["Diffuse", "nor_gl", "arm"], "role": "Hero boulder; 23k tris, max 2 visible" },
-    { "id": "island_tree_02", "res": "1k", "maps": ["leaves_diff", "leaves_nor_gl", "leaves_alpha"], "maps_only": true, "role": "Leaf texture for procedural canopy cards (mesh not downloaded: 1.7M tris)" }
+    {
+      "id": "fern_02",
+      "res": "1k",
+      "maps": [
+        "Diffuse",
+        "nor_gl",
+        "arm",
+        "Alpha"
+      ],
+      "role": "Fern clumps (undergrowth); 6.2k tris for 4 clumps"
+    },
+    {
+      "id": "calathea_orbifolia_01",
+      "res": "1k",
+      "maps": [
+        "Diffuse",
+        "nor_gl",
+        "arm",
+        "Alpha"
+      ],
+      "role": "Broad-leaf jungle plant; 16.7k tris"
+    },
+    {
+      "id": "anthurium_botany_01",
+      "res": "1k",
+      "maps": [
+        "Diffuse",
+        "nor_gl",
+        "arm",
+        "Alpha"
+      ],
+      "role": "Broad-leaf plant; 4.1k tris"
+    },
+    {
+      "id": "rock_07",
+      "res": "1k",
+      "maps": [
+        "Diffuse",
+        "nor_gl",
+        "arm"
+      ],
+      "role": "Hero boulder; 28k tris, max 2 visible"
+    },
+    {
+      "id": "rock_09",
+      "res": "1k",
+      "maps": [
+        "Diffuse",
+        "nor_gl",
+        "arm"
+      ],
+      "role": "Hero boulder; 23k tris, max 2 visible"
+    },
+    {
+      "id": "island_tree_02",
+      "res": "1k",
+      "maps": [
+        "leaves_diff",
+        "leaves_nor_gl",
+        "leaves_alpha"
+      ],
+      "maps_only": true,
+      "role": "Leaf texture for procedural canopy cards (mesh not downloaded: 1.7M tris)"
+    },
+    {
+      "id": "food_ginger_01",
+      "res": "1k",
+      "maps": [
+        "Diffuse",
+        "nor_gl",
+        "arm"
+      ],
+      "role": "Tall broad-leaf ginger clumps (jungle understory); 7.2k tris (modeled leaves, no alpha mask)"
+    },
+    {
+      "id": "shrub_sorrel_01",
+      "res": "1k",
+      "maps": [
+        "Diffuse",
+        "nor_gl",
+        "arm",
+        "Alpha"
+      ],
+      "role": "Low green groundcover; 3.3k tris"
+    }
   ]
 }

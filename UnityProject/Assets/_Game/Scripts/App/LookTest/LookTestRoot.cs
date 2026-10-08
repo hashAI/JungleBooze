@@ -29,8 +29,6 @@ namespace JungleBooze.App.LookTest
         [SerializeField] private GameObject[] _waterGroups;
 
         private const float StandInHeightM = 1.65f;
-        private const float WeaveAmplitudeM = 1.6f;
-        private const float WeavePeriodS = 7f;
         private const float CameraSmoothingS = 0.12f;
 
         private LookTestWorldView _worldView;
@@ -44,6 +42,10 @@ namespace JungleBooze.App.LookTest
         private LightShadows _sunShadows = LightShadows.Soft;
         private int _scaleStep;
         private float _autoRenderScale = 1f;
+        private float _benchmarkSeconds;
+        private float _nextBenchmarkLogS = BenchmarkLogIntervalS;
+
+        private const float BenchmarkLogIntervalS = 2f;
 
         public LookTestConfigAsset Config => _config;
 
@@ -80,7 +82,7 @@ namespace JungleBooze.App.LookTest
             }
 
             Application.targetFrameRate = _config.TargetFrameRate;
-            AllowLandscape();
+            AllowBothOrientations();
             ApplyAutoRenderScale();
 
             _runner = CreateStandIn(transform);
@@ -103,7 +105,14 @@ namespace JungleBooze.App.LookTest
             }
 
             BuildOverlay();
-            Debug.Log("[JungleBooze] Look test running. Speed " + _config.RunSpeedMps + " m/s.");
+            _benchmarkSeconds = ReadBenchmarkSeconds(System.Environment.GetCommandLineArgs());
+            if (_benchmarkSeconds > 0f)
+            {
+                Application.runInBackground = true;
+            }
+
+            Debug.Log("[JungleBooze] Look test running. Speed " + _config.RunSpeedMps + " m/s." +
+                      (_benchmarkSeconds > 0f ? " Benchmark for " + _benchmarkSeconds + " s." : string.Empty));
         }
 
         private void Update()
@@ -117,37 +126,82 @@ namespace JungleBooze.App.LookTest
             _runTimeS += dt;
             _distanceM += _config.RunSpeedMps * dt;
             PlaceRunnerAndCamera(false);
+
+            if (_benchmarkSeconds > 0f && _runTimeS >= _nextBenchmarkLogS)
+            {
+                _nextBenchmarkLogS += BenchmarkLogIntervalS;
+                Debug.Log("[JungleBooze] Benchmark t=" + _runTimeS.ToString("0") + " s, z=" + _distanceM.ToString("0") + " m\n" + _overlay.LastReport);
+                if (_runTimeS >= _benchmarkSeconds)
+                {
+                    Application.Quit();
+                }
+            }
+        }
+
+        /// <summary>
+        /// "-jbBenchmark &lt;seconds&gt;" on the player command line: log the overlay every 2 s, then quit
+        /// (used to read draw calls and triangles from a development player). Returns 0 when absent or invalid.
+        /// </summary>
+        public static float ReadBenchmarkSeconds(string[] args)
+        {
+            if (args == null)
+            {
+                return 0f;
+            }
+
+            for (int i = 0; i < args.Length - 1; i++)
+            {
+                if (args[i] == "-jbBenchmark" &&
+                    float.TryParse(args[i + 1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float seconds) &&
+                    seconds > 0f)
+                {
+                    return seconds;
+                }
+            }
+
+            return 0f;
         }
 
         private void PlaceRunnerAndCamera(bool snap)
         {
-            float x = WeaveAmplitudeM * Mathf.Sin(_runTimeS * (2f * Mathf.PI / WeavePeriodS));
+            float x = LookTestCameraRig.RunnerX(_runTimeS);
             float z = (float)_distanceM;
-            _runner.localPosition = new Vector3(x, 0f, z);
+            _runner.localPosition = LookTestCameraRig.RunnerPosition(_runTimeS, z);
             _worldView.Render(_distanceM);
 
-            // The camera follows the run line (half the weave) so the runner visibly moves across the screen.
-            Vector3 target = new Vector3(x * 0.5f, _config.CameraOffsetUpM, z - _config.CameraOffsetBehindM);
+            Vector3 target = LookTestCameraRig.CameraTarget(_config, x, z);
             Transform cam = _camera.transform;
             cam.position = snap
                 ? target
                 : Vector3.SmoothDamp(cam.position, target, ref _cameraVelocity, CameraSmoothingS);
-            cam.LookAt(new Vector3(x * 0.5f, _config.CameraLookAtHeightM, z + _config.CameraLookAheadM));
+            cam.LookAt(LookTestCameraRig.LookAtPoint(_config, x, z, _camera.aspect));
+            _camera.fieldOfView = LookTestCameraRig.VerticalFov(_config, _camera.aspect);
         }
 
-        /// <summary>Capsule stand-in for Pista until the rigged model is imported; casts and receives real shadows.</summary>
-        private static Transform CreateStandIn(Transform parent)
+        /// <summary>Capsule stand-in for Pista until the rigged model is imported; casts and receives real shadows. Also used by the editor screenshot tool.</summary>
+        public static Transform CreateStandIn(Transform parent)
         {
             var root = new GameObject("Pista (stand-in)");
             root.transform.SetParent(parent, false);
             GameObject body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             body.name = "Body";
-            Object.Destroy(body.GetComponent<Collider>());
+            Collider collider = body.GetComponent<Collider>();
+            if (Application.isPlaying)
+            {
+                Destroy(collider);
+            }
+            else
+            {
+                DestroyImmediate(collider);
+            }
+
             body.transform.SetParent(root.transform, false);
             body.transform.localScale = new Vector3(0.45f, StandInHeightM * 0.5f, 0.45f);
             body.transform.localPosition = new Vector3(0f, StandInHeightM * 0.5f, 0f);
             MeshRenderer meshRenderer = body.GetComponent<MeshRenderer>();
-            meshRenderer.material.color = new Color(0.93f, 0.52f, 0.18f, 1f);
+            var material = new Material(meshRenderer.sharedMaterial) { name = "Pista stand-in" };
+            material.color = new Color(0.93f, 0.52f, 0.18f, 1f);
+            meshRenderer.sharedMaterial = material;
             meshRenderer.shadowCastingMode = ShadowCastingMode.On;
             meshRenderer.receiveShadows = true;
             return root.transform;
@@ -201,13 +255,13 @@ namespace JungleBooze.App.LookTest
             panel.AddAction(() => _paused ? "Resume" : "Pause", () => _paused = !_paused);
         }
 
-        private static void AllowLandscape()
+        private static void AllowBothOrientations()
         {
-            // [ASSUMED] landscape for the look test (blueprint recommendation). Works on device when the player
-            // settings allow landscape (JungleBooze > Look Test > Use Look Test iOS Build Settings).
+            // Landscape and portrait: the owner rotates the phone to compare (ADR 0004 Decision 8). The camera
+            // adapts its field of view and aim to the aspect every frame (LookTestCameraRig).
             Screen.autorotateToLandscapeLeft = true;
             Screen.autorotateToLandscapeRight = true;
-            Screen.autorotateToPortrait = false;
+            Screen.autorotateToPortrait = true;
             Screen.autorotateToPortraitUpsideDown = false;
             if (!Application.isEditor)
             {
