@@ -22,7 +22,7 @@ Items marked `[ASSUMED]` are defaults the team proceeds with until the owner or 
 | Item | Choice | Notes |
 |---|---|---|
 | Engine | Unity 6 LTS, stream 6000.3 | ADR 0001. Pinned in `UnityProject/ProjectSettings/ProjectVersion.txt`. Upgrade only to newer patches of the same LTS stream, in a dedicated PR. |
-| Render pipeline | URP, mobile-tuned | ADR 0001. Forward rendering, no realtime shadows except a single blob/projected shadow under characters [ASSUMED]. |
+| Render pipeline | URP, mobile-tuned | ADR 0001. First Playable: `URP-Mobile` (no realtime shadows, blob shadow). **AURELIA realistic look: `URP-Realistic` per ADR 0004** (HDR, ACES, one-cascade soft sun shadows, MSAA 4x, no lightmaps). |
 | Scripting backend | IL2CPP, ARM64 only | Required for iOS. |
 | API compatibility | .NET Standard 2.1 | Smallest surface; enough for Core. |
 | C# version | C# 9 (Unity's compiler) | No file-scoped namespaces, no records in serialized types. |
@@ -226,6 +226,11 @@ Adding any SDK: tech-architect checks license, binary size impact, `PrivacyInfo.
 
 ## 10. Performance and asset budgets
 
+> **AURELIA realistic look (2026-10-08):** the per-frame, memory and texture budgets for the realistic look are in
+> [ADR 0004](adr/0004-realistic-look-on-mobile.md), Decision 7, and replace the table below where they differ
+> (draw calls ≤ 250 main + ≤ 100 shadow, triangles ≤ 350k main + ≤ 150k shadow, resident memory ≤ 1.0 GB).
+> The recommended floor device moves to iPhone 12 (A14), provisional until the owner's on-device check (P0-E).
+
 Hard limits (project rule 6). Measured on the **floor device** (to be confirmed by the owner; recommended iPhone XR/11-class, A12/A13) in a release IL2CPP build, by performance-engineer with the benchmark scene.
 
 ### 10.1 Runtime budgets
@@ -297,5 +302,6 @@ Hard limits (project rule 6). Measured on the **floor device** (to be confirmed 
 | [0001](adr/0001-engine-and-render-pipeline.md) | Engine and render pipeline: Unity 6 LTS + URP (mobile) | Accepted |
 | [0002](adr/0002-deterministic-simulation-core.md) | Deterministic simulation core | Accepted |
 | [0003](adr/0003-first-playable-bootstrap.md) | First Playable bootstrap: settings applied by an editor script on first open | Accepted |
-| 0004 (planned) | Save format, migrations and iCloud | Week 4 |
-| 0005 (planned) | Composition root: hand-rolled vs VContainer (if needed) | When needed |
+| [0004](adr/0004-realistic-look-on-mobile.md) | Realistic look on mobile: URP settings, lighting for streamed chunks, budgets, minimum device (AURELIA Phase 0) | Accepted for Phase 0; device floor provisional |
+| 0005 (planned) | Save format, migrations and iCloud | Week 4 |
+| 0006 (planned) | Composition root: hand-rolled vs VContainer (if needed) | When needed |

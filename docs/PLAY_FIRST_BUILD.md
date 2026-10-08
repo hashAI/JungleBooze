@@ -246,6 +246,83 @@ iPhone's cable. A free Apple ID is enough for your own phone. Limits of a free A
 
 ---
 
+## Look test (AURELIA Phase 0): realistic forest, river and waterfall
+
+A 200 m realistic stretch (forest, river, cliff and waterfall) that loops forever, with Pista (still a stand-in
+capsule) running through it. It is for judging two things: does realistic look professional, and does it run smoothly
+on your iPhone. Background: `docs/adr/0004-realistic-look-on-mobile.md`.
+
+### 1. Download the free CC0 assets (once, about 70 MB)
+
+In Terminal, in the `JungleBooze` folder (Python 3 is already on your Mac):
+
+```bash
+python3 tools/assets/fetch_cc0.py --dry-run   # optional: shows the list and sizes, downloads nothing
+python3 tools/assets/fetch_cc0.py             # downloads into UnityProject/Assets/_Game/Art/CC0/
+```
+
+It prints one line per file and ends with `Total: ... MB`. It also adds each asset with its license (all CC0, free
+for commercial use) to `docs/LICENSES.md`. Running it again only downloads what is missing.
+
+### 2. Build the scene in Unity
+
+1. Open the project (or switch back to Unity): it imports the new files (a few minutes the first time).
+2. Menu **JungleBooze > Look Test > Build Scene**. It takes 1 to 3 minutes and ends with a summary dialog
+   (triangle counts and anything missing). It creates `Assets/_Game/Scenes/LookTest.unity` and opens it, and it
+   switches the graphics settings to **URP-Realistic** (HDR, sun shadows, post-processing). The portrait Run game still
+   works with these settings.
+3. If the summary lists "Missing CC0 assets", step 1 did not finish: run it again, then Build Scene again. The scene
+   still builds without them, with plain colors instead of textures.
+
+### 3. Play in the editor
+
+1. Game view: pick a **landscape** size, for example add **2532 x 1170** (iPhone 12/13 landscape), "Fixed Resolution".
+2. Press **Play**. Pista starts running immediately; the stretch loops, so the run never ends.
+3. Controls are the same as in the main game (left/right/jump/slide with arrows, WASD, mouse drags or swipes).
+   **P** pauses and resumes.
+4. Top left: the performance readout (frames per second, frame time, CPU/GPU time, draw calls, triangles, memory).
+   In the editor these numbers say little about the phone; they matter on the iPhone.
+5. Right side: buttons that switch one feature at a time (Post, Shadows, MSAA, HDR, Plants, Water, 30/60 fps, Scale,
+   Reset stats, Pause).
+6. To change the look (sun angle, fog, colors, scatter counts, camera): **JungleBooze > Look Test > Select Config**,
+   change values in the Inspector, then **Build Scene** again. Camera, speed and render scale apply on the next Play
+   without rebuilding.
+
+### 4. Build to the iPhone and measure
+
+1. Menu **JungleBooze > Look Test > Use Look Test iOS Build Settings**: puts LookTest first in the build, landscape,
+   URP-Realistic.
+2. **File > Build Profiles > iOS**: switch platform if needed. For measuring, leave **Development Build off**.
+   Click **Build** into `UnityProject/Builds/iOS` (same as "Play on your iPhone" above).
+3. In Xcode: **Product > Scheme > Edit Scheme > Run > Build Configuration: Release**. Then sign and run as in
+   "Sign and run with Xcode" above. The app opens in landscape.
+4. Measure (please send screenshots of the readout):
+   - Low Power Mode off, phone not hot, brightness about half.
+   - Let it run **10 minutes**. Screenshot the readout at 1, 5 and 10 minutes ("FPS", "CPU main", "GPU",
+     "slowest 1%", "hitches", "mem").
+   - Then tap the right-hand buttons one at a time (each resets the numbers), wait 20 seconds, screenshot. This shows
+     what each feature costs.
+   - "n/a" for draws or triangles is normal in a release build. If you want those too, build once more with
+     Development Build on and take one screenshot.
+   - Tell the team which iPhone model you used (the readout's last line shows its model code).
+5. Judge the look: does it look professional? Anything that looks fake (trees, water, ground, light)?
+
+### 5. Back to the portrait game
+
+Menu **JungleBooze > Look Test > Restore Run Build Settings** (Run first, portrait, URP-Mobile).
+
+### Look test troubleshooting
+
+- **Pink surfaces**: a shader did not compile. Open Window > General > Console, copy the first red line that mentions
+  `JungleBooze/Nature Lit`, `Water`, `Sky HDRI` or `Mist`, and send it with `Editor.log`.
+- **Gray sky**: the HDRI is not imported as a cubemap. Select `Assets/_Game/Art/CC0/HDRI/rainforest_trail/...hdr`,
+  set **Texture Shape: Cube**, Apply, then Build Scene again.
+- **Very dark or flat lighting**: the summary says whether the sky lighting bake worked. If not, try
+  Window > Rendering > Lighting > **Generate Lighting** with the LookTest scene open.
+- **"Build Scene" is missing from the menu**: the code did not compile; see "Compile errors" below.
+
+---
+
 ## Troubleshooting
 
 ### Compile errors on first open ("Enter Safe Mode?", red errors in the Console)

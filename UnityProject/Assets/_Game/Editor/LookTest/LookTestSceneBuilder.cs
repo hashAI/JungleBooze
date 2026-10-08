@@ -668,7 +668,15 @@ namespace JungleBooze.Editor.LookTest
             instance.SetParent(parent, false);
             instance.localPosition = local;
             instance.localRotation = Quaternion.Euler(0f, yawDeg, 0f);
-            instance.localScale = Vector3.one * (height / variant.Bounds.size.y);
+            // Scale to the wanted height, but never wider than 3 × that height (flat ground-cover meshes).
+            float scale = height / variant.Bounds.size.y;
+            float wide = Mathf.Max(variant.Bounds.size.x, variant.Bounds.size.z);
+            if (wide * scale > height * 3f)
+            {
+                scale = height * 3f / wide;
+            }
+
+            instance.localScale = Vector3.one * scale;
 
             Matrix4x4 pose = Matrix4x4.Translate(new Vector3(-variant.Bounds.center.x, -variant.Bounds.min.y, -variant.Bounds.center.z)) * variant.Matrix;
             Transform child = AddRenderer(instance, variant.Mesh.name, variant.Mesh, variant.Material, shadows);

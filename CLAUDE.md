@@ -21,6 +21,7 @@ defined in `.claude/agents/`. Read `docs/AGENT_PLAN.md` for the full plan.
    questions. Take the recommended option, mark it `[ASSUMED]`, and log it in `docs/STATUS.md` for later review.
    Keep going (handing off and resuming after limits as needed) until the owner can play a first version
    (definition in `docs/STATUS.md`). Installing tools in the cloud container is allowed (owner, 2026-10-08), e.g. Blender for asset cleanup; installs vanish when the container is reclaimed. The owner's Mac stays the main place to compile and play.
+   **Always confirm budgets with the owner** before spending money or API credits (state the expected cost first).
 
 ## Ground rules for every agent
 1. **The owner decides identity and taste.** Hero, companion, art style, name, icon, prices, and "is it fun" are

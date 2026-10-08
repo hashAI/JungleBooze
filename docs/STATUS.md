@@ -23,7 +23,7 @@ no paid packs. Quality bar: professional, polished in a small scope (owner wants
 
 **Phase 0 tasks:**
 - [x] P0-A art-director: realistic art direction for AURELIA (original visual language, clearly not Pandora), realistic Pista and Duko redesign briefs + prompt library. Images wait for API keys in this environment
-- [ ] P0-B tech-architect: look-test technical design (URP realistic-on-mobile settings, budgets, CC0 sourcing with licenses) + LookTest scene builder and asset fetch script
+- [x] P0-B tech-architect: look-test technical design (URP realistic-on-mobile settings, budgets, CC0 sourcing with licenses) + LookTest scene builder and asset fetch script
 - [ ] P0-C realistic Pista concept images → owner picks. **Blocked: OpenAI account out of credits.** Run `tools/art/gen_concepts.py turnaround A|B|C`, then `keyart A|B|C`
 - [ ] P0-D 3D Pista via Meshy (needs `MESHY_API_KEY`), rig + run/jump/slide animations (phone video → AI motion capture)
 - [ ] P0-E owner opens the LookTest scene on the Mac and on iPhone; judges look and smoothness
@@ -107,6 +107,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Log
 Newest first. One line per event.
+- 2026-10-08: Owner rule: always confirm budgets before spending. P0-B done (tech-architect): ADR 0004 (iPhone 12 provisional minimum, URP-Realistic), CC0 fetch tool (16 Poly Haven assets, 68.9 MB), LookTest scene builder/runtime/shaders/overlay, 2 EditMode test files; nothing compiled in Unity, shaders never compiled. Fixed a real compile error in RunAudioCues.cs (Stumble → Stumbled). ADR numbers shifted (save format now 0005). 3D Pista v1 from Meshy multi-image-to-3D (30 credits, balance 432): 28.9k tris, 4k PBR; previews rendered with Blender (bpy 4.2) in the cloud. Issues: rope still on, backpack map patch blurred, ponytail clumpy.
 - 2026-10-08: Generated 3 Pista drafts (OpenAI, medium, 1536x1024). Owner said "pick one": take B simplified. High-quality final failed: OpenAI credits exhausted again after 3 images. One Meshy image-to-image try (3 credits) ignored the edit and dropped the back view; discarded. Meshy balance 462.
 - 2026-10-08: Pista prompts reworked to the board explorer (age 16, covered torso, 3 takes). P0-C blocked: OpenAI account has no credits (HTTP 429 insufficient_quota); nothing generated or billed. Generator script saved to tools/art/gen_concepts.py. Asked owner: add OpenAI credit; Pista skin tone/face.
 - 2026-10-08: Owner allowed installing tools in the cloud container. Told both running agents.

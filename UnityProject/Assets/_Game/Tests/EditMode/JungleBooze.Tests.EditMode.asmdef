@@ -6,6 +6,7 @@
         "JungleBooze.Gameplay",
         "JungleBooze.Services",
         "JungleBooze.Editor",
+        "JungleBooze.App",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

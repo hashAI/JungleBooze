@@ -17,6 +17,7 @@ Shader "JungleBooze/Nature Lit"
         _ArmMap("AO (R) Roughness (G) Metal (B)", 2D) = "white" {}
         _OcclusionStrength("AO Strength", Range(0, 1)) = 1
         _RoughnessScale("Roughness Scale", Range(0, 2)) = 1
+        _MetallicScale("Metal Scale (ARM B)", Range(0, 1)) = 0
         _VertexAO("Vertex AO (color A)", Range(0, 1)) = 0
 
         [Header(Layers by vertex color)]
@@ -60,6 +61,7 @@ Shader "JungleBooze/Nature Lit"
             half _BumpScale;
             half _OcclusionStrength;
             half _RoughnessScale;
+            half _MetallicScale;
             half _VertexAO;
             float4 _Layer2Map_ST;
             float4 _Layer3Map_ST;
@@ -230,7 +232,7 @@ Shader "JungleBooze/Nature Lit"
 
                 SurfaceData surface = (SurfaceData)0;
                 surface.albedo = albedo * _BaseColor.rgb;
-                surface.metallic = arm.b;
+                surface.metallic = arm.b * _MetallicScale;
                 surface.specular = half3(0.0h, 0.0h, 0.0h);
                 surface.smoothness = saturate(1.0h - arm.g * _RoughnessScale);
                 surface.normalTS = normalTS;
