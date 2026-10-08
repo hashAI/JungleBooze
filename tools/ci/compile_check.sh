@@ -59,19 +59,24 @@ fetch_unity() {
     )
     local p
     for p in "${BUILTIN_SOURCE_PACKAGES[@]}"; do
-        local ext
-        for ext in cs asmdef asmref rsp dll dll.meta hlsl cginc shader; do
-            patterns+=("$bip/$p/*.$ext")
-        done
+        patterns+=("$bip/$p/*")
+    done
+    # Package content the check never reads (samples, docs, images, models, assets).
+    local excludes=()
+    local x
+    for x in '*~/*' '*.png' '*.jpg' '*.jpeg' '*.tga' '*.psd' '*.exr' '*.tif' '*.tiff' '*.hdr' '*.fbx' '*.obj' \
+        '*.asset' '*.mat' '*.unity' '*.prefab' '*.shadergraph' '*.shadersubgraph' '*.vfx' '*.md' '*.uxml' '*.uss' \
+        '*.ttf' '*.otf' '*.anim' '*.controller' '*.wav' '*.mp4' '*.cubemap' '*.renderTexture' '*.pdf'; do
+        excludes+=("--exclude=$x")
     done
     local start=$SECONDS
     if [[ -n "${JB_UNITY_TARBALL:-}" ]]; then
         log "Reading $JB_UNITY_TARBALL"
-        tar -xJf "$JB_UNITY_TARBALL" -C "$UNITY_DIR.partial" --wildcards "${patterns[@]}"
+        tar -xJf "$JB_UNITY_TARBALL" -C "$UNITY_DIR.partial" --wildcards "${excludes[@]}" "${patterns[@]}"
     else
         log "Streaming $UNITY_URL (about 4.5 GB download, nothing large is stored; takes 5-10 minutes)"
         curl -fsSL --retry 5 --retry-all-errors "$UNITY_URL" \
-            | tar -xJ -C "$UNITY_DIR.partial" --wildcards "${patterns[@]}"
+            | tar -xJ -C "$UNITY_DIR.partial" --wildcards "${excludes[@]}" "${patterns[@]}"
     fi
     log "Extracted in $((SECONDS - start)) s ($(du -sh "$UNITY_DIR.partial" | cut -f1))"
     rm -rf "$UNITY_DIR"
