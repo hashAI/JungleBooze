@@ -55,11 +55,11 @@ Duko/continue, audio files) compiled clean on the Mac.
 | producer | not used yet | (the coordinating session does this role for now) | this file | — |
 | game-designer | done (2026-10-09) | AURELIA GDD, spec 101 movement/camera (46 ACs, 61 s feel course), spec 102 chunks/routes/World Director | `design/aurelia/GDD.md`, `design/aurelia/specs/` | Phase 2 chunk catalog detail; FTUE script |
 | balance-simulator | done (A3) | Python reference model, golden traces, S1–S9 report (`archive/pre-aurelia/docs/sim-reports/2026-10-07-spec001.md`) | `tools/sim/`, `docs/sim-reports/` | Phase 1: new movement/chunk model from the AURELIA spec (old model kept as reference) |
-| tech-architect | working (2026-10-09) | LookTest built headless, CC0 fetch, screenshot renderer + look iteration, iOS Xcode build check | `Assets/_Game/Editor/Setup/`, `docs/adr/0003-first-playable-bootstrap.md`, `docs/PLAY_FIRST_BUILD.md` | Add EditMode tests for `ProjectSetupRules`; Roslyn analyzers |
+| tech-architect | done (2026-10-09) | LookTest built headless (17 CC0 assets), screenshot renderer `LookTestBatch`, iOS Xcode export + unsigned device build OK (207 MB app). Over budget: 810–930 draws, 0.7–0.8 M tris. Look = sunny park, not lush alien jungle | `Assets/_Game/Editor/Setup/`, `docs/adr/0003-first-playable-bootstrap.md`, `docs/PLAY_FIRST_BUILD.md` | Add EditMode tests for `ProjectSetupRules`; Roslyn analyzers |
 | gameplay-engineer | working (2026-10-09) | Spec 101: deterministic movement sim, gestures, FeelTest scene + camera + HUD/results, ADR input amendment, tests | `Scripts/Gameplay/PowerUps`, `Hazards`, `Companion`, `Views`, `App/RunSceneBootstrap.cs` | Wire audio events; then Batch 3 |
 | ui-engineer | done (C2) | Track wired into the Run scene with gray-box views and HUD | `Scripts/Gameplay/Views`, `Scripts/App`, `Scripts/UI/Hud` | Fix errors the owner sends from Unity |
 | art-director | done (concepts) | Hero take 1 and macaw take 1 locked; four unused recolors on disk | `archive/pre-aurelia/design/concepts/2026-10-07/` | Store art later |
-| asset-pipeline | working (2026-10-09) | Pista cleanup/export/previews, Meshy rig + animations (cap 150 credits), Unity hand-off files | `art_source/pista/`, `tools/blender/pista/` | Report → import rigged Pista into LookTest |
+| asset-pipeline | done (2026-10-09) | Pista game-ready: 19.9k tris, 27 bones, 18 clips (`Art/Characters/Pista/`). Run clip matches 5 m/s (use 1.3x or Run_Alt); hair glossy/stringy; Unity import not yet verified | `art_source/pista/`, `tools/blender/pista/` | Report → import rigged Pista into LookTest |
 | audio-director | done (files) | SFX, Duko voice (from history), Jungle/menu music, `AudioPlayback` | `Assets/_Game/Audio`, `Scripts/Services/Audio` | Wire playback into the Run scene |
 | qa-engineer | waiting | — | — | FP1 stage F: test plan + owner play-test script |
 | performance-engineer | waiting | — | — | Benchmark scene (week 2+) |
@@ -73,7 +73,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Spend log
 Meshy: 3 (image edit test) + 30 (Pista 3D v1) = **33 credits used**; balance 2,432 after the owner's upgrade.
-**From 2026-10-09: 1,000 Meshy credits pre-approved (no per-step cap); ask the owner before going past 1,000 spent since 2026-10-09.** Prefer free retries. Spent since 2026-10-09: 0. OpenAI: 3 draft images (well under $1); account out of credit.
+**From 2026-10-09: 1,000 Meshy credits pre-approved (no per-step cap); ask the owner before going past 1,000 spent since 2026-10-09.** Prefer free retries. Spent since 2026-10-09: 62 (Pista rig 5 + anims 57). Lifetime 95; balance 2,370. OpenAI: 3 draft images (well under $1); account out of credit.
 
 ## Resume watchdog
 - Routine `trig_0125FGkR542RNUbbCvMm3LWX` ("AURELIA resume watchdog") wakes session_01GJ9eWD47NbuMr3AXGv86j8 every 2 hours (minute 52 UTC). **Disabled 2026-10-08 (owner stopped the session).**
@@ -123,6 +123,7 @@ Meshy: 3 (image edit test) + 30 (Pista 3D v1) = **33 credits used**; balance 2,4
 
 ## Log
 Newest first. One line per event.
+- 2026-10-09: tech-architect done (look test builds, iOS build OK, over draw budget, look not professional yet). asset-pipeline done (Pista rigged + animated, 62 credits). Sent owner Pista sheet, run cycle and a look-test screenshot.
 - 2026-10-09: Launched gameplay-engineer on spec 101 (Phase 1 Feel).
 - 2026-10-09: game-designer done: GDD + specs 101 (movement/camera) and 102 (chunks/routes/World Director). Needs ADR 0002 amendment (new per-tick input: commands + drag distance; replay version bump).
 - 2026-10-09: Owner pre-approved 1,000 Meshy credits (no per-step cap; free retries first); beyond that, ask.
