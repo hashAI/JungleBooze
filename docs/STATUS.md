@@ -24,7 +24,7 @@ no paid packs. Quality bar: professional, polished in a small scope (owner wants
 **Phase 0 tasks:**
 - [x] P0-A art-director: realistic art direction for AURELIA (original visual language, clearly not Pandora), realistic Pista and Duko redesign briefs + prompt library. Images wait for API keys in this environment
 - [ ] P0-B tech-architect: look-test technical design (URP realistic-on-mobile settings, budgets, CC0 sourcing with licenses) + LookTest scene builder and asset fetch script
-- [ ] P0-C realistic Pista/Duko concept images (needs `OPENAI_API_KEY`) → owner picks
+- [ ] P0-C realistic Pista concept images → owner picks. **Blocked: OpenAI account out of credits.** Run `tools/art/gen_concepts.py turnaround A|B|C`, then `keyart A|B|C`
 - [ ] P0-D 3D Pista via Meshy (needs `MESHY_API_KEY`), rig + run/jump/slide animations (phone video → AI motion capture)
 - [ ] P0-E owner opens the LookTest scene on the Mac and on iPhone; judges look and smoothness
 
@@ -107,6 +107,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Log
 Newest first. One line per event.
+- 2026-10-08: Pista prompts reworked to the board explorer (age 16, covered torso, 3 takes). P0-C blocked: OpenAI account has no credits (HTTP 429 insufficient_quota); nothing generated or billed. Generator script saved to tools/art/gen_concepts.py. Asked owner: add OpenAI credit; Pista skin tone/face.
 - 2026-10-08: Owner allowed installing tools in the cloud container. Told both running agents.
 - 2026-10-08: Keys are in the environment. Art-director generating Pista concepts only (owner wants to see them before any next step). Owner dropped Duko the macaw (confirmed).
 - 2026-10-08: Owner: Pista age 16, look based on the board explorer; orientation decided on the phone; sky no preference (no moon [ASSUMED]). Sent art-director back to rework Pista prompts.

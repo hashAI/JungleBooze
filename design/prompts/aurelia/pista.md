@@ -1,6 +1,6 @@
 # Realistic Pista: concept prompts (P0-C)
 
-**Owner:** art-director | **Status:** Ready to run | **Last updated:** 2026-10-08
+**Owner:** art-director | **Status:** Ready to run; first run blocked by an empty OpenAI credit balance (2026-10-08) | **Last updated:** 2026-10-08
 
 **Owner decisions (2026-10-08):** Pista is **16**. She is redesigned after the explorer on
 `design/aurelia/vision_board.png` ("THE EXPLORER" panel and the hero of the key art), with these rules: no crop top
@@ -94,4 +94,4 @@ nothing touches the image edge.
 ## Test log
 | Date | Image | Model, size, quality | Result / retry reason |
 |---|---|---|---|
-| — | — | — | Not run yet |
+| 2026-10-08 | Turnarounds A, B, C (3 requests, parallel) | `gpt-image-2`, 2400x1200, high | **Failed, no image:** HTTP 429 `insufficient_quota` / `credit_balance_exhausted` (the OpenAI account has no credits). Not counted against the 24-generation cap; nothing was billed |
