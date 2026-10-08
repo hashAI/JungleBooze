@@ -133,6 +133,7 @@ Ask the owner before any single step over 150 credits or total Meshy spend past 
 
 ## Log
 Newest first. One line per event.
+- 2026-10-08: New session session_01GJ9eWD47NbuMr3AXGv86j8 took over (keys present). New watchdog trig_0125FGkR542RNUbbCvMm3LWX, old one deleted. Relaunched asset-pipeline: redo Blender steps 01–05 (intermediate files were lost), export pista_clean.glb, v2 previews + self-review, README; then Meshy rig + animations (cap 150 credits).
 - 2026-10-08: Usage limit stopped both agents. Compile check verified by the coordinator: all assemblies and shaders PASS. Pista textures baked; export/rig/anim pending. Handing off to a fresh session.
 - 2026-10-08: Owner confirmed Meshy was always on a paid plan: outputs owned, no attribution. Logged in LICENSES.md.
 - 2026-10-08: Owner upgraded Meshy (2,432 credits) and approved wise use. Asset-pipeline may rig + animate Pista after cleanup, cap 150 credits.
