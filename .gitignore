@@ -84,3 +84,8 @@ __pycache__/
 # OS
 .DS_Store
 Thumbs.db
+
+# ---- Art working files (intermediate; final outputs live in art_source/*/clean) ----
+art_source/**/work/
+*.blend1
+__pycache__/
