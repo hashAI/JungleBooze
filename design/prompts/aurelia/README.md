@@ -58,7 +58,7 @@ curl -sS https://api.openai.com/v1/images/edits \
 Budget: 12 images for the owner's choice + at most 1 retry per image for checklist failures = **cap 24 generations**
 for step 1–2 `[ASSUMED]`. Each retry is logged with the reason.
 
-**Output folder:** `design/concepts/2026-10-realistic/` with names `pista_real_take{A|B|C}_{turnaround|keyart}.png`,
+**Output folder:** `design/concepts/2026-10-08/` with names `pista_real_take{A|B|C}_{turnaround|keyart}.png`,
 `duko_real_take{A|B|C}_{turnaround|keyart}.png`. Large PNGs may be saved as JPEG q92 (as done on 2026-10-07).
 
 ## Review before showing the owner
