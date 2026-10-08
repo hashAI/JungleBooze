@@ -5,6 +5,7 @@ Newest first.
 
 | Date | Gate | Decision | Options considered | Decided by |
 |---|---|---|---|---|
+| 2026-10-08 | — | **Mandate: build AURELIA to completion autonomously.** Never move away from the core vision document (`design/aurelia/BLUEPRINT.md`). Use own recommendations, test constantly, resume automatically after usage limits. Always ask the owner before spending money or credits | — | Owner |
 | 2026-10-08 | — | **Always confirm budgets with the owner** before spending money or credits (OpenAI, Meshy, ElevenLabs, purchases): state the expected cost and get an OK. "Do whatever you want" covers the work, not the spend | — | Owner |
 | 2026-10-08 | G2 | Realistic Pista: take B "Rugged expedition" (`design/concepts/2026-10-08/pista_real_takeB_turnaround.jpg`), simplified for small-screen readability (drop the rope coil and bedroll, keep the map patch with the X). Look and skin tone as drafted. Owner asked the coordinator to pick | A / B / C | Owner (delegated pick) |
 | 2026-10-08 | — | Agents may install tools in the cloud container (e.g. Blender, image tools). Replaces the 2026-10-07 "don't install toolchains" rule | Allow / don't | Owner |

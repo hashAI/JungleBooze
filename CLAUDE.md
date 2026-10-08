@@ -17,11 +17,16 @@ defined in `.claude/agents/`. Read `docs/AGENT_PLAN.md` for the full plan.
    (e) sends the owner the new session's link, and stops working in the old session.
    Never hand off while an agent is running or while a question to the owner is unanswered.
 
-4. **Current mandate (owner, 2026-10-07): autonomous until the first playable version.** Don't ask the owner
-   questions. Take the recommended option, mark it `[ASSUMED]`, and log it in `docs/STATUS.md` for later review.
-   Keep going (handing off and resuming after limits as needed) until the owner can play a first version
-   (definition in `docs/STATUS.md`). Installing tools in the cloud container is allowed (owner, 2026-10-08), e.g. Blender for asset cleanup; installs vanish when the container is reclaimed. The owner's Mac stays the main place to compile and play.
-   **Always confirm budgets with the owner** before spending money or API credits (state the expected cost first).
+4. **Current mandate (owner, 2026-10-08): build AURELIA to completion, autonomously.** The core vision document
+   `design/aurelia/BLUEPRINT.md` (with `design/aurelia/vision_board.png`) is binding: never move away from it.
+   Follow the phase plan in `docs/STATUS.md`. Use your own recommendations instead of asking the owner; mark them
+   `[ASSUMED]` and log them in `docs/STATUS.md`. Test constantly yourself: compile, run tests, render previews,
+   and look at the results before calling anything done.
+   **Budgets are the exception: always ask the owner** before spending money or API credits, with the expected cost.
+   Keep going on free work while a budget answer is pending.
+   When a usage limit is hit, wait for the reset and resume automatically (resume watchdog routine, id in `docs/STATUS.md`).
+   Installing tools in the cloud container is allowed (e.g. Blender); installs vanish when the container is reclaimed.
+   The owner's Mac and iPhone are where the owner plays and judges each phase.
 
 ## Ground rules for every agent
 1. **The owner decides identity and taste.** Hero, companion, art style, name, icon, prices, and "is it fun" are
