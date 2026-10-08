@@ -107,6 +107,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Log
 Newest first. One line per event.
+- 2026-10-08: Generated 3 Pista drafts (OpenAI, medium, 1536x1024). Owner said "pick one": take B simplified. High-quality final failed: OpenAI credits exhausted again after 3 images. One Meshy image-to-image try (3 credits) ignored the edit and dropped the back view; discarded. Meshy balance 462.
 - 2026-10-08: Pista prompts reworked to the board explorer (age 16, covered torso, 3 takes). P0-C blocked: OpenAI account has no credits (HTTP 429 insufficient_quota); nothing generated or billed. Generator script saved to tools/art/gen_concepts.py. Asked owner: add OpenAI credit; Pista skin tone/face.
 - 2026-10-08: Owner allowed installing tools in the cloud container. Told both running agents.
 - 2026-10-08: Keys are in the environment. Art-director generating Pista concepts only (owner wants to see them before any next step). Owner dropped Duko the macaw (confirmed).

@@ -41,10 +41,15 @@ try:
         p = prompt('FORMAT_TURNAROUND', take)
         if extra: p = p.replace(' Avoid:', ' ' + extra + ' Avoid:')
         res = gen(p, SIZE)
+    elif kind == 'final':
+        # Clean high-quality turnaround of the picked take, using its draft as the reference
+        p = 'Use the girl from the reference image exactly: same face, hair, body and outfit. ' + prompt('FORMAT_TURNAROUND', take)
+        if extra: p = p.replace(' Avoid:', ' ' + extra + ' Avoid:')
+        res = edit(p, SIZE, os.path.join(OUT, f'pista_real_take{take}_turnaround.jpg'))
     else:
         p = prompt('FORMAT_KEYART', take)
         if extra: p = p.replace(' Avoid:', ' ' + extra + ' Avoid:')
-        ref = [f for f in sorted(os.listdir(OUT)) if f.startswith(f'pista_real_take{take}_turnaround') and not f.endswith('.txt')][0]
+        ref = [f for f in sorted(os.listdir(OUT)) if f.startswith(f'pista_real_take{take}_' + os.environ.get('REF', 'turnaround')) and not f.endswith('.txt')][0]
         res = edit(p, SIZE, os.path.join(OUT, ref))
 except urllib.error.HTTPError as e:
     print('HTTP', e.code, e.read().decode()[:800]); sys.exit(1)

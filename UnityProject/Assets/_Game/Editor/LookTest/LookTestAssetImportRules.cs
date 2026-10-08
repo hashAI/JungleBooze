@@ -43,7 +43,7 @@ namespace JungleBooze.Editor.LookTest
                 importer.generateCubemap = TextureImporterGenerateCubemap.AutoCubemap;
                 importer.wrapMode = TextureWrapMode.Clamp;
                 importer.maxTextureSize = 2048;
-                SetIos(importer, 2048, TextureImporterFormat.RGB9E5Float);
+                SetIos(importer, 2048, TextureImporterFormat.RGB9E5);
                 return;
             }
 
