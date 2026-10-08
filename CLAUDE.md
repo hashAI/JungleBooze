@@ -23,20 +23,28 @@ defined in `.claude/agents/`. Read `docs/AGENT_PLAN.md` for the full plan.
    (`.claude/agents/`); it plans, launches, verifies and commits. It may end itself and start fresh (via the Handoff
    note) whenever carrying on would cost more than a clean start.
 
-4. **Current mandate (owner, 2026-10-09): build AURELIA into a professional, fully polished iOS game, autonomously.**
-   The core vision document `design/aurelia/BLUEPRINT.md` (with `design/aurelia/vision_board.png`) is binding: never
-   move away from it. Gameplay must feel professional. Build so it passes Apple App Review with no surprises
-   (`docs/APP_STORE_CHECKLIST.md`). Follow the phase plan in `docs/STATUS.md`. Think, test, validate and improve
-   freely; use your own recommendations instead of asking the owner; mark them `[ASSUMED]` and log them in
-   `docs/STATUS.md`. Test constantly yourself: compile, run tests, render previews/screenshots, and look at the
-   results before calling anything done.
-   **Money is the exception: always ask the owner** before spending money or API credits, with the expected cost.
-   Keep going on free work while a budget answer is pending.
-   **Never lower quality to save money.** If top-notch quality can't be reached within the approved budget or with
-   free tools, ask the owner for more budget (what it buys, expected cost, why cheaper options fall short).
-   The old lane-based direction lives only in `archive/pre-aurelia/`. It must never leak back into the game.
-   **Keep the owner updated with pictures:** send renders, previews and screenshots (SendUserFile) whenever there is
-   something visual worth seeing, with a one-line caption.
+4. **Owner rules (2026-10-09). Every session and every agent follows these.**
+   - **Goal:** build AURELIA into a professional, fully polished iOS game that passes Apple App Review with no
+     surprises (`docs/APP_STORE_CHECKLIST.md`). Gameplay must feel professional.
+   - **Vision is binding:** `design/aurelia/BLUEPRINT.md` + `design/aurelia/vision_board.png`. Never move away from
+     it. The old lane-based direction lives only in `archive/pre-aurelia/` and must never leak back into the game.
+   - **Quality is top-notch, never compromised** (not for time, not for money). If something isn't at full quality,
+     it isn't done.
+   - **Autonomy:** no permission needed for work, tools, installs, Unity, or design calls. Use your own
+     recommendations instead of asking; mark them `[ASSUMED]` and log them in `docs/STATUS.md`. Follow the phase
+     plan in `docs/STATUS.md`. Think, test, validate and improve freely: compile, run tests, render
+     screenshots/previews, play it, and look at the results yourself before calling anything done.
+   - **Money needs approval.** Pre-approved: **1,000 Meshy credits** (counted from 2026-10-09, shared, no per-step
+     cap); use them wisely (free retries before new paid generations), log every spend with a running total in
+     `docs/STATUS.md`. Anything beyond that, and any other paid service (OpenAI, ElevenLabs, assets, purchases),
+     needs the owner's OK with the expected cost. If top quality can't be reached within budget or with free tools,
+     ask for more budget (what it buys, cost, why cheaper options fall short). Keep doing free work while waiting.
+   - **Never stop.** If a usage limit is hit, wait for the reset and resume automatically (in-session resume
+     watchdog; recreate it before its 7-day expiry). Pending owner answers never stop the other work.
+   - **Lean coordinator.** The coordinating session delegates most work to subagents (`.claude/agents/`) and only
+     plans, launches, verifies and commits. It hands off to a fresh session when continuing would cost more.
+   - **Show the owner.** The owner watches remotely. Send screenshots, renders, previews and gameplay videos
+     (SendUserFile) whenever there is something visual worth seeing or judging, with a one-line caption.
 
 ## Ground rules for every agent
 1. **The owner decides identity and taste.** Hero, creatures/companions, art style, name, icon, prices, and "is it fun" are
