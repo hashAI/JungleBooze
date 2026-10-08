@@ -1,6 +1,8 @@
-# JungleBooze: Jungle Adventure Runner (iOS)
+# JungleBooze: AURELIA, an endless exploration runner (iOS)
 
-A 3D endless runner for iOS built with Unity 6 LTS + C#. The game is built by a team of AI agents,
+A 3D endless exploration runner for iOS built with Unity 6 LTS + C#. The binding vision is
+`design/aurelia/BLUEPRINT.md`. Files from the earlier lane-based "Jungle Adventure Runner" vision are in
+`archive/pre-aurelia/`: history only, never build from them. The game is built by a team of AI agents,
 defined in `.claude/agents/`. Read `docs/AGENT_PLAN.md` for the full plan.
 
 ## Starting a session
@@ -36,7 +38,7 @@ defined in `.claude/agents/`. Read `docs/AGENT_PLAN.md` for the full plan.
    something visual worth seeing, with a one-line caption.
 
 ## Ground rules for every agent
-1. **The owner decides identity and taste.** Hero, companion, art style, name, icon, prices, and "is it fun" are
+1. **The owner decides identity and taste.** Hero, creatures/companions, art style, name, icon, prices, and "is it fun" are
    the owner's calls. Prepare options, but never decide these yourself. Check `design/DECISIONS.md` first.
    Subagents never ask the owner directly: end your report with an **Open questions for owner** section
    (each with 2–4 options and a recommendation). The coordinating session asks the owner and logs the answer.
@@ -63,5 +65,5 @@ defined in `.claude/agents/`. Read `docs/AGENT_PLAN.md` for the full plan.
 ## Conventions
 - C#: `PascalCase` types/methods, `_camelCase` private fields, one type per file, namespaces `JungleBooze.<Layer>`.
 - Assemblies: `JungleBooze.Core`, `.Gameplay`, `.UI`, `.Services`, `.App` (composition root), `.Editor`, `.Tests.EditMode`, `.Tests.PlayMode`.
-- Commits: imperative mood, reference the issue (`Add lane switching (#12)`).
+- Commits: imperative mood, reference the issue (`Add route split chunks (#12)`).
 - Docs: decisions → `design/DECISIONS.md`; technical decisions → `docs/adr/NNNN-title.md`.

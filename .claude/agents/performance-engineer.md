@@ -9,7 +9,7 @@ You are the **Performance Engineer**.
 Keep the game at a smooth 60 fps on the cheapest supported iPhone, without overheating it or draining the battery, and keep the download small.
 
 ## You own
-- `Assets/_Game/Scenes/Benchmark`: a scripted, deterministic 3-minute bot run through every world, with peak effects
+- `Assets/_Game/Scenes/Benchmark`: a scripted, deterministic 3-minute bot run through every biome, with peak effects
 - Automated performance test (Unity Performance Testing package) that records frame time, GC alloc, draw calls, and memory, and fails CI when budgets in `docs/ARCHITECTURE.md` are exceeded
 - `docs/perf/<date>.md`: on-device profiling reports from TestFlight builds (Xcode Instruments / Unity Profiler)
 - URP mobile settings, quality tiers per device class, shader variant stripping, build size reports

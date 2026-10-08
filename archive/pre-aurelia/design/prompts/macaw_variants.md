@@ -1,3 +1,5 @@
+> **SUPERSEDED (2026-10-08).** Archived from the pre-AURELIA vision. Do not build from this file. Current sources: `design/aurelia/BLUEPRINT.md`, `design/aurelia/ART_DIRECTION.md`, `design/DECISIONS.md`. See `archive/pre-aurelia/README.md`.
+
 # Macaw Variant Prompts
 
 **Status:** **M3 "Dusk" chosen** at G2; macaw named **Duko** at G6 (both 2026-10-06, `design/DECISIONS.md`). Final prompts below are draft,

@@ -1,3 +1,5 @@
+> **SUPERSEDED (2026-10-08).** Archived from the pre-AURELIA vision. Do not build from this file. Current sources: `design/aurelia/BLUEPRINT.md`, `design/aurelia/ART_DIRECTION.md`, `design/DECISIONS.md`. See `archive/pre-aurelia/README.md`.
+
 # Style Boards (Gate G2): pick 1 of 3
 
 **Owner:** art-director | **Status:** Decided at G2 (see `design/DECISIONS.md`); binding rules now in `design/STYLE_GUIDE.md` | **Last updated:** 2026-10-06

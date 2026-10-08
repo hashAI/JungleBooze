@@ -1,3 +1,5 @@
+> **SUPERSEDED (2026-10-08).** Archived from the pre-AURELIA vision. Do not build from this file. Current sources: `design/aurelia/BLUEPRINT.md`, `design/aurelia/ART_DIRECTION.md`, `design/DECISIONS.md`. See `archive/pre-aurelia/README.md`.
+
 # Game Design Document: JungleBooze (working title)
 
 **Owner:** game-designer | **Status:** Fourth draft (after G0, G1, G2 and G6 name decisions, the quality-over-schedule rule, and alignment with the binding `design/STYLE_GUIDE.md`) | **Last updated:** 2026-10-06

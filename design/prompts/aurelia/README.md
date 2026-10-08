@@ -9,7 +9,7 @@ The older stylized library (`design/prompts/*.md`, Inkbound Pulp) is archived; d
 | File | Contents | Task |
 |---|---|---|
 | `pista.md` | Locked realistic SUBJECT block (16, board-explorer look), 3 takes × (turnaround + key art), 3D input views after the pick | P0-C |
-| `duko.md` | Locked realistic SUBJECT block, 3 takes × (turnaround + key art), 3D input views (rig pose) after the pick | P0-C |
+| ~~`duko.md`~~ | Archived to `archive/pre-aurelia/design/prompts/duko_realistic.md`: Duko was dropped by the owner (2026-10-08) | — |
 | `meshy.md` | Meshy image-to-3D / multi-image-to-3D / rigging request bodies for Pista, Duko and look-test props, plus cleanup steps | P0-D, look-test props |
 | `environment.md` | Concept images for Meshy props (stiltwood, rootstone, bellcap, sailback, whirlseed, bramble) and 2D cards (matte range, forest wall, veilmoss, reeds) | Look test |
 

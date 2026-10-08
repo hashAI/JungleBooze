@@ -1,4 +1,4 @@
-"""Builds docs/sim-reports/2026-10-07-spec001.md from tools/sim/out/*.json."""
+"""Builds archive/pre-aurelia/docs/sim-reports/2026-10-07-spec001.md from tools/sim/out/*.json."""
 
 import json
 import os

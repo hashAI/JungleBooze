@@ -1,3 +1,5 @@
+> **SUPERSEDED (2026-10-08).** Archived from the pre-AURELIA vision. Do not build from this file. Current sources: `design/aurelia/BLUEPRINT.md`, `design/aurelia/ART_DIRECTION.md`, `design/DECISIONS.md`. See `archive/pre-aurelia/README.md`.
+
 # Style Board Prompts
 
 **Status:** Draft, untested. Style C chosen at G2 (2026-10-06); A and B are archive. | See `design/STYLE_BOARDS.md` for the boards and `README.md` for settings.

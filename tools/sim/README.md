@@ -1,5 +1,7 @@
 # tools/sim: spec 001 reference model, bots and golden traces
 
+> **Pre-AURELIA.** This model follows the archived lane-based spec 001 (`archive/pre-aurelia/docs/specs/001-player-movement.md`). It stays as a reference for the deterministic-tick approach; the balance-simulator builds a new model from the AURELIA movement spec in Phase 1.
+
 Owner: balance-simulator. Python 3 standard library only (nothing to install).
 
 | File | What it is |

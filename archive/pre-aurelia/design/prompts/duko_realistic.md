@@ -1,3 +1,5 @@
+> **SUPERSEDED (2026-10-08).** Archived from the pre-AURELIA vision. Do not build from this file. Current sources: `design/aurelia/BLUEPRINT.md`, `design/aurelia/ART_DIRECTION.md`, `design/DECISIONS.md`. See `archive/pre-aurelia/README.md`.
+
 # Realistic Duko: concept prompts (P0-C)
 
 **Owner:** art-director | **Status:** Ready to run, untested | **Last updated:** 2026-10-08

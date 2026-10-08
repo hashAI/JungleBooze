@@ -3,7 +3,7 @@ using UnityEngine;
 namespace JungleBooze.Gameplay.Views
 {
     /// <summary>
-    /// Colors from design/STYLE_GUIDE.md section 2 (sRGB hex; Unity converts to linear when set on a material).
+    /// Colors from archive/pre-aurelia/design/STYLE_GUIDE.md section 2 (pre-AURELIA FP1 palette) (sRGB hex; Unity converts to linear when set on a material).
     /// Gray-box and HUD code takes every color from here, never from inline literals.
     /// </summary>
     public static class StylePalette

@@ -13,7 +13,7 @@ are owned by the user with commercial rights. Confirm which plan the owner's key
 ship, and record plan + license in `docs/LICENSES.md` per asset.
 
 ## Common rules
-- Inputs are the 3D input views from `pista.md` / `duko.md` / `environment.md`: plain gray background, flat light,
+- Inputs are the 3D input views from `pista.md` / `environment.md`: plain gray background, flat light,
   the whole subject inside the frame. Upload as base64 data URIs or public URLs.
 - Always `enable_pbr: true` (base color, metallic, roughness, normal). Generate at `texture_resolution: "4k"` and bake
   down to the target size in Blender, which gives cleaner mips than a 2k generation.
@@ -62,6 +62,7 @@ Meshy rigs humanoids only. Use its skeleton if it maps cleanly to Unity Humanoid
 Animation source: phone-video AI motion capture retargeted to this rig (ART_DIRECTION 7.5).
 
 ## A-02 Duko (multi-image-to-3D, wings spread)
+**Retired:** Duko was dropped by the owner (2026-10-08). Kept only as an API example; do not run.
 ```json
 POST /openapi/v1/multi-image-to-3d
 {

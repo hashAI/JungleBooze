@@ -1,11 +1,13 @@
 # Realistic Art Direction: AURELIA direction with Pista and Duko
 
+> **Update 2026-10-08:** the owner dropped Duko the macaw (`design/DECISIONS.md`). Ignore section 8 and every Duko mention below; companions come later as discoverable creatures (blueprint Part XIII) with their own original concepts. The violet and orange route-cue colors stay.
+
 **Owner:** art-director | **Status:** Draft for Phase 0 (look test). Items marked `[ASSUMED]` are art-director defaults
 waiting for owner review | **Last updated:** 2026-10-08
 
 **Inputs:** `design/aurelia/BLUEPRINT.md` (Parts I–II, VII, XIII, XXXVII–XL), `design/aurelia/vision_board.png` (target
 mood), `design/DECISIONS.md` (2026-10-08: realistic, AI tools + CC0, no paid packs; keep Pista, Duko and the game name).
-**Supersedes:** `design/STYLE_GUIDE.md` (Inkbound Pulp) for everything visual. The old guide stays as the archive for
+**Supersedes:** `archive/pre-aurelia/design/STYLE_GUIDE.md` (Inkbound Pulp) for everything visual. The old guide stays as the archive for
 shape language and readability rules, which this document carries over where they still apply (section 9).
 
 **Target hardware (owner update, 2026-10-08):** full quality on an **iPhone 12/13-class device (A14/A15)**. The
@@ -201,7 +203,7 @@ Rules:
 
 **Owner decision (2026-10-08):** Pista keeps her name but is redesigned after the explorer on the vision board
 ("THE EXPLORER" panel and the hero of the key art), aged **16**. The stylized map-cloth design
-(`design/concepts/2026-10-07/hero_take1_turnaround.png`) is retired. At most a small nod to it survives as an
+(`archive/pre-aurelia/design/concepts/2026-10-07/hero_take1_turnaround.png`) is retired. At most a small nod to it survives as an
 optional detail in one concept take.
 
 ### 7.1 Identity (what every take keeps)
@@ -254,7 +256,7 @@ retargeting needs little scaling.
 ### 8.1 Identity (locked)
 An original, invented macaw species: **deep violet body and wings** `#5B3A8C`, **sunset-orange head and chest**
 `#F28C28`, cream bare face patch `#F5EBDD`, dark gray beak `#3A3540`, **teal tail tip** `#2EC4B6`, long tail, sleek
-medium build. Reference: `design/concepts/2026-10-07/macaw_take1_turnaround.png`.
+medium build. Reference: `archive/pre-aurelia/design/concepts/2026-10-07/macaw_take1_turnaround.png`.
 
 ### 8.2 Realistic translation
 - Real macaw anatomy: ~85 cm from beak to tail tip, ~1.0–1.1 m wingspan (about 3/4 of Pista's height), strong

@@ -30,4 +30,4 @@ Ship a polished iOS game on schedule. The App Store should accept it and players
 - A risk to the ship date larger than 3 days
 - A compliance blocker
 - Spending money or creating accounts
-- Any change to the core hook (vine swinging)
+- Any move away from the core vision (`design/aurelia/BLUEPRINT.md`)

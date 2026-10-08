@@ -1,6 +1,11 @@
 # Agent Studio Plan: building a professional iOS game with AI agents
 
-This is the plan for building **Jungle Adventure Runner** (working title) with a team of
+> **Update 2026-10-08: the game is now AURELIA** (`design/aurelia/BLUEPRINT.md`, binding). The agent roles,
+> pipeline and quality rules below still apply. The schedule is replaced by the phase plan in `docs/STATUS.md`
+> (Phase 0 look test → feel → vertical slice → MVP → retention test → launch, owner check after each phase); the
+> week numbers and lane/vine/companion content in sections 8–9 are historical. Old design files: `archive/pre-aurelia/`.
+
+This is the plan for building **AURELIA** (game name and repo: JungleBooze) with a team of
 AI agents. The agents handle planning, building, testing, checking, and
 simulating. You handle **taste and identity**: who the hero is, what the world looks
 and sounds like, and whether the game feels good in your hands. You also own the
@@ -71,9 +76,9 @@ The earlier plan was Android first. For iOS first, these change:
 | 2 | **game-designer** | Turns your vision into exact mechanics and numbers | `docs/GDD.md`, feature specs, tuning ScriptableObjects |
 | 3 | **balance-simulator** | Proves the design works with simulations before players see it | Bot-run reports, economy model, difficulty curves |
 | 4 | **tech-architect** | Sets structure, conventions, and budgets. Approves big technical choices | `docs/ARCHITECTURE.md`, ADRs, asmdefs, CI layout |
-| 5 | **gameplay-engineer** | Builds runner, lanes, vine swing, obstacles, power-ups, companion | C# in `Assets/_Game/Scripts/Gameplay` + tests |
+| 5 | **gameplay-engineer** | Builds movement, routes and chunks, traversal (swim, vine), obstacles, creatures, discovery | C# in `Assets/_Game/Scripts/Gameplay` + tests |
 | 6 | **ui-engineer** | Builds HUD, menus, shop, settings, onboarding, safe areas, accessibility | UI Toolkit/uGUI screens + tests |
-| 7 | **art-director** | Owns the style guide and prompt library. Prepares options for you. Rejects off-style assets | `design/STYLE_GUIDE.md`, mood boards, review notes |
+| 7 | **art-director** | Owns the style guide and prompt library. Prepares options for you. Rejects off-style assets | `design/aurelia/ART_DIRECTION.md`, prompt library, review notes |
 | 8 | **asset-pipeline** | Generates 3D, rig, animation, and texture assets, cleans them in Blender, and imports them within budget | Blender scripts, import presets, asset validator |
 | 9 | **audio-director** | Creates SFX and music, mixes them, and tracks licenses | `Assets/_Game/Audio`, `docs/LICENSES.md` |
 | 10 | **qa-engineer** | Writes test plans and automated tests, triages bugs, and makes the release/no-release call | Test suites, bug reports, release QA sign-off |
@@ -89,7 +94,7 @@ The store listing (screenshots, preview video, and ASO text) is shared by art-di
 
 ## 4. How work flows: one feature, start to finish
 
-Every feature, for example "vine swinging", goes through the same pipeline:
+Every feature, for example "route choice", goes through the same pipeline:
 
 ```
 1. producer      → creates issue, links GDD section, assigns
@@ -120,7 +125,7 @@ Agents can't feel the game, but they can measure it at scale:
 
 1. **Deterministic core.** The gameplay is driven by a seed and a fixed timestep. The same seed and the same inputs always give the same run, so bugs can be reproduced exactly.
 2. **Bot player.** `BotInputProvider` uses the same input interface as touch. It has skill levels (reaction time, error rate) that act like a new, average, or expert player.
-3. **Headless batch runs.** Unity runs in batch mode, does 1,000+ runs per skill level, and records the data: run length, cause of death, coins, near-misses, vine swing success.
+3. **Headless batch runs.** Unity runs in batch mode, does 1,000+ runs per skill level, and records the data: run length, cause of death, coins, near-misses, route choices, traversal success.
 4. **Reports.** balance-simulator turns the data into pass/fail checks against design targets, for example:
    - New player median first run is 25–45 seconds
    - No obstacle pattern that is impossible even with perfect reactions (checked by solver)
@@ -206,8 +211,9 @@ Apple review usually takes 1–3 days. Plan for one possible rejection-and-resub
 ```
 .claude/agents/          agent definitions (this plan)
 CLAUDE.md                rules every agent follows
-design/                  DECISIONS.md, STYLE_GUIDE.md, concept art refs
-docs/                    AGENT_PLAN.md, GDD.md, ARCHITECTURE.md, ROADMAP.md, adr/, APP_STORE_CHECKLIST.md
+design/                  DECISIONS.md, aurelia/ (BLUEPRINT, ART_DIRECTION, LOOK_TEST_BRIEF), prompts/aurelia/, concepts/
+docs/                    AGENT_PLAN.md, STATUS.md, GDD.md (AURELIA, Phase 1), ARCHITECTURE.md, adr/, APP_STORE_CHECKLIST.md
+archive/pre-aurelia/     superseded design files from the earlier vision (history only)
 UnityProject/
   Assets/_Game/{Scripts/{Core,Gameplay,UI,Services},Art,Audio,Prefabs,Scenes,Config}
   Assets/_Game/Tests/{EditMode,PlayMode}

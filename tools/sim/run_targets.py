@@ -3,7 +3,7 @@
 Usage (from tools/sim):
     python3 -I run_targets.py s1 [--n 10000] [--workers 4]   # long: oracle over 360k segments
     python3 -I run_targets.py s2 | s3 | bots | whatif | s8 | s9
-    python3 -I run_targets.py report                          # writes docs/sim-reports/2026-10-07-spec001.md
+    python3 -I run_targets.py report                          # writes archive/pre-aurelia/docs/sim-reports/2026-10-07-spec001.md
     python3 -I run_targets.py all                             # everything, then report
 
 Results are cached as JSON in tools/sim/out/ so the report can be rebuilt without rerunning.
@@ -31,7 +31,7 @@ from bots import OracleSolver, SkillBot, PROFILES, run_commands, make_runner  # 
 
 OUT = os.path.join(HERE, "out")
 REPO = os.path.abspath(os.path.join(HERE, "..", ".."))
-REPORT = os.path.join(REPO, "docs", "sim-reports", "2026-10-07-spec001.md")
+REPORT = os.path.join(REPO, "archive", "pre-aurelia", "docs", "sim-reports", "2026-10-07-spec001.md")
 
 
 def _save(name, data):

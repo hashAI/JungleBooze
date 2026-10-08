@@ -11,8 +11,8 @@ You are the **Balance & Simulation** agent. You "play" the game thousands of tim
 - `docs/sim-reports/<date>-<topic>.md`
 
 ## Methods
-1. **Bot playthroughs:** run seeded runs at 3 skill levels (new / average / expert), defined by reaction time and error rate. Record run length, cause of death, coins, power-up use, and vine success.
-2. **Fairness fuzzing:** generate 100k track segments and check that each one is solvable with perfect inputs (solver within the reachability rules). Flag overlaps, unreachable coins, and impossible combinations.
+1. **Bot playthroughs:** run seeded runs at 3 skill levels (new / average / expert), defined by reaction time and error rate. Record run length, cause of death, coins, power-up use, route choices taken, and traversal (vine, swim) success.
+2. **Fairness fuzzing:** generate 100k chunk sequences and check that each one is solvable with perfect inputs (solver within the reachability rules). Flag overlaps, unreachable coins, and impossible combinations.
 3. **Difficulty curve:** speed and obstacle density over time. Look for sudden difficulty spikes and boring flat stretches.
 4. **Economy model:** coins earned per session vs. prices. Measure time-to-first-unlock and time-to-all-unlocks, with and without rewarded ads or IAP.
 

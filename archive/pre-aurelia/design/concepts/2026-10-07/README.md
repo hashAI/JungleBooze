@@ -1,3 +1,5 @@
+> **SUPERSEDED (2026-10-08).** Archived from the pre-AURELIA vision. Do not build from this file. Current sources: `design/aurelia/BLUEPRINT.md`, `design/aurelia/ART_DIRECTION.md`, `design/DECISIONS.md`. See `archive/pre-aurelia/README.md`.
+
 # Concept images, 2026-10-07: Pista (H2 "Mapcloth") and Duko (M3 "Dusk")
 
 **Owner:** art-director | **Purpose:** pick one hero take and one macaw take as the input for the image-to-3D test

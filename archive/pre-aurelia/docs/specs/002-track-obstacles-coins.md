@@ -1,3 +1,5 @@
+> **SUPERSEDED (2026-10-08).** Archived from the pre-AURELIA vision. Do not build from this file. Current sources: `design/aurelia/BLUEPRINT.md`, `design/aurelia/ART_DIRECTION.md`, `design/DECISIONS.md`. See `archive/pre-aurelia/README.md`.
+
 # Spec 002: Track, obstacles and coins
 
 **Owner:** game-designer | **Builder:** gameplay-engineer (simulation), gameplay/ui-engineer (views, HUD, Game Over) |
