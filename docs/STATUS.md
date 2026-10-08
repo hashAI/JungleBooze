@@ -22,7 +22,7 @@ no paid packs. Quality bar: professional, polished in a small scope (owner wants
 | 5 Launch | Store, compliance, performance | Ship | ~1 mo |
 
 **Phase 0 tasks:**
-- [ ] P0-A art-director: realistic art direction for AURELIA (original visual language, clearly not Pandora), realistic Pista and Duko redesign briefs + prompt library. Images wait for API keys in this environment
+- [x] P0-A art-director: realistic art direction for AURELIA (original visual language, clearly not Pandora), realistic Pista and Duko redesign briefs + prompt library. Images wait for API keys in this environment
 - [ ] P0-B tech-architect: look-test technical design (URP realistic-on-mobile settings, budgets, CC0 sourcing with licenses) + LookTest scene builder and asset fetch script
 - [ ] P0-C realistic Pista/Duko concept images (needs `OPENAI_API_KEY`) → owner picks
 - [ ] P0-D 3D Pista via Meshy (needs `MESHY_API_KEY`), rig + run/jump/slide animations (phone video → AI motion capture)
@@ -107,6 +107,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Log
 Newest first. One line per event.
+- 2026-10-08: P0-A done (art-director): ART_DIRECTION, LOOK_TEST_BRIEF, prompt library (Pista/Duko 3 takes each, Meshy, environment). No images (no keys). Budgets above ARCHITECTURE.md passed to P0-B. Note: Meshy Free-plan output is CC BY 4.0; check the owner's plan before shipping assets. Owner asked: Pista age, cheek dots, orientation, sky.
 - 2026-10-08: Owner: minimum device can rise to iPhone 12/13 for a polished look. Passed to both running agents.
 - 2026-10-08: **Owner: go.** AURELIA with Pista/Duko, realistic, AI-made art, phased plan. Launched P0-A art-director and P0-B tech-architect.
 - 2026-10-08: Owner: keep Pista, Duko and the game name for now; no plans locked, no paid assets, prefers AI + realistic look. Owner is still thinking about direction.
