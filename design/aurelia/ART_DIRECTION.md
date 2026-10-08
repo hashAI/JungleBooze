@@ -16,7 +16,7 @@ for the A13. Section 11 lists exactly where the A13 would force a cut, so the ow
 minimum device with that list in hand.
 
 Related files: `design/aurelia/LOOK_TEST_BRIEF.md` (Phase 0 scene contents and budgets), `design/prompts/aurelia/`
-(prompt library).
+(prompt library), `design/aurelia/ENVIRONMENT_STRATEGY.md` (environment plan for look test v2).
 
 ---
 
