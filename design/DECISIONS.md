@@ -5,6 +5,7 @@ Newest first.
 
 | Date | Gate | Decision | Options considered | Decided by |
 |---|---|---|---|---|
+| 2026-10-08 | G1/G2 | Pista and Duko are retired. AURELIA gets a new explorer hero and discoverable creature companions, as on the vision board | Replace / Pista as explorer / keep both | Owner |
 | 2026-10-08 | G1/G2 | **New direction: AURELIA.** The game becomes the endless exploration runner in `design/aurelia/BLUEPRINT.md`, with `design/aurelia/vision_board.png` as the target look and feel. Goal is a polished game, not a toy prototype. Still open: art fidelity, what happens to Pista/Duko, paid-asset budget | Merge AURELIA systems into Pista & Duko / full AURELIA direction / keep current plan | Owner |
 | 2026-10-07 | G2 | Macaw for 3D: original take 1 "Classic sleek" (`design/concepts/2026-10-07/macaw_take1_turnaround.png`), including the violet body and orange head. Recolor sheets (`macaw_take1_color1`–`color4`) are unused | Original take 1 / four recolors | Owner |
 | 2026-10-07 | G2 | Hero concept for 3D: take 1 "Classic" (`design/concepts/2026-10-07/hero_take1_turnaround.png`). Macaw: take 1 shape, but the owner rejected the violet/orange colors; recolor options requested | Takes 1–3 / mixes | Owner |
