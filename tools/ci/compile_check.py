@@ -102,9 +102,12 @@ PLAYER_DEFINES = ["ENABLE_IL2CPP"]
 # .asmdef platform name -> PluginImporter platform name in .dll.meta files.
 PLUGIN_PLATFORM_NAMES = {"iOS": "iOS", "macOSStandalone": "OSXUniversal"}
 
-# Assembly names the editor resolves to another assembly (the uGUI package's runtime assembly is still
-# referenced by its pre-2019.2 name "Unity.ugui", e.g. by the Input System package).
-REFERENCE_ALIASES = {"Unity.ugui": "UnityEngine.UI"}
+# uGUI is a core package in Unity 6.3: package assemblies use its assemblies without listing them (for example
+# Unity.RenderPipelines.Core.Runtime uses UnityEngine.UI, and the Input System lists only the name "Unity.ugui",
+# which no assembly has, yet its editor code uses UnityEditor.UI). The check gives every package assembly these
+# references. Project assemblies get only what their .asmdef lists (stricter than, or equal to, the editor).
+IMPLICIT_PACKAGE_REFERENCES = ["UnityEngine.UI", "UnityEditor.UI"]
+IMPLICIT_REFERENCE_SOURCE = "com.unity.ugui"
 
 # name -> (is_editor, target platform)
 CONFIGS = {
@@ -190,6 +193,10 @@ def fetch_registry_package(name, version, cache):
         out = Path(tmp) / "out"
         with tarfile.open(tgz) as tar:
             tar.extractall(out, filter="data")
+        # Folders Unity never compiles (Samples~, Documentation~, Burst's .Runtime~ compilers, ...) are dropped.
+        for d in sorted((out / "package").rglob("*"), key=lambda x: len(x.parts), reverse=True):
+            if d.is_dir() and ignored_dir(d.name):
+                shutil.rmtree(d)
         if target.exists():
             shutil.rmtree(target)
         shutil.move(str(out / "package"), str(target))
@@ -330,11 +337,11 @@ def read_plugin_meta(dll):
         constraints = [c.strip()[1:].strip() for c in m.group(1).splitlines() if c.strip().startswith("-")]
     entries = {}
     # platformData entries:  - first:\n      <Group>: <Platform>\n    second:\n      enabled: 0|1\n      settings: ...
-    for pm in re.finditer(r"-\s*first:\s*\n\s*([^:\n]+):\s*([^\n]*)\n\s*second:\s*\n\s*enabled:\s*(\d)"
+    for pm in re.finditer(r"-\s*first:\s*\n\s*([^:\n]*):\s*([^\n]*)\n\s*second:\s*\n\s*enabled:\s*(\d)"
                           r"((?:\n\s{6,}.*)*)", text):
         group, platform, on, settings = pm.group(1).strip(), pm.group(2).strip(), pm.group(3) == "1", pm.group(4)
         entries[(group, platform)] = (on, settings)
-    any_entry = entries.get(("Any", ""))
+    any_entry = entries.get(("Any", "")) or entries.get(("", "Any"))
     if not entries or (any_entry and any_entry[0]):
         excluded = set(re.findall(r"Exclude ([^:]+):\s*1", any_entry[1])) if any_entry else set()
         return explicit, "Editor" not in excluded, None, excluded, analyzer, constraints
@@ -360,6 +367,7 @@ class Planner:
     def __init__(self, args):
         self.project = Path(args.project).resolve()
         self.unity = Path(args.unity).resolve()
+        self.ios_support = Path(args.ios_support).resolve() / "Editor/Data/PlaybackEngines/iOSSupport"
         self.cache = Path(args.cache).resolve()
         self.unity_version = args.unity_version
         self.data = self.unity / "Editor/Data"
@@ -439,10 +447,14 @@ class Planner:
             return current in include
         return current not in exclude
 
-    def resolve_ref(self, ref):
-        if ref.startswith("GUID:"):
-            return self.guid_map.get(ref[5:])
-        return REFERENCE_ALIASES.get(ref, ref)
+    def resolve_refs(self, asm):
+        """The assembly names an asmdef references (GUID references resolved, implicit uGUI references added)."""
+        names = []
+        for ref in asm.get("references", []):
+            names.append(self.guid_map.get(ref[5:], ref) if ref.startswith("GUID:") else ref)
+        if not asm.is_project and asm.package != IMPLICIT_REFERENCE_SOURCE and not asm.get("noEngineReferences", False):
+            names += [n for n in IMPLICIT_PACKAGE_REFERENCES if n not in names]
+        return names
 
     def plan(self, config):
         is_editor, platform = CONFIGS[config]
@@ -470,12 +482,11 @@ class Planner:
                 return
             if n in stack:
                 raise RuntimeError("reference cycle: %s" % " -> ".join(stack + [n]))
-            for r in self.assemblies[n].get("references", []):
-                rn = self.resolve_ref(r)
+            for rn in self.resolve_refs(self.assemblies[n]):
                 if rn in active:
                     visit(rn, stack + [n])
                 else:
-                    missing.setdefault(n, []).append(rn or r)
+                    missing.setdefault(n, []).append(rn)
             needed.add(n)
             order.append(n)
 
@@ -517,26 +528,34 @@ class Planner:
             refs += sorted((ns / "EditorExtensions").glob("*.dll"))
         return refs
 
-    def engine_refs(self, is_editor):
-        managed = self.data / "Managed" / "UnityEngine"
+    def engine_refs(self, is_editor, platform):
+        """UnityEngine/UnityEditor module assemblies. Modules of disabled built-in packages are left out."""
         builtin = self.unity / "Editor/Data/Resources/PackageManager/BuiltInPackages"
         disabled = set()
         for d in builtin.glob("com.unity.modules.*"):
-            mod = d.name[len("com.unity.modules."):]
             if d.name not in self.packages:
-                disabled.add(mod.lower() + "module")
+                disabled.add(d.name[len("com.unity.modules."):].lower() + "module")
+        if is_editor:
+            managed = self.data / "Managed" / "UnityEngine"
+        elif platform == "iOS":
+            # The iOS player's own UnityEngine assemblies: editor-only engine API is not in them.
+            managed = self.ios_support / "Variations/il2cpp/Managed"
+        else:
+            raise RuntimeError("no player reference assemblies for %s" % platform)
         refs = []
         for dll in sorted(managed.glob("*.dll")):
             n = dll.stem
-            if n.startswith("Unity.Cecil"):
-                continue
-            if n.startswith("UnityEditor") and not is_editor:
+            if not n.startswith("UnityEngine") and not (is_editor and n.startswith("UnityEditor")):
                 continue
             if n.startswith("UnityEngine.") and n[len("UnityEngine."):].lower() in disabled:
                 continue
             refs.append(dll)
         if is_editor:
             refs.append(self.data / "Managed" / "UnityEditor.Graphs.dll")
+            if platform == "iOS":
+                refs += [self.ios_support / n for n in (
+                    "UnityEditor.iOS.Extensions.dll", "UnityEditor.iOS.Extensions.Common.dll",
+                    "UnityEditor.iOS.Extensions.Xcode.dll", "UnityEditor.Apple.Extensions.Common.dll")]
         return refs
 
     def source_generators(self):
@@ -566,7 +585,7 @@ def run_config(planner, config, out_root, jobs):
     env = dict(os.environ, DOTNET_SYSTEM_GLOBALIZATION_INVARIANT="1", DOTNET_CLI_TELEMETRY_OPTOUT="1",
                DOTNET_NOLOGO="1")
     framework = planner.framework_refs(is_editor)
-    engine = planner.engine_refs(is_editor)
+    engine = planner.engine_refs(is_editor, platform)
     generators = planner.source_generators()
 
     results = {}
@@ -581,11 +600,10 @@ def run_config(planner, config, out_root, jobs):
             refs += engine
         pre, _ = planner.precompiled_for(asm, is_editor, platform, defines)
         refs += pre
-        for r in asm.get("references", []):
-            rn = planner.resolve_ref(r)
+        for rn in planner.resolve_refs(asm):
             if rn in done:
                 if done[rn] is None:
-                    return name, "skipped", ["dependency %s failed" % rn], []
+                    return name, "skipped", [], []
                 refs.append(done[rn])
         out = out_dir / (name + ".dll")
         opts = list(BASE_OPTIONS)
@@ -636,8 +654,7 @@ def run_config(planner, config, out_root, jobs):
     with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as pool:
         while remaining:
             ready = [n for n in remaining if all(
-                planner.resolve_ref(r) in done or planner.resolve_ref(r) not in remaining
-                for r in planner.assemblies[n].get("references", []))]
+                rn in done or rn not in remaining for rn in planner.resolve_refs(planner.assemblies[n]))]
             if not ready:
                 raise RuntimeError("cannot order assemblies: %s" % remaining)
             for name, status, errs, warns in pool.map(build, ready):
@@ -646,9 +663,12 @@ def run_config(planner, config, out_root, jobs):
                 results[name] = status
                 asm = planner.assemblies[name]
                 tag = "project" if asm.is_project else "package"
-                log("  %-8s %-7s %s%s" % (status, tag, name,
-                                          "" if not (errs or warns) else "  (%d errors, %d warnings)" % (
-                                              len(errs), len(warns))))
+                detail = ""
+                if status == "skipped":
+                    detail = "  (not compiled: a referenced assembly failed)"
+                elif errs or warns:
+                    detail = "  (%d errors, %d warnings)" % (len(errs), len(warns))
+                log("  %-8s %-7s %s%s" % (status, tag, name, detail))
                 if asm.is_project or status == "failed":
                     errors += errs
                     if asm.is_project:
@@ -660,6 +680,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--project", required=True)
     ap.add_argument("--unity", required=True)
+    ap.add_argument("--ios-support", default="")
     ap.add_argument("--cache", required=True)
     ap.add_argument("--unity-version", required=True)
     ap.add_argument("--fetch-only", action="store_true")
@@ -699,6 +720,12 @@ def main():
             log("  " + e)
         for w in warnings:
             log("  " + w)
+        if os.environ.get("GITHUB_ACTIONS") == "true":
+            for e in errors:
+                m = re.match(r"^(.*?)\((\d+),(\d+)\): error (\w+): (.*)$", e)
+                if m:
+                    log("::error file=%s,line=%s,col=%s::[%s] %s %s" % (m.group(1), m.group(2), m.group(3), config,
+                                                                         m.group(4), m.group(5)))
         bad = [n for n, s in results.items() if s not in ("ok", "cached")]
         ok = not bad and not errors
         failed |= not ok

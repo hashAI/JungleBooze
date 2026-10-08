@@ -3,8 +3,8 @@
 Meshy's atlas is hundreds of tiny charts with poor packing (bleeds in mips/ASTC), and Blender's Smart UV Project
 fragments the noisy remesh into ~4k islands (17% coverage), so we use xatlas (pip package `xatlas`, MIT license;
 a build-time tool, nothing ships). The face gets 1.5x texel density: its triangles are handed to xatlas as a
-separate sub-mesh scaled 1.5x. Both objects are packed into one 0-1 space at 2048 with 4 px padding (2 px at 1024;
-bake margins fill the gutters). Step 6 re-bakes every map from the Meshy surface, so the old UVs can go.
+separate sub-mesh scaled 1.5x. xatlas also packs both objects into one sheet (5 px padding), which is scaled uniformly into
+0-1 (bake margins fill the gutters). Step 6 re-bakes every map from the Meshy surface, so the old UVs can go.
 
 Input:  work/pista_04_budget.blend
 Output: work/pista_05_uv.blend
@@ -23,7 +23,8 @@ import common as C  # noqa: E402
 
 FACE_DENSITY = 1.5
 RESOLUTION = 2048
-PADDING_PX = 4
+PADDING_PX = 5          # at the xatlas sheet size (~2150); ~4.8 px at 2048, ~2.4 px at 1024
+XATLAS_TPU = 900
 UV = 'UVMap'
 
 
@@ -64,15 +65,16 @@ for o, polys, scale in parts:
 co_opt = xatlas.ChartOptions()
 co_opt.max_iterations = 4
 pk = xatlas.PackOptions()
-pk.resolution = RESOLUTION
+# One unconstrained near-square sheet, then uniform scale into 0-1. Tested 2026-10-08: a fixed 2048 page spills
+# a second page even at 800 texels/m, and brute-force packing gives tall sheets (~736 px/m effective).
+pk.resolution = 0
+pk.texels_per_unit = XATLAS_TPU
 pk.padding = PADDING_PX
 pk.bilinear = True
-pk.bruteForce = True
+pk.bruteForce = False
 pk.rotate_charts = True
 atlas.generate(co_opt, pk)
 print(f'xatlas charts: {atlas.chart_count}, sheet {atlas.width}x{atlas.height}, utilization {atlas.utilization}')
-# xatlas charts are good but its packer overflows into non-square sheets; keep the charts (uniform scale, so
-# texel density stays even) and let Blender's concave packer fill the square below.
 for m, (o, polys, scale) in enumerate(parts):
     vmap, tri, uvs = atlas[m]
     uvd = o.data.uv_layers[UV].data
@@ -82,18 +84,6 @@ for m, (o, polys, scale) in enumerate(parts):
             assert vmap[tri[t][k]] == p.vertices[k]
             uvd[li].uv = (uvs[tri[t][k]][0] * atlas.width / max(atlas.width, atlas.height),
                            uvs[tri[t][k]][1] * atlas.height / max(atlas.width, atlas.height))
-
-# Pack both objects together into the 0-1 square (PADDING_PX at RESOLUTION).
-for o in bpy.context.view_layer.objects:
-    o.select_set(o in objs)
-bpy.context.view_layer.objects.active = objs[0]
-bpy.ops.object.mode_set(mode='EDIT')
-bpy.ops.mesh.select_all(action='SELECT')
-bpy.ops.uv.select_all(action='SELECT')
-bpy.ops.uv.pack_islands(udim_source='CLOSEST_UDIM', rotate=True, rotate_method='ANY', scale=True,
-                        merge_overlap=False, margin_method='FRACTION', margin=PADDING_PX / RESOLUTION,
-                        shape_method='CONCAVE')
-bpy.ops.object.mode_set(mode='OBJECT')
 
 total_area = 0.0
 for o in objs:

@@ -6,6 +6,29 @@ Decisions themselves live in `design/DECISIONS.md`; the plan lives in `docs/AGEN
 
 _Last updated: 2026-10-08 (AURELIA Phase 0: look test)_
 
+## Handoff (2026-10-08 ~19:45 UTC, from session_01TcBSvUMXMZHaqtqzyUhrPH)
+**Just finished:** cloud compile check works (`tools/ci/compile_check.sh`, ADR 0005, `docs/ci/COMPILE_CHECK.md`):
+all 8 project assemblies PASS in editor-ios, editor-osx and player-ios with warnings as errors, and the 4 look-test
+shaders compile (DXC, 84 stage compiles). First run downloads ~5.3 GB into `$JB_CI_CACHE` (use the scratchpad).
+**Interrupted by a usage limit (both agents died mid-task, work committed):**
+1. asset-pipeline, Pista cleanup in Blender. Done: steps 01 prepare (1.65 m), 02 remove rope, 03 ponytail, 04 budget,
+   05 UV, 06 bake → `art_source/pista/clean/textures/` (2k + 1k BaseColor/Normal/ARM), plus `paint_map_patch.py`,
+   `composite.py`. NOT done: final `pista_clean.glb`/FBX export, v2 preview renders + face/backpack close-ups and
+   self-review against ART_DIRECTION checklist A/B/E, `art_source/pista/README.md`. Then (approved, cap 150 Meshy
+   credits): Meshy rigging (1.65 m) + animations idle/run/jump/fall/land/slide (+ vine grab/swing if available);
+   log each call's credits; render run-cycle frames and review. Relaunch asset-pipeline with these essentials.
+   Blender: `uv venv -p 3.11 <scratch>/bpyenv && uv pip install -p <scratch>/bpyenv/bin/python bpy==4.2.0`.
+2. tech-architect compile check: functionally done (see above); it was writing docs. Review ADR 0005 and the
+   ARCHITECTURE/LICENSES edits for completeness; nothing else to relaunch.
+**Next after that (Phase 0):** import rigged Pista into the LookTest scene (replace the capsule); AI-made environment
+props from `design/aurelia/LOOK_TEST_BRIEF.md` via Meshy (stiltwood tree, rootstone pieces, bellcap, whirlseed,
+sailback; ask the owner before any step >150 credits); render look-test screenshots (if possible) and send them to
+the owner; then the owner opens it on Mac + iPhone (P0-E).
+**Pending owner items:** none blocking. OpenAI account is out of credit (only needed for new concept images).
+**Owner rules to keep:** blueprint is binding; own recommendations; test constantly; ask before spending
+(Meshy: ask before >150 credits per step or >1,000 total; others: ask each time); send pictures often; hand off when
+context is large. New session must check `OPENAI_API_KEY`, `MESHY_API_KEY`, `ELEVENLABS_API_KEY` are present.
+
 ## Current milestone
 **AURELIA, Phase 0: look test** (owner go, 2026-10-08). Source of truth for the direction: `design/aurelia/BLUEPRINT.md` and
 `design/aurelia/vision_board.png`. Pista, Duko and the game name stay. Look: **realistic**, AI-made art plus free CC0 assets,
@@ -110,6 +133,7 @@ Ask the owner before any single step over 150 credits or total Meshy spend past 
 
 ## Log
 Newest first. One line per event.
+- 2026-10-08: Usage limit stopped both agents. Compile check verified by the coordinator: all assemblies and shaders PASS. Pista textures baked; export/rig/anim pending. Handing off to a fresh session.
 - 2026-10-08: Owner confirmed Meshy was always on a paid plan: outputs owned, no attribution. Logged in LICENSES.md.
 - 2026-10-08: Owner upgraded Meshy (2,432 credits) and approved wise use. Asset-pipeline may rig + animate Pista after cleanup, cap 150 credits.
 - 2026-10-08: **Owner mandate: build AURELIA to completion autonomously, never move away from the blueprint, test constantly, auto-resume after limits, always ask before spending.** New watchdog trig_016rQLbb82z8R9q8csbCuZjN (every 2 h). Launching asset-pipeline (Pista Blender cleanup, free) and tech-architect (cloud compile check with Unity 6000.3.25f1 DLLs). Budget asks pending: Meshy rigging (~5–10 credits), animations (Meshy ~20–30 credits vs free phone mocap).

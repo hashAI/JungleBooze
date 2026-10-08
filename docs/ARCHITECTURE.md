@@ -274,6 +274,7 @@ Hard limits (project rule 6). Measured on the **floor device** (to be confirmed 
 - **EditMode** (`JungleBooze.Tests.EditMode`): all Core and simulation logic, config validation, save migrations, determinism (same seed → same sequence; jittery vs smooth frame pacing → identical result; record → replay → identical result).
 - **PlayMode** (`JungleBooze.Tests.PlayMode`): scene wiring, frame loop, pools, allocation checks, performance measurements (Unity Performance Testing package).
 - **Headless simulation** (Week 1+): batch-mode entry point in `JungleBooze.Editor` runs N seeded bot runs and writes JSON reports for balance-simulator.
+- **Cloud compile check (no license):** `tools/ci/compile_check.sh` compiles every assembly with the real Unity 6000.3.25f1 assemblies and compiler (editor iOS, editor macOS, iOS player) and our shaders with DXC against URP's ShaderLibrary. Run it before handing over any C# or shader change. ADR 0005, `docs/ci/COMPILE_CHECK.md`.
 - **CI:** `.github/workflows/test.yml` runs EditMode and PlayMode tests on every PR via GameCI on Linux. Needs secrets `UNITY_LICENSE`, `UNITY_EMAIL`, `UNITY_PASSWORD`. PRs from forks do not get secrets and will fail the secrets check by design. The iOS build workflow (macOS runner) is owned by release-engineer.
 
 ---

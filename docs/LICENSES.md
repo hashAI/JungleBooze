@@ -22,3 +22,14 @@ the owner with commercial rights per Meshy's terms. No attribution required.
 | Asset | Source | Date | License |
 |---|---|---|---|
 | Pista 3D v1 (`art_source/pista/meshy/pista.glb`) | Meshy multi-image-to-3D from our own concept (take B) | 2026-10-08 | Owned by owner (Meshy paid plan) |
+
+## Build and CI tools (not shipped in the app)
+
+Used by `tools/ci/compile_check.sh` (ADR 0005). Downloaded into a local cache at check time; never committed and
+never redistributed.
+
+| Tool | Source | License | Used for | Added |
+|---|---|---|---|---|
+| Unity 6000.3.25f1 Linux editor and iOS Build Support (managed assemblies, bundled .NET runtime and Roslyn compiler, built-in package sources) | download.unity3d.com | Unity Terms of Service (same editor version the project already uses) | compiling our C# against the real Unity API | 2026-10-08 |
+| Unity registry packages at the `packages-lock.json` versions | packages.unity.com | Unity Companion License / package licenses (already project dependencies) | compiling package assemblies our code references | 2026-10-08 |
+| DXC 1.9 (DirectX Shader Compiler) from the LunarG Vulkan SDK 1.4.363.0 | sdk.lunarg.com | University of Illinois/NCSA Open Source License (LLVM); SDK components are open source | compiling our HLSL shaders against URP's ShaderLibrary | 2026-10-08 |
