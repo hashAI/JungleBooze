@@ -17,7 +17,7 @@ MESHY_GLB = os.path.join(ART, 'meshy', 'pista.glb')
 MESHY_HIGH = os.path.join(ART, 'meshy', 'pista_pre_remeshed.glb')
 
 HEIGHT_M = 1.65          # ART_DIRECTION 7.4
-TRI_BUDGET = 25000       # design/prompts/aurelia/meshy.md, A-01 cleanup step 2
+TRI_BUDGET = 20000       # hero, realistic look: ADR 0004 has no tri number, ARCHITECTURE 10.2 (15k) is the stylized plan; [ASSUMED] 20k
 
 BODY = 'SK_Pista_Body'
 PONYTAIL = 'SK_Pista_Ponytail'
@@ -49,7 +49,9 @@ def tri_count(obj):
 
 
 def set_active(obj):
+    bpy.context.view_layer.update()
     for o in bpy.context.view_layer.objects:
-        o.select_set(False)
+        if o is not None:
+            o.select_set(False)
     obj.select_set(True)
     bpy.context.view_layer.objects.active = obj

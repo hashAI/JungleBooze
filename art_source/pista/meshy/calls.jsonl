@@ -1,0 +1,6 @@
+{"event": "created", "endpoint": "rigging", "task": "01a11d3f-f3a4-7369-9470-67c27273c6dc", "height_m": 1.65, "model": "pista_upload_meshy.glb", "balance_before": 2432, "time": "2026-10-09T02:11:36"}
+{"event": "finished", "endpoint": "rigging", "task": "01a11d3f-f3a4-7369-9470-67c27273c6dc", "status": "SUCCEEDED", "consumed_credits": 5, "error": null, "balance_after": 2427, "time": "2026-10-09T02:11:48"}
+{"event": "created", "endpoint": "animations", "task": "01a11d40-f7da-738c-9942-c9c7c92af726", "rig": "01a11d3f-f3a4-7369-9470-67c27273c6dc", "action_ids": [246, 0, 539, 509, 538, 16, 467, 466, 503, 508], "balance_before": 2427, "time": "2026-10-09T02:12:39"}
+{"event": "created", "endpoint": "animations", "task": "01a11d40-f7d0-72fb-b861-1f2a3b180a5c", "rig": "01a11d3f-f3a4-7369-9470-67c27273c6dc", "action_ids": [517, 9, 10, 416, 190, 184, 485, 477, 495], "balance_before": 2427, "time": "2026-10-09T02:12:39"}
+{"event": "finished", "endpoint": "animations", "task": "01a11d40-f7d0-72fb-b861-1f2a3b180a5c", "status": "SUCCEEDED", "consumed_credits": 27, "error": null, "balance_after": 2370, "time": "2026-10-09T02:13:23"}
+{"event": "finished", "endpoint": "animations", "task": "01a11d40-f7da-738c-9942-c9c7c92af726", "status": "SUCCEEDED", "consumed_credits": 30, "error": null, "balance_after": 2370, "time": "2026-10-09T02:13:44"}

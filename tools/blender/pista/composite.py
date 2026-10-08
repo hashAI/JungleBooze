@@ -13,6 +13,7 @@ from scipy import ndimage
 ALBEDO_FLOOR = 30 / 255      # ART_DIRECTION 10.2: darkest natural albedo 30-50 sRGB
 ALBEDO_TOE = 48 / 255        # values below this are lifted smoothly toward the floor
 ALBEDO_CEIL = 240 / 255
+SKIN_NORMAL_FLATTEN = 0.85
 
 
 def srgb_encode(x):
@@ -130,7 +131,8 @@ def run(base, base_m, rmap, rmap_m, nrm, nrm_m, zones1, zones2, ao, out_dir, log
     med = float(np.median(r0[valid]))
     var = np.clip(r0 - med, -0.15, 0.15) * 0.5
     rough = r0.copy()
-    for mask, target in ((skin, 0.52), (hair, 0.48), (leather, 0.62)):
+    # skin 0.58 / hair 0.68 (review 2026-10-09: 0.52 / 0.48 read as wet plastic under studio and sun light)
+    for mask, target in ((skin, 0.58), (hair, 0.68), (leather, 0.62)):
         f = soft(mask, R / 2048)
         rough = rough * (1 - f) + (target + var) * f
     rough = np.clip(rough, 0.30, 0.97)
@@ -155,6 +157,11 @@ def run(base, base_m, rmap, rmap_m, nrm, nrm_m, zones1, zones2, ao, out_dir, log
     # --- normals ------------------------------------------------------------------------------------------
     nn = nn / np.maximum(np.linalg.norm(nn, axis=-1, keepdims=True), 1e-6)
     nn[~valid] = (0, 0, 1)
+    # Skin: the bake picks up thin crack-like lines on the face/neck (review 2026-10-09; gone with the normal
+    # map off). Fade skin normals 85% toward flat; pore detail is below what the game camera resolves anyway.
+    fs = soft(skin, R / 2048)[..., None] * SKIN_NORMAL_FLATTEN
+    nn = nn * (1 - fs) + np.array([0, 0, 1.0], np.float32) * fs
+    nn = nn / np.maximum(np.linalg.norm(nn, axis=-1, keepdims=True), 1e-6)
 
     # --- write (Blender rows are bottom-up; images are top-down) ------------------------------------------
     maps = {

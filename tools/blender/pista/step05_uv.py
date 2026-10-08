@@ -23,7 +23,7 @@ import common as C  # noqa: E402
 
 FACE_DENSITY = 1.5
 RESOLUTION = 2048
-PADDING_PX = 5          # at the xatlas sheet size (~2150); ~4.8 px at 2048, ~2.4 px at 1024
+PADDING_PX = 4          # at the xatlas sheet size (~2060); ~4 px at 2048 (game size), ~2 px at 1024
 XATLAS_TPU = 900
 UV = 'UVMap'
 
@@ -46,6 +46,11 @@ for o in objs:
     me.uv_layers.new(name=UV)
     for p in me.polygons:
         p.use_smooth = True
+    # Decimation interpolates the glTF custom split normals badly (faceted highlights on the face, review
+    # 2026-10-09). Drop them: the target shades with plain smooth normals and the bake carries the detail.
+    if me.has_custom_normals:
+        C.set_active(o)
+        bpy.ops.mesh.customdata_custom_splitnormals_clear()
     if 'sharp_face' in me.attributes:
         me.attributes.remove(me.attributes['sharp_face'])
     if o.name == C.BODY:
@@ -64,6 +69,10 @@ for o, polys, scale in parts:
     atlas.add_mesh(co, idx)
 co_opt = xatlas.ChartOptions()
 co_opt.max_iterations = 4
+# Tested 2026-10-09: chart count stays ~1600 for any weights (noisy remesh); max_cost 32 + padding 4 lifts
+# coverage 0.42 -> 0.465.
+co_opt.max_cost = 32
+co_opt.normal_seam_weight = 4
 pk = xatlas.PackOptions()
 # One unconstrained near-square sheet, then uniform scale into 0-1. Tested 2026-10-08: a fixed 2048 page spills
 # a second page even at 800 texels/m, and brute-force packing gives tall sheets (~736 px/m effective).

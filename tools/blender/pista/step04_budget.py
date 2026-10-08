@@ -1,4 +1,4 @@
-"""Step 4: bring Pista under the 25k triangle budget (meshy.md A-01) with collapse decimation.
+"""Step 4: bring Pista under the 20k triangle budget (common.TRI_BUDGET) with collapse decimation.
 
 The face (eyes, nose, mouth, ears) and the hands keep their triangles: they are listed in a vertex group and the
 decimate modifier is told to leave them alone. Textures are re-baked in step 5 from the untouched Meshy mesh, so
@@ -15,8 +15,8 @@ import bpy
 sys.path.insert(0, os.path.dirname(__file__))
 import common as C  # noqa: E402
 
-BODY_TARGET = 20800
-PONYTAIL_TARGET = 3200
+BODY_TARGET = 17300
+PONYTAIL_TARGET = 2600
 
 
 def protect_group(obj):

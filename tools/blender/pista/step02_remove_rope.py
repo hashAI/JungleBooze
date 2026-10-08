@@ -118,7 +118,47 @@ new_faces = filled['faces']
 tri = bmesh.ops.triangulate(bm, faces=new_faces)
 print(f'filled {len(new_faces)} holes')
 rest = [e for e in bm.edges if e.is_boundary and in_box((e.verts[0].co + e.verts[1].co) / 2)]
-print('boundary edges left in box:', len(rest))
+print('boundary edges left after holes_fill:', len(rest))
+
+# holes_fill skips some long, non-planar loops (a 48-edge slit under the belt showed as a dark crack in the
+# 2026-10-09 review). Fan-fill every remaining closed loop around its centroid (centroid pushed slightly outward
+# so the patch follows the trouser curve). The bake textures the patch from the mirrored leg (rope mask).
+rest_set = set(rest)
+fans = 0
+while rest_set:
+    e0 = rest_set.pop()
+    loop = [e0.verts[0], e0.verts[1]]
+    used = {e0}
+    closed = False
+    while True:
+        nxt = [e for e in loop[-1].link_edges if e in rest_set and e not in used]
+        if not nxt:
+            break
+        e = nxt[0]; used.add(e); rest_set.discard(e)
+        v = e.other_vert(loop[-1])
+        if v is loop[0]:
+            closed = True
+            break
+        loop.append(v)
+    if not closed or len(loop) < 3:
+        continue
+    c = sum((v.co for v in loop), Vector()) / len(loop)
+    n = sum((f.normal for v in loop for f in v.link_faces), Vector()).normalized()
+    r = sum(((v.co - c).length for v in loop)) / len(loop)
+    centre = bm.verts.new(c + n * r * 0.15)
+    new = []
+    for i in range(len(loop)):
+        try:
+            new.append(bm.faces.new((loop[i], loop[(i + 1) % len(loop)], centre)))
+        except ValueError:
+            pass
+    for f in new:
+        f.normal_update()
+    if sum((f.normal for f in new), Vector()).dot(n) < 0:
+        bmesh.ops.reverse_faces(bm, faces=new)
+    fans += 1
+rest = [e for e in bm.edges if e.is_boundary and in_box((e.verts[0].co + e.verts[1].co) / 2)]
+print(f'fan-filled {fans} loops; boundary edges left in box: {len(rest)} (open strips at the box edge are fine)')
 
 bm.to_mesh(obj.data)
 bm.free()
