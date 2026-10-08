@@ -5,7 +5,7 @@ Newest first.
 
 | Date | Gate | Decision | Options considered | Decided by |
 |---|---|---|---|---|
-| 2026-10-08 | G1 | Drop Duko the macaw (owner: "we can drop piko", read as Duko; to confirm). No Duko concepts generated. Companions follow the blueprint (discoverable creatures) later | Keep / drop | Owner |
+| 2026-10-08 | G1 | Drop Duko the macaw (owner confirmed). No Duko concepts generated. Companions follow the blueprint (discoverable creatures) later | Keep / drop | Owner |
 | 2026-10-08 | G2 | Realistic Pista is redesigned after the explorer on the vision board (ponytail, outdoor-adventure outfit, harness, backpack), keeping the name Pista; she is **16**. Torso stays covered (no crop top). Cheek dots dropped. Duko unchanged | Age 10–11 / 12 / 13–14 / 16; keep old look / board look | Owner |
 | 2026-10-08 | G2 | Orientation: build the look test in both landscape and portrait; owner decides on the phone. Sky: no preference, so no moon, Earth-like sky [ASSUMED] | Landscape / portrait / both | Owner |
 | 2026-10-08 | G0 | Minimum device may rise to iPhone 12 or 13 if a polished realistic look needs it. Quality first; no settling low. 60 fps stays the target on the chosen minimum. Revises the iPhone 11 decision (2026-10-06) | iPhone 11 / 12 / 13 | Owner |
