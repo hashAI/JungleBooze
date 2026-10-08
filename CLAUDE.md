@@ -9,13 +9,18 @@ defined in `.claude/agents/`. Read `docs/AGENT_PLAN.md` for the full plan.
 2. The coordinating session updates `docs/STATUS.md` (agent table + log line) every time it launches an agent,
    receives an agent's report, or records an owner decision, and commits it with that work.
 
-3. **Automatic handoff (owner-approved).** When the coordinating session's conversation is about 40% full (owner's threshold;
-   the session estimates this, since it has no exact gauge), and no agents are running, it: (a) updates `docs/STATUS.md` with a "Handoff" note (what was just finished, what to launch next),
-   (b) commits and pushes, (c) starts a new cloud session on the same repo and branch with the prompt
+3. **Automatic handoff (owner-approved, revised 2026-10-08).** Goal: the best use of tokens without ever lowering game
+   quality. When the coordinating session's context has grown large (about 40% full; the session estimates this, it
+   has no exact gauge), it hands off to a fresh session:
+   (a) Prefer handing off right after running agents report. A new session runs in a new container, so files from an
+   agent still running are lost unless committed; if the context is getting too full to wait, commit the agents' work
+   in progress and list each interrupted task (with its prompt essentials) in the Handoff note so it is relaunched.
+   (b) Update `docs/STATUS.md` with a "Handoff" note (just finished, in progress, what to launch next, pending owner
+   answers), (c) commit and push, (d) start a new cloud session on the same repo and branch with the prompt
    "Continue the project: read docs/STATUS.md and design/DECISIONS.md, then carry on from the Handoff note",
-   (d) creates a new resume watchdog routine bound to the new session and deletes the old one (id in `docs/STATUS.md`),
-   (e) sends the owner the new session's link, and stops working in the old session.
-   Never hand off while an agent is running or while a question to the owner is unanswered.
+   (e) create a new resume watchdog bound to the new session and delete the old one (id in `docs/STATUS.md`),
+   (f) send the owner the new session's link, and stop working in the old session.
+   A pending owner question doesn't block the handoff; it moves into the Handoff note and the new session asks it.
 
 4. **Current mandate (owner, 2026-10-08): build AURELIA to completion, autonomously.** The core vision document
    `design/aurelia/BLUEPRINT.md` (with `design/aurelia/vision_board.png`) is binding: never move away from it.
