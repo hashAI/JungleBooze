@@ -73,7 +73,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Spend log
 Meshy: 3 (image edit test) + 30 (Pista 3D v1) = **33 credits used**; balance 2,432 after the owner's upgrade.
-Ask the owner before any single step over 150 credits or total Meshy spend past 1,000. OpenAI: 3 draft images (well under $1); account out of credit.
+**From 2026-10-09: 1,000 Meshy credits pre-approved (no per-step cap); ask the owner before going past 1,000 spent since 2026-10-09.** Prefer free retries. Spent since 2026-10-09: 0. OpenAI: 3 draft images (well under $1); account out of credit.
 
 ## Resume watchdog
 - Routine `trig_0125FGkR542RNUbbCvMm3LWX` ("AURELIA resume watchdog") wakes session_01GJ9eWD47NbuMr3AXGv86j8 every 2 hours (minute 52 UTC). **Disabled 2026-10-08 (owner stopped the session).**
@@ -122,6 +122,7 @@ Ask the owner before any single step over 150 credits or total Meshy spend past 
 
 ## Log
 Newest first. One line per event.
+- 2026-10-09: Owner pre-approved 1,000 Meshy credits (no per-step cap; free retries first); beyond that, ask.
 - 2026-10-09: Launched game-designer (GDD, specs 101/102), asset-pipeline (Pista finish + Meshy rig/anim, cap 150), tech-architect (look test build, screenshots, iOS build check). Local session resume watchdog: in-session hourly cron at :17 (expires after 7 days).
 - 2026-10-09: **Moved to local development on the owner's Mac.** Owner mandate: professional, fully polished, App Store-safe AURELIA; autonomy except money; lean coordinator relying on subagents. Archived the old lane-based code/tests/audio/Run scene/tools/sim to `archive/pre-aurelia/`; look test decoupled (stand-in runner). Compile clean, EditMode 57/57.
 - 2026-10-08: **Owner: stop the session.** Stopped asset-pipeline before it wrote anything (it was installing Blender); Pista task still to do exactly as in the Handoff note. Resume watchdog trig_0125FGkR542RNUbbCvMm3LWX disabled (not deleted); re-enable it when the owner restarts work.
