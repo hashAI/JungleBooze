@@ -37,7 +37,7 @@ no paid packs. Quality bar: professional, polished in a small scope (owner wants
 - [x] P0-A art-director: realistic art direction for AURELIA (original visual language, clearly not Pandora), realistic Pista and Duko redesign briefs + prompt library. Images wait for API keys in this environment
 - [x] P0-B tech-architect: look-test technical design (URP realistic-on-mobile settings, budgets, CC0 sourcing with licenses) + LookTest scene builder and asset fetch script
 - [ ] P0-C realistic Pista concept images → owner picks. **Blocked: OpenAI account out of credits.** Run `tools/art/gen_concepts.py turnaround A|B|C`, then `keyart A|B|C`
-- [ ] P0-D 3D Pista via Meshy (needs `MESHY_API_KEY`), rig + run/jump/slide animations (phone video → AI motion capture)
+- [x] P0-D 3D Pista via Meshy (needs `MESHY_API_KEY`), rig + run/jump/slide animations (phone video → AI motion capture)
 - [ ] P0-E owner opens the LookTest scene on the Mac and on iPhone; judges look and smoothness
 
 **Blocked:** API keys are not in this cloud environment (the old `~/.config/junglebooze/secrets.env` was on another machine).
@@ -56,14 +56,14 @@ Duko/continue, audio files) compiled clean on the Mac.
 | game-designer | done (2026-10-09) | AURELIA GDD, spec 101 movement/camera (46 ACs, 61 s feel course), spec 102 chunks/routes/World Director | `design/aurelia/GDD.md`, `design/aurelia/specs/` | Phase 2 chunk catalog detail; FTUE script |
 | balance-simulator | done (A3) | Python reference model, golden traces, S1–S9 report (`archive/pre-aurelia/docs/sim-reports/2026-10-07-spec001.md`) | `tools/sim/`, `docs/sim-reports/` | Phase 1: new movement/chunk model from the AURELIA spec (old model kept as reference) |
 | tech-architect | working (2026-10-09) | Look test v2 steps 2–3: S-curved graybox layout + shot frames + budget skeleton; light/atmosphere to Checkpoint A | `Assets/_Game/Editor/Setup/`, `docs/adr/0003-first-playable-bootstrap.md`, `docs/PLAY_FIRST_BUILD.md` | Add EditMode tests for `ProjectSetupRules`; Roslyn analyzers |
-| gameplay-engineer | working (2026-10-09) | Spec 101: deterministic movement sim, gestures, FeelTest scene + camera + HUD/results, ADR input amendment, tests | `Scripts/Gameplay/PowerUps`, `Hazards`, `Companion`, `Views`, `App/RunSceneBootstrap.cs` | Wire audio events; then Batch 3 |
+| gameplay-engineer | working (2026-10-09) | Phase 1 done (dcc0721: EditMode 206/206, PlayMode 5/5, bot 0 hits). Now: real Pista + Animator in FeelTest, edge feedback, haptics hooks, sensitivity, portrait+landscape, gameplay video capture | `Scripts/Gameplay/PowerUps`, `Hazards`, `Companion`, `Views`, `App/RunSceneBootstrap.cs` | Wire audio events; then Batch 3 |
 | ui-engineer | done (C2) | Track wired into the Run scene with gray-box views and HUD | `Scripts/Gameplay/Views`, `Scripts/App`, `Scripts/UI/Hud` | Fix errors the owner sends from Unity |
-| art-director | done (2026-10-09) | Environment strategy: composition/light are the main gap; buy generic understory + impostor tool, make signature art in-house (Meshy, Blender, gpt-image); approval list ~$175 | `design/aurelia/ENVIRONMENT_STRATEGY.md` | Store art later |
+| art-director | working (2026-10-09) | Meshy keyframes F1–F5 for look test v2 (cap 100 credits) → design/aurelia/keyframes/ | `design/aurelia/ENVIRONMENT_STRATEGY.md` | Store art later |
 | asset-pipeline | done (2026-10-09) | Pista game-ready: 19.9k tris, 27 bones, 18 clips (`Art/Characters/Pista/`). Run clip matches 5 m/s (use 1.3x or Run_Alt); hair glossy/stringy; Unity import not yet verified | `art_source/pista/`, `tools/blender/pista/` | Report → import rigged Pista into LookTest |
 | audio-director | done (files) | SFX, Duko voice (from history), Jungle/menu music, `AudioPlayback` | `Assets/_Game/Audio`, `Scripts/Services/Audio` | Wire playback into the Run scene |
 | qa-engineer | waiting | — | — | FP1 stage F: test plan + owner play-test script |
 | performance-engineer | waiting | — | — | Benchmark scene (week 2+) |
-| code-reviewer | stopped by owner (token cost) | FP0 compile review was stopped before reporting; nothing written | — | Rerun after the owner's review, if the owner wants it |
+| code-reviewer | working (2026-10-09) | Review of Phase 1 Feel (dcc0721) → docs/reviews/2026-10-09-phase1-feel.md | — | Rerun after the owner's review, if the owner wants it |
 | monetization-engineer | waiting | — | — | Week 4–5 |
 | appstore-compliance | done (2026-10-09) | AURELIA design review: no blocker; 16 ranked risks. High: name "AURELIA" alone is crowded (Kingdom of Aurelia, adult VN Aurelia); Unity `submitAnalytics` must be off for "Data Not Collected"; bundle id/product name still lane-era | `docs/compliance/2026-10-aurelia-design-review.md`, `docs/APP_STORE_CHECKLIST.md` | Privacy manifest when SDKs are chosen; follow-ups: "report an ad" option, Declared Age Range API, CI check for the word "booze" |
 | release-engineer | paused (owner: build the game first) | Partial: build script, fastlane lanes, one-command build, setup guide (stopped mid-verification) | `fastlane/`, `tools/build/`, `docs/RELEASE.md`, `.github/workflows/build-ios.yml` | Resume later: finish and verify the Fastfile lanes |
@@ -124,6 +124,7 @@ Meshy: 3 (image edit test) + 30 (Pista 3D v1) = **33 credits used**; balance 2,4
 
 ## Log
 Newest first. One line per event.
+- 2026-10-09: Phase 1 Feel implemented and verified in Unity (dcc0721). Launched gameplay-engineer (real Pista + video), code-reviewer (Phase 1), art-director (Meshy keyframes, cap 100).
 - 2026-10-09: Environment strategy revised to Meshy + CC0 + in-house: shopping list 831 credits (reserve 107); possible extra ask up to 600 credits only if a checkpoint shows a layer below the bar (near foliage most at risk). Launching keyframes (item 1, ~75 credits).
 - 2026-10-09: Owner: no purchases for environment (Meshy + CC0 + in-house only); store name "Aurelia: <coined word>"; bundle id later. gameplay-engineer finished spec 101 code (113 logic tests pass outside Unity, bot clears course) but blocked from Unity by LookTest compile break; told tech-architect to restore compile.
 - 2026-10-09: art-director done (environment strategy). Launched tech-architect on look test v2 graybox + light (free steps). Asked owner for environment budget, store name direction.
