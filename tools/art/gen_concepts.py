@@ -1,6 +1,7 @@
 import json, os, re, sys, base64, urllib.request, uuid, time
-MD = '/home/user/JungleBooze/design/prompts/aurelia/pista.md'
-OUT = '/home/user/JungleBooze/design/concepts/2026-10-08'
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+MD = os.path.join(ROOT, 'design/prompts/aurelia/pista.md')
+OUT = os.path.join(ROOT, 'design/concepts/2026-10-08')
 os.makedirs(OUT, exist_ok=True)
 txt = open(MD).read()
 def block(token):
@@ -42,5 +43,5 @@ try:
 except urllib.error.HTTPError as e:
     print('HTTP', e.code, e.read().decode()[:800]); sys.exit(1)
 open(os.path.join(OUT, name), 'wb').write(base64.b64decode(res['data'][0]['b64_json']))
-open(os.path.join('/tmp/claude-0/-home-user-JungleBooze/6648f42c-bde1-5a4b-b000-2d9be4f20958/scratchpad/gen', name + '.prompt.txt'), 'w').write(p)
+open(os.path.join(OUT, name + '.prompt.txt'), 'w').write(p)
 print('ok', name, res.get('usage', {}))
