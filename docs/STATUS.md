@@ -53,13 +53,13 @@ Duko/continue, audio files) compiled clean on the Mac.
 | Agent | State | Current / last task | Output | Next for this agent |
 |---|---|---|---|---|
 | producer | not used yet | (the coordinating session does this role for now) | this file | — |
-| game-designer | done (stage A2) | Spec 002: track, obstacles, coins, generator, fairness, lifecycle | `archive/pre-aurelia/docs/specs/002-track-obstacles-coins.md` | Phase 1: new AURELIA GDD + movement spec from the blueprint (old GDD/specs archived) |
+| game-designer | working (2026-10-09) | AURELIA GDD + spec 101 movement/camera + spec 102 chunks/routes/World Director | `archive/pre-aurelia/docs/specs/002-track-obstacles-coins.md` | Phase 1: new AURELIA GDD + movement spec from the blueprint (old GDD/specs archived) |
 | balance-simulator | done (A3) | Python reference model, golden traces, S1–S9 report (`archive/pre-aurelia/docs/sim-reports/2026-10-07-spec001.md`) | `tools/sim/`, `docs/sim-reports/` | Phase 1: new movement/chunk model from the AURELIA spec (old model kept as reference) |
-| tech-architect | done (stage D) | First-open bootstrap: URP mobile asset, input set to Both, iOS basics (placeholder bundle id `com.pistaduko.junglerunner`, iOS 15, portrait), empty Run scene in build list; Mac play guide | `Assets/_Game/Editor/Setup/`, `docs/adr/0003-first-playable-bootstrap.md`, `docs/PLAY_FIRST_BUILD.md` | Add EditMode tests for `ProjectSetupRules`; Roslyn analyzers |
+| tech-architect | working (2026-10-09) | LookTest built headless, CC0 fetch, screenshot renderer + look iteration, iOS Xcode build check | `Assets/_Game/Editor/Setup/`, `docs/adr/0003-first-playable-bootstrap.md`, `docs/PLAY_FIRST_BUILD.md` | Add EditMode tests for `ProjectSetupRules`; Roslyn analyzers |
 | gameplay-engineer | done (batch 2) | Power-ups, lane strikes, Duko, continue; compile-checked | `Scripts/Gameplay/PowerUps`, `Hazards`, `Companion`, `Views`, `App/RunSceneBootstrap.cs` | Wire audio events; then Batch 3 |
 | ui-engineer | done (C2) | Track wired into the Run scene with gray-box views and HUD | `Scripts/Gameplay/Views`, `Scripts/App`, `Scripts/UI/Hud` | Fix errors the owner sends from Unity |
 | art-director | done (concepts) | Hero take 1 and macaw take 1 locked; four unused recolors on disk | `archive/pre-aurelia/design/concepts/2026-10-07/` | Store art later |
-| asset-pipeline | stopped by owner | Pista: finish cleanup/export/previews, then Meshy rig + animations (cap 150 credits); nothing written yet | `art_source/pista/`, `tools/blender/pista/` | Report → import rigged Pista into LookTest |
+| asset-pipeline | working (2026-10-09) | Pista cleanup/export/previews, Meshy rig + animations (cap 150 credits), Unity hand-off files | `art_source/pista/`, `tools/blender/pista/` | Report → import rigged Pista into LookTest |
 | audio-director | done (files) | SFX, Duko voice (from history), Jungle/menu music, `AudioPlayback` | `Assets/_Game/Audio`, `Scripts/Services/Audio` | Wire playback into the Run scene |
 | qa-engineer | waiting | — | — | FP1 stage F: test plan + owner play-test script |
 | performance-engineer | waiting | — | — | Benchmark scene (week 2+) |
@@ -122,6 +122,7 @@ Ask the owner before any single step over 150 credits or total Meshy spend past 
 
 ## Log
 Newest first. One line per event.
+- 2026-10-09: Launched game-designer (GDD, specs 101/102), asset-pipeline (Pista finish + Meshy rig/anim, cap 150), tech-architect (look test build, screenshots, iOS build check). Local session resume watchdog: in-session hourly cron at :17 (expires after 7 days).
 - 2026-10-09: **Moved to local development on the owner's Mac.** Owner mandate: professional, fully polished, App Store-safe AURELIA; autonomy except money; lean coordinator relying on subagents. Archived the old lane-based code/tests/audio/Run scene/tools/sim to `archive/pre-aurelia/`; look test decoupled (stand-in runner). Compile clean, EditMode 57/57.
 - 2026-10-08: **Owner: stop the session.** Stopped asset-pipeline before it wrote anything (it was installing Blender); Pista task still to do exactly as in the Handoff note. Resume watchdog trig_0125FGkR542RNUbbCvMm3LWX disabled (not deleted); re-enable it when the owner restarts work.
 - 2026-10-08: Owner OK'd cleanup of the old vision. Moved the old GDD, specs 001/002, sim report, Inkbound Pulp style guide, hero/macaw concept sheets and prompts, realistic Duko prompts and 2026-10-07 concepts to `archive/pre-aurelia/` (with SUPERSEDED banners and a README). Updated CLAUDE.md, AGENT_PLAN.md, 7 agent definitions and cross-links to AURELIA wording; Duko-dropped notes in ART_DIRECTION and meshy prompts. FP1 code and tools/sim kept for Phase 1 review (sim tests 64/64 pass).
