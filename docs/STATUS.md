@@ -55,10 +55,10 @@ Duko/continue, audio files) compiled clean on the Mac.
 | producer | not used yet | (the coordinating session does this role for now) | this file | — |
 | game-designer | done (2026-10-09) | AURELIA GDD, spec 101 movement/camera (46 ACs, 61 s feel course), spec 102 chunks/routes/World Director | `design/aurelia/GDD.md`, `design/aurelia/specs/` | Phase 2 chunk catalog detail; FTUE script |
 | balance-simulator | done (A3) | Python reference model, golden traces, S1–S9 report (`archive/pre-aurelia/docs/sim-reports/2026-10-07-spec001.md`) | `tools/sim/`, `docs/sim-reports/` | Phase 1: new movement/chunk model from the AURELIA spec (old model kept as reference) |
-| tech-architect | done (2026-10-09) | LookTest built headless (17 CC0 assets), screenshot renderer `LookTestBatch`, iOS Xcode export + unsigned device build OK (207 MB app). Over budget: 810–930 draws, 0.7–0.8 M tris. Look = sunny park, not lush alien jungle | `Assets/_Game/Editor/Setup/`, `docs/adr/0003-first-playable-bootstrap.md`, `docs/PLAY_FIRST_BUILD.md` | Add EditMode tests for `ProjectSetupRules`; Roslyn analyzers |
+| tech-architect | working (2026-10-09) | Look test v2 steps 2–3: S-curved graybox layout + shot frames + budget skeleton; light/atmosphere to Checkpoint A | `Assets/_Game/Editor/Setup/`, `docs/adr/0003-first-playable-bootstrap.md`, `docs/PLAY_FIRST_BUILD.md` | Add EditMode tests for `ProjectSetupRules`; Roslyn analyzers |
 | gameplay-engineer | working (2026-10-09) | Spec 101: deterministic movement sim, gestures, FeelTest scene + camera + HUD/results, ADR input amendment, tests | `Scripts/Gameplay/PowerUps`, `Hazards`, `Companion`, `Views`, `App/RunSceneBootstrap.cs` | Wire audio events; then Batch 3 |
 | ui-engineer | done (C2) | Track wired into the Run scene with gray-box views and HUD | `Scripts/Gameplay/Views`, `Scripts/App`, `Scripts/UI/Hud` | Fix errors the owner sends from Unity |
-| art-director | done (concepts) | Hero take 1 and macaw take 1 locked; four unused recolors on disk | `archive/pre-aurelia/design/concepts/2026-10-07/` | Store art later |
+| art-director | done (2026-10-09) | Environment strategy: composition/light are the main gap; buy generic understory + impostor tool, make signature art in-house (Meshy, Blender, gpt-image); approval list ~$175 | `design/aurelia/ENVIRONMENT_STRATEGY.md` | Store art later |
 | asset-pipeline | done (2026-10-09) | Pista game-ready: 19.9k tris, 27 bones, 18 clips (`Art/Characters/Pista/`). Run clip matches 5 m/s (use 1.3x or Run_Alt); hair glossy/stringy; Unity import not yet verified | `art_source/pista/`, `tools/blender/pista/` | Report → import rigged Pista into LookTest |
 | audio-director | done (files) | SFX, Duko voice (from history), Jungle/menu music, `AudioPlayback` | `Assets/_Game/Audio`, `Scripts/Services/Audio` | Wire playback into the Run scene |
 | qa-engineer | waiting | — | — | FP1 stage F: test plan + owner play-test script |
@@ -92,6 +92,7 @@ Meshy: 3 (image edit test) + 30 (Pista 3D v1) = **33 credits used**; balance 2,4
 | G4–G8 | Not started |
 
 ## Open questions for the owner
+- (2026-10-09, environment) Approve: exception to "no paid packs" for SeedMesh Jungle – Tropical Vegetation ($39.99+tax) and Amplify Impostors ($60+tax, confirm Unity 6000.3 first); OpenAI credit cap $75 (~$43 expected). Meshy ~610 credits stays inside the 1,000. Asked 2026-10-09.
 - (2026-10-09, compliance) Store name: "Aurelia: <coined word>" (rec.) / new coined name / "AURELIA" alone. Bundle id: set a neutral `com.<studio>.aurelia` now (rec.; needs a studio name) / wait / keep. Lawyer name check before store art (rec.) / at launch prep. Not blocking until TestFlight. To do (free): turn off Unity `submitAnalytics` after gameplay-engineer finishes.
 0. API keys for image/3D/audio generation must be added to the cloud environment (see Phase 0 "Blocked").
 1. Ads and prices: deferred to week 4 (tracking already decided: none).
@@ -124,6 +125,7 @@ Meshy: 3 (image edit test) + 30 (Pista 3D v1) = **33 credits used**; balance 2,4
 
 ## Log
 Newest first. One line per event.
+- 2026-10-09: art-director done (environment strategy). Launched tech-architect on look test v2 graybox + light (free steps). Asked owner for environment budget, store name direction.
 - 2026-10-09: appstore-compliance done: AURELIA design review (no blocker; name, analytics flag, bundle id are the high risks).
 - 2026-10-09: tech-architect done (look test builds, iOS build OK, over draw budget, look not professional yet). asset-pipeline done (Pista rigged + animated, 62 credits). Sent owner Pista sheet, run cycle and a look-test screenshot.
 - 2026-10-09: Launched gameplay-engineer on spec 101 (Phase 1 Feel).
