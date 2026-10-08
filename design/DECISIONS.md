@@ -5,6 +5,7 @@ Newest first.
 
 | Date | Gate | Decision | Options considered | Decided by |
 |---|---|---|---|---|
+| 2026-10-08 | — | Agents may install tools in the cloud container (e.g. Blender, image tools). Replaces the 2026-10-07 "don't install toolchains" rule | Allow / don't | Owner |
 | 2026-10-08 | G1 | Drop Duko the macaw (owner confirmed). No Duko concepts generated. Companions follow the blueprint (discoverable creatures) later | Keep / drop | Owner |
 | 2026-10-08 | G2 | Realistic Pista is redesigned after the explorer on the vision board (ponytail, outdoor-adventure outfit, harness, backpack), keeping the name Pista; she is **16**. Torso stays covered (no crop top). Cheek dots dropped. Duko unchanged | Age 10–11 / 12 / 13–14 / 16; keep old look / board look | Owner |
 | 2026-10-08 | G2 | Orientation: build the look test in both landscape and portrait; owner decides on the phone. Sky: no preference, so no moon, Earth-like sky [ASSUMED] | Landscape / portrait / both | Owner |

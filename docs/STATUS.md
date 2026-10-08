@@ -107,6 +107,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Log
 Newest first. One line per event.
+- 2026-10-08: Owner allowed installing tools in the cloud container. Told both running agents.
 - 2026-10-08: Keys are in the environment. Art-director generating Pista concepts only (owner wants to see them before any next step). Owner dropped Duko the macaw (confirmed).
 - 2026-10-08: Owner: Pista age 16, look based on the board explorer; orientation decided on the phone; sky no preference (no moon [ASSUMED]). Sent art-director back to rework Pista prompts.
 - 2026-10-08: P0-A done (art-director): ART_DIRECTION, LOOK_TEST_BRIEF, prompt library (Pista/Duko 3 takes each, Meshy, environment). No images (no keys). Budgets above ARCHITECTURE.md passed to P0-B. Note: Meshy Free-plan output is CC BY 4.0; check the owner's plan before shipping assets. Owner asked: Pista age, cheek dots, orientation, sky.

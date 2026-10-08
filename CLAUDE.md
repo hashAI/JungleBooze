@@ -20,7 +20,7 @@ defined in `.claude/agents/`. Read `docs/AGENT_PLAN.md` for the full plan.
 4. **Current mandate (owner, 2026-10-07): autonomous until the first playable version.** Don't ask the owner
    questions. Take the recommended option, mark it `[ASSUMED]`, and log it in `docs/STATUS.md` for later review.
    Keep going (handing off and resuming after limits as needed) until the owner can play a first version
-   (definition in `docs/STATUS.md`). Don't install toolchains in the cloud container; code runs on the owner's Mac.
+   (definition in `docs/STATUS.md`). Installing tools in the cloud container is allowed (owner, 2026-10-08), e.g. Blender for asset cleanup; installs vanish when the container is reclaimed. The owner's Mac stays the main place to compile and play.
 
 ## Ground rules for every agent
 1. **The owner decides identity and taste.** Hero, companion, art style, name, icon, prices, and "is it fun" are
