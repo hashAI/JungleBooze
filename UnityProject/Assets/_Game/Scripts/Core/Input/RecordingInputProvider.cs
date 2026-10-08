@@ -15,11 +15,11 @@ namespace JungleBooze.Core
 
         public InputRecording Recording { get; }
 
-        public InputCommand ReadCommands(long tick)
+        public InputFrame ReadInput(long tick)
         {
-            InputCommand commands = _inner.ReadCommands(tick);
-            Recording.Add(tick, commands);
-            return commands;
+            InputFrame frame = _inner.ReadInput(tick);
+            Recording.Add(tick, frame);
+            return frame;
         }
     }
 }

@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 807f9f166a5294178b0fb39b4b88ee94, type: 3}
+  m_Name: GestureConfig
+  m_EditorClassIdentifier: JungleBooze.Gameplay::JungleBooze.Gameplay.Config.GestureConfigAsset
+  _values:
+    DragSensitivity: 0.04
+    SensitivityMultiplier: 1
+    TouchDeadZone: 4
+    VerticalIntentAngle: 30
+    SwipeDistance: 24
+    SwipeWindow: 0.12
+    SwipeAngleTolerance: 35
+    SwipeRearmTime: 0.18
+    FlickMaxDuration: 0.22
+    FlickMinDistance: 30
+    FlickAngleTolerance: 35
+    ReleaseFlickEnabled: 1
+    ReleaseFlickSpeed: 1200
+    ReleaseFlickWindow: 0.06
+    MaxTrackedTouches: 2
+    CommandQueueSize: 16
+    KeyboardLateralSpeed: 10
+    EditorPixelsPerPoint: 2

@@ -38,7 +38,7 @@ namespace JungleBooze.Tests.PlayMode
             var recording = new InputRecording(1UL);
             for (int tick = 0; tick < 1000; tick += 7)
             {
-                recording.Add(tick, InputCommand.Jump);
+                recording.Add(tick, InputFrame.FromCommands(InputCommand.Jump));
             }
 
             var replay = new ReplayInputProvider(recording);
@@ -48,7 +48,7 @@ namespace JungleBooze.Tests.PlayMode
             {
                 for (int tick = 0; tick < 1000; tick++)
                 {
-                    replay.ReadCommands(tick);
+                    replay.ReadInput(tick);
                     rng.NextFloat();
                 }
             }, Is.Not.AllocatingGCMemory());

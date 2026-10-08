@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d4a416888adde4d1a83cae96818a5522, type: 3}
+  m_Name: CameraProfile_Landscape
+  m_EditorClassIdentifier: JungleBooze.Gameplay::JungleBooze.Gameplay.Config.CameraProfileAsset
+  _values:
+    Name: Landscape
+    OffsetBack: 5.5
+    Height: 2.4
+    PitchDeg: 9
+    FovBaseDeg: 55
+    FovGainDeg: 6
+    FovHalfLife: 0.5
+    LateralFollow: 0.7
+    LateralHalfLife: 0.1
+    YawHalfLife: 0.25
+    GroundHalfLife: 0.3
+    AirFollow: 0.35
+    AirHalfLife: 0.2
+    SlideDip: 0.25
+    SlideDipHalfLife: 0.12
+    BankMaxDeg: 2
+    BankHalfLife: 0.12
+    ShakeHardLandingAmplitude: 0.04
+    ShakeHardLandingTime: 0.18
+    ShakeMinorHitAmplitude: 0.07
+    ShakeMinorHitTime: 0.25
+    ShakeCrashAmplitude: 0.12
+    ShakeCrashTime: 0.35
+    ShakeFrequency: 18
+    ShakeMaxPosition: 0.12
+    ShakeMaxRotationDeg: 1
+    ReducedMotionFovGainFactor: 0.5
+    ReducedMotionSlideDipFactor: 0.5
+    BlendTime: 0.4
+    NearClip: 0.15
+    FarClip: 220

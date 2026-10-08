@@ -1,6 +1,6 @@
 # ADR 0002: Deterministic simulation core
 
-- Status: Accepted
+- Status: Accepted; input format amended by [ADR 0006](0006-steering-input-format.md) (2026-10-09)
 - Date: 2026-10-06
 - Deciders: tech-architect
 - Hard to undo: **yes** (every gameplay system is written against this contract)
@@ -16,7 +16,7 @@ The plan depends on agents "playing" the game at scale: thousands of headless bo
 3. **Three seams, all in Core:**
    - `IRandom`, implemented by `Pcg32Random` (PCG32 XSH-RR). Chosen over xorshift variants for better statistical quality at the same cost, tiny state (two `ulong`s), cheap stream selection (`Fork(streamId)`), and a published reference test vector we test against. One forked stream per subsystem so changes in one system do not shift another's sequence.
    - `ITimeSource`, implemented by `FixedStepTimeSource`: 60 Hz fixed step [ASSUMED], accumulator driven by real frame time, max 5 steps per frame, excess dropped. Simulation reads `Tick` and the constant `DeltaTime` only.
-   - `IInputProvider` returning `InputCommand` flags per tick. Touch, bot and replay providers are interchangeable; `RecordingInputProvider` records any of them. Recordings store the seed plus sparse (tick, command) frames.
+   - `IInputProvider` returning `InputCommand` flags per tick (superseded by ADR 0006: `ReadInput(tick)` returns `InputFrame` = commands + steering drag in mm; replay format 2). Touch, bot and replay providers are interchangeable; `RecordingInputProvider` records any of them. Recordings store the seed plus sparse (tick, command) frames.
 4. **Banned in simulation code:** `UnityEngine.Random`, `System.Random`, `UnityEngine.Time`, `DateTime.Now`, physics engine queries/callbacks for gameplay outcomes, unordered collection iteration affecting results, static mutable state. Collision for gameplay uses simple analytic checks (lane + AABB/capsule in track space) inside the simulation.
 5. **Presentation** reads simulation state and interpolates with `InterpolationAlpha`; it never feeds back into the simulation.
 

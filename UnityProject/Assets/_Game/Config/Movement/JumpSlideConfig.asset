@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9f77ee5a683b2412592a65630342ab0e, type: 3}
+  m_Name: JumpSlideConfig
+  m_EditorClassIdentifier: JungleBooze.Gameplay::JungleBooze.Gameplay.Config.JumpSlideConfigAsset
+  _values:
+    JumpVelocity: 9.33
+    GUp: 31.1
+    GDown: 42
+    ApexHangThreshold: 1
+    ApexHangFactor: 0.6
+    MaxFallSpeed: 24
+    CoyoteTime: 0.1
+    InputBufferTime: 0.15
+    StepUpHeight: 0.35
+    StepDownSnap: 0.35
+    FallKillDepth: 1.2
+    LedgeAssistReach: 0.3
+    LedgeAssistDrop: 0.25
+    HardLandingFall: 2.5
+    SoftLandingFall: 1
+    SlideDuration: 0.65
+    FastFallSpeed: 14
+    FastFallGravityFactor: 2
+    CeilingHoldTime: 0.35

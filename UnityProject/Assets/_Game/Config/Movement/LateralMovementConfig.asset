@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d8a8315d49f714262a1151c8f8ac18bb, type: 3}
+  m_Name: LateralMovementConfig
+  m_EditorClassIdentifier: JungleBooze.Gameplay::JungleBooze.Gameplay.Config.LateralMovementConfigAsset
+  _values:
+    Tau: 0.075
+    VLatMax: 11
+    AccelLat: 150
+    DecelLat: 180
+    EdgeMargin: 0.3
+    SoftZone: 0.35
+    SoftEdgeMinFactor: 0.4
+    EdgeBrushDistance: 0.05
+    NarrowPushSpeed: 6
+    AirLateralFactor: 1
+    SlideLateralFactor: 1
+    DodgeDistance: 2.2
+    DodgeVLatMax: 14
+    DodgeAccel: 220
+    DodgeBoostTime: 0.22
+    ForkNudgeLookahead: 8
+    ForkNudgeZone: 0.6

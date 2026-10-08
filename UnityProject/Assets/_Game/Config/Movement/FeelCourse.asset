@@ -1,0 +1,718 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2b64b77cc45ee437f8abae5795f98299, type: 3}
+  m_Name: FeelCourse
+  m_EditorClassIdentifier: JungleBooze.Gameplay::JungleBooze.Gameplay.Config.FeelCourseAsset
+  _course:
+    Name: "Feel course (spec 101 \xA76)"
+    FinishS: 640
+    RunOutLength: 80
+    Widths:
+    - S: 0
+      XMin: -4
+      XMax: 4
+    - S: 36
+      XMin: -4
+      XMax: 4
+    - S: 44
+      XMin: -3.5
+      XMax: 3.5
+    - S: 380
+      XMin: -3.5
+      XMax: 3.5
+    - S: 404
+      XMin: -1.2
+      XMax: 1.2
+    - S: 430
+      XMin: -1.2
+      XMax: 1.2
+    - S: 440
+      XMin: -3.5
+      XMax: 3.5
+    - S: 520
+      XMin: -3.5
+      XMax: 3.5
+    - S: 530
+      XMin: -4.1
+      XMax: 3
+    - S: 590
+      XMin: -4.1
+      XMax: 3
+    - S: 600
+      XMin: -3.5
+      XMax: 3.5
+    - S: 760
+      XMin: -3.5
+      XMax: 3.5
+    Floors:
+    - Kind: 0
+      SMin: 315
+      SMax: 318
+      XMin: -10
+      XMax: 10
+      Y0: 0
+      Y1: 0
+    - Kind: 0
+      SMin: 330
+      SMax: 334.5
+      XMin: -10
+      XMax: 10
+      Y0: 0
+      Y1: 0
+    - Kind: 1
+      SMin: 535
+      SMax: 545
+      XMin: 0.6
+      XMax: 3
+      Y0: 0
+      Y1: 1
+    - Kind: 1
+      SMin: 545
+      SMax: 582
+      XMin: 0.6
+      XMax: 3
+      Y0: 1
+      Y1: 1
+    - Kind: 1
+      SMin: 582
+      SMax: 590
+      XMin: 0.6
+      XMax: 3
+      Y0: 1
+      Y1: 0
+    - Kind: 0
+      SMin: 560
+      SMax: 562.5
+      XMin: 0.6
+      XMax: 3
+      Y0: 0
+      Y1: 0
+    Forks:
+    - Name: C12 fork
+      SFront: 530
+      SMerge: 590
+      DividerCenterX: 0
+      DividerHalfWidth: 0.6
+      LeftXMin: -4.1
+      LeftXMax: -0.6
+      RightXMin: 0.6
+      RightXMax: 3
+      SafeSide: -1
+    Obstacles:
+    - Label: C3 slalom rock L 110
+      Class: 2
+      SMin: 109.4
+      SMax: 110.6
+      XMin: -2.2
+      XMax: -0.8
+      YMin: 0
+      YMax: 2.4
+      WalkableTop: 0
+    - Label: C3 slalom rock R 125
+      Class: 2
+      SMin: 124.4
+      SMax: 125.6
+      XMin: 0.8
+      XMax: 2.2
+      YMin: 0
+      YMax: 2.4
+      WalkableTop: 0
+    - Label: C3 slalom rock L 140
+      Class: 2
+      SMin: 139.4
+      SMax: 140.6
+      XMin: -2.2
+      XMax: -0.8
+      YMin: 0
+      YMax: 2.4
+      WalkableTop: 0
+    - Label: C4 root 160
+      Class: 0
+      SMin: 159.75
+      SMax: 160.25
+      XMin: -4.3
+      XMax: 4.3
+      YMin: 0
+      YMax: 0.6
+      WalkableTop: 0
+    - Label: C4 root 185
+      Class: 0
+      SMin: 184.75
+      SMax: 185.25
+      XMin: -4.3
+      XMax: 4.3
+      YMin: 0
+      YMax: 0.6
+      WalkableTop: 0
+    - Label: C4 log 205 (walkable)
+      Class: 0
+      SMin: 204.5
+      SMax: 205.5
+      XMin: -4.3
+      XMax: 4.3
+      YMin: 0
+      YMax: 0.9
+      WalkableTop: 1
+    - Label: C5 branch 220
+      Class: 1
+      SMin: 219.7
+      SMax: 220.3
+      XMin: -4.3
+      XMax: 4.3
+      YMin: 1
+      YMax: 2.4
+      WalkableTop: 0
+    - Label: C5 branch 240
+      Class: 1
+      SMin: 239.7
+      SMax: 240.3
+      XMin: -4.3
+      XMax: 4.3
+      YMin: 1
+      YMax: 2.4
+      WalkableTop: 0
+    - Label: C6 branch 270
+      Class: 1
+      SMin: 269.7
+      SMax: 270.3
+      XMin: -4.3
+      XMax: 4.3
+      YMin: 1
+      YMax: 2.4
+      WalkableTop: 0
+    - Label: C6 root 280
+      Class: 0
+      SMin: 279.75
+      SMax: 280.25
+      XMin: -4.3
+      XMax: 4.3
+      YMin: 0
+      YMax: 0.6
+      WalkableTop: 0
+    - Label: C6 root 292
+      Class: 0
+      SMin: 291.75
+      SMax: 292.25
+      XMin: -4.3
+      XMax: 4.3
+      YMin: 0
+      YMax: 0.6
+      WalkableTop: 0
+    - Label: C6 branch 300
+      Class: 1
+      SMin: 299.7
+      SMax: 300.3
+      XMin: -4.3
+      XMax: 4.3
+      YMin: 1
+      YMax: 2.4
+      WalkableTop: 0
+    - Label: C8 wall right 355
+      Class: 2
+      SMin: 354.5
+      SMax: 355.5
+      XMin: -0.5
+      XMax: 3.8
+      YMin: 0
+      YMax: 2.4
+      WalkableTop: 0
+    - Label: C8 wall left 365
+      Class: 2
+      SMin: 364.5
+      SMax: 365.5
+      XMin: -3.8
+      XMax: 0.5
+      YMin: 0
+      YMax: 2.4
+      WalkableTop: 0
+    - Label: C10 log 450 (walkable)
+      Class: 0
+      SMin: 449.5
+      SMax: 450.5
+      XMin: -4.3
+      XMax: 4.3
+      YMin: 0
+      YMax: 0.9
+      WalkableTop: 1
+    - Label: C10 branch 462
+      Class: 1
+      SMin: 461.7
+      SMax: 462.3
+      XMin: -4.3
+      XMax: 4.3
+      YMin: 1
+      YMax: 2.4
+      WalkableTop: 0
+    - Label: C11 root 480
+      Class: 0
+      SMin: 479.75
+      SMax: 480.25
+      XMin: -4.3
+      XMax: 4.3
+      YMin: 0
+      YMax: 0.6
+      WalkableTop: 0
+    - Label: C11 rock 490
+      Class: 2
+      SMin: 489.4
+      SMax: 490.6
+      XMin: 0.39999998
+      XMax: 1.6
+      YMin: 0
+      YMax: 2.4
+      WalkableTop: 0
+    - Label: C11 branch 500
+      Class: 1
+      SMin: 499.7
+      SMax: 500.3
+      XMin: -4.3
+      XMax: 4.3
+      YMin: 1
+      YMax: 2.4
+      WalkableTop: 0
+    - Label: C11 thorns 506
+      Class: 3
+      SMin: 505
+      SMax: 507
+      XMin: -3.8
+      XMax: -1
+      YMin: 0
+      YMax: 0.5
+      WalkableTop: 0
+    - Label: C11 root 512
+      Class: 0
+      SMin: 511.75
+      SMax: 512.25
+      XMin: -4.3
+      XMax: 4.3
+      YMin: 0
+      YMax: 0.6
+      WalkableTop: 0
+    - Label: C12 safe root 560
+      Class: 0
+      SMin: 559.75
+      SMax: 560.25
+      XMin: -4.4
+      XMax: -0.6
+      YMin: 0
+      YMax: 0.6
+      WalkableTop: 0
+    - Label: C12 risky branch 575
+      Class: 1
+      SMin: 574.7
+      SMax: 575.3
+      XMin: 0.6
+      XMax: 3.3
+      YMin: 2
+      YMax: 3.4
+      WalkableTop: 0
+    Coins:
+    - S: 10
+      X: 0
+      Y: 0.9
+    - S: 12.5
+      X: 0
+      Y: 0.9
+    - S: 15
+      X: 0
+      Y: 0.9
+    - S: 17.5
+      X: 0
+      Y: 0.9
+    - S: 20
+      X: 0
+      Y: 0.9
+    - S: 22.5
+      X: 0
+      Y: 0.9
+    - S: 25
+      X: 0
+      Y: 0.9
+    - S: 27.5
+      X: 0
+      Y: 0.9
+    - S: 30
+      X: 0
+      Y: 0.9
+    - S: 32.5
+      X: 0
+      Y: 0.9
+    - S: 35
+      X: 0
+      Y: 0.9
+    - S: 37.5
+      X: 0
+      Y: 0.9
+    - S: 42
+      X: 1.0168417
+      Y: 0.9
+    - S: 44
+      X: 1.857862
+      Y: 0.9
+    - S: 46
+      X: 2.3776414
+      Y: 0.9
+    - S: 48
+      X: 2.4863048
+      Y: 0.9
+    - S: 50
+      X: 2.1650634
+      Y: 0.9
+    - S: 52
+      X: 1.4694631
+      Y: 0.9
+    - S: 54
+      X: 0.5197792
+      Y: 0.9
+    - S: 56
+      X: -0.5197792
+      Y: 0.9
+    - S: 58
+      X: -1.4694631
+      Y: 0.9
+    - S: 60
+      X: -2.1650634
+      Y: 0.9
+    - S: 62
+      X: -2.4863048
+      Y: 0.9
+    - S: 64
+      X: -2.3776414
+      Y: 0.9
+    - S: 66
+      X: -1.857862
+      Y: 0.9
+    - S: 68
+      X: -1.0168417
+      Y: 0.9
+    - S: 70
+      X: -2.8327693e-15
+      Y: 0.9
+    - S: 72
+      X: 1.0168417
+      Y: 0.9
+    - S: 74
+      X: 1.857862
+      Y: 0.9
+    - S: 76
+      X: 2.3776414
+      Y: 0.9
+    - S: 78
+      X: 2.4863048
+      Y: 0.9
+    - S: 80
+      X: 2.1650634
+      Y: 0.9
+    - S: 82
+      X: 1.4694631
+      Y: 0.9
+    - S: 84
+      X: 0.5197792
+      Y: 0.9
+    - S: 86
+      X: -0.5197792
+      Y: 0.9
+    - S: 88
+      X: -1.4694631
+      Y: 0.9
+    - S: 90
+      X: -2.1650634
+      Y: 0.9
+    - S: 92
+      X: -2.4863048
+      Y: 0.9
+    - S: 94
+      X: -2.3776414
+      Y: 0.9
+    - S: 96
+      X: -1.857862
+      Y: 0.9
+    - S: 98
+      X: -1.0168417
+      Y: 0.9
+    - S: 406
+      X: 0
+      Y: 0.9
+    - S: 408
+      X: 0
+      Y: 0.9
+    - S: 410
+      X: 0
+      Y: 0.9
+    - S: 412
+      X: 0
+      Y: 0.9
+    - S: 414
+      X: 0
+      Y: 0.9
+    - S: 416
+      X: 0
+      Y: 0.9
+    - S: 418
+      X: 0
+      Y: 0.9
+    - S: 420
+      X: 0
+      Y: 0.9
+    - S: 422
+      X: 0
+      Y: 0.9
+    - S: 424
+      X: 0
+      Y: 0.9
+    - S: 426
+      X: 0
+      Y: 0.9
+    - S: 428
+      X: 0
+      Y: 0.9
+    - S: 452
+      X: -0.6
+      Y: 0.35
+    - S: 452
+      X: 0
+      Y: 0.35
+    - S: 452
+      X: 0.6
+      Y: 0.35
+    - S: 453.5
+      X: -0.6
+      Y: 0.35
+    - S: 453.5
+      X: 0
+      Y: 0.35
+    - S: 453.5
+      X: 0.6
+      Y: 0.35
+    - S: 455
+      X: -0.6
+      Y: 0.35
+    - S: 455
+      X: 0
+      Y: 0.35
+    - S: 455
+      X: 0.6
+      Y: 0.35
+    - S: 538
+      X: -2.35
+      Y: 0.9
+    - S: 538
+      X: 1.3
+      Y: 1.2
+    - S: 538
+      X: 2.3
+      Y: 1.2
+    - S: 541
+      X: -2.35
+      Y: 0.9
+    - S: 541
+      X: 1.3
+      Y: 1.5
+    - S: 541
+      X: 2.3
+      Y: 1.5
+    - S: 544
+      X: -2.35
+      Y: 0.9
+    - S: 544
+      X: 1.3
+      Y: 1.8
+    - S: 544
+      X: 2.3
+      Y: 1.8
+    - S: 547
+      X: -2.35
+      Y: 0.9
+    - S: 547
+      X: 1.3
+      Y: 1.9
+    - S: 547
+      X: 2.3
+      Y: 1.9
+    - S: 550
+      X: -2.35
+      Y: 0.9
+    - S: 550
+      X: 1.3
+      Y: 1.9
+    - S: 550
+      X: 2.3
+      Y: 1.9
+    - S: 553
+      X: -2.35
+      Y: 0.9
+    - S: 553
+      X: 1.3
+      Y: 1.9
+    - S: 553
+      X: 2.3
+      Y: 1.9
+    - S: 556
+      X: -2.35
+      Y: 0.9
+    - S: 556
+      X: 1.3
+      Y: 1.9
+    - S: 556
+      X: 2.3
+      Y: 1.9
+    - S: 559
+      X: -2.35
+      Y: 0.9
+    - S: 562
+      X: -2.35
+      Y: 0.9
+    - S: 565
+      X: -2.35
+      Y: 0.9
+    - S: 568
+      X: -2.35
+      Y: 0.9
+    - S: 568
+      X: 1.3
+      Y: 1.9
+    - S: 568
+      X: 2.3
+      Y: 1.9
+    - S: 571
+      X: -2.35
+      Y: 0.9
+    - S: 571
+      X: 1.3
+      Y: 1.9
+    - S: 571
+      X: 2.3
+      Y: 1.9
+    - S: 574
+      X: -2.35
+      Y: 0.9
+    - S: 574
+      X: 1.3
+      Y: 1.9
+    - S: 574
+      X: 2.3
+      Y: 1.9
+    - S: 577
+      X: -2.35
+      Y: 0.9
+    - S: 577
+      X: 1.3
+      Y: 1.9
+    - S: 577
+      X: 2.3
+      Y: 1.9
+    - S: 580
+      X: -2.35
+      Y: 0.9
+    - S: 580
+      X: 1.3
+      Y: 1.9
+    - S: 580
+      X: 2.3
+      Y: 1.9
+    - S: 583
+      X: -2.35
+      Y: 0.9
+    - S: 583
+      X: 1.3
+      Y: 1.775
+    - S: 583
+      X: 2.3
+      Y: 1.775
+    - S: 586
+      X: -2.35
+      Y: 0.9
+    - S: 586
+      X: 1.3
+      Y: 1.4
+    - S: 586
+      X: 2.3
+      Y: 1.4
+    - S: 606
+      X: 0
+      Y: 0.9
+    - S: 608.5
+      X: 0
+      Y: 0.9
+    - S: 611
+      X: 0
+      Y: 0.9
+    - S: 613.5
+      X: 0
+      Y: 0.9
+    - S: 616
+      X: 0
+      Y: 0.9
+    - S: 618.5
+      X: 0
+      Y: 0.9
+    - S: 621
+      X: 0
+      Y: 0.9
+    - S: 623.5
+      X: 0
+      Y: 0.9
+    - S: 626
+      X: 0
+      Y: 0.9
+    - S: 628.5
+      X: 0
+      Y: 0.9
+    - S: 631
+      X: 0
+      Y: 0.9
+    - S: 633.5
+      X: 0
+      Y: 0.9
+    - S: 636
+      X: 0
+      Y: 0.9
+    Sections:
+    - Name: C1 Start
+      SMin: 0
+      SMax: 40
+    - Name: C2 Weave
+      SMin: 40
+      SMax: 100
+    - Name: C3 Slalom
+      SMin: 100
+      SMax: 150
+    - Name: C4 Jumps
+      SMin: 150
+      SMax: 210
+    - Name: C5 Slides
+      SMin: 210
+      SMax: 260
+    - Name: C6 Combos
+      SMin: 260
+      SMax: 303
+    - Name: C7 Gaps
+      SMin: 303
+      SMax: 340
+    - Name: C8 Dodge
+      SMin: 340
+      SMax: 380
+    - Name: C9 Ledge
+      SMin: 380
+      SMax: 440
+    - Name: C10 Fast-fall
+      SMin: 440
+      SMax: 470
+    - Name: C11 Mix
+      SMin: 470
+      SMax: 520
+    - Name: C12 Fork
+      SMin: 520
+      SMax: 600
+    - Name: C13 Finish
+      SMin: 600
+      SMax: 720

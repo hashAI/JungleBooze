@@ -161,6 +161,8 @@ Contract: **same build + same platform + same seed + same input stream + same co
 - Headless simulations do not call `Accumulate`; they call `Step()` in a tight loop as fast as the CPU allows.
 
 ### 5.3 `IInputProvider` (`Core/Input`)
+> **Amended by [ADR 0006](adr/0006-steering-input-format.md) (2026-10-09):** `ReadInput(tick)` returns `InputFrame { InputCommand Commands; short LateralDeltaMm; }`; commands are `Jump`, `Slide`, `DodgeLeft`, `DodgeRight`, `TouchBegan`; replay format version 2. The lane-era text below is kept for history.
+
 - `InputCommand` is a `[Flags] byte` enum matching GDD section 5.1: `MoveLeft`, `MoveRight` (swipe left/right), `Jump` (swipe up), `Slide` (swipe down), `CompanionAssist` (double tap). Commands are intents; the simulation interprets them by context (e.g. `Jump` while swinging releases the vine, `Slide` in the air fast-falls). The 150 ms input buffer and 80 ms coyote time from the GDD live in the simulation, not in the provider, so bots and replays get them too. Values are persisted in replays: append only, never renumber.
 - `ReadCommands(tick)` is called exactly once per simulation step with increasing ticks and must not allocate.
 - Implementations:
@@ -306,5 +308,7 @@ Hard limits (project rule 6). Measured on the **floor device** (to be confirmed 
 | [0002](adr/0002-deterministic-simulation-core.md) | Deterministic simulation core | Accepted |
 | [0003](adr/0003-first-playable-bootstrap.md) | First Playable bootstrap: settings applied by an editor script on first open | Accepted |
 | [0004](adr/0004-realistic-look-on-mobile.md) | Realistic look on mobile: URP settings, lighting for streamed chunks, budgets, minimum device (AURELIA Phase 0) | Accepted for Phase 0; device floor provisional |
-| 0005 (planned) | Save format, migrations and iCloud | Week 4 |
-| 0006 (planned) | Composition root: hand-rolled vs VContainer (if needed) | When needed |
+| [0005](adr/0005-cloud-compile-check.md) | Cloud compile check | Accepted |
+| [0006](adr/0006-steering-input-format.md) | Steering input format (replay format 2) | Accepted |
+| (planned) | Save format, migrations and iCloud | Week 4 |
+| (planned) | Composition root: hand-rolled vs VContainer (if needed) | When needed |

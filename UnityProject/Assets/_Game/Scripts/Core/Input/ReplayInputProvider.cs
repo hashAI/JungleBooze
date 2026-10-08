@@ -16,7 +16,7 @@ namespace JungleBooze.Core
         /// <summary>True once every recorded frame has been returned.</summary>
         public bool IsFinished => _cursor >= _recording.Count;
 
-        public InputCommand ReadCommands(long tick)
+        public InputFrame ReadInput(long tick)
         {
             while (_cursor < _recording.Count && _recording[_cursor].Tick < tick)
             {
@@ -25,12 +25,12 @@ namespace JungleBooze.Core
 
             if (_cursor < _recording.Count && _recording[_cursor].Tick == tick)
             {
-                InputCommand commands = _recording[_cursor].Commands;
+                InputFrame frame = _recording[_cursor].Frame;
                 _cursor++;
-                return commands;
+                return frame;
             }
 
-            return InputCommand.None;
+            return InputFrame.Empty;
         }
     }
 }

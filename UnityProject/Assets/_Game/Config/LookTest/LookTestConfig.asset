@@ -1,0 +1,130 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 18295073cb204b4e9422781151b489fe, type: 3}
+  m_Name: LookTestConfig
+  m_EditorClassIdentifier: JungleBooze.App::JungleBooze.App.LookTest.LookTestConfigAsset
+  _runSpeedMps: 9
+  _cameraFovDeg: 47
+  _cameraPortraitHorizontalFovDeg: 42
+  _cameraPortraitLookAtHeightM: 3.4
+  _cameraOffsetBehindM: 5.5
+  _cameraOffsetUpM: 2.5
+  _cameraLookAheadM: 10
+  _cameraLookAtHeightM: 1.3
+  _cameraFarClipM: 230
+  _targetFrameRate: 60
+  _targetInternalMegapixels: 1.7
+  _minRenderScale: 0.6
+  _maxRenderScale: 1
+  _loopLengthM: 200
+  _segmentCount: 8
+  _recycleBehindM: 22
+  _seed: 20261008
+  _pathHalfWidthM: 3
+  _groundHalfWidthM: 70
+  _groundStepZM: 1
+  _leftSlope: 0.12
+  _groundBumpM: 0.6
+  _riverCenterXM: 17
+  _riverMeanderM: 3
+  _riverHalfWidthM: 4
+  _riverBedDepthM: 1.6
+  _waterLevelM: -0.55
+  _riverFlowSpeed: 0.35
+  _cliffStartZM: 88
+  _cliffEndZM: 182
+  _cliffHeightM: 16
+  _cliffSetbackM: 6
+  _cliffRampM: 35
+  _waterfallZM: 135
+  _waterfallWidthM: 5
+  _waterfallFlowSpeed: 1.6
+  _mistParticles: 28
+  _treeCount: 110
+  _trunkHeightMinM: 16
+  _trunkHeightMaxM: 30
+  _trunkRadiusMinM: 0.45
+  _trunkRadiusMaxM: 1.2
+  _canopyCardsPerTree: 64
+  _canopyCardSizeM: 4
+  _boulderCount: 36
+  _heroRockCount: 6
+  _fernCount: 420
+  _plantCount: 150
+  _fernHeightMinM: 0.9
+  _fernHeightMaxM: 1.9
+  _plantHeightMinM: 0.8
+  _plantHeightMaxM: 2.2
+  _plantCullScreenFraction: 0.035
+  _rockCullScreenFraction: 0.015
+  _windStrengthM: 0.12
+  _understoryTreeCount: 60
+  _understoryHeightMinM: 6
+  _understoryHeightMaxM: 12
+  _skyHdriId: kloofendal_48d_partly_cloudy_puresky
+  _forestFloorTextureId: leafy_grass
+  _pathTextureId: forest_ground_05
+  _riverBedTextureId: ganges_river_pebbles
+  _cliffTextureId: rock_face_03
+  _boulderTextureId: mossy_rock
+  _barkTextureId: bark_brown_02
+  _leafCardModelId: island_tree_02
+  _fernModelId: fern_02
+  _plantModelIds:
+  - food_ginger_01
+  - anthurium_botany_01
+  - calathea_orbifolia_01
+  - shrub_sorrel_01
+  _rockModelIds:
+  - rock_07
+  - rock_09
+  _forestFloorTint: {r: 0.46, g: 0.6, b: 0.36, a: 1}
+  _pathTint: {r: 0.95, g: 0.86, b: 0.76, a: 1}
+  _riverBedTint: {r: 0.9, g: 0.95, b: 0.9, a: 1}
+  _scannedRockTint: {r: 0.62, g: 0.6, b: 0.54, a: 1}
+  _groundTileM: {x: 4, y: 5, z: 2.5}
+  _cliffTileM: 8
+  _barkTileM: 2
+  _sunPitchDeg: 42
+  _sunYawDeg: -38
+  _sunColor: {r: 1, g: 0.93, b: 0.82, a: 1}
+  _sunIntensity: 2.6
+  _skyExposure: 1
+  _skyRotationDeg: 0
+  _ambientIntensity: 1
+  _bakeEnvironmentLighting: 1
+  _fallbackSkyAmbient: {r: 0.55, g: 0.66, b: 0.72, a: 1}
+  _fallbackEquatorAmbient: {r: 0.36, g: 0.42, b: 0.34, a: 1}
+  _fallbackGroundAmbient: {r: 0.16, g: 0.15, b: 0.11, a: 1}
+  _fogColor: {r: 0.56, g: 0.7, b: 0.7, a: 1}
+  _fogDensity: 0.0075
+  _hdr: 1
+  _msaaSamples: 4
+  _shadowDistanceM: 45
+  _shadowResolution: 2048
+  _shadowCascades: 1
+  _softShadows: 1
+  _acesTonemapping: 1
+  _postExposure: 0.25
+  _contrast: 12
+  _saturation: 8
+  _whiteBalanceTemperature: 4
+  _bloomThreshold: 1.1
+  _bloomIntensity: 0.35
+  _bloomScatter: 0.6
+  _vignetteIntensity: 0.2
+  _waterShallowColor: {r: 0.22, g: 0.75, b: 0.68, a: 1}
+  _waterDeepColor: {r: 0.07, g: 0.4, b: 0.43, a: 1}
+  _waterOpacity: 0.72
+  _waterNormalTilingPerM: 0.35
+  _statsRefreshSeconds: 0.5
+  _showQualityPanel: 1

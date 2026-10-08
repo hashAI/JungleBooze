@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b5bbe4b93dcf54b298af850e77176f99, type: 3}
+  m_Name: FeelTestPalette
+  m_EditorClassIdentifier: JungleBooze.Gameplay::JungleBooze.Gameplay.Views.FeelTestPalette
+  Path: {fileID: 2100000, guid: 7142a220ce1c34ea9b2d69b2b8b7507f, type: 2}
+  PathSafe: {fileID: 2100000, guid: d40a0fad419354df0917f0a35ce065a8, type: 2}
+  PathRisky: {fileID: 2100000, guid: 8207bb537534c46fca319d13e7474663, type: 2}
+  PathSide: {fileID: 2100000, guid: 19ac3f29ad9e74b929142a05bad08b34, type: 2}
+  Ground: {fileID: 2100000, guid: f1f5057a1d0354844b2a677c7fadf070, type: 2}
+  Hedge: {fileID: 2100000, guid: 6a0fadf8097d444779bf3064b61dc184, type: 2}
+  Low: {fileID: 2100000, guid: 59d7434f75ccf4e4ba74bba3149d202c, type: 2}
+  High: {fileID: 2100000, guid: 18664ee82fddb462cae321ac2701c719, type: 2}
+  Blocker: {fileID: 2100000, guid: d476339ba259a42f99eaf4c7c1047cca, type: 2}
+  Thorns: {fileID: 2100000, guid: cb973bc41b2224bf8af2ab1de63e2baa, type: 2}
+  Coin: {fileID: 2100000, guid: 3f0917474c98749fd88a4e166dd2d018, type: 2}
+  Divider: {fileID: 2100000, guid: 529c709ed0c9147238b8265b82576e54, type: 2}
+  Finish: {fileID: 2100000, guid: f241d396a72404363855ea638554b4e6, type: 2}
+  Runner: {fileID: 2100000, guid: dc4d92648ce0d4a35a0299bea382c506, type: 2}
+  RunnerAccent: {fileID: 2100000, guid: e15d16b9d1f8946cc8c4f62b3138ed91, type: 2}
+  DebugHitbox: {fileID: 2100000, guid: 6e3df9185a45f45f284bcf042d09d4b7, type: 2}
+  DebugRunner: {fileID: 2100000, guid: 64b1f7a9caf084bdcb6d04893b2b23c2, type: 2}
+  DebugTarget: {fileID: 2100000, guid: 6dc94662828564dce9c59c56bc305658, type: 2}
+  Marker: {fileID: 2100000, guid: 2442ba835719a4fed9bca8f9c0ac6a9b, type: 2}

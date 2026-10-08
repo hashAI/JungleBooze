@@ -22,7 +22,7 @@ namespace JungleBooze.Tests.EditMode
                 _input = input;
             }
 
-            public int Lane { get; private set; }
+            public float Lateral { get; private set; }
 
             public float Distance { get; private set; }
 
@@ -30,19 +30,19 @@ namespace JungleBooze.Tests.EditMode
 
             public void Step()
             {
-                InputCommand commands = _input.ReadCommands(_time.Tick);
-                if ((commands & InputCommand.MoveLeft) != 0 && Lane > -1)
+                InputFrame frame = _input.ReadInput(_time.Tick);
+                Lateral += frame.LateralDeltaM;
+                if (Lateral < -3f)
                 {
-                    Lane--;
+                    Lateral = -3f;
                 }
-
-                if ((commands & InputCommand.MoveRight) != 0 && Lane < 1)
+                else if (Lateral > 3f)
                 {
-                    Lane++;
+                    Lateral = 3f;
                 }
 
                 Distance += 10f * _time.DeltaTime;
-                if (_random.NextInt(-1, 2) == Lane && _random.Chance(0.05f))
+                if (_random.NextInt(-1, 2) == (int)System.Math.Round(Lateral) && _random.Chance(0.05f))
                 {
                     Coins++;
                 }
@@ -58,21 +58,21 @@ namespace JungleBooze.Tests.EditMode
                 _random = random;
             }
 
-            public InputCommand ReadCommands(long tick)
+            public InputFrame ReadInput(long tick)
             {
                 if (tick % 30 != 0)
                 {
-                    return InputCommand.None;
+                    return InputFrame.Empty;
                 }
 
-                return _random.Chance(0.5f) ? InputCommand.MoveLeft : InputCommand.MoveRight;
+                return new InputFrame(InputCommand.None, _random.Chance(0.5f) ? (short)-1000 : (short)1000);
             }
         }
 
         private struct Outcome
         {
             public long Tick;
-            public int Lane;
+            public float Lateral;
             public float Distance;
             public int Coins;
         }
@@ -97,7 +97,7 @@ namespace JungleBooze.Tests.EditMode
                 }
             }
 
-            return new Outcome { Tick = time.Tick, Lane = sim.Lane, Distance = sim.Distance, Coins = sim.Coins };
+            return new Outcome { Tick = time.Tick, Lateral = sim.Lateral, Distance = sim.Distance, Coins = sim.Coins };
         }
 
         private static readonly double[] SmoothFrames = { 1.0 / 60.0 };
@@ -115,11 +115,11 @@ namespace JungleBooze.Tests.EditMode
             Outcome slow = RunWithFramePacing(seed, ticks, SlowFrames);
 
             Assert.AreEqual(smooth.Tick, jittery.Tick);
-            Assert.AreEqual(smooth.Lane, jittery.Lane);
+            Assert.AreEqual(smooth.Lateral, jittery.Lateral);
             Assert.AreEqual(smooth.Distance, jittery.Distance);
             Assert.AreEqual(smooth.Coins, jittery.Coins);
 
-            Assert.AreEqual(smooth.Lane, slow.Lane);
+            Assert.AreEqual(smooth.Lateral, slow.Lateral);
             Assert.AreEqual(smooth.Distance, slow.Distance);
             Assert.AreEqual(smooth.Coins, slow.Coins);
         }
@@ -147,7 +147,7 @@ namespace JungleBooze.Tests.EditMode
             Outcome live = RunWithFramePacing(seed, ticks, JitteryFrames, recorder);
             Outcome replayed = RunWithFramePacing(recording.Seed, ticks, SmoothFrames, new ReplayInputProvider(recording));
 
-            Assert.AreEqual(live.Lane, replayed.Lane);
+            Assert.AreEqual(live.Lateral, replayed.Lateral);
             Assert.AreEqual(live.Distance, replayed.Distance);
             Assert.AreEqual(live.Coins, replayed.Coins);
         }
