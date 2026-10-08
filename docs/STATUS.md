@@ -107,6 +107,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Log
 Newest first. One line per event.
+- 2026-10-08: Owner: minimum device can rise to iPhone 12/13 for a polished look. Passed to both running agents.
 - 2026-10-08: **Owner: go.** AURELIA with Pista/Duko, realistic, AI-made art, phased plan. Launched P0-A art-director and P0-B tech-architect.
 - 2026-10-08: Owner: keep Pista, Duko and the game name for now; no plans locked, no paid assets, prefers AI + realistic look. Owner is still thinking about direction.
 - 2026-10-08: Owner: replace Pista/Duko. Art fidelity and asset budget still open; owner asked for effort estimate, whether AI can reach good mobile quality, and whether to start a new repo.
