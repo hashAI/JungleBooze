@@ -65,7 +65,7 @@ Duko/continue, audio files) compiled clean on the Mac.
 | performance-engineer | waiting | — | — | Benchmark scene (week 2+) |
 | code-reviewer | stopped by owner (token cost) | FP0 compile review was stopped before reporting; nothing written | — | Rerun after the owner's review, if the owner wants it |
 | monetization-engineer | waiting | — | — | Week 4–5 |
-| appstore-compliance | done | Name check (Pista: low caution, Duko: clear; not legal clearance), 8 ranked app names, 17 early risks, checklist refreshed for current Apple rules (Xcode 26 / iOS 26 SDK) | `docs/compliance/2026-10-name-and-early-review.md`, `docs/APP_STORE_CHECKLIST.md` | Privacy manifest when SDKs are chosen; follow-ups: "report an ad" option, Declared Age Range API, CI check for the word "booze" |
+| appstore-compliance | done (2026-10-09) | AURELIA design review: no blocker; 16 ranked risks. High: name "AURELIA" alone is crowded (Kingdom of Aurelia, adult VN Aurelia); Unity `submitAnalytics` must be off for "Data Not Collected"; bundle id/product name still lane-era | `docs/compliance/2026-10-aurelia-design-review.md`, `docs/APP_STORE_CHECKLIST.md` | Privacy manifest when SDKs are chosen; follow-ups: "report an ad" option, Declared Age Range API, CI check for the word "booze" |
 | release-engineer | paused (owner: build the game first) | Partial: build script, fastlane lanes, one-command build, setup guide (stopped mid-verification) | `fastlane/`, `tools/build/`, `docs/RELEASE.md`, `.github/workflows/build-ios.yml` | Resume later: finish and verify the Fastfile lanes |
 
 States: **working** (launched, report not received) · waiting · blocked · done.
@@ -92,6 +92,7 @@ Meshy: 3 (image edit test) + 30 (Pista 3D v1) = **33 credits used**; balance 2,4
 | G4–G8 | Not started |
 
 ## Open questions for the owner
+- (2026-10-09, compliance) Store name: "Aurelia: <coined word>" (rec.) / new coined name / "AURELIA" alone. Bundle id: set a neutral `com.<studio>.aurelia` now (rec.; needs a studio name) / wait / keep. Lawyer name check before store art (rec.) / at launch prep. Not blocking until TestFlight. To do (free): turn off Unity `submitAnalytics` after gameplay-engineer finishes.
 0. API keys for image/3D/audio generation must be added to the cloud environment (see Phase 0 "Blocked").
 1. Ads and prices: deferred to week 4 (tracking already decided: none).
 2. Jungle music variation: three loops on disk (A/B/C). Playback is not wired yet; default to A until the owner listens.
@@ -123,6 +124,7 @@ Meshy: 3 (image edit test) + 30 (Pista 3D v1) = **33 credits used**; balance 2,4
 
 ## Log
 Newest first. One line per event.
+- 2026-10-09: appstore-compliance done: AURELIA design review (no blocker; name, analytics flag, bundle id are the high risks).
 - 2026-10-09: tech-architect done (look test builds, iOS build OK, over draw budget, look not professional yet). asset-pipeline done (Pista rigged + animated, 62 credits). Sent owner Pista sheet, run cycle and a look-test screenshot.
 - 2026-10-09: Launched gameplay-engineer on spec 101 (Phase 1 Feel).
 - 2026-10-09: game-designer done: GDD + specs 101 (movement/camera) and 102 (chunks/routes/World Director). Needs ADR 0002 amendment (new per-tick input: commands + drag distance; replay version bump).
