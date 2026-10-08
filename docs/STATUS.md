@@ -53,7 +53,7 @@ Duko/continue, audio files) compiled clean on the Mac.
 | Agent | State | Current / last task | Output | Next for this agent |
 |---|---|---|---|---|
 | producer | not used yet | (the coordinating session does this role for now) | this file | — |
-| game-designer | working (2026-10-09) | AURELIA GDD + spec 101 movement/camera + spec 102 chunks/routes/World Director | `archive/pre-aurelia/docs/specs/002-track-obstacles-coins.md` | Phase 1: new AURELIA GDD + movement spec from the blueprint (old GDD/specs archived) |
+| game-designer | done (2026-10-09) | AURELIA GDD, spec 101 movement/camera (46 ACs, 61 s feel course), spec 102 chunks/routes/World Director | `design/aurelia/GDD.md`, `design/aurelia/specs/` | Phase 2 chunk catalog detail; FTUE script |
 | balance-simulator | done (A3) | Python reference model, golden traces, S1–S9 report (`archive/pre-aurelia/docs/sim-reports/2026-10-07-spec001.md`) | `tools/sim/`, `docs/sim-reports/` | Phase 1: new movement/chunk model from the AURELIA spec (old model kept as reference) |
 | tech-architect | working (2026-10-09) | LookTest built headless, CC0 fetch, screenshot renderer + look iteration, iOS Xcode build check | `Assets/_Game/Editor/Setup/`, `docs/adr/0003-first-playable-bootstrap.md`, `docs/PLAY_FIRST_BUILD.md` | Add EditMode tests for `ProjectSetupRules`; Roslyn analyzers |
 | gameplay-engineer | done (batch 2) | Power-ups, lane strikes, Duko, continue; compile-checked | `Scripts/Gameplay/PowerUps`, `Hazards`, `Companion`, `Views`, `App/RunSceneBootstrap.cs` | Wire audio events; then Batch 3 |
@@ -97,6 +97,7 @@ Meshy: 3 (image edit test) + 30 (Pista 3D v1) = **33 credits used**; balance 2,4
 2. Jungle music variation: three loops on disk (A/B/C). Playback is not wired yet; default to A until the owner listens.
 
 ## Assumptions waiting for owner review (`[ASSUMED]`)
+- AURELIA (spec 101/GDD, 2026-10-09): controls "Steer + Flick" (drag steers 0.040 m/pt, flick = 2.2 m dodge, swipe up/down fire on threshold); speed 10→16 m/s; fixed jump 1.41 m / 0.60 s, coyote 100 ms, buffer 150 ms; frontal crash into a tall blocker ends the run; health +1 per 350 m undamaged; revive 1/2/4 crystals (max 3); rare resource "Crystals"; power-ups Magnet/Shield/Explorer Vision; 7 abilities; rating 9+; first 60 s can't die; analytics on-device (TestFlight upload only); DDA starts −0.3; MVP 14 chunks. Owner confirms controls at the Phase 1 check.
 - Track: seam-fallback breather doesn't reset the breather timer; each breather gets its own pick; mover moves for 30 ticks after its trigger tick; random stream ids TrackGeneration=1…Cosmetic=5.
 - Collisions: a second obstacle clipped on the same tick as a stumble is ignored; obstacles touched while invulnerable are ignored for that pass; a box already overlapping at tick start is a stumble, never a death; sliding under a standard high barrier counts as a near-miss.
 - Possible feel change for the owner later: jump airtime 600 ms → 650 ms (same 1.5 m height) makes low barriers easier; the simulation shows average-player survival 87% → 90%. Not applied.
@@ -122,6 +123,7 @@ Meshy: 3 (image edit test) + 30 (Pista 3D v1) = **33 credits used**; balance 2,4
 
 ## Log
 Newest first. One line per event.
+- 2026-10-09: game-designer done: GDD + specs 101 (movement/camera) and 102 (chunks/routes/World Director). Needs ADR 0002 amendment (new per-tick input: commands + drag distance; replay version bump).
 - 2026-10-09: Owner pre-approved 1,000 Meshy credits (no per-step cap; free retries first); beyond that, ask.
 - 2026-10-09: Launched game-designer (GDD, specs 101/102), asset-pipeline (Pista finish + Meshy rig/anim, cap 150), tech-architect (look test build, screenshots, iOS build check). Local session resume watchdog: in-session hourly cron at :17 (expires after 7 days).
 - 2026-10-09: **Moved to local development on the owner's Mac.** Owner mandate: professional, fully polished, App Store-safe AURELIA; autonomy except money; lean coordinator relying on subagents. Archived the old lane-based code/tests/audio/Run scene/tools/sim to `archive/pre-aurelia/`; look test decoupled (stand-in runner). Compile clean, EditMode 57/57.
