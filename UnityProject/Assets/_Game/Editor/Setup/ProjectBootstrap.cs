@@ -334,7 +334,7 @@ namespace JungleBooze.Editor.Setup
             EditorUtility.SetDirty(rendererData);
         }
 
-        private static ScriptableObject FindUrpPostProcessData()
+        internal static ScriptableObject FindUrpPostProcessData()
         {
             // Same asset URP's own "Create > Rendering > URP Asset" menu assigns (URP 17.3).
             var known = AssetDatabase.LoadAssetAtPath<ScriptableObject>(
