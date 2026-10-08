@@ -70,7 +70,7 @@ Duko/continue, audio files) compiled clean on the Mac.
 | gameplay-engineer | done (batch 2) | Power-ups, lane strikes, Duko, continue; compile-checked | `Scripts/Gameplay/PowerUps`, `Hazards`, `Companion`, `Views`, `App/RunSceneBootstrap.cs` | Wire audio events; then Batch 3 |
 | ui-engineer | done (C2) | Track wired into the Run scene with gray-box views and HUD | `Scripts/Gameplay/Views`, `Scripts/App`, `Scripts/UI/Hud` | Fix errors the owner sends from Unity |
 | art-director | done (concepts) | Hero take 1 and macaw take 1 locked; four unused recolors on disk | `archive/pre-aurelia/design/concepts/2026-10-07/` | Store art later |
-| asset-pipeline | working | Pista: finish cleanup/export/previews, then Meshy rig + animations (cap 150 credits) | `art_source/pista/`, `tools/blender/pista/` | Report → import rigged Pista into LookTest |
+| asset-pipeline | stopped by owner | Pista: finish cleanup/export/previews, then Meshy rig + animations (cap 150 credits); nothing written yet | `art_source/pista/`, `tools/blender/pista/` | Report → import rigged Pista into LookTest |
 | audio-director | done (files) | SFX, Duko voice (from history), Jungle/menu music, `AudioPlayback` | `Assets/_Game/Audio`, `Scripts/Services/Audio` | Wire playback into the Run scene |
 | qa-engineer | waiting | — | — | FP1 stage F: test plan + owner play-test script |
 | performance-engineer | waiting | — | — | Benchmark scene (week 2+) |
@@ -87,7 +87,7 @@ Meshy: 3 (image edit test) + 30 (Pista 3D v1) = **33 credits used**; balance 2,4
 Ask the owner before any single step over 150 credits or total Meshy spend past 1,000. OpenAI: 3 draft images (well under $1); account out of credit.
 
 ## Resume watchdog
-- Routine `trig_0125FGkR542RNUbbCvMm3LWX` ("AURELIA resume watchdog") wakes session_01GJ9eWD47NbuMr3AXGv86j8 every 2 hours (minute 52 UTC).
+- Routine `trig_0125FGkR542RNUbbCvMm3LWX` ("AURELIA resume watchdog") wakes session_01GJ9eWD47NbuMr3AXGv86j8 every 2 hours (minute 52 UTC). **Disabled 2026-10-08 (owner stopped the session).**
   It resumes stalled work after usage limits or interruptions; idle when only a pending budget answer blocks work.
 - Old routines `trig_01KrbEoPcZMAR8K2x73kVcUn` and `trig_016rQLbb82z8R9q8csbCuZjN` deleted 2026-10-08.
 - Stall started: _none_. After 3 days stalled, ask the owner and disable the routine until they answer.
@@ -133,6 +133,7 @@ Ask the owner before any single step over 150 credits or total Meshy spend past 
 
 ## Log
 Newest first. One line per event.
+- 2026-10-08: **Owner: stop the session.** Stopped asset-pipeline before it wrote anything (it was installing Blender); Pista task still to do exactly as in the Handoff note. Resume watchdog trig_0125FGkR542RNUbbCvMm3LWX disabled (not deleted); re-enable it when the owner restarts work.
 - 2026-10-08: Owner OK'd cleanup of the old vision. Moved the old GDD, specs 001/002, sim report, Inkbound Pulp style guide, hero/macaw concept sheets and prompts, realistic Duko prompts and 2026-10-07 concepts to `archive/pre-aurelia/` (with SUPERSEDED banners and a README). Updated CLAUDE.md, AGENT_PLAN.md, 7 agent definitions and cross-links to AURELIA wording; Duko-dropped notes in ART_DIRECTION and meshy prompts. FP1 code and tools/sim kept for Phase 1 review (sim tests 64/64 pass).
 - 2026-10-08: New session session_01GJ9eWD47NbuMr3AXGv86j8 took over (keys present). New watchdog trig_0125FGkR542RNUbbCvMm3LWX, old one deleted. Relaunched asset-pipeline: redo Blender steps 01–05 (intermediate files were lost), export pista_clean.glb, v2 previews + self-review, README; then Meshy rig + animations (cap 150 credits).
 - 2026-10-08: Usage limit stopped both agents. Compile check verified by the coordinator: all assemblies and shaders PASS. Pista textures baked; export/rig/anim pending. Handing off to a fresh session.
