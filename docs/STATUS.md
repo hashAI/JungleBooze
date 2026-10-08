@@ -110,6 +110,7 @@ Ask the owner before any single step over 150 credits or total Meshy spend past 
 
 ## Log
 Newest first. One line per event.
+- 2026-10-08: Owner confirmed Meshy was always on a paid plan: outputs owned, no attribution. Logged in LICENSES.md.
 - 2026-10-08: Owner upgraded Meshy (2,432 credits) and approved wise use. Asset-pipeline may rig + animate Pista after cleanup, cap 150 credits.
 - 2026-10-08: **Owner mandate: build AURELIA to completion autonomously, never move away from the blueprint, test constantly, auto-resume after limits, always ask before spending.** New watchdog trig_016rQLbb82z8R9q8csbCuZjN (every 2 h). Launching asset-pipeline (Pista Blender cleanup, free) and tech-architect (cloud compile check with Unity 6000.3.25f1 DLLs). Budget asks pending: Meshy rigging (~5–10 credits), animations (Meshy ~20–30 credits vs free phone mocap).
 - 2026-10-08: Owner rule: always confirm budgets before spending. P0-B done (tech-architect): ADR 0004 (iPhone 12 provisional minimum, URP-Realistic), CC0 fetch tool (16 Poly Haven assets, 68.9 MB), LookTest scene builder/runtime/shaders/overlay, 2 EditMode test files; nothing compiled in Unity, shaders never compiled. Fixed a real compile error in RunAudioCues.cs (Stumble → Stumbled). ADR numbers shifted (save format now 0005). 3D Pista v1 from Meshy multi-image-to-3D (30 credits, balance 432): 28.9k tris, 4k PBR; previews rendered with Blender (bpy 4.2) in the cloud. Issues: rope still on, backpack map patch blurred, ponytail clumpy.

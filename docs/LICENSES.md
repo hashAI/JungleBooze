@@ -13,3 +13,12 @@ All Poly Haven assets are CC0 1.0 (https://polyhaven.com/license): free for comm
 
 | Item | Type | Source | License | Commercial use OK | Added |
 |---|---|---|---|---|---|
+
+## Meshy AI-generated 3D (paid plan)
+
+The owner's Meshy account has been on a paid plan for every generation (owner, 2026-10-08), so outputs are owned by
+the owner with commercial rights per Meshy's terms. No attribution required.
+
+| Asset | Source | Date | License |
+|---|---|---|---|
+| Pista 3D v1 (`art_source/pista/meshy/pista.glb`) | Meshy multi-image-to-3D from our own concept (take B) | 2026-10-08 | Owned by owner (Meshy paid plan) |
