@@ -5,6 +5,7 @@ Newest first.
 
 | Date | Gate | Decision | Options considered | Decided by |
 |---|---|---|---|---|
+| 2026-10-09 | — | **Switch to local development on the owner's Mac** (Unity, Xcode, API keys in `~/.config/junglebooze/secrets.env`). Full autonomy on everything except money: ask before any paid spend. Goal: a professional, fully polished iOS game that passes App Review. AURELIA only: the old lane-based direction may be deleted or archived and must never interfere. Coordinator stays lean, relies on subagents, and may restart fresh when that's cheaper | — | Owner |
 | 2026-10-08 | — | When the session context grows large, commit the work (including running agents' work in progress) and hand off to a fresh session; optimal token use without compromising game quality. CLAUDE.md step 3 revised | — | Owner |
 | 2026-10-08 | — | Meshy upgraded by the owner (balance 2,432). Meshy credits approved for use with judgment toward a polished game. Working rule [ASSUMED]: log every spend with a running total in `docs/STATUS.md`; ask the owner before any single step over 150 credits or before total Meshy spend passes 1,000 credits. Other services (OpenAI, ElevenLabs, purchases) still need an OK each time | — | Owner |
 | 2026-10-08 | — | **Mandate: build AURELIA to completion autonomously.** Never move away from the core vision document (`design/aurelia/BLUEPRINT.md`). Use own recommendations, test constantly, resume automatically after usage limits. Always ask the owner before spending money or credits | — | Owner |

@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace JungleBooze.UI.Hud
+namespace JungleBooze.UI.Common
 {
     /// <summary>
     /// Stretches its RectTransform to <see cref="Screen.safeArea"/> (notch, Dynamic Island, home indicator) and

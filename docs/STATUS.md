@@ -4,30 +4,19 @@
 The coordinating session updates it whenever it launches an agent, receives an agent's report, or records an owner decision.
 Decisions themselves live in `design/DECISIONS.md`; the plan lives in `docs/AGENT_PLAN.md`.
 
-_Last updated: 2026-10-08 (AURELIA Phase 0: look test)_
+_Last updated: 2026-10-09 (AURELIA Phase 0: look test, local development)_
 
-## Handoff (2026-10-08 ~19:45 UTC, from session_01TcBSvUMXMZHaqtqzyUhrPH)
-**Just finished:** cloud compile check works (`tools/ci/compile_check.sh`, ADR 0005, `docs/ci/COMPILE_CHECK.md`):
-all 8 project assemblies PASS in editor-ios, editor-osx and player-ios with warnings as errors, and the 4 look-test
-shaders compile (DXC, 84 stage compiles). First run downloads ~5.3 GB into `$JB_CI_CACHE` (use the scratchpad).
-**Interrupted by a usage limit (both agents died mid-task, work committed):**
-1. asset-pipeline, Pista cleanup in Blender. Done: steps 01 prepare (1.65 m), 02 remove rope, 03 ponytail, 04 budget,
-   05 UV, 06 bake → `art_source/pista/clean/textures/` (2k + 1k BaseColor/Normal/ARM), plus `paint_map_patch.py`,
-   `composite.py`. NOT done: final `pista_clean.glb`/FBX export, v2 preview renders + face/backpack close-ups and
-   self-review against ART_DIRECTION checklist A/B/E, `art_source/pista/README.md`. Then (approved, cap 150 Meshy
-   credits): Meshy rigging (1.65 m) + animations idle/run/jump/fall/land/slide (+ vine grab/swing if available);
-   log each call's credits; render run-cycle frames and review. Relaunch asset-pipeline with these essentials.
-   Blender: `uv venv -p 3.11 <scratch>/bpyenv && uv pip install -p <scratch>/bpyenv/bin/python bpy==4.2.0`.
-2. tech-architect compile check: functionally done (see above); it was writing docs. Review ADR 0005 and the
-   ARCHITECTURE/LICENSES edits for completeness; nothing else to relaunch.
-**Next after that (Phase 0):** import rigged Pista into the LookTest scene (replace the capsule); AI-made environment
-props from `design/aurelia/LOOK_TEST_BRIEF.md` via Meshy (stiltwood tree, rootstone pieces, bellcap, whirlseed,
-sailback; ask the owner before any step >150 credits); render look-test screenshots (if possible) and send them to
-the owner; then the owner opens it on Mac + iPhone (P0-E).
-**Pending owner items:** none blocking. OpenAI account is out of credit (only needed for new concept images).
-**Owner rules to keep:** blueprint is binding; own recommendations; test constantly; ask before spending
-(Meshy: ask before >150 credits per step or >1,000 total; others: ask each time); send pictures often; hand off when
-context is large. New session must check `OPENAI_API_KEY`, `MESHY_API_KEY`, `ELEVENLABS_API_KEY` are present.
+## Working setup (2026-10-09)
+Local development on the owner's M4 Mac (see CLAUDE.md step 3). Branch `ccr-9e904458-5jxbus`. Cloud sessions are over;
+the cloud resume watchdog `trig_0125FGkR542RNUbbCvMm3LWX` stays disabled (no delete in the tool; harmless).
+Headless Unity: `tools/ci/unity.sh compile|test`. Old lane-based code, tests, audio, Run scene and `tools/sim` moved to
+`archive/pre-aurelia/` (2026-10-09); the look test now uses a stand-in runner until the AURELIA movement core lands.
+Baseline after the archive: all assemblies compile, EditMode 57/57 pass.
+
+**Carried over from the 2026-10-08 handoff:** Pista cleanup in Blender (steps 01–05 redo, 06 bake is done:
+`art_source/pista/clean/textures/`), export `pista_clean.glb`, previews + self-review, README; then Meshy rig +
+animations (approved cap 150 credits). Then import rigged Pista into the LookTest scene, AI/CC0 environment props from
+`design/aurelia/LOOK_TEST_BRIEF.md`, screenshots to the owner, owner opens it on Mac + iPhone (P0-E).
 
 ## Current milestone
 **AURELIA, Phase 0: look test** (owner go, 2026-10-08). Source of truth for the direction: `design/aurelia/BLUEPRINT.md` and
@@ -133,6 +122,7 @@ Ask the owner before any single step over 150 credits or total Meshy spend past 
 
 ## Log
 Newest first. One line per event.
+- 2026-10-09: **Moved to local development on the owner's Mac.** Owner mandate: professional, fully polished, App Store-safe AURELIA; autonomy except money; lean coordinator relying on subagents. Archived the old lane-based code/tests/audio/Run scene/tools/sim to `archive/pre-aurelia/`; look test decoupled (stand-in runner). Compile clean, EditMode 57/57.
 - 2026-10-08: **Owner: stop the session.** Stopped asset-pipeline before it wrote anything (it was installing Blender); Pista task still to do exactly as in the Handoff note. Resume watchdog trig_0125FGkR542RNUbbCvMm3LWX disabled (not deleted); re-enable it when the owner restarts work.
 - 2026-10-08: Owner OK'd cleanup of the old vision. Moved the old GDD, specs 001/002, sim report, Inkbound Pulp style guide, hero/macaw concept sheets and prompts, realistic Duko prompts and 2026-10-07 concepts to `archive/pre-aurelia/` (with SUPERSEDED banners and a README). Updated CLAUDE.md, AGENT_PLAN.md, 7 agent definitions and cross-links to AURELIA wording; Duko-dropped notes in ART_DIRECTION and meshy prompts. FP1 code and tools/sim kept for Phase 1 review (sim tests 64/64 pass).
 - 2026-10-08: New session session_01GJ9eWD47NbuMr3AXGv86j8 took over (keys present). New watchdog trig_0125FGkR542RNUbbCvMm3LWX, old one deleted. Relaunched asset-pipeline: redo Blender steps 01–05 (intermediate files were lost), export pista_clean.glb, v2 previews + self-review, README; then Meshy rig + animations (cap 150 credits).

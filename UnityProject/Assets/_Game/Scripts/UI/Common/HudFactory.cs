@@ -1,9 +1,8 @@
-using JungleBooze.Gameplay.Views;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
 
-namespace JungleBooze.UI.Hud
+namespace JungleBooze.UI.Common
 {
     /// <summary>
     /// Builds uGUI elements from code in the style guide's comic-panel look (section 8): parchment fill, 3 pt ink
@@ -14,6 +13,7 @@ namespace JungleBooze.UI.Hud
     {
         public const float BorderPt = 3f;
         public const float ShadowPt = 4f;
+        private static readonly Color InkColor = new Color(0x1E / 255f, 0x1A / 255f, 0x24 / 255f, 1f);
 
         public static RectTransform CreateRect(Transform parent, string name)
         {
@@ -60,12 +60,12 @@ namespace JungleBooze.UI.Hud
             RectTransform root = CreateRect(parent, name);
             Place(root, anchor, size, offset);
 
-            Image shadow = CreateImage(root, "Shadow", StylePalette.Ink, false);
+            Image shadow = CreateImage(root, "Shadow", InkColor, false);
             Stretch(shadow.rectTransform, 0f);
             shadow.rectTransform.offsetMin = new Vector2(ShadowPt, -ShadowPt);
             shadow.rectTransform.offsetMax = new Vector2(ShadowPt, -ShadowPt);
 
-            Image border = CreateImage(root, "Border", StylePalette.Ink, false);
+            Image border = CreateImage(root, "Border", InkColor, false);
             Stretch(border.rectTransform, 0f);
 
             Image fillImage = CreateImage(root, "Fill", fill, false);

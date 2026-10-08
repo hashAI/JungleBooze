@@ -1,6 +1,6 @@
 using System;
 using System.Text;
-using JungleBooze.UI.Hud;
+using JungleBooze.UI.Common;
 using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.UI;

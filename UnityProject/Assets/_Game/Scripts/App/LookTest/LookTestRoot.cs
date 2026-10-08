@@ -1,7 +1,3 @@
-using JungleBooze.Gameplay.Controls;
-using JungleBooze.Gameplay.Runner;
-using JungleBooze.Gameplay.Session;
-using JungleBooze.Gameplay.Views;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.Rendering;
@@ -14,15 +10,11 @@ namespace JungleBooze.App.LookTest
 {
     /// <summary>
     /// Composition root of the AURELIA Phase 0 look test scene (ADR 0004). The editor scene builder
-    /// (JungleBooze > Look Test > Build Scene) places this component and fills in its references; at Play it wires
-    /// the existing run code to the realistic stretch:
-    /// the same <see cref="GameSession"/> / <see cref="RunnerSimulation"/>, touch and keyboard input
-    /// (<see cref="PlayerInputAdapter"/>) and <see cref="RunDriver"/> as the Run scene, on a flat
-    /// world (no obstacles) at a constant speed; Pista is the existing gray-box <see cref="RunnerView"/> (casting a
-    /// real shadow) until the 3D model exists; the existing <see cref="FollowCameraView"/> with landscape camera
-    /// values; <see cref="LookTestWorldView"/> loops the stretch; <see cref="FrameStatsOverlay"/> and
-    /// <see cref="LookTestQualityPanel"/> measure it. The run starts immediately.
-    /// The deterministic simulation is unchanged: only its config inputs (speed curve, presentation) differ.
+    /// (JungleBooze > Look Test > Build Scene) places this component and fills in its references. At Play a stand-in
+    /// Pista runs forward at the configured speed with a slow side-to-side weave (free horizontal movement, no lanes),
+    /// a smoothed third-person camera follows her, <see cref="LookTestWorldView"/> loops the stretch, and
+    /// <see cref="FrameStatsOverlay"/> / <see cref="LookTestQualityPanel"/> measure it. Presentation only: the look
+    /// test has no gameplay simulation, so it reads frame time directly.
     /// </summary>
     public sealed class LookTestRoot : MonoBehaviour
     {
@@ -36,7 +28,17 @@ namespace JungleBooze.App.LookTest
         [SerializeField] private GameObject[] _plantGroups;
         [SerializeField] private GameObject[] _waterGroups;
 
-        private RunDriver _driver;
+        private const float StandInHeightM = 1.65f;
+        private const float WeaveAmplitudeM = 1.6f;
+        private const float WeavePeriodS = 7f;
+        private const float CameraSmoothingS = 0.12f;
+
+        private LookTestWorldView _worldView;
+        private Transform _runner;
+        private double _distanceM;
+        private float _runTimeS;
+        private bool _paused;
+        private Vector3 _cameraVelocity;
         private FrameStatsOverlay _overlay;
         private UniversalAdditionalCameraData _cameraData;
         private LightShadows _sunShadows = LightShadows.Soft;
@@ -45,7 +47,10 @@ namespace JungleBooze.App.LookTest
 
         public LookTestConfigAsset Config => _config;
 
-        public RunDriver Driver => _driver;
+        /// <summary>Distance the stand-in has run, in meters.</summary>
+        public double DistanceM => _distanceM;
+
+        public bool Paused => _paused;
 
         /// <summary>Called by the editor scene builder to fill in the scene references.</summary>
         public void Configure(
@@ -78,52 +83,19 @@ namespace JungleBooze.App.LookTest
             AllowLandscape();
             ApplyAutoRenderScale();
 
-            RunConfigSet configs = RunConfigLoader.Load();
-            RunnerPresentationConfig presentation = configs.Presentation;
-            presentation.CameraFovDeg = _config.CameraFovDeg;
-            presentation.CameraOffsetBehindM = _config.CameraOffsetBehindM;
-            presentation.CameraOffsetUpM = _config.CameraOffsetUpM;
-            presentation.CameraLookAheadM = _config.CameraLookAheadM;
-            presentation.CameraLookAtHeightM = _config.CameraLookAtHeightM;
-
-            var input = new PlayerInputAdapter(configs.Input, PlayerInputAdapter.PixelsPerPointForDpi(Screen.dpi));
-            var session = new GameSession(
-                configs.Runner,
-                SpeedCurve.CreateConstant(_config.RunSpeedMps),
-                input,
-                new FlatRunWorldFactory(),
-                presentation.ToSessionTimings(),
-                (ulong)(uint)_config.Seed,
-                SessionPhase.Ready);
-            session.Begin();
-
-            var kit = new GrayBoxKit();
-            var runnerObject = new GameObject("Pista (stand-in)");
-            runnerObject.transform.SetParent(transform, false);
-            RunnerView runnerView = runnerObject.AddComponent<RunnerView>();
-            runnerView.Init(kit, configs.Runner, presentation);
-            UseRealShadows(runnerObject);
-
+            _runner = CreateStandIn(transform);
             _camera.farClipPlane = _config.CameraFarClipM;
-            FollowCameraView cameraView = _camera.GetComponent<FollowCameraView>();
-            if (cameraView == null)
-            {
-                cameraView = _camera.gameObject.AddComponent<FollowCameraView>();
-            }
-
-            cameraView.Init(_camera, presentation);
+            _camera.fieldOfView = _config.CameraFovDeg;
             _cameraData = _camera.GetUniversalAdditionalCameraData();
 
-            LookTestWorldView worldView = _stretchRoot.GetComponent<LookTestWorldView>();
-            if (worldView == null)
+            _worldView = _stretchRoot.GetComponent<LookTestWorldView>();
+            if (_worldView == null)
             {
-                worldView = _stretchRoot.gameObject.AddComponent<LookTestWorldView>();
+                _worldView = _stretchRoot.gameObject.AddComponent<LookTestWorldView>();
             }
 
-            worldView.Init(_segments, _config.LoopLengthM, _config.RecycleBehindM);
-
-            _driver = gameObject.AddComponent<RunDriver>();
-            _driver.Init(session, input, new IRunView[] { worldView, runnerView, cameraView }, kit);
+            _worldView.Init(_segments, _config.LoopLengthM, _config.RecycleBehindM);
+            PlaceRunnerAndCamera(true);
 
             if (_sun != null && _sun.shadows != LightShadows.None)
             {
@@ -131,7 +103,54 @@ namespace JungleBooze.App.LookTest
             }
 
             BuildOverlay();
-            Debug.Log("[JungleBooze] Look test running. Config: " + configs.Source + ". Speed " + _config.RunSpeedMps + " m/s.");
+            Debug.Log("[JungleBooze] Look test running. Speed " + _config.RunSpeedMps + " m/s.");
+        }
+
+        private void Update()
+        {
+            if (_runner == null || _paused)
+            {
+                return;
+            }
+
+            float dt = Time.deltaTime;
+            _runTimeS += dt;
+            _distanceM += _config.RunSpeedMps * dt;
+            PlaceRunnerAndCamera(false);
+        }
+
+        private void PlaceRunnerAndCamera(bool snap)
+        {
+            float x = WeaveAmplitudeM * Mathf.Sin(_runTimeS * (2f * Mathf.PI / WeavePeriodS));
+            float z = (float)_distanceM;
+            _runner.localPosition = new Vector3(x, 0f, z);
+            _worldView.Render(_distanceM);
+
+            // The camera follows the run line (half the weave) so the runner visibly moves across the screen.
+            Vector3 target = new Vector3(x * 0.5f, _config.CameraOffsetUpM, z - _config.CameraOffsetBehindM);
+            Transform cam = _camera.transform;
+            cam.position = snap
+                ? target
+                : Vector3.SmoothDamp(cam.position, target, ref _cameraVelocity, CameraSmoothingS);
+            cam.LookAt(new Vector3(x * 0.5f, _config.CameraLookAtHeightM, z + _config.CameraLookAheadM));
+        }
+
+        /// <summary>Capsule stand-in for Pista until the rigged model is imported; casts and receives real shadows.</summary>
+        private static Transform CreateStandIn(Transform parent)
+        {
+            var root = new GameObject("Pista (stand-in)");
+            root.transform.SetParent(parent, false);
+            GameObject body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            body.name = "Body";
+            Object.Destroy(body.GetComponent<Collider>());
+            body.transform.SetParent(root.transform, false);
+            body.transform.localScale = new Vector3(0.45f, StandInHeightM * 0.5f, 0.45f);
+            body.transform.localPosition = new Vector3(0f, StandInHeightM * 0.5f, 0f);
+            MeshRenderer meshRenderer = body.GetComponent<MeshRenderer>();
+            meshRenderer.material.color = new Color(0.93f, 0.52f, 0.18f, 1f);
+            meshRenderer.shadowCastingMode = ShadowCastingMode.On;
+            meshRenderer.receiveShadows = true;
+            return root.transform;
         }
 
         private void BuildOverlay()
@@ -179,40 +198,7 @@ namespace JungleBooze.App.LookTest
             });
             panel.AddAction(ScaleLabel, CycleRenderScale);
             panel.AddAction(() => "Reset stats", () => { });
-            panel.AddAction(() => _driver != null && _driver.Session.Phase == SessionPhase.Paused ? "Resume" : "Pause", () =>
-            {
-                if (_driver == null)
-                {
-                    return;
-                }
-
-                if (_driver.Session.Phase == SessionPhase.Paused)
-                {
-                    _driver.Resume();
-                }
-                else
-                {
-                    _driver.Pause();
-                }
-            });
-        }
-
-        /// <summary>Gray-box Pista casts and receives the sun's shadow; the flat blob shadow is hidden.</summary>
-        private static void UseRealShadows(GameObject runnerObject)
-        {
-            MeshRenderer[] renderers = runnerObject.GetComponentsInChildren<MeshRenderer>(true);
-            for (int i = 0; i < renderers.Length; i++)
-            {
-                MeshRenderer meshRenderer = renderers[i];
-                if (meshRenderer.gameObject.name == "BlobShadow")
-                {
-                    meshRenderer.enabled = false;
-                    continue;
-                }
-
-                meshRenderer.shadowCastingMode = ShadowCastingMode.On;
-                meshRenderer.receiveShadows = true;
-            }
+            panel.AddAction(() => _paused ? "Resume" : "Pause", () => _paused = !_paused);
         }
 
         private static void AllowLandscape()

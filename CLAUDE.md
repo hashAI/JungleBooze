@@ -11,29 +11,28 @@ defined in `.claude/agents/`. Read `docs/AGENT_PLAN.md` for the full plan.
 2. The coordinating session updates `docs/STATUS.md` (agent table + log line) every time it launches an agent,
    receives an agent's report, or records an owner decision, and commits it with that work.
 
-3. **Automatic handoff (owner-approved, revised 2026-10-08).** Goal: the best use of tokens without ever lowering game
-   quality. When the coordinating session's context has grown large (about 40% full; the session estimates this, it
-   has no exact gauge), it hands off to a fresh session:
-   (a) Prefer handing off right after running agents report. A new session runs in a new container, so files from an
-   agent still running are lost unless committed; if the context is getting too full to wait, commit the agents' work
-   in progress and list each interrupted task (with its prompt essentials) in the Handoff note so it is relaunched.
-   (b) Update `docs/STATUS.md` with a "Handoff" note (just finished, in progress, what to launch next, pending owner
-   answers), (c) commit and push, (d) start a new cloud session on the same repo and branch with the prompt
-   "Continue the project: read docs/STATUS.md and design/DECISIONS.md, then carry on from the Handoff note",
-   (e) create a new resume watchdog bound to the new session and delete the old one (id in `docs/STATUS.md`),
-   (f) send the owner the new session's link, and stop working in the old session.
-   A pending owner question doesn't block the handoff; it moves into the Handoff note and the new session asks it.
+3. **Local development (owner, 2026-10-09).** Work happens on the owner's M4 Mac in `/Users/hash/Projects/JungleBooze`,
+   not in cloud containers. Unity 6000.3.25f1 (with iOS Build Support), Xcode, Homebrew and git-lfs are installed;
+   API keys live in `~/.config/junglebooze/secrets.env` (never print or commit them). Installing tools on the Mac is
+   allowed. Disk space is tight (~24 GB free on 2026-10-09): keep scratch output out of the repo and clean up builds.
+   Headless checks: `tools/ci/unity.sh compile` and `tools/ci/unity.sh test` (EditMode/PlayMode).
+   When a session's context grows large (about 40% full), it writes a "Handoff" note in `docs/STATUS.md`
+   (just finished, in progress, what to launch next), commits, and the next local session carries on from it.
+   Commit agent work after every report so nothing is lost if a session stops.
+   **Token economy (owner, 2026-10-09):** the coordinating session stays lean and delegates most work to subagents
+   (`.claude/agents/`); it plans, launches, verifies and commits. It may end itself and start fresh (via the Handoff
+   note) whenever carrying on would cost more than a clean start.
 
-4. **Current mandate (owner, 2026-10-08): build AURELIA to completion, autonomously.** The core vision document
-   `design/aurelia/BLUEPRINT.md` (with `design/aurelia/vision_board.png`) is binding: never move away from it.
-   Follow the phase plan in `docs/STATUS.md`. Use your own recommendations instead of asking the owner; mark them
-   `[ASSUMED]` and log them in `docs/STATUS.md`. Test constantly yourself: compile, run tests, render previews,
-   and look at the results before calling anything done.
-   **Budgets are the exception: always ask the owner** before spending money or API credits, with the expected cost.
+4. **Current mandate (owner, 2026-10-09): build AURELIA into a professional, fully polished iOS game, autonomously.**
+   The core vision document `design/aurelia/BLUEPRINT.md` (with `design/aurelia/vision_board.png`) is binding: never
+   move away from it. Gameplay must feel professional. Build so it passes Apple App Review with no surprises
+   (`docs/APP_STORE_CHECKLIST.md`). Follow the phase plan in `docs/STATUS.md`. Think, test, validate and improve
+   freely; use your own recommendations instead of asking the owner; mark them `[ASSUMED]` and log them in
+   `docs/STATUS.md`. Test constantly yourself: compile, run tests, render previews/screenshots, and look at the
+   results before calling anything done.
+   **Money is the exception: always ask the owner** before spending money or API credits, with the expected cost.
    Keep going on free work while a budget answer is pending.
-   When a usage limit is hit, wait for the reset and resume automatically (resume watchdog routine, id in `docs/STATUS.md`).
-   Installing tools in the cloud container is allowed (e.g. Blender); installs vanish when the container is reclaimed.
-   The owner's Mac and iPhone are where the owner plays and judges each phase.
+   The old lane-based direction lives only in `archive/pre-aurelia/`. It must never leak back into the game.
    **Keep the owner updated with pictures:** send renders, previews and screenshots (SendUserFile) whenever there is
    something visual worth seeing, with a one-line caption.
 

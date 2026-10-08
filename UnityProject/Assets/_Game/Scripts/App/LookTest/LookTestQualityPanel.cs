@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
-using JungleBooze.Gameplay.Views;
-using JungleBooze.UI.Hud;
+using JungleBooze.UI.Common;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -102,14 +101,14 @@ namespace JungleBooze.App.LookTest
             Button button = HudFactory.CreateButton(
                 _area,
                 "Toggle" + index,
-                StylePalette.Parchment,
+                new Color(0.96f, 0.92f, 0.82f, 1f),
                 new Vector2(1f, 1f),
                 new Vector2(ButtonWidth, ButtonHeight),
                 offset,
                 _font,
                 label,
                 LabelFontSize,
-                StylePalette.Ink,
+                new Color(0.12f, 0.10f, 0.14f, 1f),
                 new Color(0f, 0f, 0f, 0f),
                 onClick);
             return button.GetComponentInChildren<Text>();

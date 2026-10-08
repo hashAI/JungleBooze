@@ -1,7 +1,4 @@
 using System;
-using JungleBooze.Gameplay.Runner;
-using JungleBooze.Gameplay.Session;
-using JungleBooze.Gameplay.Views;
 using UnityEngine;
 
 namespace JungleBooze.App.LookTest
@@ -13,7 +10,7 @@ namespace JungleBooze.App.LookTest
     /// [z − behind, z − behind + loop). The stretch is built periodic in z, so the loop is seamless.
     /// Moves only the segment that fell behind; no allocations per frame.
     /// </summary>
-    public sealed class LookTestWorldView : MonoBehaviour, IRunView
+    public sealed class LookTestWorldView : MonoBehaviour
     {
         private Transform[] _segments;
         private long[] _placedLoop;
@@ -47,7 +44,8 @@ namespace JungleBooze.App.LookTest
             }
         }
 
-        public void BeginRun(GameSession session)
+        /// <summary>Forgets the placement so the next <see cref="Render"/> places every segment again.</summary>
+        public void ResetPlacement()
         {
             if (_placedLoop == null)
             {
@@ -58,23 +56,16 @@ namespace JungleBooze.App.LookTest
             {
                 _placedLoop[i] = long.MinValue;
             }
-
-            Render(session, 1f, 0f);
         }
 
-        public void OnRunnerEvent(in RunnerEvent e)
-        {
-        }
-
-        public void Render(GameSession session, float alpha, float realDeltaSeconds)
+        /// <summary>Places the segments around the runner's forward distance <paramref name="z"/> (meters).</summary>
+        public void Render(double z)
         {
             if (_segments == null)
             {
                 return;
             }
 
-            RunnerSimulation runner = session.Runner;
-            RunnerInterpolation.Evaluate(runner.Previous, runner.Current, alpha, out _, out _, out double z);
             double windowStart = z - _behindM;
 
             for (int i = 0; i < _segments.Length; i++)
