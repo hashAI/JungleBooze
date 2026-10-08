@@ -4,9 +4,11 @@
 The coordinating session updates it whenever it launches an agent, receives an agent's report, or records an owner decision.
 Decisions themselves live in `design/DECISIONS.md`; the plan lives in `docs/AGENT_PLAN.md`.
 
-_Last updated: 2026-10-07 (build phase)_
+_Last updated: 2026-10-08 (new direction: AURELIA)_
 
 ## Current milestone
+**2026-10-08: owner set a new direction, AURELIA** (`design/aurelia/BLUEPRINT.md` + `design/aurelia/vision_board.png`), aiming for a polished game. Batches 3–4 below are on hold until the open questions on art fidelity, Pista/Duko and asset budget are answered; then the GDD is rewritten for AURELIA and the 5-minute vertical slice (Blueprint Part LV) becomes the next milestone.
+
 **FP1 COMPILED AND PLAYED by the owner (2026-10-07).** New phase: **BUILD THE GAME** (owner: "only focus on building first; review, test etc. later").
 Agents implement features straight from the GDD sections (no separate spec docs, no new tests, no code-review passes for now).
 The coordinating session compile-checks in Unity batch mode on the owner's Mac (Unity 6000.3.25f1 is installed) after each batch and fixes errors before committing.
@@ -96,6 +98,7 @@ If a new session finds an agent marked **working** but no matching output or com
 | G4–G8 | Not started |
 
 ## Open questions for the owner
+0. AURELIA direction (asked 2026-10-08): art fidelity (board-level realistic vs stylized-lush), Pista/Duko (replace vs keep), paid Unity Asset Store budget.
 1. Ads and prices: deferred to week 4 (tracking already decided: none).
 2. Jungle music variation: three loops on disk (A/B/C). Playback is not wired yet; default to A until the owner listens.
 
@@ -125,6 +128,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Log
 Newest first. One line per event.
+- 2026-10-08: **Owner shared the AURELIA blueprint and vision board: "I want a polished game now, not a toy project."** Saved both to `design/aurelia/`, recorded the direction in DECISIONS. Could not compile in the cloud container (no Unity); last Mac compile check (Batch 2) was clean. Asked the owner about art fidelity, Pista/Duko and asset budget before rewriting the GDD.
 - 2026-10-07: **Owner: finish up; use original macaw (take 1 violet/orange).** Recolors color1–4 are on disk unused. Audio files generated (SFX regenerated; Duko voice recovered from ElevenLabs history; 3 Jungle loops + menu + sting). Playback code exists, not wired into the Run scene. Updating STATUS, committing Batch 2 (power-ups, Duko/continue, audio, concepts), pushing.
 - 2026-10-07: Power-ups compile-check clean (Core, Services, Gameplay, UI, App, Editor; warnings as errors). Test assemblies were not judged: the headless nunit reference wants mscorlib, which is a compiler-setup mismatch, not a game-code error. [ASSUMED] coyote counts as air; slowdown still smashes obstacles. Macaw recolors and audio still running. Not committed yet.
 - 2026-10-07: Power-ups agent finished. Views spawned in RunSceneBootstrap; Speed Boost holds its ending and vine sections until the boost is over. RunSceneBootstrapTests view count was already stale (expects 4).
