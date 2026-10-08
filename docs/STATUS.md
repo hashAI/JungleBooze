@@ -124,6 +124,7 @@ Meshy: 3 (image edit test) + 30 (Pista 3D v1) = **33 credits used**; balance 2,4
 
 ## Log
 Newest first. One line per event.
+- 2026-10-09: Environment strategy revised to Meshy + CC0 + in-house: shopping list 831 credits (reserve 107); possible extra ask up to 600 credits only if a checkpoint shows a layer below the bar (near foliage most at risk). Launching keyframes (item 1, ~75 credits).
 - 2026-10-09: Owner: no purchases for environment (Meshy + CC0 + in-house only); store name "Aurelia: <coined word>"; bundle id later. gameplay-engineer finished spec 101 code (113 logic tests pass outside Unity, bot clears course) but blocked from Unity by LookTest compile break; told tech-architect to restore compile.
 - 2026-10-09: art-director done (environment strategy). Launched tech-architect on look test v2 graybox + light (free steps). Asked owner for environment budget, store name direction.
 - 2026-10-09: appstore-compliance done: AURELIA design review (no blocker; name, analytics flag, bundle id are the high risks).
