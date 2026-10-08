@@ -59,6 +59,10 @@ Duko/continue, audio files) compiled clean on the Mac.
 States: **working** (launched, report not received) · waiting · blocked · done.
 If a new session finds an agent marked **working** but no matching output or commit, assume that agent was interrupted. Check the listed output files and relaunch the task.
 
+## Spend log
+Meshy: 3 (image edit test) + 30 (Pista 3D v1) = **33 credits used**; balance 2,432 after the owner's upgrade.
+Ask the owner before any single step over 150 credits or total Meshy spend past 1,000. OpenAI: 3 draft images (well under $1); account out of credit.
+
 ## Resume watchdog
 - Routine `trig_016rQLbb82z8R9q8csbCuZjN` ("AURELIA resume watchdog") wakes this session every 2 hours (minute 32 UTC).
   It resumes stalled work after usage limits or interruptions; idle when only a pending budget answer blocks work.
@@ -106,6 +110,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Log
 Newest first. One line per event.
+- 2026-10-08: Owner upgraded Meshy (2,432 credits) and approved wise use. Asset-pipeline may rig + animate Pista after cleanup, cap 150 credits.
 - 2026-10-08: **Owner mandate: build AURELIA to completion autonomously, never move away from the blueprint, test constantly, auto-resume after limits, always ask before spending.** New watchdog trig_016rQLbb82z8R9q8csbCuZjN (every 2 h). Launching asset-pipeline (Pista Blender cleanup, free) and tech-architect (cloud compile check with Unity 6000.3.25f1 DLLs). Budget asks pending: Meshy rigging (~5–10 credits), animations (Meshy ~20–30 credits vs free phone mocap).
 - 2026-10-08: Owner rule: always confirm budgets before spending. P0-B done (tech-architect): ADR 0004 (iPhone 12 provisional minimum, URP-Realistic), CC0 fetch tool (16 Poly Haven assets, 68.9 MB), LookTest scene builder/runtime/shaders/overlay, 2 EditMode test files; nothing compiled in Unity, shaders never compiled. Fixed a real compile error in RunAudioCues.cs (Stumble → Stumbled). ADR numbers shifted (save format now 0005). 3D Pista v1 from Meshy multi-image-to-3D (30 credits, balance 432): 28.9k tris, 4k PBR; previews rendered with Blender (bpy 4.2) in the cloud. Issues: rope still on, backpack map patch blurred, ponytail clumpy.
 - 2026-10-08: Generated 3 Pista drafts (OpenAI, medium, 1536x1024). Owner said "pick one": take B simplified. High-quality final failed: OpenAI credits exhausted again after 3 images. One Meshy image-to-image try (3 credits) ignored the edit and dropped the back view; discarded. Meshy balance 462.
