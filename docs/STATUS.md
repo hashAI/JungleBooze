@@ -92,8 +92,7 @@ Meshy: 3 (image edit test) + 30 (Pista 3D v1) = **33 credits used**; balance 2,4
 | G4–G8 | Not started |
 
 ## Open questions for the owner
-- (2026-10-09, environment) Approve: exception to "no paid packs" for SeedMesh Jungle – Tropical Vegetation ($39.99+tax) and Amplify Impostors ($60+tax, confirm Unity 6000.3 first); OpenAI credit cap $75 (~$43 expected). Meshy ~610 credits stays inside the 1,000. Asked 2026-10-09.
-- (2026-10-09, compliance) Store name: "Aurelia: <coined word>" (rec.) / new coined name / "AURELIA" alone. Bundle id: set a neutral `com.<studio>.aurelia` now (rec.; needs a studio name) / wait / keep. Lawyer name check before store art (rec.) / at launch prep. Not blocking until TestFlight. To do (free): turn off Unity `submitAnalytics` after gameplay-engineer finishes.
+- (2026-10-09) Store name options "Aurelia: <coined word>" to prepare (6–8 with collision checks) for the owner to pick. Bundle id: ask before the first TestFlight upload. To do (free): turn off Unity `submitAnalytics`.
 0. API keys for image/3D/audio generation must be added to the cloud environment (see Phase 0 "Blocked").
 1. Ads and prices: deferred to week 4 (tracking already decided: none).
 2. Jungle music variation: three loops on disk (A/B/C). Playback is not wired yet; default to A until the owner listens.
@@ -125,6 +124,7 @@ Meshy: 3 (image edit test) + 30 (Pista 3D v1) = **33 credits used**; balance 2,4
 
 ## Log
 Newest first. One line per event.
+- 2026-10-09: Owner: no purchases for environment (Meshy + CC0 + in-house only); store name "Aurelia: <coined word>"; bundle id later. gameplay-engineer finished spec 101 code (113 logic tests pass outside Unity, bot clears course) but blocked from Unity by LookTest compile break; told tech-architect to restore compile.
 - 2026-10-09: art-director done (environment strategy). Launched tech-architect on look test v2 graybox + light (free steps). Asked owner for environment budget, store name direction.
 - 2026-10-09: appstore-compliance done: AURELIA design review (no blocker; name, analytics flag, bundle id are the high risks).
 - 2026-10-09: tech-architect done (look test builds, iOS build OK, over draw budget, look not professional yet). asset-pipeline done (Pista rigged + animated, 62 credits). Sent owner Pista sheet, run cycle and a look-test screenshot.

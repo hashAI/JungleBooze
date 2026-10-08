@@ -5,6 +5,8 @@ Newest first.
 
 | Date | Gate | Decision | Options considered | Decided by |
 |---|---|---|---|---|
+| 2026-10-09 | G2 | **No purchases for environment art** (declined SeedMesh, Amplify Impostors, OpenAI credit). Use Meshy (inside the 1,000 pre-approved credits; ask beyond), CC0 and in-house Blender/procedural work | Approve all ~$175 / OpenAI only / no new money | Owner |
+| 2026-10-09 | G6 | Store name: "Aurelia: <coined word>"; coordinator prepares 6–8 options with collision checks. Bundle id decided later (before the first TestFlight upload) | Aurelia: coined / new coined / AURELIA alone | Owner |
 | 2026-10-09 | — | Quality is never compromised to save money. If top-notch quality needs more budget (beyond the 1,000 Meshy credits, or any paid tool/asset/service), ask the owner with the expected cost and why cheaper options fall short | — | Owner |
 | 2026-10-09 | — | **Meshy budget: 1,000 credits pre-approved** (counted from 2026-10-09; no per-step cap). Use them wisely: prefer Meshy's free retries over new paid generations, log every spend with a running total in `docs/STATUS.md`. Anything beyond 1,000 needs the owner's OK. Replaces the 150-per-step rule. Other paid services (OpenAI, ElevenLabs, purchases) still need an OK each time | — | Owner |
 | 2026-10-09 | — | **Switch to local development on the owner's Mac** (Unity, Xcode, API keys in `~/.config/junglebooze/secrets.env`). Full autonomy on everything except money: ask before any paid spend. Goal: a professional, fully polished iOS game that passes App Review. AURELIA only: the old lane-based direction may be deleted or archived and must never interfere. Coordinator stays lean, relies on subagents, and may restart fresh when that's cheaper | — | Owner |
