@@ -32,6 +32,8 @@ defined in `.claude/agents/`. Read `docs/AGENT_PLAN.md` for the full plan.
    When a usage limit is hit, wait for the reset and resume automatically (resume watchdog routine, id in `docs/STATUS.md`).
    Installing tools in the cloud container is allowed (e.g. Blender); installs vanish when the container is reclaimed.
    The owner's Mac and iPhone are where the owner plays and judges each phase.
+   **Keep the owner updated with pictures:** send renders, previews and screenshots (SendUserFile) whenever there is
+   something visual worth seeing, with a one-line caption.
 
 ## Ground rules for every agent
 1. **The owner decides identity and taste.** Hero, companion, art style, name, icon, prices, and "is it fun" are
