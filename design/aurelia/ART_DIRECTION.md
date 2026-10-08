@@ -44,7 +44,7 @@ mobile-friendly techniques.** It does not mean film-level geometry or a simulati
 | Grounded human and bird proportions (no big heads, no cartoon hands) | Aerial perspective stronger than in reality, so planes separate at phone size | Foliage is cards and low-poly clumps with tight-cut alpha; far trees are impostors / billboards |
 | Physically plausible sun, sky and bounce light | A character-only rim and fill light so Pista's back is never lost in shade | God rays are additive mesh cards, not volumetric lighting |
 | Real water behavior: transparency in shallows, color by depth, foam where it is fast | Pickups are self-lit and the brightest thing on screen (an intentional game convention) | Water is a custom shader: scrolling normals, depth tint, flow-map foam; waterfalls are scrolling flow meshes + mist cards |
-| Real-world scale: a person is ~1.5 m, a door-size gap reads as a door-size gap | Path surfaces have reduced micro-contrast (high-frequency texture noise reads as "blur" at speed) | Distant landmarks and the far range are matte-painted cards and low-poly silhouettes |
+| Real-world scale: Pista is ~1.65 m, a door-size gap reads as a door-size gap | Path surfaces have reduced micro-contrast (high-frequency texture noise reads as "blur" at speed) | Distant landmarks and the far range are matte-painted cards and low-poly silhouettes |
 | Wet, dry, mossy, sunlit and shaded versions of the same material | Hazards are slightly darker and more angular than nature would make them | No realtime GI, no SSR; reflection probes are baked; screen-space effects limited to bloom + tonemapping + color grade |
 
 **Quality bar test:** a still frame of the look test, viewed on the phone at arm's length, should be mistakable for a
@@ -157,8 +157,8 @@ the board's **mood** (lush, sunlit, waterfalls, vast scale, wonder) and replace 
 | # | Vision-board element | Why it must change | What we use instead |
 |---|---|---|---|
 | 1 | **Floating mountains with waterfalls** pouring off them (hero image, Sky Reaches, Riverlands) | The single most recognizable Pandora image ("Hallelujah Mountains") | **Grounded rootstone pillars and arches** rising out of the forest and river, connected by natural root-bridges, wrapped in mist at their base so they *feel* weightless without floating. Falls come out of them (5.1, #2). Sky Reaches later: tall pillars and wind, still grounded |
-| 2 | **Big blue planet / gas giant in the sky** (top of hero image) | Pandora's sky signature (Polyphemus) | **No planet.** A familiar blue sky with towering cumulus. Strangeness comes from the land (rootstone range on the horizon). Option for the owner: one pale daytime moon at a normal size (section 13, Q4) |
-| 3 | **Winged mount** (large blue-orange flying creature, rider implied) | Pandora's banshee/ikran and the bonded-rider fantasy | **No mounts.** Flight is Pista's own: the future glide ability uses a **map-cloth kite-glider** (her identity material). Ambient flyers are small (≤ 1 m wingspan) and non-rideable: the sailback glider lizard (look-test brief) |
+| 2 | **Big blue planet / gas giant in the sky** (top of hero image) | Pandora's sky signature (Polyphemus) | **No planet.** A familiar blue sky with towering cumulus. Strangeness comes from the land (rootstone range on the horizon). No moon either (owner had no preference; art-director recommendation `[ASSUMED]`) |
+| 3 | **Winged mount** (large blue-orange flying creature, rider implied) | Pandora's banshee/ikran and the bonded-rider fantasy | **No mounts.** Flight is Pista's own: the future glide ability uses a compact **wingsuit-kite glider** from her backpack, in her white/orange/charcoal colors. Ambient flyers are small (≤ 1 m wingspan) and non-rideable: the sailback glider lizard (look-test brief) |
 | 4 | **Giant whale creature** (Dynamic Events: Giant Creature Encounter) | Pandora's tulkun (Avatar 2) | **A land giant** for later events, working label "mossback": a hill-sized, slow grazer with a rootstone-like armored back carrying its own garden, rainwater streaming off it. Not in Phase 0; concept later with owner options |
 | 5 | **Bioluminescent purple/cyan forest** (Deep Earth tile, secret cave, mysteries tile) | Pandora's night forest with glowing, touch-reactive plants | Glow is **rare and mineral**, not plant-based: small cyan/violet mineral glints in secret spots and caves. No glowing footprints, no glowing jungle at night |
 | 6 | **Spiral plants, fan lizards, floating seed jellyfish** (board details, companion panel) | Pandora's helicoradian, fan lizard, woodsprites | No spiral plants that retract. No spinning disc creatures. No glowing jellyfish seeds. Our floaters are **whirlseeds** (oversized winged seeds that spin as they fall, matte, tan-gold) |
@@ -199,60 +199,55 @@ Rules:
 
 ## 7. Pista in realism
 
-### 7.1 Identity (locked by the owner; must survive the change of style)
-- Map-cloth clothes: an old canvas treasure map turned into a wrap top and knee-length wrap shorts, cream with
-  faded sepia lines and a dotted trail.
-- A bold sepia **X** high on the back of the top, between the shoulder blades (on cloth, never on skin).
-- A teal cloth **sash band** wrapped around the chest just below the X (never diagonal, never covering the X).
-- Leather satchel on her right hip, woven ankle bands, barefoot, bamboo whistle in the sash.
-- Big round cloud of natural curly dark hair, deep brown skin.
-Reference: `design/concepts/2026-10-07/hero_take1_turnaround.png` (locked concept, stylized).
+**Owner decision (2026-10-08):** Pista keeps her name but is redesigned after the explorer on the vision board
+("THE EXPLORER" panel and the hero of the key art), aged **16**. The stylized map-cloth design
+(`design/concepts/2026-10-07/hero_take1_turnaround.png`) is retired. At most a small nod to it survives as an
+optional detail in one concept take.
 
-### 7.2 Realistic translation
-| Element | Stylized concept | Realistic version |
+### 7.1 Identity (what every take keeps)
+- An athletic 16-year-old outdoor explorer. Fearless, curious and playful. She reads as a capable young expedition
+  runner, not a soldier and not a glamour heroine.
+- **Brown hair in a high ponytail.** It is the main back-view landmark and swings with every stride and jump.
+- **Outfit color blocking: white / orange / charcoal.** A fitted athletic top with white and orange panels that covers
+  the whole torso, charcoal technical trousers, a tan-brown leather utility harness with orange shoulder straps,
+  a belt with pouches, fingerless gloves and sturdy brown hiking boots.
+- **A technical backpack with orange accents**, compact and close to the back. This is the second back-view landmark.
+  The camera sees it 90% of the time.
+- Color targets: off-white `#ECE8E1`, expedition orange `#E8742A`, charcoal `#2E3136`, leather `#7A5232`, brown hair
+  `#4A2E1E`. Her orange is a deeper, earthier tone than the bellcap risky cue `#F08A2C` and sits on a person, so it
+  does not read as a route cue. Hazard crimson is banned on her.
+
+### 7.2 What we change from the board (rules)
+| Board explorer | Pista | Why |
 |---|---|---|
-| Proportions | ~4 heads tall, big hands | Real proportions for her age: ~6.5–7 heads tall, ~1.50 m (age ~12, section 7.4). Lean, athletic, long-limbed. No enlarged eyes or hands |
-| Hair | Lobed cloud | A natural afro, **round and full**, wider than the shoulders, made of visible curl clumps. Must hold its round silhouette at 60 px. In 3D: a sculpted hair mass with clump detail and a thin card shell for the edge, no long strands |
-| Map cloth | Flat print | Real heavy canvas: frayed but hemmed edges, hand stitching, sun-faded cream, sepia ink lines that follow the fabric folds, mud and water stains at the hems. The map must have no readable words (fake script only) |
-| X | Flat printed mark | Hand-painted in sepia ink with brush texture and slight fading; ~1/3 of the back width |
-| Sash | Flat teal | Woven cotton band, teal `#178F8A`, slightly darker when wet, two wraps, knot at the left side |
-| Satchel | Simple pouch | Worn brown leather, brass buckle (one of the few specular highlights on her), short saffron strap |
-| Skin | Flat brown | Deep brown `#6B4029` mid-tone with real subsurface warmth, sun sheen on shoulders, dust on shins and feet |
-| Feet | Bare | Barefoot by default (identity). Option in take B: cloth foot wraps that leave the toes free (section 13) |
-| Cheek clay dots | 2 per cheek | See 7.3 |
+| Crop top with a bare midriff | **Fitted athletic top that covers the whole torso** down to the waistband, short or three-quarter sleeves | She is 16; App Store safety; practical |
+| Capri leggings that hug the body | **Technical trousers** (straight, slightly loose, knee patches or pads) | Practical, not glamour |
+| Close to generic AAA explorers | Design choices that keep her original: high ponytail (never a single long braid), no thigh or twin holsters, no tank top and shorts, no weapons, an orange-and-white color story, a technical (not military) look | Avoids the Lara Croft read (braid, tank top, shorts, twin holsters) and also Aloy (red braids, tribal gear), Ellie (The Last of Us) and Chloe Frazer (Uncharted) |
+| Face of the board hero | **An original face** that must not resemble a real actor, model or celebrity. Realistic AI faces can drift toward famous faces, so every face gets a resemblance check (checklist A2) | Originality and likeness rights |
 
-### 7.3 Respectful realism (important)
-In the stylized concept, "wild girl raised by animals" read as playful. Rendered realistically, a Black girl
-presented as feral risks reading as the "wild native child" stereotype. Defaults `[ASSUMED]`:
-- Personality stays fearless and playful, but she reads as a **highly skilled young jungle expert** who grew up at
-  the old expedition camp, not as an animal. Her agility is cat-like (light, low, springy) in **movement quality**
-  only. No running on all fours, no snarling, no sniffing the air.
-- Clothing is resourceful and well-kept (patched, stitched, cared for), never rags.
-- **Cheek clay dots:** realistic pale dots on a Black girl's face can read as ethnic face paint. Default: take A
-  keeps two faint clay dots so the owner can compare; takes B and C drop them. Recommendation: drop them
-  (section 13, Q2).
-- No real-world tribal patterns, no headdress, no sacred symbols (carried over from the old rules).
+The cheek dots are dropped everywhere. Of the old Pista design, only take B keeps a small optional nod: a faded
+treasure-map patch with a small sepia X stitched on the backpack lid.
+
+### 7.3 Skin tone, ethnicity, face
+Default `[ASSUMED]`: follow the board's hero (warm light-tan skin, brown eyes, dark brown hair). This is an owner
+question with options (agent report). The prompt keeps the skin and hair phrases in one token so they can be swapped
+without changing anything else.
 
 ### 7.4 Age and App Store safety
-- Age: **about 12** `[ASSUMED]` (top of the owner's decided 9–12 range; reads as athletic enough for realistic
-  parkour). Options in section 13, Q1.
-- Clothing coverage (all takes, all marketing): the top covers the whole torso front and back down to the shorts,
-  **no bare midriff**, wide shoulder straps or short sleeves, shorts to the knee. Nothing tight-fitting is emphasized.
-  This was already a problem in the stylized generation (rejected v2 had a bandeau); prompts repeat it explicitly.
-- Posing and camera: no low upward camera angles on her in key art or menus; poses are athletic and natural. No
-  makeup, no glamour lighting.
-- **Failure presentation:** a realistic child in peril is more intense than a cartoon one. Deaths are stumbles,
-  splashes, slips out of frame and quick fades; no injury, no impact gore, no ragdoll limb-bending, no pain
-  expressions held on screen. This also keeps the age rating low (relevant to `docs/APP_STORE_CHECKLIST.md`;
-  appstore-compliance should confirm).
-- Realistic minors in AI image tools can trigger moderation. Prompts use neutral, non-descriptive body language
-  (section 10.3).
+- Age **16** (owner, 2026-10-08). Real adult-like proportions, ~1.65 m tall, athletic build.
+- She is still a minor, so the rules from the stylized version stay: no bare midriff, no tight-fitting emphasis,
+  no makeup or glamour lighting, no low upward camera angles, no posing that emphasizes the body. Key art shows
+  action and exploration.
+- **Failure presentation:** deaths are stumbles, splashes, slips out of frame and quick fades. No injury, no gore,
+  no ragdoll limb-bending, no held pain expressions. This keeps the age rating low; appstore-compliance should confirm
+  against `docs/APP_STORE_CHECKLIST.md`.
+- No weapons. The utility harness carries rope, a compass and pouches, never holsters or knives.
 
 ### 7.5 Motion direction (for the phone-video mocap in P0-D)
-Run: light, quick, forward lean, long strides, arms pumping close to the body; a slight bounce in the hair. Jump: a
-compact tuck with a reach. Slide: a low baseball slide on one hip with one hand trailing. Landing: soft, absorb with
-the knees, one hand may brush the ground (the one feline accent). The actor should be a light, athletic runner;
-retargeting to a 1.50 m body must keep the stride length believable (scale the root motion, not the timing).
+Run: an athletic trail-runner's gait, forward lean, long strides, arms pumping close to the body, ponytail swinging.
+Jump: a compact tuck with a reach. Slide: a low slide on one hip with one hand trailing. Landing: soft, absorbs with the
+knees, one hand may touch the ground. A teen or adult athlete of similar height (~1.6–1.7 m) can be the actor, so
+retargeting needs little scaling.
 
 ## 8. Duko in realism
 
@@ -293,9 +288,9 @@ the screen during play (same rule as the old guide).
 | Damping | Soft lateral follow (Pista moves within the frame before the camera follows), no roll except a tiny bank on fast turns | Freedom-of-movement feel without nausea |
 | Shake | None while running; small on hard landings only; off with "reduced motion" | Blueprint accessibility |
 
-**Orientation:** the blueprint recommends landscape; the project is set to portrait (ADR 0003). The framing above is
-for landscape. Portrait framing (if kept): Pista at ~12% of screen height, horizon at 35% from the top, FOV 65°
-vertical. Recommendation: the look-test scene supports both so the owner can judge on the phone (section 13, Q3).
+**Orientation (owner, 2026-10-08):** the look test is built in **both** orientations, switchable at runtime; the owner
+decides on the phone. The framing above is for landscape. Portrait framing: Pista at ~12% of screen height, horizon at
+35% from the top, FOV 65° vertical.
 
 ## 10. Consistency rules for AI-generated assets
 
@@ -319,20 +314,21 @@ vertical. Recommendation: the look-test scene supports both so the owner can jud
 | Albedo lighting | No baked shadows, AO or highlights in albedo (Meshy `remove_lighting` / delighting step) |
 | Roughness | Dry rock 0.75–0.95, wet rock 0.25–0.45, leaves 0.45–0.65, skin 0.45–0.6, canvas 0.8–0.95, leather 0.5–0.7, water 0.02–0.08 |
 | Metallic | 0 everywhere except brass buckle/whistle cap and coins |
-| Texel density | Path and near props: 512 px/m; mid scenery: 256 px/m; hero: ~1200 px/m (2048² over ~1.5 m tall); Duko: ~1000 px/m |
+| Texel density | Path and near props: 512 px/m; mid scenery: 256 px/m; hero: ~1200 px/m (2048² over ~1.65 m tall); Duko: ~1000 px/m |
 
 ### 10.3 Style-lock checklist (every asset is reviewed against this)
 An asset passes only if every applicable line is "yes". Record the result in the asset's review note.
 
 **A. Identity and originality**
-- A1. Character assets match the locked reference: hair silhouette, map cloth, X position, sash below X, satchel on
-  her right hip, barefoot (or approved wraps); Duko's violet/orange/teal-tip pattern.
+- A1. Character assets match the locked reference: Pista's high ponytail, white/orange/charcoal outfit, torso fully
+  covered, harness, belt pouches, fingerless gloves, boots, backpack with orange accents (section 7.1); Duko's
+  violet/orange/teal-tip pattern.
 - A2. Nothing resembles a known character, creature, brand or franchise (section 5.3 bans; Tarzan, Mowgli, Moana,
   Lara Croft, Rio, Iago; Pandora list).
 - A3. No readable text, logos, real-world flags, real tribal or sacred patterns.
 
 **B. Realism**
-- B1. Real-world scale checked against a 1.50 m Pista proxy.
+- B1. Real-world scale checked against a 1.65 m Pista proxy.
 - B2. PBR values inside section 10.2 ranges; no lighting baked into albedo.
 - B3. Materials match neighbors: rootstone, bark, moss and soil look like the same world (same grade, same wetness
   logic).
@@ -348,7 +344,7 @@ An asset passes only if every applicable line is "yes". Record the result in the
   player.
 
 **D. Readability (in the look-test camera, on the phone)**
-- D1. Squint test: at 64 px tall in grayscale, Pista's silhouette (hair cloud + X back) reads.
+- D1. Squint test: at 64 px tall in grayscale, Pista's silhouette (high ponytail + backpack) reads.
 - D2. Pickups are the brightest elements; hazards are darker than the path.
 - D3. Nothing in the near 15 m of path has high-frequency texture noise that flickers at speed.
 - D4. Duko never covers the path in the lower 60% of the frame.
@@ -378,17 +374,16 @@ Tech-architect (P0-B) owns the final numbers and the device decision record.
 
 ## 12. Assumptions in this document
 - `[ASSUMED]` Late-morning sun, ahead-left, 35° elevation.
-- `[ASSUMED]` Pista's realistic age about 12; cat-like agility only in movement quality, no animal behaviors.
+- `[ASSUMED]` Pista's skin tone, ethnicity and face follow the board's hero (owner question open).
+- `[ASSUMED]` Only take B keeps a nod to the old Pista (map patch with an X on the backpack lid).
 - `[ASSUMED]` Duko's violet overlaps the secret cue on purpose.
-- `[ASSUMED]` Camera 5.5 m back / 2.4 m up / 55° vertical FOV, landscape framing.
-- `[ASSUMED]` No sky planet; option of a normal-size pale moon is the owner's call.
+- `[ASSUMED]` Camera 5.5 m back / 2.4 m up / 55° vertical FOV in landscape; portrait framing in section 9.
+- `[ASSUMED]` Earth-like sky with no planet and no moon (owner had no preference).
 - `[ASSUMED]` Hazard accent crimson `#9E2238` (replaces hazard red `#D7263D` in realism).
 - `[ASSUMED]` Working labels: rootstone, stiltwood, bellcap, veilmoss, duskbell, ribbon reed, whirlseed, sailback,
   mossback. Lore names are the owner's call later.
 
-## 13. Open questions for the owner
-See the agent report for the final list; summary:
-1. Pista's realistic age (11 / ~12 / 13–14 / 16).
-2. Cheek clay dots in realism (keep faint / drop).
-3. Orientation for the look test (landscape / portrait / both).
-4. Sky (no moon / one pale day moon / two small moons).
+## 13. Owner decisions and open questions
+Decided 2026-10-08: Pista is 16, redesigned after the board's explorer; no cheek dots; look test in both
+orientations; sky without a moon.
+Open: Pista's skin tone, ethnicity and face (see the agent report); minimum device (section 11).

@@ -43,22 +43,22 @@ POST /openapi/v1/multi-image-to-3d
 If the face or hands are mushy, rerun once with `"geometry_resolution": "2k"` and compare.
 
 Cleanup (Blender, asset-pipeline):
-1. Scale to **1.50 m** tall (age ~12 `[ASSUMED]`), feet on the origin, facing +Z for rigging.
+1. Scale to **1.65 m** tall (age 16, owner 2026-10-08), feet on the origin, facing +Z for rigging.
 2. Retopology pass where the remesh failed (shoulders, elbows, knees, hips need loops for deformation). Final
-   ≤ 25k triangles: body+cloth material and hair material.
-3. Hair: keep a closed sculpted mass with curl-clump normal detail + a thin alpha card shell on the silhouette edge
-   (≤ 2k tris). Bind rigidly to the head with 2–4 jiggle bones for bounce.
-4. Re-bake textures to 2048² (body) and 1024² (hair) from the pre-remesh mesh; repaint the X, sash and map lines where
-   the generation blurred them (these are identity marks and must be crisp).
-5. Delight check: no baked shadows in base color (ART_DIRECTION 10.2).
+   ≤ 25k triangles: body+outfit material and hair material.
+3. Hair: a sculpted head-hair mass with strand-clump normal detail; the high ponytail is a separate tapered mesh with
+   a thin alpha card shell (≤ 2k tris) on 3–4 chain bones for swing.
+4. Re-bake textures to 2048² (body, outfit, harness, backpack) and 1024² (hair) from the pre-remesh mesh; repaint
+   panel edges, stitching and the orange accents where the generation blurred them.
+5. Delight check: no baked shadows in base color (ART_DIRECTION 10.2). Face resemblance check (checklist A2).
 
 Rigging:
 ```json
 POST /openapi/v1/rigging
-{ "model_url": "<cleaned, textured pista.glb, face toward +Z>", "height_meters": 1.50 }
+{ "model_url": "<cleaned, textured pista.glb, face toward +Z>", "height_meters": 1.65 }
 ```
 Meshy rigs humanoids only. Use its skeleton if it maps cleanly to Unity Humanoid; otherwise rig manually in Blender
-(Rigify or a game rig). Add secondary bones: hair (2–4), satchel (1), sash knot (1). Total ≤ 60 bones.
+(Rigify or a game rig). Add secondary bones: ponytail (3–4), backpack (1), belt pouches (2). Total ≤ 60 bones.
 Animation source: phone-video AI motion capture retargeted to this rig (ART_DIRECTION 7.5).
 
 ## A-02 Duko (multi-image-to-3D, wings spread)

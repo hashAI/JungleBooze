@@ -8,7 +8,7 @@ The older stylized library (`design/prompts/*.md`, Inkbound Pulp) is archived; d
 
 | File | Contents | Task |
 |---|---|---|
-| `pista.md` | Locked realistic SUBJECT block, 3 takes × (turnaround + key art), 3D input views after the pick | P0-C |
+| `pista.md` | Locked realistic SUBJECT block (16, board-explorer look), 3 takes × (turnaround + key art), 3D input views after the pick | P0-C |
 | `duko.md` | Locked realistic SUBJECT block, 3 takes × (turnaround + key art), 3D input views (rig pose) after the pick | P0-C |
 | `meshy.md` | Meshy image-to-3D / multi-image-to-3D / rigging request bodies for Pista, Duko and look-test props, plus cleanup steps | P0-D, look-test props |
 | `environment.md` | Concept images for Meshy props (stiltwood, rootstone, bellcap, sailback, whirlseed, bramble) and 2D cards (matte range, forest wall, veilmoss, reeds) | Look test |
@@ -64,8 +64,9 @@ for step 1–2 `[ASSUMED]`. Each retry is logged with the reason.
 ## Review before showing the owner
 Run the style-lock checklist (ART_DIRECTION 10.3), sections A, B and C, on every image. Typical generator failures
 seen on 2026-10-07 and what to check first:
-- Pista: top turned into a bandeau / bare midriff; X printed on skin; sash drifting to the waist or diagonal;
-  satchel on the wrong hip; adult proportions.
+- Pista: the board's crop top coming back (bare midriff); tight leggings instead of technical trousers; holsters or
+  weapons appearing; a single long braid instead of a high ponytail; a face that resembles a known actress or game
+  heroine; looking older than 16 or glamorized.
 - Duko: wrong colors on the tail (teal spreading up the tail), all-violet head, cartoon eyes.
 - Realism-specific: plastic skin, uncanny faces, extra toes, hair turning into straight strands or braids,
   Pandora drift in backgrounds (floating rocks, planets, glowing plants).
