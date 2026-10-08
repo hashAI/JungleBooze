@@ -4,58 +4,37 @@
 The coordinating session updates it whenever it launches an agent, receives an agent's report, or records an owner decision.
 Decisions themselves live in `design/DECISIONS.md`; the plan lives in `docs/AGENT_PLAN.md`.
 
-_Last updated: 2026-10-08 (new direction: AURELIA)_
+_Last updated: 2026-10-08 (AURELIA Phase 0: look test)_
 
 ## Current milestone
-**2026-10-08: owner set a new direction, AURELIA** (`design/aurelia/BLUEPRINT.md` + `design/aurelia/vision_board.png`), aiming for a polished game. Batches 3–4 below are on hold until the open questions on art fidelity, Pista/Duko and asset budget are answered; then the GDD is rewritten for AURELIA and the 5-minute vertical slice (Blueprint Part LV) becomes the next milestone.
+**AURELIA, Phase 0: look test** (owner go, 2026-10-08). Source of truth for the direction: `design/aurelia/BLUEPRINT.md` and
+`design/aurelia/vision_board.png`. Pista, Duko and the game name stay. Look: **realistic**, AI-made art plus free CC0 assets,
+no paid packs. Quality bar: professional, polished in a small scope (owner wants "the greatest product").
 
-**FP1 COMPILED AND PLAYED by the owner (2026-10-07).** New phase: **BUILD THE GAME** (owner: "only focus on building first; review, test etc. later").
-Agents implement features straight from the GDD sections (no separate spec docs, no new tests, no code-review passes for now).
-The coordinating session compile-checks in Unity batch mode on the owner's Mac (Unity 6000.3.25f1 is installed) after each batch and fixes errors before committing.
+**Phase plan (owner checks at the end of each phase; don't start the next until it passes):**
+| Phase | Build | Owner check | Est. |
+|---|---|---|---|
+| **0 Look test** ← now | One realistic forest + waterfall stretch, realistic Pista running through it, on iPhone | Looks professional on the phone and runs smoothly | 1–2 wk |
+| 1 Feel | Movement + camera tuned: a fun 60-second run | Is just running fun? | 2–3 wk |
+| 2 Vertical slice | Blueprint Part LV: route choice, river/swim, vine, Duko, a creature, a secret, results, first upgrade | 5 testers say "let me try again" | 4–6 wk |
+| 3 MVP | Full forest biome, 12–15 chunks, journal, 5–8 unlock abilities, light adaptive difficulty, audio | Owner wants to play daily | 3–4 mo |
+| 4 Retention test | Missions, daily expedition, next-goal results; TestFlight 20–50 testers | D1 ≥ 40%, D7 ≥ 15% | 1–2 mo |
+| 5 Launch | Store, compliance, performance | Ship | ~1 mo |
 
-**Build plan (tick as they land):**
-- [x] Batch 1 (parallel): gameplay-engineer vine swinging (GDD §7) · ui-engineer main menu, pause, game over, settings, save of coins/best (GDD §19, §13.1)
-- [x] Batch 2: power-ups and lane-strike hazards (GDD §10, §8.3) · Duko companion + continue (GDD §15, §14.4) · audio files + playback code (not yet hooked into the Run scene)
-- [ ] Batch 3: missions, daily reward, shop/unlocks (GDD §13) · onboarding (GDD §12)
-- [ ] Batch 4: worlds and transitions (GDD §9) · difficulty ramp check (GDD §11)
-- [ ] Later: 3D from locked concepts, wire audio into the run, ads/IAP, review, tests, TestFlight.
+**Phase 0 tasks:**
+- [ ] P0-A art-director: realistic art direction for AURELIA (original visual language, clearly not Pandora), realistic Pista and Duko redesign briefs + prompt library. Images wait for API keys in this environment
+- [ ] P0-B tech-architect: look-test technical design (URP realistic-on-mobile settings, budgets, CC0 sourcing with licenses) + LookTest scene builder and asset fetch script
+- [ ] P0-C realistic Pista/Duko concept images (needs `OPENAI_API_KEY`) → owner picks
+- [ ] P0-D 3D Pista via Meshy (needs `MESHY_API_KEY`), rig + run/jump/slide animations (phone video → AI motion capture)
+- [ ] P0-E owner opens the LookTest scene on the Mac and on iPhone; judges look and smoothness
 
-**Resume note:** Batch 2 is on disk and being committed. Next: hook `AudioPlayback` into `RunSceneBootstrap` / `GameSession` (clips are in `Assets/_Game/Audio`, mapping is `RunAudioCues`). Then Batch 3. Mesh generation waits on Meshy after this commit. If interrupted: compile-check with Unity 6000.3.25f1 rsp + bundled csc, then commit.
+**Blocked:** API keys are not in this cloud environment (the old `~/.config/junglebooze/secrets.env` was on another machine).
+Owner adds `OPENAI_API_KEY`, `MESHY_API_KEY`, `ELEVENLABS_API_KEY` in the environment settings; a new session picks them up.
 
-**Goal: First Playable (FP1). Autonomous mandate: no owner questions until it's done.** Release/store work is paused.
+**On hold:** old Batch 3/4 (missions, shop, worlds) and lane-based design work. The FP1 code stays and is reused where it fits.
 
-**FP1 is done when** the owner, on their M4 MacBook, can:
-1. Follow `docs/PLAY_FIRST_BUILD.md`: install Unity Hub + Unity 6 LTS (with iOS Build Support), open `UnityProject/`.
-2. Press Play and run an endless gray-box track (primitives in the style-guide palette): Pista (stand-in shape) switches
-   3 lanes, jumps, slides; obstacles of the shared kit; coins; speed ramps up; collisions end the run (stumble rule).
-3. Control with arrow keys / WASD / space in the editor, mouse-drag swipes, and touch swipes on iPhone.
-4. See a HUD (distance, coins) and a Game Over panel with Restart.
-5. Run the EditMode tests in Unity's Test Runner and see them pass.
-6. Optionally build to their iPhone via Xcode with a free Apple ID (steps in the same doc).
-Not in FP1 (comes right after): vine swinging, Duko, power-ups, menus/shop, real art, audio.
-
-**Notes for stage C:** the Run scene is empty, so the runtime bootstrap creates the portrait camera and a directional light and only acts in the scene named "Run". Don't use `Shader.Find`; clone the material from `GameObject.CreatePrimitive` and set `.color`. Prefer `InputSystemUIInputModule`. Warnings are errors. Replace the placeholder controls table in `docs/PLAY_FIRST_BUILD.md`.
-
-**Early preview FP0 (owner asked to play progress ASAP):** as soon as C1 is done, a focused compile-correctness review of
-the flat-world slice (Core, Runner, Session, Views, Controls, App, UI/Hud) and fixes, then tell the owner to pull and press Play.
-FP0 = flat ground, lanes, jump, slide, pause, HUD, Game Over/restart. Obstacles and coins arrive with FP1. The owner's real
-compiler on the Mac is the fastest way to find remaining errors; fix whatever they send back first.
-
-**FP1 plan (stages; tick as they land):**
-- [x] A1 gameplay-engineer: movement simulation (spec 001 minus collisions) + EditMode tests (AC-01–14, 16–33, 45–46, 61–63; collisions deferred to B)
-- [x] A2 game-designer: spec 002 (track, obstacles, coins): 16 Jungle chunks, generator, coins/score, fairness rules, run lifecycle, AC-201–250
-- [x] A3 balance-simulator: Python reference model (64 tests pass), 6 golden traces, targets report: S1–S3, S6–S8 pass; S4/S5 fail (bot mistake profiles, low-barrier jump is the tightest timing)
-- [x] B1 gameplay-engineer: collisions (swept AABB, lethal vs stumble, daze, edge forgiveness, near-miss, step hooks) + tests for AC-34–45
-- [x] B2 gameplay-engineer: track simulation (generator, TrackSimulation as ITrackQuery, coin layout, scoring, TrackRunWorld/Factory, RunSession lifecycle, config assets, .meta files). Tests deferred by owner; 4 track test files written but never run
-- [ ] B3 gameplay-engineer: chunk fairness validator (spec 002 §11) as an EditMode test + editor menu
-- [x] C1 ui-engineer: presentation (bootstrap, session with Ready/Dying/GameOver, Run again/Same track, input, gray-box views, HUD, PlayMode tests). Swap point for C2: `RunSceneBootstrap.CreateWorldFactory`.
-- [x] C2 ui-engineer: track world wired in; obstacle, ravine and coin views; score HUD; stumble/near-miss feedback. GameSession stays the lifecycle (RunSession unused)
-- [x] D tech-architect: first-open bootstrap (`Assets/_Game/Editor/Setup/ProjectBootstrap.cs`, ADR 0003) + `docs/PLAY_FIRST_BUILD.md`
-- [ ] E code-reviewer: compile-correctness and logic review of everything; fixes applied (an early run was stopped by the owner to save tokens)
-- [ ] F qa-engineer: test plan + owner play-test script
-
-Lesson from the 2026-10-07 worker restart: uncommitted agent work is lost on restart. Keep agent tasks small,
-and commit after every agent report.
+**Earlier milestone (done):** FP1 compiled and played by the owner on 2026-10-07; Batch 1–2 (vines, menus/save, power-ups,
+Duko/continue, audio files) compiled clean on the Mac.
 
 ## Agents: who is doing what
 
@@ -98,7 +77,7 @@ If a new session finds an agent marked **working** but no matching output or com
 | G4–G8 | Not started |
 
 ## Open questions for the owner
-0. AURELIA direction (asked 2026-10-08): art fidelity (board-level realistic vs stylized-lush), Pista/Duko (replace vs keep), paid Unity Asset Store budget.
+0. API keys for image/3D/audio generation must be added to the cloud environment (see Phase 0 "Blocked").
 1. Ads and prices: deferred to week 4 (tracking already decided: none).
 2. Jungle music variation: three loops on disk (A/B/C). Playback is not wired yet; default to A until the owner listens.
 
@@ -128,6 +107,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Log
 Newest first. One line per event.
+- 2026-10-08: **Owner: go.** AURELIA with Pista/Duko, realistic, AI-made art, phased plan. Launched P0-A art-director and P0-B tech-architect.
 - 2026-10-08: Owner: keep Pista, Duko and the game name for now; no plans locked, no paid assets, prefers AI + realistic look. Owner is still thinking about direction.
 - 2026-10-08: Owner: replace Pista/Duko. Art fidelity and asset budget still open; owner asked for effort estimate, whether AI can reach good mobile quality, and whether to start a new repo.
 - 2026-10-08: **Owner shared the AURELIA blueprint and vision board: "I want a polished game now, not a toy project."** Saved both to `design/aurelia/`, recorded the direction in DECISIONS. Could not compile in the cloud container (no Unity); last Mac compile check (Batch 2) was clean. Asked the owner about art fidelity, Pista/Duko and asset budget before rewriting the GDD.
