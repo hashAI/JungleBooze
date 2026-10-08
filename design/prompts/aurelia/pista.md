@@ -95,3 +95,4 @@ nothing touches the image edge.
 | Date | Image | Model, size, quality | Result / retry reason |
 |---|---|---|---|
 | 2026-10-08 | Turnarounds A, B, C (3 requests, parallel) | `gpt-image-2`, 2400x1200, high | **Failed, no image:** HTTP 429 `insufficient_quota` / `credit_balance_exhausted` (the OpenAI account has no credits). Not counted against the 24-generation cap; nothing was billed |
+| 2026-10-08 | Turnaround A (recheck) | `gpt-image-2`, 2400x1200, high | **Failed, no image:** HTTP 429 `credit_balance_exhausted` again. Not counted, nothing billed |
