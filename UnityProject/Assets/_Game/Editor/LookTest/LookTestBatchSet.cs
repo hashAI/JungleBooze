@@ -46,6 +46,20 @@ namespace JungleBooze.Editor.LookTest
             return accumulator;
         }
 
+        /// <summary>Visits every non-empty batch in creation order: (segment, layer, label, material, accumulator).</summary>
+        public void ForEach(System.Action<int, string, string, Material, LookTestMeshAccumulator> visit)
+        {
+            for (int i = 0; i < _order.Count; i++)
+            {
+                Key key = _order[i];
+                LookTestMeshAccumulator accumulator = _batches[key];
+                if (!accumulator.IsEmpty)
+                {
+                    visit(key.Segment, key.Layer, key.Label, key.Material, accumulator);
+                }
+            }
+        }
+
         /// <summary>Renderer name of a batch: the budget layer code comes first.</summary>
         public static string RendererName(string layer, string label, string materialName)
         {

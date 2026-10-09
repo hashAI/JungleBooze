@@ -17,6 +17,8 @@ namespace JungleBooze.App.HeroBasin
         [SerializeField] private HeroPainterlyLook _painterly = new HeroPainterlyLook();
         [Tooltip("Painterly set-dressing pass (HERO_BASIN_DRESSING.md): counts and screen regions. Painterly style only.")]
         [SerializeField] private HeroDressing _dressing = new HeroDressing();
+        [Tooltip("Painterly v4 cheap tricks (ADR 0011): arch matte card, pillar impostors, painted foam and cascades.")]
+        [SerializeField] private HeroCards _cards = new HeroCards();
 
         [Header("Cameras (position, euler: pitch + = down, yaw + = right; vertical FOV)")]
         [SerializeField] private Vector3 _landscapePosition = new Vector3(1.3f, 1.9f, -4.7f);
@@ -239,6 +241,7 @@ namespace JungleBooze.App.HeroBasin
         public HeroBasinStyle Style => _style;
         public HeroPainterlyLook Painterly => _painterly;
         public HeroDressing Dressing => _dressing;
+        public HeroCards Cards => _style == HeroBasinStyle.Painterly ? _cards : null;
         public Vector3 LandscapePosition => _landscapePosition;
         public Vector3 LandscapeEuler => _landscapeEuler;
         public float LandscapeFovDeg => _landscapeFovDeg;

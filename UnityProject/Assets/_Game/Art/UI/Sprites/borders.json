@@ -1,0 +1,16 @@
+{
+ "button_primary": 34,
+ "button_secondary": 34,
+ "card": 30,
+ "chip": 44,
+ "circle": 0,
+ "divider": 0,
+ "glow": 0,
+ "knob": 0,
+ "panel": 36,
+ "scrim": 0,
+ "shadow": 56,
+ "track": 15,
+ "track_fill": 15,
+ "white": 16
+}

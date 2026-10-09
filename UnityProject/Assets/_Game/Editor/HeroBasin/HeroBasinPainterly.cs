@@ -63,7 +63,7 @@ namespace JungleBooze.Editor.HeroBasin
 
                             break;
                         case WaterShader:
-                            Water(m, p);
+                            Water(m, p, h.Cards);
                             water++;
                             break;
                         case WaterfallShader:
@@ -185,8 +185,25 @@ namespace JungleBooze.Editor.HeroBasin
             EditorUtility.SetDirty(m);
         }
 
-        private static void Water(Material m, HeroPainterlyLook p)
+        private static void Water(Material m, HeroPainterlyLook p, HeroCards cards)
         {
+            // v4 (ADR 0011): painted foam atlas instead of the thresholded cream shapes.
+            Texture2D foam = cards != null && cards.PaintedFoam
+                ? AssetDatabase.LoadAssetAtPath<Texture2D>(HeroBasinCards.EffectsFolder + "/" + cards.FoamTexture + ".png")
+                : null;
+            m.SetFloat("_PaintedFoam", foam != null ? 1f : 0f);
+            if (foam != null)
+            {
+                m.EnableKeyword("_PAINTED_FOAM");
+                m.SetTexture("_PaintFoamTex", foam);
+                m.SetVector("_PaintFoamCell", new Vector4(cards.FoamCellM.x, cards.FoamCellM.y, 0f, 0f));
+                m.SetFloat("_PaintFoamMax", cards.FoamMaxAlpha);
+            }
+            else
+            {
+                m.DisableKeyword("_PAINTED_FOAM");
+            }
+
             m.SetFloat("_Painterly", 1f);
             m.EnableKeyword(Keyword);
             m.SetColor("_ShallowColor", p.WaterShallow);

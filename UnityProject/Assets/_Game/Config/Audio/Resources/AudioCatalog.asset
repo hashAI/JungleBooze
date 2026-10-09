@@ -1,0 +1,969 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c01bbaaf9a8624219b9e578076b08d1b, type: 3}
+  m_Name: AudioCatalog
+  m_EditorClassIdentifier: JungleBooze.Services::JungleBooze.Services.Audio.AudioCatalog
+  Cues:
+  - Id: amb.canopy.wind
+    Bus: 1
+    Clips:
+    - {fileID: 8300000, guid: 820164f215af94aa3a3429904531eeed, type: 3}
+    Volume: 1
+    PitchJitter: 0
+    VolumeJitterDb: 0
+    Cooldown: 1
+    MaxVoices: 1
+    Priority: 64
+    Haptic: 0
+    Loop: 1
+  - Id: amb.cue.risky
+    Bus: 1
+    Clips:
+    - {fileID: 8300000, guid: 899c20fdabfb34c40b3b77b4a059524c, type: 3}
+    Volume: 0.7
+    PitchJitter: 0
+    VolumeJitterDb: 0
+    Cooldown: 1
+    MaxVoices: 1
+    Priority: 64
+    Haptic: 0
+    Loop: 0
+  - Id: amb.falls.roar
+    Bus: 1
+    Clips:
+    - {fileID: 8300000, guid: 0a298d738d47643b58c5df30ea02d2e4, type: 3}
+    Volume: 0.8
+    PitchJitter: 0
+    VolumeJitterDb: 0
+    Cooldown: 1
+    MaxVoices: 1
+    Priority: 64
+    Haptic: 0
+    Loop: 1
+  - Id: amb.forest
+    Bus: 1
+    Clips:
+    - {fileID: 8300000, guid: e7f8ead65eef84323968fa94e7ef79fa, type: 3}
+    Volume: 1
+    PitchJitter: 0
+    VolumeJitterDb: 0
+    Cooldown: 1
+    MaxVoices: 1
+    Priority: 64
+    Haptic: 0
+    Loop: 1
+  - Id: amb.grotto
+    Bus: 1
+    Clips:
+    - {fileID: 8300000, guid: 078cf68957abc4cfeb792a304d5defa2, type: 3}
+    Volume: 1
+    PitchJitter: 0
+    VolumeJitterDb: 0
+    Cooldown: 1
+    MaxVoices: 1
+    Priority: 64
+    Haptic: 0
+    Loop: 1
+  - Id: amb.rapids
+    Bus: 1
+    Clips:
+    - {fileID: 8300000, guid: a6d50bc9683ad433f9a458619311de00, type: 3}
+    Volume: 0.9
+    PitchJitter: 0
+    VolumeJitterDb: 0
+    Cooldown: 1
+    MaxVoices: 1
+    Priority: 64
+    Haptic: 0
+    Loop: 1
+  - Id: amb.river
+    Bus: 1
+    Clips:
+    - {fileID: 8300000, guid: 0312bb86b74e04f548e333274f302dc3, type: 3}
+    Volume: 0.9
+    PitchJitter: 0
+    VolumeJitterDb: 0
+    Cooldown: 1
+    MaxVoices: 1
+    Priority: 64
+    Haptic: 0
+    Loop: 1
+  - Id: amb.secret.dripEcho
+    Bus: 1
+    Clips:
+    - {fileID: 8300000, guid: 6897c9d379a734b4da6b8e7ae6b083c9, type: 3}
+    Volume: 0.6
+    PitchJitter: 0
+    VolumeJitterDb: 0
+    Cooldown: 1
+    MaxVoices: 1
+    Priority: 64
+    Haptic: 0
+    Loop: 1
+  - Id: amb.underwater
+    Bus: 1
+    Clips:
+    - {fileID: 8300000, guid: 4582a088c656a45b8a38d0ae0dbd2746, type: 3}
+    Volume: 1
+    PitchJitter: 0
+    VolumeJitterDb: 0
+    Cooldown: 1
+    MaxVoices: 1
+    Priority: 64
+    Haptic: 0
+    Loop: 1
+  - Id: mus.reveal.vista
+    Bus: 0
+    Clips:
+    - {fileID: 8300000, guid: 4f2dc577f88384cb4a4b004b5109c8c9, type: 3}
+    Volume: 0.9
+    PitchJitter: 0
+    VolumeJitterDb: 0
+    Cooldown: 0.5
+    MaxVoices: 1
+    Priority: 0
+    Haptic: 0
+    Loop: 0
+  - Id: mus.sting.discovery
+    Bus: 0
+    Clips:
+    - {fileID: 8300000, guid: 2f37b13ce949d47a784fdf462bd9eec6, type: 3}
+    Volume: 0.9
+    PitchJitter: 0
+    VolumeJitterDb: 0
+    Cooldown: 0.5
+    MaxVoices: 1
+    Priority: 0
+    Haptic: 0
+    Loop: 0
+  - Id: mus.sting.gameover
+    Bus: 0
+    Clips:
+    - {fileID: 8300000, guid: 381711768ea7f4592a3fd8939c08f12f, type: 3}
+    Volume: 0.9
+    PitchJitter: 0
+    VolumeJitterDb: 0
+    Cooldown: 0.5
+    MaxVoices: 1
+    Priority: 0
+    Haptic: 0
+    Loop: 0
+  - Id: mus.sting.secret
+    Bus: 0
+    Clips:
+    - {fileID: 8300000, guid: ea4b66457660e43ef828dc5ba104d464, type: 3}
+    Volume: 0.9
+    PitchJitter: 0
+    VolumeJitterDb: 0
+    Cooldown: 0.5
+    MaxVoices: 1
+    Priority: 0
+    Haptic: 0
+    Loop: 0
+  - Id: mus.sting.unlock
+    Bus: 0
+    Clips:
+    - {fileID: 8300000, guid: d8980cf14d0e942848cea4385ef69fb9, type: 3}
+    Volume: 0.9
+    PitchJitter: 0
+    VolumeJitterDb: 0
+    Cooldown: 0.5
+    MaxVoices: 1
+    Priority: 0
+    Haptic: 0
+    Loop: 0
+  - Id: sfx.beam.land
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: 306245569e28c4687a5ce6a5cbddc711, type: 3}
+    Volume: 1
+    PitchJitter: 0.5
+    VolumeJitterDb: 1
+    Cooldown: 0.03
+    MaxVoices: 2
+    Priority: 128
+    Haptic: 1
+    Loop: 0
+  - Id: sfx.branch.creak
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: d95e9c64ae5e94a2cb0cafe72a76c91d, type: 3}
+    Volume: 1
+    PitchJitter: 0.5
+    VolumeJitterDb: 1
+    Cooldown: 0.03
+    MaxVoices: 2
+    Priority: 128
+    Haptic: 0
+    Loop: 0
+  - Id: sfx.bump.water
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: 1a8f34449f23146d293a1b2e6a63ae23, type: 3}
+    Volume: 1
+    PitchJitter: 0.5
+    VolumeJitterDb: 1
+    Cooldown: 0.03
+    MaxVoices: 2
+    Priority: 200
+    Haptic: 0
+    Loop: 0
+  - Id: sfx.cleanLine
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: 64802b1d701424e8d9be202cdd595f77, type: 3}
+    - {fileID: 8300000, guid: b2f145cf6ee4448e5bca428522545e98, type: 3}
+    Volume: 1
+    PitchJitter: 0.5
+    VolumeJitterDb: 1
+    Cooldown: 0.03
+    MaxVoices: 2
+    Priority: 128
+    Haptic: 1
+    Loop: 0
+  - Id: sfx.coin
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: b02756f3e595641328c69a5b7a341fa7, type: 3}
+    - {fileID: 8300000, guid: 0164a51234f49466ab781565e0fff051, type: 3}
+    Volume: 0.55
+    PitchJitter: 0.15
+    VolumeJitterDb: 1
+    Cooldown: 0.02
+    MaxVoices: 4
+    Priority: 100
+    Haptic: 0
+    Loop: 0
+  - Id: sfx.crash
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: 20f722e7be3a04be2ba84207c09608c6, type: 3}
+    - {fileID: 8300000, guid: da2349b96169940d99ef04e1cf361998, type: 3}
+    Volume: 1
+    PitchJitter: 0.5
+    VolumeJitterDb: 1
+    Cooldown: 0.03
+    MaxVoices: 2
+    Priority: 200
+    Haptic: 0
+    Loop: 0
+  - Id: sfx.crystal
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: 49e7c400213f944bd891e13b3f21ca88, type: 3}
+    - {fileID: 8300000, guid: 031757576fc2c433db73c9e5ed13185a, type: 3}
+    Volume: 1
+    PitchJitter: 0.5
+    VolumeJitterDb: 1
+    Cooldown: 0.03
+    MaxVoices: 2
+    Priority: 128
+    Haptic: 1
+    Loop: 0
+  - Id: sfx.curtain.pass
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: 4a238152b39f944799cf6e879950748b, type: 3}
+    - {fileID: 8300000, guid: 04bb3abd2f7fc43d4b7d63c53ef6ed46, type: 3}
+    Volume: 1
+    PitchJitter: 0.5
+    VolumeJitterDb: 1
+    Cooldown: 0.03
+    MaxVoices: 2
+    Priority: 128
+    Haptic: 1
+    Loop: 0
+  - Id: sfx.deepDive
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: b161ec46424164e449cf16a87fca1c55, type: 3}
+    Volume: 1
+    PitchJitter: 0.5
+    VolumeJitterDb: 1
+    Cooldown: 0.03
+    MaxVoices: 2
+    Priority: 128
+    Haptic: 0
+    Loop: 0
+  - Id: sfx.discovery
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: b61c3863aec3d48a7a2bf6dbf92289ad, type: 3}
+    Volume: 1
+    PitchJitter: 0.5
+    VolumeJitterDb: 1
+    Cooldown: 0.03
+    MaxVoices: 2
+    Priority: 128
+    Haptic: 0
+    Loop: 0
+  - Id: sfx.dive
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: 89b6b9fb30d9c4f56bd2f465035b0d43, type: 3}
+    - {fileID: 8300000, guid: 3b5f1809925f7412e967b1c089196f1d, type: 3}
+    Volume: 1
+    PitchJitter: 0.5
+    VolumeJitterDb: 1
+    Cooldown: 0.03
+    MaxVoices: 2
+    Priority: 128
+    Haptic: 0
+    Loop: 0
+  - Id: sfx.dodge
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: 0d691fcb7e7854721b2140f43d66a666, type: 3}
+    - {fileID: 8300000, guid: aa1429b31baf44d6caf60c33b01f18c8, type: 3}
+    Volume: 1
+    PitchJitter: 0.5
+    VolumeJitterDb: 1
+    Cooldown: 0.03
+    MaxVoices: 2
+    Priority: 128
+    Haptic: 0
+    Loop: 0
+  - Id: sfx.edgeBrush
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: 745ac75c098734c48b95ba50a3ea35b3, type: 3}
+    - {fileID: 8300000, guid: f7406f8cae1394079aa49055bd6c3529, type: 3}
+    Volume: 0.6
+    PitchJitter: 1
+    VolumeJitterDb: 1
+    Cooldown: 0.25
+    MaxVoices: 1
+    Priority: 128
+    Haptic: 0
+    Loop: 0
+  - Id: sfx.fail.crash
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: 1bc1d90ab8c3a431ea2205f5f0c844ff, type: 3}
+    Volume: 1
+    PitchJitter: 0
+    VolumeJitterDb: 1
+    Cooldown: 0.03
+    MaxVoices: 2
+    Priority: 220
+    Haptic: 0
+    Loop: 0
+  - Id: sfx.fall
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: 83c3501cfc3e142e88f7a1c0b7eb9546, type: 3}
+    Volume: 1
+    PitchJitter: 0
+    VolumeJitterDb: 1
+    Cooldown: 0.03
+    MaxVoices: 2
+    Priority: 220
+    Haptic: 0
+    Loop: 0
+  - Id: sfx.gap.whoosh
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: 0ae8816bd11334423a8fac7550d8648e, type: 3}
+    Volume: 1
+    PitchJitter: 0.5
+    VolumeJitterDb: 1
+    Cooldown: 0.03
+    MaxVoices: 2
+    Priority: 128
+    Haptic: 0
+    Loop: 0
+  - Id: sfx.hit.minor
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: aefcff8d551ac4dde9c647ff158a9e5f, type: 3}
+    - {fileID: 8300000, guid: cf11d5947d4734030966a214110d91c1, type: 3}
+    Volume: 1
+    PitchJitter: 0.5
+    VolumeJitterDb: 1
+    Cooldown: 0.03
+    MaxVoices: 2
+    Priority: 200
+    Haptic: 0
+    Loop: 0
+  - Id: sfx.hit.thorns
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: e2340cac58b884d029f384ad0c3641af, type: 3}
+    Volume: 1
+    PitchJitter: 0.5
+    VolumeJitterDb: 1
+    Cooldown: 0.03
+    MaxVoices: 2
+    Priority: 200
+    Haptic: 0
+    Loop: 0
+  - Id: sfx.jump
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: 4819670922165483ab2b1e8682d47ff9, type: 3}
+    - {fileID: 8300000, guid: 2a106b54e44b0453caed60de89314b83, type: 3}
+    Volume: 0.8
+    PitchJitter: 0.5
+    VolumeJitterDb: 1
+    Cooldown: 0.03
+    MaxVoices: 2
+    Priority: 128
+    Haptic: 0
+    Loop: 0
+  - Id: sfx.land
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: 8972375b251bc4cfcb55e46a5fb3e981, type: 3}
+    - {fileID: 8300000, guid: b06b2d930a0624b279e98d89710812db, type: 3}
+    - {fileID: 8300000, guid: d5257b2d0368f485bb7de8c6add808c6, type: 3}
+    Volume: 0.8
+    PitchJitter: 0.5
+    VolumeJitterDb: 1
+    Cooldown: 0.03
+    MaxVoices: 2
+    Priority: 128
+    Haptic: 0
+    Loop: 0
+  - Id: sfx.land.hard
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: 3143de96cf71f4a8b9fcd14ee0e52002, type: 3}
+    Volume: 1
+    PitchJitter: 0.5
+    VolumeJitterDb: 1
+    Cooldown: 0.03
+    MaxVoices: 2
+    Priority: 128
+    Haptic: 0
+    Loop: 0
+  - Id: sfx.leap
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: ee02b98029bde4cf5b4d9cc3ef22f1a9, type: 3}
+    - {fileID: 8300000, guid: 27a233d2f494a4e1aa15b692c5044380, type: 3}
+    Volume: 1
+    PitchJitter: 0.5
+    VolumeJitterDb: 1
+    Cooldown: 0.03
+    MaxVoices: 2
+    Priority: 128
+    Haptic: 0
+    Loop: 0
+  - Id: sfx.perfect
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: 089961e69de8449e98640c60f9a3963d, type: 3}
+    - {fileID: 8300000, guid: d15805276cb804646a87e78beadb7500, type: 3}
+    Volume: 1
+    PitchJitter: 0.5
+    VolumeJitterDb: 1
+    Cooldown: 0.03
+    MaxVoices: 2
+    Priority: 128
+    Haptic: 4
+    Loop: 0
+  - Id: sfx.powerup
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: 54a34b9d763404c0897117ee4bd467cd, type: 3}
+    Volume: 1
+    PitchJitter: 0.5
+    VolumeJitterDb: 1
+    Cooldown: 0.03
+    MaxVoices: 2
+    Priority: 128
+    Haptic: 0
+    Loop: 0
+  - Id: sfx.release
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: 2e6cb0f9b64f84a8b923232250480d1b, type: 3}
+    - {fileID: 8300000, guid: 45dd0f628b7764e4194851328640a2d9, type: 3}
+    Volume: 1
+    PitchJitter: 0.5
+    VolumeJitterDb: 1
+    Cooldown: 0.03
+    MaxVoices: 2
+    Priority: 128
+    Haptic: 0
+    Loop: 0
+  - Id: sfx.revive
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: 40990856134fa4334bff0eefb5d4f592, type: 3}
+    Volume: 1
+    PitchJitter: 0.5
+    VolumeJitterDb: 1
+    Cooldown: 0.03
+    MaxVoices: 2
+    Priority: 128
+    Haptic: 0
+    Loop: 0
+  - Id: sfx.sailback.chirp
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: 01483f9c0f2b94782b13d8696c4c5cba, type: 3}
+    - {fileID: 8300000, guid: 02184cbf552744139945f503bf3273cf, type: 3}
+    - {fileID: 8300000, guid: 254f2b12fdd1d4632acd331eba951f86, type: 3}
+    Volume: 0.85
+    PitchJitter: 1
+    VolumeJitterDb: 1
+    Cooldown: 0.25
+    MaxVoices: 2
+    Priority: 128
+    Haptic: 0
+    Loop: 0
+  - Id: sfx.sailback.distant
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: 4ade841b934444c17b931f2455e64339, type: 3}
+    Volume: 0.7
+    PitchJitter: 0.5
+    VolumeJitterDb: 1
+    Cooldown: 3
+    MaxVoices: 1
+    Priority: 128
+    Haptic: 0
+    Loop: 0
+  - Id: sfx.sailback.launch
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: 45e531a75c1ed4995926f18dc1741be0, type: 3}
+    Volume: 1
+    PitchJitter: 0.5
+    VolumeJitterDb: 1
+    Cooldown: 0.03
+    MaxVoices: 2
+    Priority: 128
+    Haptic: 0
+    Loop: 0
+  - Id: sfx.sailback.sailFlare
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: 58d42c1654a7f4a5887e45d3bee13ff2, type: 3}
+    - {fileID: 8300000, guid: db57943e7120f46d29f6bdd7e0c810a1, type: 3}
+    Volume: 1
+    PitchJitter: 0.5
+    VolumeJitterDb: 1
+    Cooldown: 0.03
+    MaxVoices: 2
+    Priority: 128
+    Haptic: 0
+    Loop: 0
+  - Id: sfx.shield.break
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: ccdedbd93417e4a6f9d905dd524bc2c6, type: 3}
+    - {fileID: 8300000, guid: 0b7249005ed2847898e13429020b78b9, type: 3}
+    Volume: 1
+    PitchJitter: 0.5
+    VolumeJitterDb: 1
+    Cooldown: 0.03
+    MaxVoices: 2
+    Priority: 128
+    Haptic: 2
+    Loop: 0
+  - Id: sfx.shield.expire
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: c227baf51e09743669a6142b28594ac5, type: 3}
+    Volume: 1
+    PitchJitter: 0.5
+    VolumeJitterDb: 1
+    Cooldown: 0.03
+    MaxVoices: 2
+    Priority: 128
+    Haptic: 0
+    Loop: 0
+  - Id: sfx.shield.pickup
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: 5a705c59c3c5e4549b913bd64b6a3859, type: 3}
+    Volume: 1
+    PitchJitter: 0.5
+    VolumeJitterDb: 1
+    Cooldown: 0.03
+    MaxVoices: 2
+    Priority: 128
+    Haptic: 1
+    Loop: 0
+  - Id: sfx.slide
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: efc6f8570b3f94b0997d8773f0af48fb, type: 3}
+    - {fileID: 8300000, guid: 056990ab9e3fa48f8bb859cd89ada8d0, type: 3}
+    Volume: 1
+    PitchJitter: 0.5
+    VolumeJitterDb: 1
+    Cooldown: 0.03
+    MaxVoices: 2
+    Priority: 128
+    Haptic: 0
+    Loop: 0
+  - Id: sfx.splash
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: a569de06c15dc493188ed61455d69811, type: 3}
+    - {fileID: 8300000, guid: c9314475d6edf4ba58a607a0e900159e, type: 3}
+    Volume: 1
+    PitchJitter: 0.5
+    VolumeJitterDb: 1
+    Cooldown: 0.03
+    MaxVoices: 2
+    Priority: 128
+    Haptic: 1
+    Loop: 0
+  - Id: sfx.step.dirt
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: 272389a7708a9472eab84a43e8561c7c, type: 3}
+    - {fileID: 8300000, guid: 25a63db3129fc43acb0f5b3c7c072aff, type: 3}
+    - {fileID: 8300000, guid: 8cedff7c91f47400181f6082a920c1f2, type: 3}
+    - {fileID: 8300000, guid: 097a39c217d1641e8a9d41155c1b9cf6, type: 3}
+    - {fileID: 8300000, guid: 40fc21dadc3704c87b615e33b8c573af, type: 3}
+    - {fileID: 8300000, guid: d83b6d0d0f0a1400bad4a48dedbdc860, type: 3}
+    Volume: 0.55
+    PitchJitter: 0.8
+    VolumeJitterDb: 2
+    Cooldown: 0.12
+    MaxVoices: 2
+    Priority: 60
+    Haptic: 0
+    Loop: 0
+  - Id: sfx.step.moss
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: 59c95c6f66e3249a9ae0c1220392dbbb, type: 3}
+    - {fileID: 8300000, guid: 7afb267fe185344ebb1ab979a1fc0230, type: 3}
+    - {fileID: 8300000, guid: 832abf547b5af44b7869c00af3816dbf, type: 3}
+    - {fileID: 8300000, guid: 0875b2d8ca2a5452ebd1ba013463f3e7, type: 3}
+    - {fileID: 8300000, guid: 3c7138ebbb7824086a6298167d8de21f, type: 3}
+    - {fileID: 8300000, guid: 487ab3a84c8694713a7014ad0a7d47c7, type: 3}
+    Volume: 0.55
+    PitchJitter: 0.8
+    VolumeJitterDb: 2
+    Cooldown: 0.12
+    MaxVoices: 2
+    Priority: 60
+    Haptic: 0
+    Loop: 0
+  - Id: sfx.step.shallow
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: 0d9bf3009f63a4f63ba5c650adc72ee8, type: 3}
+    - {fileID: 8300000, guid: 7b2fd6db3805e472e820837f686c2baf, type: 3}
+    - {fileID: 8300000, guid: c11c46e21a227410ba83a0c2e9349a3a, type: 3}
+    - {fileID: 8300000, guid: d28a0c87b9d3d49d3934cdf2333cc7e6, type: 3}
+    - {fileID: 8300000, guid: 8de6144a3c9884cf8b6e85d87667ced9, type: 3}
+    - {fileID: 8300000, guid: 8e6a44d7aa01c4d329e04dd4ef3a5d3a, type: 3}
+    Volume: 0.55
+    PitchJitter: 0.8
+    VolumeJitterDb: 2
+    Cooldown: 0.12
+    MaxVoices: 2
+    Priority: 60
+    Haptic: 0
+    Loop: 0
+  - Id: sfx.step.wood
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: 9a95cb49ab7314d7da18de84f2c9da32, type: 3}
+    - {fileID: 8300000, guid: f315540ee048743249f8bb22a41ba380, type: 3}
+    - {fileID: 8300000, guid: cd8bbaacd24094b68b96a2c77a551a27, type: 3}
+    - {fileID: 8300000, guid: 1187190d88bc9425cbbe995fe3fd8be9, type: 3}
+    - {fileID: 8300000, guid: 2192b02199a924b7583044f6a3bee080, type: 3}
+    - {fileID: 8300000, guid: 4734512d39648435b8fa17754a4c26af, type: 3}
+    Volume: 0.55
+    PitchJitter: 0.8
+    VolumeJitterDb: 2
+    Cooldown: 0.12
+    MaxVoices: 2
+    Priority: 60
+    Haptic: 0
+    Loop: 0
+  - Id: sfx.surface
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: 2eff941002ba9414ebd29493d39e80cd, type: 3}
+    Volume: 1
+    PitchJitter: 0.5
+    VolumeJitterDb: 1
+    Cooldown: 0.03
+    MaxVoices: 2
+    Priority: 128
+    Haptic: 0
+    Loop: 0
+  - Id: sfx.swim.stroke
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: d3c9f245673c848e0970d032a3af5c6b, type: 3}
+    - {fileID: 8300000, guid: ab4845c9b84b2406fa761e18b98067c5, type: 3}
+    Volume: 0.6
+    PitchJitter: 0.5
+    VolumeJitterDb: 1
+    Cooldown: 0.3
+    MaxVoices: 2
+    Priority: 128
+    Haptic: 0
+    Loop: 0
+  - Id: sfx.vine.creak
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: 430e76f3eac444893823e62f110abb58, type: 3}
+    - {fileID: 8300000, guid: 6eb8ee3cdbce6402da5263224ad73b67, type: 3}
+    Volume: 0.7
+    PitchJitter: 0.5
+    VolumeJitterDb: 1
+    Cooldown: 0.03
+    MaxVoices: 2
+    Priority: 128
+    Haptic: 0
+    Loop: 0
+  - Id: sfx.vine.grab
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: b3fb4100c39744a389373bec36fa9518, type: 3}
+    - {fileID: 8300000, guid: c2c617004dc4b4e3f88e222c8f46ff43, type: 3}
+    Volume: 1
+    PitchJitter: 0.5
+    VolumeJitterDb: 1
+    Cooldown: 0.03
+    MaxVoices: 2
+    Priority: 128
+    Haptic: 1
+    Loop: 0
+  - Id: sfx.vine.window
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: 3ae7cc4fe9df247f29fb78dffaea95c4, type: 3}
+    Volume: 1
+    PitchJitter: 0.5
+    VolumeJitterDb: 1
+    Cooldown: 0.03
+    MaxVoices: 2
+    Priority: 128
+    Haptic: 0
+    Loop: 0
+  - Id: sfx.water.enter
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: b309dd41563cd48eb8c1652a37f39d60, type: 3}
+    - {fileID: 8300000, guid: e7bb2c75ae25c4a709388e41c0c9c619, type: 3}
+    Volume: 1
+    PitchJitter: 0.5
+    VolumeJitterDb: 1
+    Cooldown: 0.03
+    MaxVoices: 2
+    Priority: 128
+    Haptic: 1
+    Loop: 0
+  - Id: sfx.water.exit
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: e8be024ea9ec14c90b3270ba87fb69fa, type: 3}
+    Volume: 1
+    PitchJitter: 0.5
+    VolumeJitterDb: 1
+    Cooldown: 0.03
+    MaxVoices: 2
+    Priority: 128
+    Haptic: 0
+    Loop: 0
+  - Id: sfx.water.wadeIn
+    Bus: 2
+    Clips:
+    - {fileID: 8300000, guid: d10b7b94a497f4a85a80cf881f5534f9, type: 3}
+    Volume: 1
+    PitchJitter: 0.5
+    VolumeJitterDb: 1
+    Cooldown: 0.03
+    MaxVoices: 2
+    Priority: 128
+    Haptic: 0
+    Loop: 0
+  - Id: ui.back
+    Bus: 3
+    Clips:
+    - {fileID: 8300000, guid: 86b181b9c50cb44aca0a8b8ebdfa525d, type: 3}
+    Volume: 0.8
+    PitchJitter: 0.2
+    VolumeJitterDb: 0.5
+    Cooldown: 0.05
+    MaxVoices: 2
+    Priority: 160
+    Haptic: 0
+    Loop: 0
+  - Id: ui.confirm
+    Bus: 3
+    Clips:
+    - {fileID: 8300000, guid: 97aa90dbecf1f4052bde519d291454cf, type: 3}
+    Volume: 0.8
+    PitchJitter: 0.2
+    VolumeJitterDb: 0.5
+    Cooldown: 0.05
+    MaxVoices: 2
+    Priority: 160
+    Haptic: 0
+    Loop: 0
+  - Id: ui.countUp
+    Bus: 3
+    Clips:
+    - {fileID: 8300000, guid: f08a5b42d84bb4da49d595af453d7f15, type: 3}
+    Volume: 0.5
+    PitchJitter: 0.2
+    VolumeJitterDb: 0.5
+    Cooldown: 0.04
+    MaxVoices: 2
+    Priority: 160
+    Haptic: 0
+    Loop: 0
+  - Id: ui.countdown
+    Bus: 3
+    Clips:
+    - {fileID: 8300000, guid: 4e190ccded8ec4afc8cba9f934305841, type: 3}
+    Volume: 0.8
+    PitchJitter: 0.2
+    VolumeJitterDb: 0.5
+    Cooldown: 0.05
+    MaxVoices: 2
+    Priority: 160
+    Haptic: 0
+    Loop: 0
+  - Id: ui.denied
+    Bus: 3
+    Clips:
+    - {fileID: 8300000, guid: 5647d3962a531499d98effc24ebf909a, type: 3}
+    Volume: 0.8
+    PitchJitter: 0.2
+    VolumeJitterDb: 0.5
+    Cooldown: 0.05
+    MaxVoices: 2
+    Priority: 160
+    Haptic: 0
+    Loop: 0
+  - Id: ui.learn
+    Bus: 3
+    Clips:
+    - {fileID: 8300000, guid: f1ea839923a774f63a26e3b848039cae, type: 3}
+    Volume: 0.8
+    PitchJitter: 0.2
+    VolumeJitterDb: 0.5
+    Cooldown: 0.05
+    MaxVoices: 2
+    Priority: 160
+    Haptic: 4
+    Loop: 0
+  - Id: ui.newRecord
+    Bus: 3
+    Clips:
+    - {fileID: 8300000, guid: 4b2d22696ae3a46f8a69d99e910d0e96, type: 3}
+    Volume: 0.8
+    PitchJitter: 0.2
+    VolumeJitterDb: 0.5
+    Cooldown: 0.05
+    MaxVoices: 2
+    Priority: 160
+    Haptic: 0
+    Loop: 0
+  - Id: ui.objective
+    Bus: 3
+    Clips:
+    - {fileID: 8300000, guid: e52cb00c5d2404a65b51d546df427bc6, type: 3}
+    Volume: 0.8
+    PitchJitter: 0.2
+    VolumeJitterDb: 0.5
+    Cooldown: 0.05
+    MaxVoices: 2
+    Priority: 160
+    Haptic: 1
+    Loop: 0
+  - Id: ui.pause
+    Bus: 3
+    Clips:
+    - {fileID: 8300000, guid: d79934d67f74141fe9b5999efb27ec8e, type: 3}
+    Volume: 0.8
+    PitchJitter: 0.2
+    VolumeJitterDb: 0.5
+    Cooldown: 0.05
+    MaxVoices: 2
+    Priority: 160
+    Haptic: 0
+    Loop: 0
+  - Id: ui.tap
+    Bus: 3
+    Clips:
+    - {fileID: 8300000, guid: 5c47e22e0716849759bddd6cb0a0dace, type: 3}
+    - {fileID: 8300000, guid: b53f1aac24d3642f8b65f4f5e725e8fb, type: 3}
+    Volume: 0.8
+    PitchJitter: 0.2
+    VolumeJitterDb: 0.5
+    Cooldown: 0.05
+    MaxVoices: 2
+    Priority: 160
+    Haptic: 0
+    Loop: 0
+  - Id: ui.toast
+    Bus: 3
+    Clips:
+    - {fileID: 8300000, guid: d9f634d4d5b2648cc9b7d8cd1b13955e, type: 3}
+    Volume: 0.8
+    PitchJitter: 0.2
+    VolumeJitterDb: 0.5
+    Cooldown: 0.05
+    MaxVoices: 2
+    Priority: 160
+    Haptic: 0
+    Loop: 0
+  - Id: ui.toggle
+    Bus: 3
+    Clips:
+    - {fileID: 8300000, guid: 55cecc24bf7c84be780818142065aae3, type: 3}
+    Volume: 0.8
+    PitchJitter: 0.2
+    VolumeJitterDb: 0.5
+    Cooldown: 0.05
+    MaxVoices: 2
+    Priority: 160
+    Haptic: 0
+    Loop: 0
+  Music:
+    Intro: {fileID: 8300000, guid: a57c1698ecebd44d18a75aeb54348132, type: 3}
+    Layers:
+    - {fileID: 8300000, guid: bea020446c6dc4d669fcdef97c2f5e04, type: 3}
+    - {fileID: 8300000, guid: 5194e1e935fc84330aed3fddfbe4368a, type: 3}
+    - {fileID: 8300000, guid: 9c445020c5e2046cabe93942b5eb6aa0, type: 3}
+    - {fileID: 8300000, guid: 4e04d102f0c3c4174840735b8fa9f678, type: 3}
+    Results: {fileID: 8300000, guid: 3afbb43759e5c4639b79baf33f15cc5b, type: 3}
+    BarSeconds: 2
+    LevelVolumes:
+    - 0.85
+    - 0
+    - 0
+    - 0
+    - 1
+    - 0.5
+    - 0
+    - 0
+    - 1
+    - 0.9
+    - 0
+    - 0.7
+    - 0
+    - 0
+    - 1
+    - 0.9
+    LayerFade: 1.5
+    SectionFade: 0.5
+    StingDuck: 0.35
+    StingDuckFade: 0.25
+    StopFade: 1.2
+  Mixer: {fileID: 24100000, guid: 2fafefe32bccf4b3fbd959d68f522118, type: 2}

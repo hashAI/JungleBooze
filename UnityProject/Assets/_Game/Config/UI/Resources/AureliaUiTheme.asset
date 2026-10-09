@@ -1,0 +1,54 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4d87415d718814c40af0ee630eb812b3, type: 3}
+  m_Name: AureliaUiTheme
+  m_EditorClassIdentifier: JungleBooze.UI::JungleBooze.UI.Common.UiTheme
+  Body: {fileID: 12800000, guid: 266c8c795d3274ab38505c5e8064a6ae, type: 3}
+  Heavy: {fileID: 12800000, guid: 5a1c9f7fc81fa47ee93d1476e37a19ae, type: 3}
+  Display: {fileID: 12800000, guid: 063b02c2502984127a502420546fa997, type: 3}
+  Panel: {fileID: 21300000, guid: 28f70ddc579864356bfc51f5d220a714, type: 3}
+  Card: {fileID: 21300000, guid: e5dfc0d50f21d4ef58b1b047589fba14, type: 3}
+  ButtonPrimary: {fileID: 21300000, guid: 373d439bc54ce44c79f597b2f1580ad5, type: 3}
+  ButtonSecondary: {fileID: 21300000, guid: b5497bf7881d840dea1ec26815e091a2, type: 3}
+  Chip: {fileID: 21300000, guid: 9d3551cf0aafb474ab868efde52960f1, type: 3}
+  Circle: {fileID: 21300000, guid: c3cd22730a9494cada452b9bd4e9d7c3, type: 3}
+  Track: {fileID: 21300000, guid: 2ebfd66430d204d83803b285f9575a44, type: 3}
+  TrackFill: {fileID: 21300000, guid: c207d1400549b4c04a23ed372078fca0, type: 3}
+  Knob: {fileID: 21300000, guid: 29b05256d799b4c5bacfeccf68b7af00, type: 3}
+  Glow: {fileID: 21300000, guid: cc1407c8e6fe24e5f89b60680a68b198, type: 3}
+  Shadow: {fileID: 21300000, guid: 6c6dfb57162bc41c4a2ef95ea7885df8, type: 3}
+  Scrim: {fileID: 21300000, guid: 120dbfc07997b4c4195c8524c44ac200, type: 3}
+  Divider: {fileID: 21300000, guid: 5df3ded31adea43faa89849e30d6f65c, type: 3}
+  White: {fileID: 21300000, guid: fd43bf69a8a4e421eb29769b9cbc88c3, type: 3}
+  Coin: {fileID: 21300000, guid: a0c8cad4d1f194ce09cc458e47e1bcae, type: 3}
+  Crystal: {fileID: 21300000, guid: e5cbcb05c23bf4e19b814731d9d8f2e4, type: 3}
+  Health: {fileID: 21300000, guid: bb0080a7e8f2d4f8a997835ee889ef02, type: 3}
+  HealthEmpty: {fileID: 21300000, guid: b777043ae38f94cc993315f34dac0d36, type: 3}
+  ShieldIcon: {fileID: 21300000, guid: feee60cd6de3f4929b56eadc39f22128, type: 3}
+  Settings: {fileID: 21300000, guid: d432139170b51455884c00df681b0bc7, type: 3}
+  Journal: {fileID: 21300000, guid: 9fd7c13ac98604429b3d5ff80f33dbf8, type: 3}
+  Abilities: {fileID: 21300000, guid: 811a31c68f7464c2893db94e97076b2f, type: 3}
+  Discovery: {fileID: 21300000, guid: 4bf9165520d5c4faf879c4e2b3f02906, type: 3}
+  Record: {fileID: 21300000, guid: b9235b7d755bb4395803c3ac4e09a3fd, type: 3}
+  Camp: {fileID: 21300000, guid: 529db92da154e461cbcb36ffb146a1b9, type: 3}
+  Distance: {fileID: 21300000, guid: 4b9d8069c1f544cf886202ce808fdcc6, type: 3}
+  Lock: {fileID: 21300000, guid: bd35526f5fd74415d8ca8de3c3acea6a, type: 3}
+  Pause: {fileID: 21300000, guid: 387cbac2cdc8f4577a1be46aa4f2f072, type: 3}
+  Back: {fileID: 21300000, guid: d439ea459c5fe422dbfc7681e64cb2b8, type: 3}
+  Next: {fileID: 21300000, guid: 2b10f3f4901ec4c43bcfb00933f76329, type: 3}
+  Check: {fileID: 21300000, guid: 5d7a42dde2f764935a88394dcbf4cfdc, type: 3}
+  Close: {fileID: 21300000, guid: ac1edbc4e021d41b5a484ed436162c55, type: 3}
+  Play: {fileID: 21300000, guid: 8d7615f4251714045a5dabc86589b9b6, type: 3}
+  HomeLandscape: {fileID: 2800000, guid: 2715d5ed29dac447f942af15e6026192, type: 3}
+  HomePortrait: {fileID: 2800000, guid: 12a2fbad229854f07a1c7d6054006ab4, type: 3}
+  StringsEnglish: {fileID: 4900000, guid: c5023f86ec4f8470cbd3e0546f28d54e, type: 3}
+  PrivacyPolicyUrl: 

@@ -79,6 +79,29 @@ namespace JungleBooze.Gameplay.Views.World
             }
         }
 
+        /// <summary>
+        /// Chunk id signs (debug aid). Built only when a font is passed to <see cref="Build"/> (debug builds) and shown
+        /// only while the debug overlay is on.
+        /// </summary>
+        public bool SignsVisible { get; private set; }
+
+        public void SetSignsVisible(bool visible)
+        {
+            SignsVisible = visible;
+            if (_signs == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _signs.Length; i++)
+            {
+                if (_signs[i] != null && _signs[i].gameObject.activeSelf != visible)
+                {
+                    _signs[i].gameObject.SetActive(visible);
+                }
+            }
+        }
+
         public void Build(ChunkLibrary library, WorldPath path, WorldPalette palette, Font font)
         {
             _library = library ?? throw new ArgumentNullException(nameof(library));
@@ -114,6 +137,7 @@ namespace JungleBooze.Gameplay.Views.World
                     text.anchor = TextAnchor.LowerLeft;
                     text.color = new Color(0.12f, 0.1f, 0.14f);
                     label.GetComponent<MeshRenderer>().sharedMaterial = font.material;
+                    label.SetActive(SignsVisible);
                     _signs[i] = text;
                 }
 

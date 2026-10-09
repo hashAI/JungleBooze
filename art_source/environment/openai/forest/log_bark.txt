@@ -1,0 +1,1 @@
+{"file": "art_source/environment/openai/forest/f_swatch_bark_c1.png", "output_tokens": 1756, "est_usd": 0.0878}

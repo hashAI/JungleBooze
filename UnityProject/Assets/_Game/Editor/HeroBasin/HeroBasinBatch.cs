@@ -110,6 +110,7 @@ namespace JungleBooze.Editor.HeroBasin
             File.WriteAllBytes(Path.Combine(outDir, "F4_landscape.png"), landscape.EncodeToPNG());
             stats.AppendLine().AppendLine("F4 landscape").Append(LookTestFrameBudget.Measure(camera, look));
             Segment(camera, landscape, h, outDir, "F4", stats);
+            Overdraw(camera, h, landscapeSize, outDir, "F4", stats);
 
             var portraitSize = new Vector2Int(1170, 2532);
             HeroBasinBuilder.PoseCamera(camera, h, true, (float)portraitSize.x / portraitSize.y);
@@ -117,6 +118,7 @@ namespace JungleBooze.Editor.HeroBasin
             File.WriteAllBytes(Path.Combine(outDir, "P1_portrait.png"), portrait.EncodeToPNG());
             stats.AppendLine().AppendLine("P1 portrait").Append(LookTestFrameBudget.Measure(camera, look));
             Segment(camera, portrait, h, outDir, "P1", stats);
+            Overdraw(camera, h, portraitSize, outDir, "P1", stats);
             stats.AppendLine().AppendLine("Pista (skinned, not in the tallies above): " + PistaTriangles().ToString("N0", System.Globalization.CultureInfo.InvariantCulture) + " tris");
             camera.ResetAspect();
 
@@ -159,6 +161,17 @@ namespace JungleBooze.Editor.HeroBasin
                 File.WriteAllBytes(Path.Combine(outDir, name + "_mask.png"), r.Mask.EncodeToPNG());
                 Object.DestroyImmediate(r.Mask);
             }
+        }
+
+        /// <summary>Overdraw and estimated GPU cost per layer (ADR 0011), measured at half resolution; painterly only.</summary>
+        private static void Overdraw(Camera camera, HeroBasinConfigAsset h, Vector2Int size, string outDir, string name, StringBuilder stats)
+        {
+            if (h.Style != HeroBasinStyle.Painterly)
+            {
+                return;
+            }
+
+            stats.Append(name).Append(' ').Append(HeroBasinOverdraw.Measure(camera, size.x / 2, size.y / 2, size.x, size.y, Path.Combine(outDir, name + "_overdraw.png")));
         }
 
         private static long PistaTriangles()

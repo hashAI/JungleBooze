@@ -82,8 +82,13 @@ namespace JungleBooze.Editor.HeroBasin
             {
                 if (!_portrait)
                 {
-                    ArchOvergrowth();
-                    ArchCurtains();
+                    // v4: the painted arch card carries its own overgrowth and curtains.
+                    if (_world.Cards?.Mouth == null)
+                    {
+                        ArchOvergrowth();
+                        ArchCurtains();
+                    }
+
                     Islands();
                     Rims();
                     Shelves();
@@ -276,6 +281,7 @@ namespace JungleBooze.Editor.HeroBasin
                 case "Terrain":
                     return Kind.Ground;
                 case "Arch":
+                case "Arch card":
                     return layer == "L2" ? Kind.Arch : Kind.None;
                 case "Ledge":
                 case "Stones":
@@ -771,7 +777,7 @@ namespace JungleBooze.Editor.HeroBasin
             // Upper pool on the sill, then the fall over the lip toward the camera.
             pools.Append(LookTestMeshFactory.Pool(width * 0.5f, 0.6f, "SpillPool"), Matrix4x4.Translate(new Vector3(back.x, water + drop + 0.05f, back.z) + toEye * sill * 0.2f), null);
             Vector3 lip = waterAt + Vector3.up * (drop + 0.04f) - toEye * sill * 0.05f;
-            LookTestLandmarks.Fall(_ctx, _rng, Seg, "Falls", lip, water, width * 0.8f, _eye, Mathf.Clamp(drop * 0.35f, 0.3f, 2.5f), LookTestLandmarks.FallFoot.Pool, 2);
+            _world.ShortFall(lip, water, width * 0.8f, Mathf.Clamp(drop * 0.35f, 0.3f, 2.5f), 2);
         }
 
         /// <summary>A flat foam ring on the water: R (foam) 1 at the inner radius fading to 0 outside, A fading out.</summary>
@@ -1381,6 +1387,12 @@ namespace JungleBooze.Editor.HeroBasin
                 EnvironmentKit.Piece piece = crowns[_rng.NextInt(0, crowns.Count)];
                 Bounds b = piece.Bounds;
                 float height = width * b.size.y / Mathf.Max(0.01f, Mathf.Max(b.size.x, b.size.z));
+                if (_world.Cards != null && _world.Cards.InWindow(hit.point + Vector3.up * height * 0.75f))
+                {
+                    // v4: the arch window stays clear for the painted fall.
+                    continue;
+                }
+
                 PlaceKit(piece, hit.point - Vector3.up * height * 0.25f, width, 25f, "L3", LookTestBatchSet.Group.Trees);
                 placed.Add(uv);
             }

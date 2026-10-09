@@ -228,29 +228,31 @@ Adding any SDK: tech-architect checks license, binary size impact, `PrivacyInfo.
 
 ## 10. Performance and asset budgets
 
-> **AURELIA realistic look (2026-10-08):** the per-frame, memory and texture budgets for the realistic look are in
-> [ADR 0004](adr/0004-realistic-look-on-mobile.md), Decision 7, and replace the table below where they differ
-> (draw calls ≤ 250 main + ≤ 100 shadow, triangles ≤ 350k main + ≤ 150k shadow, resident memory ≤ 1.0 GB).
-> The recommended floor device moves to iPhone 12 (A14), provisional until the owner's on-device check (P0-E).
-> First measurement (2026-10-09, ADR 0004 "Measured"): the look test is over budget (≈850 draws, ≈0.75 M triangles
-> including shadows); per-segment plant merging and lighter plant meshes are the planned fixes.
+> **Floor device: iPhone 12 (A14), 60 fps, hard requirement** (owner, 2026-10-09, painterly style). The budgets below
+> are those of [ADR 0004](adr/0004-realistic-look-on-mobile.md) Decision 7. They are measured on an iPhone 12 in a
+> release build with the device benchmark (10.5). The latest numbers are in
+> [docs/perf/2026-10-iphone12-readiness.md](perf/2026-10-iphone12-readiness.md).
 
-Hard limits (project rule 6). Measured on the **floor device** (to be confirmed by the owner; recommended iPhone XR/11-class, A12/A13) in a release IL2CPP build, by performance-engineer with the benchmark scene.
+Hard limits (project rule 6).
 
-### 10.1 Runtime budgets
+### 10.1 Runtime budgets (iPhone 12, internal resolution 1.7 MP)
 
-| Metric | Budget |
-|---|---|
-| Frame rate | 60 fps sustained during a 10-minute run (no thermal drop below 55 fps p95) |
-| CPU frame time | ≤ 10 ms (main thread) |
-| GPU frame time | ≤ 12 ms |
-| Simulation step | ≤ 1 ms per step (≤ 0.5 ms target) |
-| Draw calls (SetPass + batches) | ≤ 120 |
-| Triangles on screen | ≤ 150k |
-| GC allocations during a run | 0 bytes per frame (checked by PlayMode tests with `Is.Not.AllocatingGCMemory()` and profiler captures) |
-| Memory (resident) | ≤ 600 MB |
-| Cold start to interactive | ≤ 5 s; first run playable within 10 s of opening |
-| App download size | ≤ 200 MB (target ≤ 150 MB) |
+| Metric | Budget | Latest (painterly hero basin v4, 2026-10-09) |
+|---|---|---|
+| Frame rate | 60 fps sustained over a 10-minute soak, p95 frame ≤ 18 ms, no thermal state above "fair" | not yet measured on device |
+| GPU frame time | ≤ 12 ms (thermal headroom inside 16.7 ms) | estimate 9–11 ms landscape, 10.5–13 ms portrait (M4 full-clock run × 3.6–4.4) |
+| CPU main thread | ≤ 8 ms | M4 dev build 0.8–1.8 ms → estimate ≤ 3.5 ms |
+| CPU render thread | ≤ 8 ms | M4 0.7–1.2 ms |
+| Draw calls, main view (SRP-batched) | ≤ 250 (shadow pass ≤ 100) | 42–44 + shadow 5 |
+| SetPass calls | ≤ 40 | 34 (M4 counter, incl. shadow and post) |
+| Triangles, main view | ≤ 350k (shadow pass ≤ 150k) | 232k–236k + Pista 20k; shadow ~58k (estimate) |
+| Alpha-tested shaded fragments | ≤ 0.35 per pixel on average (35 % of the screen, one layer) | **3.06 landscape, 1.65 portrait (over)** |
+| Blended overdraw | ≤ 1.5 layers per pixel on average | 1.28 landscape, 1.20 portrait |
+| Texture memory, one biome | ≤ 150 MB | hero basin 94 MB (32 MB of it the sky HDRI cube) |
+| Resident memory (physical footprint) | ≤ 1.0 GB (hard ceiling 1.2 GB) | not yet measured on device |
+| GC allocations | 0 bytes per frame in game code | 0 (dev build; the bench overlay's 1 string per second excluded) |
+| Cold start to interactive | ≤ 5 s | not measured |
+| App download | ≤ 200 MB first install | bench app 318 MB uncompressed (dev build, 125 MB of it the dev binary) |
 
 ### 10.2 Asset budgets [ASSUMED initial values; asset-pipeline enforces with an editor validator]
 
@@ -270,6 +272,30 @@ Hard limits (project rule 6). Measured on the **floor device** (to be confirmed 
 - No `Instantiate`/`Destroy`, LINQ, string concatenation/formatting, boxing, closures or `foreach` over interfaces in per-frame code. UI text updates only when values change, using cached/non-allocating formatting.
 - GPU instancing / SRP Batcher compatible materials; static batching for track chunk geometry.
 - Addressables groups per world; the first world ships in the player.
+
+### 10.4 Quality tiers ([ADR 0010](adr/0010-device-quality-tiers.md))
+
+| | High (iPhone 12 / A14 and newer, iPad gen 13+, desktop) | Low (older or < 3.5 GB memory) |
+|---|---|---|
+| Unity quality level | `High` (the former "Ultra": LOD bias 2, forced anisotropic, unlimited skin weights) | `Low` (former "Medium", LOD bias 1) |
+| URP asset | `URP-Realistic` (Graphics default, unchanged) | `URP-Realistic-Low`: MSAA 2x, 1024 shadow map, 30 m shadows, low soft shadows |
+| Internal resolution | 1.7 MP (render scale 0.758 on iPhone 12) | 1.2 MP |
+| Content | everything | `HeroTierContent` layers off (ADR 0011) |
+
+`QualityTiers` applies the tier before the first scene loads and caps every scene at 60 fps. The editor keeps High.
+Config: `Config/Perf/Resources/QualityTiers.asset`. Set-up: *JungleBooze > Perf > Set Up Quality Tiers*.
+
+### 10.5 How performance is measured
+- **Device benchmark**: `tools/build/device_bench.sh` (owner steps in the readiness report). About 15 minutes on the
+  phone, on its own: hero basin landscape and portrait, Expedition bot, then a 10-minute soak. It logs one CSV row
+  per second (frame p50/p95/p99, CPU/GPU ms, thermal state, footprint, battery, draws, GC) to `Documents/bench`.
+  Get the logs with `--pull`.
+- **Offline audit** (no phone): `JungleBooze.Editor.Perf.PerfAudit.Run`. It writes overdraw heat maps and per-draw
+  shaded fragments, Metal ALU and sample counts per shader variant, texture formats and memory, and mesh memory. Then
+  `tools/perf/gpu_estimate.py` turns them into an A14 estimate.
+- **Calibration**: `DeviceBenchBuild.BuildMac`, run with `-jbUncapped -jbBenchSeconds 30`, gives the M4 full-clock
+  frame time of the same build. GPU ms read under a 60 fps cap is inflated by clock scaling, so read device headroom
+  from missed frames and the thermal state.
 
 ---
 
@@ -312,5 +338,7 @@ Hard limits (project rule 6). Measured on the **floor device** (to be confirmed 
 | [0006](adr/0006-steering-input-format.md) | Steering input format (replay format 2) | Accepted |
 | [0007](adr/0007-look-test-v2-world-structure-and-atmosphere.md) | Look test v2: path-space world, merge per segment, atmosphere | Accepted (look test) |
 | [0008](adr/0008-water-mist-and-environment-integration.md) | Layered water and mist without a depth texture; environment asset integration contract | Accepted (look test) |
+| [0009](adr/0009-painterly-style-switch.md) | Painterly style behind a style switch | Accepted |
+| [0010](adr/0010-device-quality-tiers.md) | Device quality tiers and the iPhone benchmark | Accepted; thresholds provisional until the iPhone 12 run |
 | (planned) | Save format, migrations and iCloud | Week 4 |
 | (planned) | Composition root: hand-rolled vs VContainer (if needed) | When needed |

@@ -40,6 +40,10 @@ Shader "JungleBooze/Water"
         _PaintSparkle("Sparkle", Range(0, 8)) = 2
         _PaintSparkleSize("Sparkle Threshold", Range(0.9, 0.9999)) = 0.993
         _PaintLight("Body Light (sun share)", Range(0, 1)) = 0.45
+        [Toggle(_PAINTED_FOAM)] _PaintedFoam("Painted Foam Atlas (v4)", Float) = 0
+        [NoScaleOffset] _PaintFoamTex("Painted Foam Atlas (2x2: lace, streaks, impact, contact)", 2D) = "black" {}
+        _PaintFoamCell("Foam Cell Size (x lace m, y streaks m)", Vector) = (3.2, 6, 0, 0)
+        _PaintFoamMax("Foam Max Opacity", Range(0, 1)) = 0.85
         [Enum(UnityEngine.Rendering.CullMode)] _Cull("Cull", Float) = 0
     }
 
@@ -62,6 +66,7 @@ Shader "JungleBooze/Water"
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile_instancing
             #pragma shader_feature_local_fragment _PAINTERLY
+            #pragma shader_feature_local_fragment _PAINTED_FOAM
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
@@ -95,10 +100,23 @@ Shader "JungleBooze/Water"
                 half _PaintSparkle;
                 half _PaintSparkleSize;
                 half _PaintLight;
+                half _PaintedFoam;
+                float4 _PaintFoamCell;
+                half _PaintFoamMax;
             CBUFFER_END
 
             TEXTURE2D(_NormalMap); SAMPLER(sampler_NormalMap);
             TEXTURE2D(_FxTex); SAMPLER(sampler_FxTex);
+            TEXTURE2D(_PaintFoamTex); SAMPLER(sampler_PaintFoamTex);
+
+            // One cell of the 2x2 painted foam atlas, tiled in metres (cells have transparent margins, so the tiles
+            // never show a seam; gradients come from the continuous coordinate, so mips do not break at the wrap).
+            half4 FoamCell(float2 coord, float2 cellOrigin)
+            {
+                float2 dx = ddx(coord) * 0.5;
+                float2 dy = ddy(coord) * 0.5;
+                return SAMPLE_TEXTURE2D_GRAD(_PaintFoamTex, sampler_PaintFoamTex, frac(coord) * 0.5 + cellOrigin, dx, dy);
+            }
 
             struct Attributes
             {
@@ -182,6 +200,33 @@ Shader "JungleBooze/Water"
                 half glint = smoothstep(_PaintSparkleSize, 1.0h, dot(normalWS, halfDirP));
                 colorP += mainLight.color * (glint * _PaintSparkle * shadow);
 
+            #if defined(_PAINTED_FOAM)
+                // Painted foam (v4): the field (vertex R) chooses where foam may be, the painted atlas decides what it
+                // looks like. Strong field (impact, rock contact, shore) = lace patches; weak field (trails) =
+                // streak lines drifting downstream (toward -z). Never more than _PaintFoamMax opaque, never a flat
+                // white area: the painted cells are ~20-40% covered.
+                half fieldF = saturate(input.color.r * _FoamStrength);
+                float2 m = input.uvMeters;
+                float2 drift = float2(0.0, t * 0.08);
+                half4 laceA = FoamCell(m / _PaintFoamCell.x + drift, float2(0.0, 0.5));
+                half4 laceB = FoamCell(float2(m.y, -m.x) / (_PaintFoamCell.x * 0.73) + float2(0.37, 0.11) + drift * 1.3, float2(0.0, 0.5));
+                // Streak cell: its strokes run ~35 degrees off the cell's x axis; turn them to run along the flow.
+                float2 r = float2(m.x * 0.57 - m.y * 0.82, m.x * 0.82 + m.y * 0.57);
+                half4 streak = FoamCell(r / _PaintFoamCell.y + float2(t * 0.05, 0.0), float2(0.5, 0.5));
+                half laceW = smoothstep(0.3h, 0.85h, fieldF);
+                half streakW = smoothstep(0.04h, 0.35h, fieldF) * (1.0h - 0.6h * laceW);
+                half laceAlpha = max(laceA.a, laceB.a * 0.85h);
+                half3 laceRgb = laceA.a >= laceB.a * 0.85h ? laceA.rgb : laceB.rgb;
+                half aF = max(laceAlpha * laceW, streak.a * streakW);
+                half3 paintF = laceAlpha * laceW >= streak.a * streakW ? laceRgb : streak.rgb;
+                aF = saturate(aF * 1.25h) * _PaintFoamMax;
+                // Lit like the painted water: the paint holds its own cream / grey-teal shading.
+                half3 foamLitF = paintF * lerp(ambient * 1.5h + mainLight.color * 0.3h, mainLight.color * 0.8h + ambient * 0.9h, shadow);
+                colorP = lerp(colorP, foamLitF, aF);
+                half alphaF = saturate(lerp(lerp(_ShallowOpacity, _Opacity, d), 1.0h, fresnel * 0.5h) + aF) * input.color.a;
+                colorP = JBApplyFog(colorP, input.positionWS);
+                return half4(colorP, alphaF);
+            #endif
                 float2 foamUvP = input.uvMeters * _FoamTiling * _PaintFoamScale + t * _FlowA.xy * 0.12;
                 half laceP = SAMPLE_TEXTURE2D(_FxTex, sampler_FxTex, foamUvP).g;
                 half lace2P = SAMPLE_TEXTURE2D(_FxTex, sampler_FxTex, foamUvP * 2.1 + float2(0.31, 0.17) - t * 0.015).g;

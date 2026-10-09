@@ -1,0 +1,116 @@
+# AURELIA UI strings, English (base locale). Format: key = value. {0}, {1} … are arguments; \n is a line break.
+# Every visible UI string comes from this table (no hard-coded strings in UI code). Translators copy this file to
+# <locale>.txt (fr, de, it, es …) and translate the right side only.
+
+app.wordmark = AURELIA
+app.tagline = RUN · EXPLORE · DISCOVER
+
+home.start = START EXPEDITION
+home.best = Best {0}
+home.bestNone = Your first expedition awaits
+home.journal = Journal
+home.abilities = Abilities
+home.settings = Settings
+
+hud.pause = Pause
+hud.ready = READY
+hud.paused = PAUSED
+hud.toastTitle = NEW DISCOVERY
+hud.shield = Shield
+hud.healthLabel = Health {0} of {1}
+hud.hint.steer = Drag to steer
+hud.hint.jump = Swipe up to jump
+hud.hint.slide = Swipe down to slide
+hud.hint.dodge = Flick sideways to dodge
+hud.hint.gap = Swipe up to jump the gap
+hud.hint.dive = Swipe down to dive
+hud.hint.leap = Swipe up to leap
+hud.hint.release = Swipe up to let go
+hud.desktopHint = Drag or A/D steer · W/Space jump · S slide · Q/E dodge · Esc pause
+
+revive.title = CONTINUE?
+revive.button.one = Revive · {0} crystal
+revive.button.many = Revive · {0} crystals
+revive.skip = No thanks
+revive.short = Not enough crystals
+
+pause.title = PAUSED
+pause.resume = RESUME
+pause.settings = Settings
+pause.home = Return to Camp
+pause.homeNote = Coins from this run are lost
+
+settings.title = SETTINGS
+settings.section.controls = Controls
+settings.section.sound = Sound
+settings.section.display = Display & comfort
+settings.section.about = About
+settings.sensitivity = Steering sensitivity
+settings.handed = Hand
+settings.handed.right = Right
+settings.handed.left = Left
+settings.haptics = Haptics
+settings.reducedMotion = Reduced motion
+settings.music = Music
+settings.sfx = Sound effects
+settings.textSize = Text size
+settings.on = On
+settings.off = Off
+settings.privacy = Privacy Policy
+settings.credits = Credits
+settings.version = Version {0}
+
+credits.title = CREDITS
+credits.body = AURELIA: Wildward\n\nFonts: Nunito by The Nunito Project Authors and Cinzel by The Cinzel Project Authors, both under the SIL Open Font License 1.1.\n\nMade with Unity.
+
+results.title = EXPEDITION COMPLETE
+results.newRecord = NEW RECORD
+results.distance = Distance
+results.best = Best {0}
+results.bestFirst = Best {0} · first expedition
+results.coins = Coins
+results.crystals = Crystals
+results.discoveries = Discoveries
+results.bonus.cleanLine = +{0} Clean Line
+results.bonus.perfect = +{0} Perfect
+results.bonus.discovery = +{0} Discovery
+results.discoveriesNone = None this time
+results.next = NEXT GOAL
+results.runAgain = RUN AGAIN
+results.home = Camp
+results.tapToSkip = Tap to skip
+
+objective.abilityReady = {0} ready · {1}/{2}
+objective.abilityProgress = {0} · {1}/{2}
+objective.nearBest = {0} / {1}
+objective.nearBestDetail = So close to your best
+objective.beatBest = Beat your best: {0}
+objective.secrets = Secrets {0}/{1}
+
+upgrade.cost = {0} coins
+upgrade.costBoth = {0} coins · {1} crystals
+upgrade.wallet = You have {0} coins · {1} crystals
+upgrade.learn = LEARN · {0}
+upgrade.learned = LEARNED
+upgrade.short = Need {0} more coins
+upgrade.learnedBanner = {0} LEARNED
+upgrade.objectiveLearned = {0} learned · {1}
+upgrade.back = Back
+
+journal.title = JOURNAL
+journal.unknown = Undiscovered
+journal.found = seen {0}×
+journal.cat.creature = Creature
+journal.cat.plant = Plant
+journal.cat.location = Location
+journal.cat.mystery = Mystery
+journal.count = {0} of {1} discovered
+
+abilities.title = ABILITIES
+abilities.owned = Learned
+abilities.soon = Coming later
+abilities.open = View
+
+common.back = Back
+common.close = Close
+unit.metres = {0} m

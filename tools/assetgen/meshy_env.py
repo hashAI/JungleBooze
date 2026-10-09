@@ -11,7 +11,8 @@ Endpoints and prices checked against docs.meshy.ai on 2026-10-09:
 Usage (one job per call, blocks until done, downloads results):
   meshy_env.py t2i  <task> <name> <model> <aspect> <prompt_file> <out_dir> [--nobg]
   meshy_env.py i2i  <task> <name> <model> <aspect> <prompt_file> <out_dir> <ref.png> [<ref.png> ...] [--nobg]
-  meshy_env.py i23d <task> <name> <model> <image.png> <out_dir> [--ultra] [--polycount N]
+  meshy_env.py i23d <task> <name> <model> <image.png> <out_dir> [--ultra] [--polycount N] [--texture]
+    --texture: textured result guided by the input image (base colour only, no PBR)
   meshy_env.py balance
 """
 import base64
@@ -114,6 +115,9 @@ def i23d(a):
         body['target_polycount'] = int(a[a.index('--polycount') + 1])
     if '--ultra' in a:
         body['geometry_resolution'] = '2k'
+    if '--texture' in a:
+        body['should_texture'] = True
+        body['enable_pbr'] = False
     ts = time.strftime('%Y-%m-%dT%H:%M:%S')
     tid = req('POST', '/image-to-3d', body)['result']
     t = wait('image-to-3d', tid)

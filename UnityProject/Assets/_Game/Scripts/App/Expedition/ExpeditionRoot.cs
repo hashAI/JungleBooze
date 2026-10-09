@@ -3,8 +3,10 @@ using System.Globalization;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
+using JungleBooze.App.Audio;
 using JungleBooze.App.FeelTest;
 using JungleBooze.Core;
+using JungleBooze.Core.Feedback;
 using JungleBooze.Core.Save;
 using JungleBooze.Core.Settings;
 using JungleBooze.Gameplay.Analytics;
@@ -20,9 +22,11 @@ using JungleBooze.Gameplay.Views;
 using JungleBooze.Gameplay.Views.World;
 using JungleBooze.Gameplay.World;
 using JungleBooze.Services.Analytics;
+using JungleBooze.Services.Audio;
 using JungleBooze.Services.Haptics;
 using JungleBooze.Services.Save;
 using JungleBooze.Services.Settings;
+using JungleBooze.UI.Common;
 using JungleBooze.UI.Expedition;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -39,20 +43,19 @@ namespace JungleBooze.App.Expedition
     /// run, the World Director after it and on every later run), input (touch, mouse, keyboard or the Perfect bot),
     /// the streamed gray-box world, the real Pista, the camera rig, first-run slow-time help, discovery toasts, the
     /// results with the next objective, and the Deep Breath purchase. Update is the only per-frame entry point:
-    /// input → fixed-step simulation (scaled while help is shown) → views → camera → HUD. Keys: Esc pause, R restart,
+    /// input → fixed-step simulation (scaled while help is shown) → views → camera → HUD. Keys: Esc pause/back, R restart,
     /// Enter run again (results), F1 debug, O camera profile, B bot, M reduced motion.
+    /// UI (ui-engineer): the painterly <see cref="ExpeditionHud"/> with Home on launch (except the very first launch,
+    /// which goes straight into Expedition 1), pause menu, settings, journal, abilities and results.
     /// </summary>
-    public sealed class ExpeditionRoot : MonoBehaviour, IRunFeedbackListener
+    public sealed class ExpeditionRoot : MonoBehaviour, IRunFeedbackListener, IExpeditionUiHost
     {
         public const int TargetFrameRate = 60;
         private const int StepsPerSecond = 60;
         private const int MaxStepsPerFrame = 5;
-        private const string ReadyText = "READY";
-        private const string PausedText = "PAUSED";
-        private const string NewDiscoveryTitle = "NEW DISCOVERY";
-
         private static readonly string[] Countdown = { string.Empty, "1", "2", "3" };
-        private static readonly string[] HelpGlyphs = { "←  →", "↑", "↓", "«  »", "↑", "↓", "↑", "↑" };
+        private string _readyText = "READY";
+        private string _newDiscoveryTitle = "NEW DISCOVERY";
 
         [SerializeField] private MovementConfigAssets _movement = new MovementConfigAssets();
         [SerializeField] private GestureConfigAsset _gestures;
@@ -71,6 +74,22 @@ namespace JungleBooze.App.Expedition
 
         [Tooltip("Tools and tests: keep the profile in memory (never touch the player's save).")]
         [SerializeField] private bool _memorySave;
+
+        [Tooltip("Painterly UI theme. Empty = Resources/AureliaUiTheme.")]
+        [SerializeField] private UiTheme _uiTheme;
+
+        private UiPreferences _uiPrefs;
+        private bool _atHome;
+        private bool _homeOnLaunch = true;
+        private bool _toolsUi;
+        private IHaptics _haptics;
+
+        [Tooltip("Audio catalog. Empty = Resources/AudioCatalog.")]
+        [SerializeField] private AudioCatalog _audioCatalog;
+
+        private ExpeditionAudio _audio;
+        private Func<double> _toolsAudioClock;
+        private float _lastTapHaptic = -1f;
 
         private MovementConfig _config;
         private ExpeditionContent _expedition;
@@ -156,6 +175,14 @@ namespace JungleBooze.App.Expedition
 
         public bool Paused => _paused;
 
+        /// <summary>Home (camp) is showing; the run is frozen and the 3D camera is off.</summary>
+        public bool AtHome => _atHome;
+
+        /// <summary>Music/SFX volume, handedness and text size (audio system hooks: read the volumes, listen to Changed).</summary>
+        public UiPreferences Preferences => _uiPrefs;
+
+        public FeelSettings Feel => _settings;
+
         /// <summary>Seconds left of the first-run establishing shot (0 = playing).</summary>
         public float EstablishingSeconds => _establishing;
 
@@ -191,10 +218,26 @@ namespace JungleBooze.App.Expedition
             _avatarPrefab = prefab;
         }
 
+        /// <summary>Tools (screenshots): build the UI outside Play mode too (call before <see cref="Build"/>).</summary>
+        public void EnableToolsUi()
+        {
+            _toolsUi = true;
+        }
+
+        /// <summary>Expedition audio (null without a catalog, or outside Play mode unless <see cref="EnableToolsAudio"/>).</summary>
+        public ExpeditionAudio Audio => _audio;
+
+        /// <summary>Tools (offline audio render): build the audio outside Play mode on a simulation clock (call before <see cref="Build"/>).</summary>
+        public void EnableToolsAudio(Func<double> clock)
+        {
+            _toolsAudioClock = clock;
+        }
+
         /// <summary>Tools/tests: use an in-memory save (call before <see cref="Build"/>).</summary>
         public void UseMemorySave(SaveData initial)
         {
             _memorySave = true;
+            _homeOnLaunch = false;
             _profile = initial;
         }
 
@@ -238,11 +281,13 @@ namespace JungleBooze.App.Expedition
             _bot.ForkPreference = _botRoutes;
             _botDriving = _startWithBot;
 
-            Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            // Chunk id signs are a debug aid: built only in development builds and the editor, shown only with F1.
+            Font font = Debug.isDebugBuild || Application.isEditor ? Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf") : null;
             var world = new GameObject("World");
             world.transform.SetParent(transform, false);
             _worldView = world.AddComponent<WorldView>();
             _worldView.Build(_expedition.Library, _session.Path, _palette, font);
+            _worldView.SetSignsVisible(_debugVisible);
 
             RunnerAvatar avatar = _avatarPrefab != null ? Instantiate(_avatarPrefab, transform) : CapsuleRunnerAvatar.Create(transform, _palette.Runner, _palette.RunnerAccent);
             avatar.Bind(_config);
@@ -255,7 +300,9 @@ namespace JungleBooze.App.Expedition
 
             ISettingsStore settingsStore = Application.isPlaying && !_memorySave ? new PlayerPrefsSettingsStore() : (ISettingsStore)new MemorySettingsStore();
             _settings = new FeelSettings(settingsStore, _reducedMotion);
-            _feedback = new RunFeedbackRouter(IosHaptics.Create(), this, _config.JumpSlide.SoftLandingFall);
+            _uiPrefs = new UiPreferences(settingsStore);
+            _haptics = IosHaptics.Create();
+            _feedback = new RunFeedbackRouter(_haptics, this, _config.JumpSlide.SoftLandingFall);
             _gestureRecognizer.SensitivityMultiplier = _settings.Sensitivity;
             _feedback.HapticsEnabled = _settings.HapticsEnabled;
             _reducedMotion = _settings.ReducedMotion;
@@ -273,19 +320,122 @@ namespace JungleBooze.App.Expedition
             _analyticsLog = new LocalAnalyticsLog(_memorySave || !Application.isPlaying ? null : Application.temporaryCachePath);
             _flow = new ExpeditionFlow(_expedition, _session, _save, _profile, _analytics, _analyticsLog);
 
-            if (Application.isPlaying)
+            if (Application.isPlaying || _toolsUi)
             {
-                EnsureEventSystem();
+                if (Application.isPlaying)
+                {
+                    EnsureEventSystem();
+                }
+
                 var hudObject = new GameObject("ExpeditionHud");
                 hudObject.transform.SetParent(transform, false);
                 _hud = hudObject.AddComponent<ExpeditionHud>();
-                _hud.Build(font, _config.Health.MaxHealth, TogglePause, RunAgain, OpenObjective, () => Learn(), CloseUpgrade, () => AcceptRevive(), DeclineRevive);
-                _hud.SetHint(Application.isMobilePlatform ? string.Empty : "drag/A D steer · W/Space jump · S slide · Q/E dodge · Esc pause · R restart · F1 debug · O camera · B bot");
+                _hud.Build(_uiTheme, _config.Health.MaxHealth, this, _settings, _uiPrefs, _expedition, () => _profile, Application.version);
+                _readyText = _hud.Strings.Get("hud.ready");
+                _newDiscoveryTitle = _hud.Strings.Get("hud.toastTitle");
+                _hud.SetHint(Application.isMobilePlatform ? string.Empty : _hud.Strings.Get("hud.desktopHint"));
+                UiFeedback.Tap = OnUiTap;
                 _pointer.IsOverUi = (id, pixel) => _hud != null && _hud.HitsControl(pixel);
-                _pointer.Enable();
+                if (Application.isPlaying)
+                {
+                    _pointer.Enable();
+                }
+            }
+
+            if (Application.isPlaying || _toolsAudioClock != null)
+            {
+                // Audio (audio-director): SFX, music, ambience; one 100 ms haptic gate shared with the feedback router.
+                _audio = ExpeditionAudio.Create(transform, _audioCatalog, settingsStore, _haptics, _session, _expedition, _toolsAudioClock);
+                if (_audio != null)
+                {
+                    _haptics = _audio.Haptics;
+                    _feedback.Haptics = _audio.Haptics;
+                    _audio.HookUi(_uiPrefs);
+                }
             }
 
             StartRun();
+            if (_homeOnLaunch && !_session.FirstExpedition && _hud != null)
+            {
+                // From the second launch on, the app opens on Home (GDD §18); the first launch plays Expedition 1.
+                ShowHome();
+            }
+        }
+
+        /// <summary>Home (camp): the run is frozen, the 3D camera is off (the painted backdrop covers the screen).</summary>
+        public void ShowHome()
+        {
+            _atHome = true;
+            _paused = false;
+            _resumeCountdown = 0f;
+            _reviveOffer = 0f;
+            _establishing = 0f;
+            _flow.SafePoint(true);
+            if (_camera != null)
+            {
+                _camera.enabled = false;
+            }
+
+            _hud?.ShowHome();
+        }
+
+        // ---- IExpeditionUiHost ----
+
+        public void StartExpedition()
+        {
+            _atHome = false;
+            if (_camera != null)
+            {
+                _camera.enabled = true;
+            }
+
+            StartRun();
+        }
+
+        public void ReturnToCamp()
+        {
+            ShowHome();
+        }
+
+        public void OpenAbility(AbilityFlags ability)
+        {
+            AbilityDefinition def = _expedition.FindAbility(ability);
+            if (def == null || _hud == null)
+            {
+                return;
+            }
+
+            _upgradeAbility = def;
+            bool owned = ProgressionRules.Owns(_profile, def.Ability);
+            _hud.ShowUpgrade(def, _profile.coins, _profile.crystals, ProgressionRules.CanAfford(_profile, def) && def.Implemented, owned);
+        }
+
+        public void LearnSelected()
+        {
+            Learn();
+        }
+
+        public void Revive()
+        {
+            AcceptRevive();
+        }
+
+        public void SettingsChanged()
+        {
+            _gestureRecognizer.SensitivityMultiplier = _settings.Sensitivity;
+            _feedback.HapticsEnabled = _settings.HapticsEnabled;
+            _reducedMotion = _settings.ReducedMotion;
+        }
+
+        private void OnUiTap()
+        {
+            // Light tap on UI buttons (GDD §19: max 1 haptic per 100 ms; respects the toggle).
+            float now = Time.unscaledTime;
+            if (_settings != null && _settings.HapticsEnabled && now - _lastTapHaptic >= 0.1f)
+            {
+                _lastTapHaptic = now;
+                _haptics?.Impact(HapticImpact.Light);
+            }
         }
 
         /// <summary>New run from the current profile (instant restart; Expedition 1 when no run was finished yet).</summary>
@@ -297,6 +447,13 @@ namespace JungleBooze.App.Expedition
             BeginRun(setup);
             _establishing = first && _runsThisSession == 0 && Application.isPlaying ? _expedition.Results.EstablishingShotTime : 0f;
             _runsThisSession++;
+            _atHome = false;
+            if (_camera != null)
+            {
+                _camera.enabled = true;
+            }
+
+            _hud?.ShowHudOnly();
         }
 
         /// <summary>Tools and tests: start a run with an explicit setup (forced speed, seeds).</summary>
@@ -310,6 +467,7 @@ namespace JungleBooze.App.Expedition
             _worldView.ResetRun();
             _runnerView.ResetRun();
             _feedback.Reset();
+            _audio?.BeginRun(_runsThisSession == 0);
             _edgeBrush.Clear();
             _help.BeginRun(setup.FirstExpedition && !_botDriving);
             _toasts.Clear();
@@ -331,8 +489,8 @@ namespace JungleBooze.App.Expedition
                 _hud.HideRevive();
                 _hud.SetOverlay(Color.clear, 0f);
                 _hud.HideToast();
-                _hud.SetHelp(null);
-                _hud.SetCenter(ReadyText);
+                _hud.SetHelp(-1);
+                _hud.SetCenter(_readyText);
                 _hud.SetDistance(0f);
                 _hud.SetWallet(0, 0);
             }
@@ -350,14 +508,21 @@ namespace JungleBooze.App.Expedition
                 return;
             }
 
+            if (_atHome)
+            {
+                return;
+            }
+
             if (!_paused)
             {
                 _paused = true;
                 _resumeCountdown = 0f;
+                _hud?.OpenPauseMenu();
             }
             else if (_resumeCountdown <= 0f)
             {
                 _resumeCountdown = _config.Flow.ResumeReadyTime;
+                _hud?.ClosePauseMenu();
             }
         }
 
@@ -378,6 +543,7 @@ namespace JungleBooze.App.Expedition
         public void SetDebugVisible(bool visible)
         {
             _debugVisible = visible;
+            _worldView?.SetSignsVisible(visible);
             if (_hud != null)
             {
                 _hud.SetDebugVisible(visible);
@@ -413,6 +579,10 @@ namespace JungleBooze.App.Expedition
             }
 
             Present(1f, ticks / (float)StepsPerSecond);
+            if (!Application.isPlaying)
+            {
+                _audio?.Tick(ticks / (float)StepsPerSecond, false, _settings.HapticsEnabled);
+            }
         }
 
         /// <summary>Opens the objective card (the ability card when the objective is an ability).</summary>
@@ -430,14 +600,7 @@ namespace JungleBooze.App.Expedition
                 ability = _expedition.NextAbility((AbilityFlags)_profile.abilities)?.Ability ?? AbilityFlags.None;
             }
 
-            _upgradeAbility = _expedition.FindAbility(ability);
-            if (_upgradeAbility == null)
-            {
-                return;
-            }
-
-            bool owned = ProgressionRules.Owns(_profile, _upgradeAbility.Ability);
-            _hud.ShowUpgrade(_upgradeAbility, _profile.coins, _profile.crystals, ProgressionRules.CanAfford(_profile, _upgradeAbility) && _upgradeAbility.Implemented, owned);
+            OpenAbility(ability);
         }
 
         /// <summary>LEARN: deducts the cost once, saves, plays the unlock moment, then returns to the results.</summary>
@@ -457,6 +620,7 @@ namespace JungleBooze.App.Expedition
             }
 
             _unlockMoment = _expedition.Results.UnlockMomentTime;
+            _audio?.OnLearn();
             return true;
         }
 
@@ -513,7 +677,7 @@ namespace JungleBooze.App.Expedition
 
             _reviveOffer = cfg.ReviveOfferTime;
             _flow.RecordReviveOffered(s.Tick * 1000L / StepsPerSecond);
-            _hud?.ShowRevive(ReviveRules.Cost(cfg, stats.Revives), true, _reviveOffer);
+            _hud?.ShowRevive(ReviveRules.Cost(cfg, stats.Revives), true, _reviveOffer, cfg.ReviveOfferTime);
         }
 
         private void Start()
@@ -524,6 +688,12 @@ namespace JungleBooze.App.Expedition
         private void OnDestroy()
         {
             _pointer?.Dispose();
+            if (_audio != null)
+            {
+                _audio.Stop();
+                AudioListener.pause = false;
+            }
+
         }
 
         private void OnApplicationPause(bool pauseStatus)
@@ -552,10 +722,17 @@ namespace JungleBooze.App.Expedition
             _gestureRecognizer.CancelAll(Time.realtimeSinceStartupAsDouble);
             _dispatcher.Clear();
             _flow?.SafePoint(true);
-            if (_session.Phase != RunPhase.Results)
+            if (_session.Phase != RunPhase.Results && !_atHome && !_paused)
             {
                 _paused = true;
                 _resumeCountdown = 0f;
+                _hud?.OpenPauseMenu();
+            }
+            else if (_paused && _resumeCountdown > 0f)
+            {
+                // An interruption during the countdown cancels it: the player resumes again (spec 101 §8).
+                _resumeCountdown = 0f;
+                _hud?.OpenPauseMenu();
             }
         }
 
@@ -572,8 +749,16 @@ namespace JungleBooze.App.Expedition
         {
             HandleKeys();
             UpdateOrientation(now);
-            _pointer.Enabled = !_botDriving && !_paused && _establishing <= 0f;
+            _pointer.Enabled = !_botDriving && !_paused && !_atHome && _establishing <= 0f;
             _pointer.PollFrame(frame, now);
+            _audio?.Tick(frame, _paused || _atHome, _settings.HapticsEnabled);
+            if (_atHome)
+            {
+                // Home: the run is frozen and the camera is off; only the UI animates.
+                _dispatcher.BeginFrame(0);
+                _hud?.Tick(frame);
+                return;
+            }
 
             if (_establishing > 0f)
             {
@@ -612,7 +797,7 @@ namespace JungleBooze.App.Expedition
                 if (_hud != null)
                 {
                     ResultsConfig cfg = _expedition.Results;
-                    _hud.ShowRevive(ReviveRules.Cost(cfg, _session.Stats.Revives), ReviveRules.CanAfford(cfg, _profile, _session.Stats), _reviveOffer);
+                    _hud.ShowRevive(ReviveRules.Cost(cfg, _session.Stats.Revives), ReviveRules.CanAfford(cfg, _profile, _session.Stats), _reviveOffer, cfg.ReviveOfferTime);
                 }
 
                 if (_reviveOffer <= 0f)
@@ -638,7 +823,7 @@ namespace JungleBooze.App.Expedition
                 if (_unlockMoment <= 0f && _hud != null)
                 {
                     _hud.HideUpgrade(true);
-                    _hud.SetObjective(_upgradeAbility.Name + " learned · " + _upgradeAbility.ObjectiveLine, true);
+                    _hud.SetObjective(_hud.Strings.Format("upgrade.objectiveLearned", _upgradeAbility.Name, _upgradeAbility.ObjectiveLine), true);
                 }
             }
 
@@ -663,6 +848,7 @@ namespace JungleBooze.App.Expedition
                 _runnerView.OnRunEvent(e);
                 _worldView.OnRunEvent(e);
                 _feedback.OnRunEvent(e);
+                _audio?.OnRunEvent(e);
                 _analytics.OnRunEvent(e, _session);
                 switch (e.Type)
                 {
@@ -773,21 +959,22 @@ namespace JungleBooze.App.Expedition
             if (_toasts.Current >= 0)
             {
                 DiscoveryEntry entry = _expedition.Discoveries[_toasts.Current];
-                _hud.ShowToast(NewDiscoveryTitle, entry.ToastText);
+                _hud.ShowToast(_newDiscoveryTitle, entry.ToastText);
             }
             else
             {
                 _hud.HideToast();
             }
 
-            _hud.SetHelp(_help.Active ? HelpGlyphs[Mathf.Clamp((int)_help.ActiveMove, 0, HelpGlyphs.Length - 1)] : null);
+            _hud.SetHelp(_help.Active ? (int)_help.ActiveMove : -1);
             if (_paused)
             {
-                _hud.SetCenter(_resumeCountdown > 0f ? Countdown[Mathf.Clamp(Mathf.CeilToInt(_resumeCountdown * 3f), 0, 3)] : PausedText);
+                // The pause menu says PAUSED; the centre shows only the resume countdown.
+                _hud.SetCenter(_resumeCountdown > 0f ? Countdown[Mathf.Clamp(Mathf.CeilToInt(_resumeCountdown * 3f), 0, 3)] : null);
             }
             else
             {
-                _hud.SetCenter(_session.Phase == RunPhase.Ready ? ReadyText : null);
+                _hud.SetCenter(_session.Phase == RunPhase.Ready ? _readyText : null);
             }
 
             _hud.Tick(frameSeconds);
@@ -814,6 +1001,7 @@ namespace JungleBooze.App.Expedition
 
             // Never throws on a storage failure (review S3): the results always show; the save is retried.
             _results = _flow.FinishRun();
+            _audio?.OnResults(_results != null && _results.NewRecord);
             bool saved = _flow.LastSaveOk;
             if (_session.Director.LastResortPicks > 0)
             {
@@ -826,7 +1014,7 @@ namespace JungleBooze.App.Expedition
                 _hud.ShowResults(_results, _expedition.Results.CountUpTime);
                 _hud.SetWallet(_profile.coins, _profile.crystals);
                 _hud.HideToast();
-                _hud.SetHelp(null);
+                _hud.SetHelp(-1);
             }
 
             string replay = SaveReplay();
@@ -834,7 +1022,7 @@ namespace JungleBooze.App.Expedition
                       ": " + ((int)stats.Distance) + " m, coins " + stats.TotalCoins + " (clean line " + stats.CleanLineCoins + ", discovery " + stats.DiscoveryCoins +
                       "), crystals " + stats.TotalCrystals + ", hits " + stats.Hits + ", discoveries " + stats.NewDiscoveryCount + ", routes risky/safe/secret " +
                       stats.RiskyRoutes + "/" + stats.SafeRoutes + "/" + stats.SecretRoutes + ", cause " + stats.Cause + " " + stats.DeathLabel +
-                      ", objective \"" + ExpeditionHud.ObjectiveLine(_results.Objective).Replace('\n', ' ') + "\", skill " +
+                      ", objective \"" + (_hud != null ? _hud.ObjectiveText : _results.Objective.Title).Replace('\n', ' ') + "\", skill " +
                       _profile.skill.ToString("0.00", CultureInfo.InvariantCulture) + (saved ? string.Empty : _save.ReadOnly ? " (save read-only)" : " (save pending: " + _save.LastError + ")") +
                       (_botDriving ? ", bot" : string.Empty) + (replay != null ? ", replay " + replay : string.Empty));
         }
@@ -937,12 +1125,20 @@ namespace JungleBooze.App.Expedition
 
             if (keyboard.escapeKey.wasPressedThisFrame)
             {
-                TogglePause();
+                // Esc = Back in menus (always one level), pause/resume in the run.
+                if (_hud != null && _hud.CurrentScreen != UiScreen.Hud && _hud.CurrentScreen != UiScreen.Home && _hud.CurrentScreen != UiScreen.Results)
+                {
+                    _hud.Back();
+                }
+                else if (!_atHome)
+                {
+                    TogglePause();
+                }
             }
 
-            if (keyboard.rKey.wasPressedThisFrame || (_session.Phase == RunPhase.Results && keyboard.enterKey.wasPressedThisFrame))
+            if (keyboard.rKey.wasPressedThisFrame || (_session.Phase == RunPhase.Results && keyboard.enterKey.wasPressedThisFrame) || (_atHome && keyboard.enterKey.wasPressedThisFrame))
             {
-                StartRun();
+                StartExpedition();
             }
 
             if (keyboard.f1Key.wasPressedThisFrame)
@@ -964,6 +1160,7 @@ namespace JungleBooze.App.Expedition
             {
                 _settings.SetReducedMotion(!_settings.ReducedMotion);
                 _reducedMotion = _settings.ReducedMotion;
+                _hud?.ApplyTextScale();
             }
         }
 

@@ -42,10 +42,6 @@ namespace JungleBooze.Editor.Expedition
         /// <summary>Results count-up in the video, s.</summary>
         private const float ResultsCountUp = 1.5f;
 
-        private static void Noop()
-        {
-        }
-
         public static void Capture()
         {
             int code;
@@ -184,7 +180,8 @@ namespace JungleBooze.Editor.Expedition
                             // shows the run's real results through it.
                             hudObject = new GameObject("VideoResultsHud");
                             hud = hudObject.AddComponent<ExpeditionHud>();
-                            hud.Build(Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"), 3, Noop, Noop, Noop, Noop, Noop, Noop, Noop);
+                            var store = new JungleBooze.Core.Settings.MemorySettingsStore();
+                            hud.Build(null, 3, null, new JungleBooze.Gameplay.Feedback.FeelSettings(store, false), new JungleBooze.UI.Common.UiPreferences(store), root.Session.Content, () => root.Profile, Application.version);
                             hud.Canvas.renderMode = RenderMode.ScreenSpaceCamera;
                             hud.Canvas.worldCamera = camera;
                             hud.Canvas.planeDistance = camera.nearClipPlane + 0.5f;

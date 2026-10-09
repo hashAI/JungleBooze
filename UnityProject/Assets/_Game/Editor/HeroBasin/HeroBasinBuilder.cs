@@ -187,7 +187,16 @@ namespace JungleBooze.Editor.HeroBasin
             atmosphere.Configure(look, dapple, null);
 
             var rng = new Pcg32Random((ulong)(uint)look.Seed, 4242UL);
-            var world = new HeroBasinWorld(ctx, h, plants, rng, camera.transform.position);
+            HeroBasinCards cards = null;
+            if (style == HeroBasinStyle.Painterly && h.Cards != null)
+            {
+                // Painterly v4 (ADR 0011): painted arch card (projection-matched to this landscape pose), pillar
+                // impostors, painted cascades and foam.
+                cards = new HeroBasinCards(ctx, h.Cards, paths.Materials);
+                cards.Arch(camera);
+            }
+
+            var world = new HeroBasinWorld(ctx, h, plants, rng, camera.transform.position) { Cards = cards };
             world.Build();
             Backdrops(ctx, h, materials, camera.transform.position, report);
             if (style == HeroBasinStyle.Painterly && h.Dressing != null && h.Dressing.Enabled)
@@ -230,6 +239,7 @@ namespace JungleBooze.Editor.HeroBasin
             if (style == HeroBasinStyle.Painterly)
             {
                 report.Add(HeroBasinPainterly.Apply(h, root, pista, paths.Materials));
+                report.Add(MarkHighTierOnly(root, h.Cards));
             }
 
             LookTestAssets.EnsureFolder(System.IO.Path.GetDirectoryName(paths.Scene).Replace('\\', '/'));
@@ -244,6 +254,31 @@ namespace JungleBooze.Editor.HeroBasin
             AssetDatabase.SaveAssets();
             Debug.Log(LogPrefix + "Built " + paths.Scene + System.Environment.NewLine + string.Join(System.Environment.NewLine, report));
             return report;
+        }
+
+        /// <summary>Tags the renderers listed in <see cref="HeroCards.LowTierDrops"/> as High-tier only (ADR 0011).</summary>
+        private static string MarkHighTierOnly(Transform root, HeroCards cards)
+        {
+            if (cards?.LowTierDrops == null)
+            {
+                return "Tiers: no Low-tier drops.";
+            }
+
+            var marked = new List<string>();
+            foreach (MeshRenderer renderer in root.GetComponentsInChildren<MeshRenderer>(true))
+            {
+                foreach (string prefix in cards.LowTierDrops)
+                {
+                    if (!string.IsNullOrEmpty(prefix) && renderer.name.StartsWith(prefix, System.StringComparison.Ordinal))
+                    {
+                        renderer.gameObject.AddComponent<HeroTierContent>().MinimumTier = JungleBooze.Core.Perf.DeviceTier.High;
+                        marked.Add(renderer.name);
+                        break;
+                    }
+                }
+            }
+
+            return "Tiers: High only (dropped on Low): " + string.Join(", ", marked);
         }
 
         private static void TintArch(Material m, HeroBasinConfigAsset h)

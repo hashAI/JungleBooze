@@ -1,0 +1,73 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Pool
+  m_Shader: {fileID: 4800000, guid: 3262213e3f3b41eca75d86b755a06ef1, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords:
+  - _PAINTED_FOAM
+  - _PAINTERLY
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: 3000
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _FxTex:
+        m_Texture: {fileID: 2800000, guid: 21761ef5692154da08163e1a58023448, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _NormalMap:
+        m_Texture: {fileID: 2800000, guid: 672b4111114324b628cba1db3b4841db, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _PaintFoamTex:
+        m_Texture: {fileID: 2800000, guid: dc3dee6713da547e18b859cb654a79f9, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _Cull: 0
+    - _FoamStrength: 1.2
+    - _FoamTiling: 0.4
+    - _FresnelPower: 4
+    - _NormalStrength: 0.3
+    - _NormalTiling: 0.35
+    - _Opacity: 0.93
+    - _PaintDepthGain: 0.8
+    - _PaintFoamEdge: 1.2
+    - _PaintFoamMax: 0.85
+    - _PaintFoamScale: 0.35
+    - _PaintLight: 0.55
+    - _PaintSparkle: 2
+    - _PaintSparkleSize: 0.993
+    - _PaintedFoam: 1
+    - _Painterly: 1
+    - _ReflectionStrength: 0.35
+    - _ShallowOpacity: 0.65
+    - _Smoothness: 0.92
+    - _SpecularStrength: 0.3
+    m_Colors:
+    - _DeepColor: {r: 0.06, g: 0.42, b: 0.36, a: 1}
+    - _FlowA: {r: 0.03, g: 0.06, b: 0, a: 0}
+    - _FlowB: {r: -0.04, g: 0.03, b: 0, a: 0}
+    - _FoamColor: {r: 0.988, g: 0.941, b: 0.796, a: 1}
+    - _PaintFoamCell: {r: 3.2, g: 6, b: 0, a: 0}
+    - _PaintMidColor: {r: 0.16, g: 0.66, b: 0.54, a: 1}
+    - _PaintSkyColor: {r: 0.745, g: 0.89, b: 0.91, a: 1}
+    - _ReflectionTint: {r: 0.78, g: 0.93, b: 0.96, a: 1}
+    - _ShallowColor: {r: 0.38, g: 0.86, b: 0.66, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

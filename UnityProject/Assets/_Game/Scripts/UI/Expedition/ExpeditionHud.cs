@@ -1,259 +1,316 @@
-using System;
-using System.Globalization;
-using System.Text;
+using JungleBooze.Core.Save;
 using JungleBooze.Gameplay.Expedition;
+using JungleBooze.Gameplay.Feedback;
 using JungleBooze.UI.Common;
-using JungleBooze.UI.FeelTest;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace JungleBooze.UI.Expedition
 {
     /// <summary>
-    /// Minimal gray-box HUD and results for the vertical slice (spec 103 §9, GDD §17; ui-engineer polishes later):
-    /// distance, coins, crystals, health with the Shield timer, pause, centre message, discovery toast, slow-time
-    /// help glyph, the "EXPEDITION COMPLETE" results with count-ups, NEW RECORD and the one next-objective card, and
-    /// the ability card with LEARN. Built from code with <see cref="HudFactory"/>; in-run updates only touch the UI
-    /// when a value changes and never allocate.
+    /// The Expedition scene's whole UI (uGUI, built from code with the painterly <see cref="UiTheme"/>): in-run HUD,
+    /// toast, gesture hints, revive, pause, settings, home, journal, abilities, credits, results and the ability card.
+    /// One <see cref="NavigationStack"/> decides what shows; Back always returns one level. The canvas keeps the short
+    /// screen side at 390 units in both orientations; layouts react to rotation, safe-area and text-size changes.
+    /// HUD and menus live on separate sub-canvases so per-frame HUD changes never rebuild menu meshes. Per-frame
+    /// setters only touch the UI on changes and never allocate.
+    /// Why uGUI over UI Toolkit: code-built 9-slice painted art, world/camera-space capture for the video and
+    /// screenshot tools, proven mobile batching, and the existing tests/tools already drive uGUI.
     /// </summary>
     public sealed class ExpeditionHud : MonoBehaviour
     {
-        private static readonly Color HealthFull = new Color(0.36f, 0.78f, 0.38f, 1f);
-        private static readonly Color HealthEmpty = new Color(0.18f, 0.16f, 0.2f, 0.75f);
-        private static readonly Color ShieldColor = new Color(0.35f, 0.75f, 1f, 1f);
-        private static readonly Color Parchment = new Color(0.96f, 0.92f, 0.82f, 0.96f);
-        private static readonly Color Ink = new Color(0.12f, 0.1f, 0.14f, 1f);
-        private static readonly Color Leaf = new Color(0.3f, 0.62f, 0.32f, 1f);
-        private static readonly Color Gold = new Color(0.95f, 0.76f, 0.19f, 1f);
-        private static readonly Color Cyan = new Color(0.35f, 0.85f, 0.95f, 1f);
-        private static readonly Color Violet = new Color(0.55f, 0.42f, 0.85f, 1f);
-        private static readonly CultureInfo Invariant = CultureInfo.InvariantCulture;
-
-        private readonly IntStringCache _metres = new IntStringCache(5001, " m");
-        private readonly IntStringCache _numbers = new IntStringCache(3001, string.Empty);
+        private readonly NavigationStack _nav = new NavigationStack(UiScreen.Hud);
         private Canvas _canvas;
         private CanvasScaler _scaler;
-        private RectTransform _safe;
-        private Text _distance;
-        private Text _coins;
-        private Text _crystals;
-        private Image[] _segments;
-        private Image _shield;
-        private Image _shieldTimer;
-        private Text _center;
-        private RectTransform _pauseButton;
-        private GameObject _toast;
-        private Text _toastTitle;
-        private Text _toastLine;
-        private Text _help;
-        private GameObject _results;
-        private RectTransform _resultsRect;
-        private Text _resultsTitle;
-        private Text _resultsBody;
-        private Text _record;
-        private Button _objective;
-        private Text _objectiveText;
-        private Button _runAgain;
-        private GameObject _upgrade;
-        private RectTransform _upgradeRect;
-        private Text _upgradeName;
-        private Text _upgradeBody;
-        private Button _learn;
-        private Text _learnLabel;
-        private Text _learned;
-        private Text _debug;
-        private Text _hint;
+        private RectTransform _rootRect;
+        private UiTheme _theme;
+        private StringTable _strings;
+        private TextScaleRegistry _texts;
+        private UiFactory _f;
+        private IExpeditionUiHost _host;
+        private UiPreferences _prefs;
+        private FeelSettings _feel;
+        private ExpeditionContent _content;
+        private System.Func<SaveData> _profile;
         private Image _overlay;
         private Color _overlayColor;
-        private GameObject _revive;
-        private RectTransform _reviveRect;
-        private Text _reviveTitle;
-        private Text _reviveTimer;
-        private Button _reviveButton;
-        private Text _reviveLabel;
-        private int _shownReviveCost = -1;
-        private int _shownReviveSeconds = -1;
-        private int _shownDistance = -1;
-        private int _shownCoins = -1;
-        private int _shownCrystals = -1;
-        private int _shownHealth = -1;
-        private bool _shownShield;
-        private float _shownShieldFill = -1f;
-        private RunResults _resultsData;
-        private float _countUp;
-        private float _countUpTime = 1.2f;
-        private bool _counting;
-
-        public bool ResultsVisible => _results != null && _results.activeSelf;
-
-        public bool UpgradeVisible => _upgrade != null && _upgrade.activeSelf;
-
-        public bool ToastVisible => _toast != null && _toast.activeSelf;
-
-        public bool HelpVisible => _help != null && _help.gameObject.activeSelf;
-
-        public string ResultsText => _resultsBody != null ? _resultsBody.text : string.Empty;
-
-        public string ObjectiveText => _objectiveText != null ? _objectiveText.text : string.Empty;
-
-        public string ToastText => _toastLine != null ? _toastLine.text : string.Empty;
-
-        public bool RecordVisible => _record != null && _record.gameObject.activeSelf;
-
-        public bool LearnInteractable => _learn != null && _learn.interactable;
-
-        public bool CountingUp => _counting;
+        private HudView _hud;
+        private HomeView _home;
+        private PauseView _pause;
+        private SettingsView _settings;
+        private CreditsView _credits;
+        private JournalView _journal;
+        private AbilitiesView _abilities;
+        private ResultsView _results;
+        private UpgradeView _upgrade;
+        private ReviveView _revive;
+        private Text _debug;
+        private Text _desktopHint;
+        private Vector2 _laidOutSize;
+        private Rect _laidOutSafe;
+        private float _laidOutScale = -1f;
+        private bool _laidOutHand;
+        private ScreenFrame _frame;
 
         public Canvas Canvas => _canvas;
 
-        public bool ReviveVisible => _revive != null && _revive.activeSelf;
+        public StringTable Strings => _strings;
 
-        public bool ReviveInteractable => _reviveButton != null && _reviveButton.interactable;
+        public UiTheme Theme => _theme;
+
+        public UiScreen CurrentScreen => _nav.Current;
+
+        public NavigationStack Navigation => _nav;
+
+        public ScreenFrame Frame => _frame;
+
+        public bool ReducedMotion => _feel != null && _feel.ReducedMotion;
+
+        public HudView HudView => _hud;
+
+        public ResultsView ResultsView => _results;
+
+        public HomeView HomeView => _home;
+
+        public PauseView PauseView => _pause;
+
+        public SettingsView SettingsView => _settings;
+
+        public JournalView JournalView => _journal;
+
+        public AbilitiesView AbilitiesView => _abilities;
+
+        public CreditsView CreditsView => _credits;
+
+        public UpgradeView UpgradeView => _upgrade;
+
+        public ReviveView ReviveView => _revive;
+
+        public bool ResultsVisible => _results != null && _nav.Current == UiScreen.Results;
+
+        public bool UpgradeVisible => _upgrade != null && _nav.Current == UiScreen.Upgrade;
+
+        public bool HomeVisible => _home != null && _nav.Root == UiScreen.Home;
+
+        public bool PauseMenuVisible => _nav.Current == UiScreen.Pause;
+
+        public bool ToastVisible => _hud != null && _hud.ToastVisible;
+
+        public bool HelpVisible => _hud != null && _hud.HelpVisible;
+
+        public string ResultsText => _results != null ? _results.Summary() : string.Empty;
+
+        public string ObjectiveText => _results != null ? _results.ObjectiveText : string.Empty;
+
+        public string ToastText => _hud != null ? _hud.ToastLine : string.Empty;
+
+        public bool RecordVisible => _results != null && _results.RecordVisible;
+
+        public bool LearnInteractable => _upgrade != null && _upgrade.LearnInteractable;
+
+        public bool CountingUp => _results != null && _results.CountingUp;
+
+        public bool ReviveVisible => _revive != null && _revive.Visible;
+
+        public bool ReviveInteractable => _revive != null && _revive.Button.Interactable;
 
         public float OverlayAlpha => _overlay != null && _overlay.gameObject.activeSelf ? _overlay.color.a : 0f;
 
-        public void Build(Font font, int maxHealth, Action onPause, Action onRunAgain, Action onObjective, Action onLearn, Action onUpgradeBack)
-        {
-            Build(font, maxHealth, onPause, onRunAgain, onObjective, onLearn, onUpgradeBack, null, null);
-        }
+        public bool DebugVisible => _debug != null && _debug.gameObject.activeSelf;
 
-        public void Build(Font font, int maxHealth, Action onPause, Action onRunAgain, Action onObjective, Action onLearn, Action onUpgradeBack, Action onRevive, Action onSkipRevive)
+        /// <summary>Builds every screen. <paramref name="profile"/> supplies the current save for home/journal/abilities.</summary>
+        public void Build(UiTheme theme, int maxHealth, IExpeditionUiHost host, FeelSettings feel, UiPreferences prefs, ExpeditionContent content, System.Func<SaveData> profile, string version)
         {
+            _theme = theme != null ? theme : UiTheme.Load();
+            _strings = _theme != null ? _theme.LoadStrings() : new StringTable("en");
+            _texts = new TextScaleRegistry();
+            _f = new UiFactory(_theme, _strings, _texts);
+            _host = host;
+            _feel = feel;
+            _prefs = prefs;
+            _content = content;
+            _profile = profile;
+
             _canvas = gameObject.AddComponent<Canvas>();
             _canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             _canvas.sortingOrder = 10;
+            _canvas.pixelPerfect = false;
             _scaler = gameObject.AddComponent<CanvasScaler>();
             _scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            _scaler.matchWidthOrHeight = 0.5f;
+            _scaler.referenceResolution = new Vector2(ScreenFrame.ShortSide, ScreenFrame.ShortSide);
+            _scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            _scaler.referencePixelsPerUnit = 100f;
             gameObject.AddComponent<GraphicRaycaster>();
+            _rootRect = (RectTransform)transform;
             SetOrientation(Screen.width >= Screen.height);
 
-            // Full-screen tint (under water during a deep dive, droplets at a water curtain), below every control.
-            _overlay = HudFactory.CreateImage(transform, "Overlay", Color.clear, false);
-            HudFactory.Stretch(_overlay.rectTransform, 0f);
-            _overlay.raycastTarget = false;
+            // Full-screen tint (under water, curtain droplets), below everything.
+            _overlay = _f.Image(transform, "Overlay", null, Color.clear);
+            _overlay.type = Image.Type.Simple;
+            UiFactory.Stretch(_overlay.rectTransform);
             _overlay.gameObject.SetActive(false);
 
-            _safe = HudFactory.CreateRect(transform, "SafeArea");
-            HudFactory.Stretch(_safe, 0f);
-            _safe.gameObject.AddComponent<SafeAreaFitter>();
+            RectTransform hudCanvas = SubCanvas("HudCanvas", 0);
+            RectTransform safe = UiFactory.Rect(hudCanvas, "SafeArea");
+            UiFactory.Stretch(safe);
+            safe.gameObject.AddComponent<SafeAreaFitter>();
+            _hud = new HudView(_f, safe, maxHealth, () => _host?.TogglePause());
 
-            Image distancePanel = HudFactory.CreatePanel(_safe, "DistancePanel", Parchment, new Vector2(0f, 1f), new Vector2(150f, 48f), new Vector2(16f, -12f));
-            _distance = HudFactory.CreateText(distancePanel.transform, "Distance", font, 28, Ink, Color.clear, TextAnchor.MiddleCenter);
-            HudFactory.Stretch(_distance.rectTransform, 2f);
-            _distance.text = _metres.Get(0);
-
-            Image wallet = HudFactory.CreatePanel(_safe, "WalletPanel", Parchment, new Vector2(0f, 1f), new Vector2(150f, 40f), new Vector2(16f, -66f));
-            Image coinIcon = HudFactory.CreateImage(wallet.transform, "CoinIcon", Gold, false);
-            HudFactory.Place(coinIcon.rectTransform, new Vector2(0f, 0.5f), new Vector2(16f, 16f), new Vector2(8f, 0f));
-            _coins = HudFactory.CreateText(wallet.transform, "Coins", font, 22, Ink, Color.clear, TextAnchor.MiddleLeft);
-            HudFactory.Place(_coins.rectTransform, new Vector2(0f, 0.5f), new Vector2(60f, 36f), new Vector2(28f, 0f));
-            Image crystalIcon = HudFactory.CreateImage(wallet.transform, "CrystalIcon", Cyan, false);
-            HudFactory.Place(crystalIcon.rectTransform, new Vector2(0f, 0.5f), new Vector2(14f, 14f), new Vector2(92f, 0f));
-            crystalIcon.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 45f);
-            _crystals = HudFactory.CreateText(wallet.transform, "Crystals", font, 22, Ink, Color.clear, TextAnchor.MiddleLeft);
-            HudFactory.Place(_crystals.rectTransform, new Vector2(0f, 0.5f), new Vector2(40f, 36f), new Vector2(110f, 0f));
-
-            RectTransform health = HudFactory.CreateRect(_safe, "Health");
-            HudFactory.Place(health, new Vector2(0.5f, 1f), new Vector2(64f * maxHealth, 30f), new Vector2(0f, -22f));
-            _segments = new Image[maxHealth];
-            for (int i = 0; i < maxHealth; i++)
-            {
-                _segments[i] = HudFactory.CreatePanel(health, "Segment" + i, HealthFull, new Vector2(0f, 0.5f), new Vector2(56f, 24f), new Vector2(4f + (i * 64f), 0f));
-            }
-
-            _shield = HudFactory.CreateImage(health, "Shield", ShieldColor, false);
-            HudFactory.Place(_shield.rectTransform, new Vector2(1f, 0.5f), new Vector2(24f, 24f), new Vector2(32f, 0f));
-            _shieldTimer = HudFactory.CreateImage(_shield.transform, "Timer", Color.white, false);
-            HudFactory.Place(_shieldTimer.rectTransform, new Vector2(0.5f, 0f), new Vector2(24f, 4f), new Vector2(0f, -6f));
-            _shield.gameObject.SetActive(false);
-
-            Button pause = HudFactory.CreateButton(_safe, "Pause", Parchment, new Vector2(1f, 1f), new Vector2(56f, 52f), new Vector2(-16f, -12f), font, "II", 26, Ink, Color.clear, () => onPause?.Invoke());
-            _pauseButton = (RectTransform)pause.transform.parent;
-
-            _center = HudFactory.CreateText(_safe, "Center", font, 54, Color.white, Ink, TextAnchor.MiddleCenter);
-            HudFactory.Place(_center.rectTransform, new Vector2(0.5f, 0.62f), new Vector2(600f, 80f), Vector2.zero);
-            _center.gameObject.SetActive(false);
-
-            Image toast = HudFactory.CreatePanel(_safe, "Toast", Parchment, new Vector2(0.5f, 1f), new Vector2(360f, 64f), new Vector2(0f, -60f));
-            _toast = toast.transform.parent.gameObject;
-            _toastTitle = HudFactory.CreateText(toast.transform, "Title", font, 18, Violet, Color.clear, TextAnchor.UpperCenter);
-            HudFactory.Place(_toastTitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(340f, 24f), new Vector2(0f, -4f));
-            _toastTitle.text = "NEW DISCOVERY";
-            _toastLine = HudFactory.CreateText(toast.transform, "Line", font, 18, Ink, Color.clear, TextAnchor.LowerCenter);
-            _toastLine.fontStyle = FontStyle.Normal;
-            HudFactory.Place(_toastLine.rectTransform, new Vector2(0.5f, 0f), new Vector2(340f, 28f), new Vector2(0f, 6f));
-            _toast.SetActive(false);
-
-            _help = HudFactory.CreateText(_safe, "HelpGlyph", font, 72, Color.white, Ink, TextAnchor.MiddleCenter);
-            HudFactory.Place(_help.rectTransform, new Vector2(0.5f, 0.35f), new Vector2(300f, 100f), Vector2.zero);
-            _help.gameObject.SetActive(false);
-
-            BuildRevive(font, onRevive, onSkipRevive);
-            BuildResults(font, onRunAgain, onObjective);
-            BuildUpgrade(font, onLearn, onUpgradeBack);
-
-            _debug = HudFactory.CreateText(_safe, "Debug", font, 15, Color.white, Ink, TextAnchor.UpperLeft);
-            _debug.fontStyle = FontStyle.Normal;
-            HudFactory.Place(_debug.rectTransform, new Vector2(0f, 1f), new Vector2(460f, 300f), new Vector2(16f, -116f));
+            _desktopHint = _f.Label(safe, "DesktopHint", string.Empty, FontKind.Body, 13, new Color(1f, 1f, 1f, 0.8f), TextAnchor.LowerCenter, true, false, true);
+            UiFactory.Anchor(_desktopHint.rectTransform, new Vector2(0.5f, 0f), new Vector2(760f, 22f), new Vector2(0f, 4f));
+            _debug = _f.Label(safe, "Debug", string.Empty, FontKind.Body, 13, Color.white, TextAnchor.UpperLeft, true, false, true);
+            UiFactory.Anchor(_debug.rectTransform, new Vector2(0f, 1f), new Vector2(460f, 300f), new Vector2(16f, -150f));
             _debug.gameObject.SetActive(false);
 
-            _hint = HudFactory.CreateText(_safe, "Hint", font, 14, new Color(1f, 1f, 1f, 0.85f), Ink, TextAnchor.LowerCenter);
-            _hint.fontStyle = FontStyle.Normal;
-            HudFactory.Place(_hint.rectTransform, new Vector2(0.5f, 0f), new Vector2(800f, 24f), new Vector2(0f, 8f));
+            RectTransform menus = SubCanvas("MenuCanvas", 1);
+            _f.CappedScale = true; // fixed layouts
+            _home = new HomeView(_f, menus, () => _host?.StartExpedition(), () => Push(UiScreen.Journal), () => Push(UiScreen.Abilities), () => Push(UiScreen.Settings));
+            _revive = new ReviveView(_f, menus, () => _host?.Revive(), () => _host?.DeclineRevive());
+            _results = new ResultsView(_f, menus, content, () => _host?.RunAgain(), () => _host?.OpenObjective(), () => _host?.ReturnToCamp());
+            _upgrade = new UpgradeView(_f, menus, () => _host?.LearnSelected(), () => _host?.CloseUpgrade());
+            _pause = new PauseView(_f, menus, () => _host?.TogglePause(), () => Push(UiScreen.Settings), () => _host?.ReturnToCamp());
+            _f.CappedScale = false; // scrolling lists take the full text size
+            _journal = new JournalView(_f, menus, content, () => Back());
+            _abilities = new AbilitiesView(_f, menus, content, () => Back(), a => _host?.OpenAbility(a.Ability));
+            _settings = new SettingsView(_f, menus, feel, prefs, Application.version, _theme.PrivacyPolicyUrl, () => Back(), () => Push(UiScreen.Credits), () =>
+            {
+                ApplyTextScale();
+                _host?.SettingsChanged();
+            });
+            _credits = new CreditsView(_f, menus, () => Back());
+            ApplyTextScale();
+            Relayout(true);
+            SyncScreens(true);
         }
 
-        private void BuildRevive(Font font, Action onRevive, Action onSkip)
+        // ---- navigation ----
+
+        /// <summary>Home (camp) as the base screen; the in-run HUD hides.</summary>
+        public void ShowHome()
         {
-            // GDD §11 "Continue?": 4 s offer, skip always visible, never mandatory (spec 103 §9.2: from run 2).
-            Image panel = HudFactory.CreatePanel(_safe, "Revive", Parchment, new Vector2(0.5f, 0.5f), new Vector2(320f, 200f), Vector2.zero);
-            _revive = panel.transform.parent.gameObject;
-            _reviveRect = (RectTransform)_revive.transform;
-            _reviveTitle = HudFactory.CreateText(panel.transform, "Title", font, 30, Ink, Color.clear, TextAnchor.UpperCenter);
-            HudFactory.Place(_reviveTitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(300f, 40f), new Vector2(0f, -12f));
-            _reviveTitle.text = "CONTINUE?";
-            _reviveTimer = HudFactory.CreateText(panel.transform, "Timer", font, 20, Violet, Color.clear, TextAnchor.UpperCenter);
-            HudFactory.Place(_reviveTimer.rectTransform, new Vector2(0.5f, 1f), new Vector2(300f, 28f), new Vector2(0f, -52f));
-            _reviveButton = HudFactory.CreateButton(panel.transform, "Continue", Cyan, new Vector2(0.5f, 0f), new Vector2(220f, 56f), new Vector2(0f, 70f), font, "Revive", 24, Ink, Color.clear, () => onRevive?.Invoke());
-            _reviveLabel = _reviveButton.GetComponentInChildren<Text>();
-            HudFactory.CreateButton(panel.transform, "Skip", Parchment, new Vector2(0.5f, 0f), new Vector2(120f, 44f), new Vector2(0f, 16f), font, "Skip", 20, Ink, Color.clear, () => onSkip?.Invoke());
-            _revive.SetActive(false);
+            _nav.Reset(UiScreen.Home);
+            _home.Refresh(_profile?.Invoke());
+            HideRevive();
+            SyncScreens(false);
         }
 
-        /// <summary>Shows or updates the revive offer (cost in crystals, seconds left). Only touches UI on changes.</summary>
-        public void ShowRevive(int cost, bool affordable, float secondsLeft)
+        /// <summary>The run's HUD only (START EXPEDITION, RUN AGAIN, resume).</summary>
+        public void ShowHudOnly()
         {
-            if (!_revive.activeSelf)
-            {
-                _revive.SetActive(true);
-                _shownReviveCost = -1;
-                _shownReviveSeconds = -1;
-            }
-
-            if (cost != _shownReviveCost)
-            {
-                _shownReviveCost = cost;
-                _reviveLabel.text = "Revive · " + cost.ToString(Invariant) + (cost == 1 ? " crystal" : " crystals");
-            }
-
-            _reviveButton.interactable = affordable;
-            int seconds = Mathf.CeilToInt(Mathf.Max(0f, secondsLeft));
-            if (seconds != _shownReviveSeconds)
-            {
-                _shownReviveSeconds = seconds;
-                _reviveTimer.text = _numbers.Get(seconds);
-            }
+            _nav.Reset(UiScreen.Hud);
+            SyncScreens(false);
         }
 
-        public void HideRevive()
+        public void OpenPauseMenu()
         {
-            if (_revive != null)
+            if (_nav.Root == UiScreen.Hud && _nav.Current == UiScreen.Hud)
             {
-                _revive.SetActive(false);
+                _nav.Push(UiScreen.Pause);
+                SyncScreens(false);
             }
         }
 
-        /// <summary>Full-screen tint (alpha 0 hides it). No allocation.</summary>
+        public void ClosePauseMenu()
+        {
+            if (_nav.Root == UiScreen.Hud && _nav.Depth > 1)
+            {
+                _nav.Reset(UiScreen.Hud);
+                SyncScreens(false);
+            }
+        }
+
+        public void Push(UiScreen screen)
+        {
+            switch (screen)
+            {
+                case UiScreen.Journal:
+                    _journal.Refresh(_profile?.Invoke());
+                    break;
+                case UiScreen.Abilities:
+                    _abilities.Refresh(_profile?.Invoke());
+                    break;
+                case UiScreen.Settings:
+                    _settings.Refresh();
+                    break;
+            }
+
+            _nav.Push(screen);
+            SyncScreens(false);
+        }
+
+        /// <summary>Back one level (header back buttons, Esc). Pause → resume; ability card → where it came from.</summary>
+        public bool Back()
+        {
+            switch (_nav.Current)
+            {
+                case UiScreen.Pause:
+                    _host?.TogglePause();
+                    return true;
+                case UiScreen.Upgrade:
+                    _host?.CloseUpgrade();
+                    return true;
+            }
+
+            if (!_nav.Back())
+            {
+                return false;
+            }
+
+            if (_nav.Current == UiScreen.Abilities)
+            {
+                _abilities.Refresh(_profile?.Invoke());
+            }
+
+            SyncScreens(false);
+            return true;
+        }
+
+        // ---- HUD ----
+
+        public void SetDistance(float metres)
+        {
+            _hud.SetDistance(metres < 0f ? 0 : (int)metres);
+        }
+
+        public void SetWallet(int coins, int crystals)
+        {
+            _hud.SetWallet(coins, crystals);
+        }
+
+        public void SetHealth(int health, bool shield, float shieldFraction)
+        {
+            _hud.SetHealth(health, shield, shieldFraction);
+        }
+
+        public void SetCenter(string message)
+        {
+            _hud.SetCenter(message);
+        }
+
+        public void ShowToast(string title, string line)
+        {
+            _hud.ShowToast(title, line);
+        }
+
+        public void HideToast()
+        {
+            _hud.HideToast();
+        }
+
+        /// <summary>First-run gesture hint (HelpMove value), −1 hides it.</summary>
+        public void SetHelp(int move)
+        {
+            _hud.SetHelp(move);
+        }
+
+        public void SetOrientation(bool landscape)
+        {
+            if (_scaler != null)
+            {
+                _scaler.matchWidthOrHeight = landscape ? 1f : 0f;
+            }
+        }
+
         public void SetOverlay(Color color, float alpha)
         {
             if (_overlay == null)
@@ -278,259 +335,81 @@ namespace JungleBooze.UI.Expedition
             }
         }
 
-        private void BuildResults(Font font, Action onRunAgain, Action onObjective)
+        public void ShowRevive(int cost, bool affordable, float secondsLeft)
         {
-            Image panel = HudFactory.CreatePanel(_safe, "Results", Parchment, new Vector2(0.5f, 0.5f), new Vector2(380f, 400f), Vector2.zero);
-            _results = panel.transform.parent.gameObject;
-            _resultsRect = (RectTransform)_results.transform;
-            _resultsTitle = HudFactory.CreateText(panel.transform, "Title", font, 28, Ink, Color.clear, TextAnchor.UpperCenter);
-            HudFactory.Place(_resultsTitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(360f, 36f), new Vector2(0f, -12f));
-            _record = HudFactory.CreateText(panel.transform, "NewRecord", font, 22, Gold, Ink, TextAnchor.UpperCenter);
-            HudFactory.Place(_record.rectTransform, new Vector2(0.5f, 1f), new Vector2(360f, 28f), new Vector2(0f, -46f));
-            _record.text = "NEW RECORD";
-            _resultsBody = HudFactory.CreateText(panel.transform, "Body", font, 18, Ink, Color.clear, TextAnchor.UpperLeft);
-            _resultsBody.fontStyle = FontStyle.Normal;
-            HudFactory.Place(_resultsBody.rectTransform, new Vector2(0.5f, 1f), new Vector2(330f, 170f), new Vector2(0f, -76f));
-
-            _objective = HudFactory.CreateButton(panel.transform, "Objective", new Color(0.86f, 0.93f, 0.98f, 1f), new Vector2(0.5f, 0f), new Vector2(330f, 70f), new Vector2(0f, 92f), font, string.Empty, 18, Ink, Color.clear, () => onObjective?.Invoke());
-            _objectiveText = HudFactory.CreateText(_objective.transform, "Text", font, 18, Ink, Color.clear, TextAnchor.MiddleCenter);
-            HudFactory.Stretch(_objectiveText.rectTransform, 6f);
-            _objectiveText.horizontalOverflow = HorizontalWrapMode.Wrap;
-
-            _runAgain = HudFactory.CreateButton(panel.transform, "RunAgain", Leaf, new Vector2(0.5f, 0f), new Vector2(240f, 60f), new Vector2(0f, 16f), font, "RUN AGAIN", 28, Color.white, Ink, () => onRunAgain?.Invoke());
-            _results.SetActive(false);
+            ShowRevive(cost, affordable, secondsLeft, 4f);
         }
 
-        private void BuildUpgrade(Font font, Action onLearn, Action onBack)
+        public void ShowRevive(int cost, bool affordable, float secondsLeft, float total)
         {
-            Image panel = HudFactory.CreatePanel(_safe, "Upgrade", Parchment, new Vector2(0.5f, 0.5f), new Vector2(360f, 300f), Vector2.zero);
-            _upgrade = panel.transform.parent.gameObject;
-            _upgradeRect = (RectTransform)_upgrade.transform;
-            _upgradeName = HudFactory.CreateText(panel.transform, "Name", font, 28, Ink, Color.clear, TextAnchor.UpperCenter);
-            HudFactory.Place(_upgradeName.rectTransform, new Vector2(0.5f, 1f), new Vector2(340f, 36f), new Vector2(0f, -14f));
-            _upgradeBody = HudFactory.CreateText(panel.transform, "Body", font, 18, Ink, Color.clear, TextAnchor.UpperCenter);
-            _upgradeBody.fontStyle = FontStyle.Normal;
-            _upgradeBody.horizontalOverflow = HorizontalWrapMode.Wrap;
-            HudFactory.Place(_upgradeBody.rectTransform, new Vector2(0.5f, 1f), new Vector2(320f, 110f), new Vector2(0f, -58f));
-            _learn = HudFactory.CreateButton(panel.transform, "Learn", Leaf, new Vector2(0.5f, 0f), new Vector2(200f, 60f), new Vector2(0f, 76f), font, "LEARN", 28, Color.white, Ink, () => onLearn?.Invoke());
-            _learnLabel = _learn.GetComponentInChildren<Text>();
-            HudFactory.CreateButton(panel.transform, "Back", Parchment, new Vector2(0.5f, 0f), new Vector2(120f, 44f), new Vector2(0f, 18f), font, "Back", 20, Ink, Color.clear, () => onBack?.Invoke());
-            _learned = HudFactory.CreateText(panel.transform, "Learned", font, 34, Gold, Ink, TextAnchor.MiddleCenter);
-            HudFactory.Place(_learned.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(340f, 60f), new Vector2(0f, 10f));
-            _learned.gameObject.SetActive(false);
-            _upgrade.SetActive(false);
+            _revive.Show(cost, affordable, secondsLeft, total, ReducedMotion);
         }
 
-        public void SetOrientation(bool landscape)
+        public void HideRevive()
         {
-            if (_scaler != null)
-            {
-                _scaler.referenceResolution = landscape ? new Vector2(844f, 390f) : new Vector2(390f, 844f);
-            }
+            _revive?.Hide();
         }
 
-        public void SetDistance(float metres)
-        {
-            int value = metres < 0f ? 0 : (int)metres;
-            if (value != _shownDistance)
-            {
-                _shownDistance = value;
-                _distance.text = _metres.Get(value);
-            }
-        }
+        // ---- results and ability card ----
 
-        public void SetWallet(int coins, int crystals)
-        {
-            if (coins != _shownCoins)
-            {
-                _shownCoins = coins;
-                _coins.text = _numbers.Get(coins);
-            }
-
-            if (crystals != _shownCrystals)
-            {
-                _shownCrystals = crystals;
-                _crystals.text = _numbers.Get(crystals);
-            }
-        }
-
-        /// <summary>Health segments and the Shield icon; <paramref name="shieldFraction"/> is the time left (0–1).</summary>
-        public void SetHealth(int health, bool shield, float shieldFraction)
-        {
-            if (health != _shownHealth)
-            {
-                _shownHealth = health;
-                for (int i = 0; i < _segments.Length; i++)
-                {
-                    _segments[i].color = i < health ? HealthFull : HealthEmpty;
-                }
-            }
-
-            if (shield != _shownShield)
-            {
-                _shownShield = shield;
-                _shield.gameObject.SetActive(shield);
-            }
-
-            float fill = Mathf.Round(Mathf.Clamp01(shieldFraction) * 24f) / 24f;
-            if (shield && fill != _shownShieldFill)
-            {
-                _shownShieldFill = fill;
-                _shieldTimer.rectTransform.sizeDelta = new Vector2(24f * fill, 4f);
-                _shield.color = fill < 0.1f ? new Color(ShieldColor.r, ShieldColor.g, ShieldColor.b, 0.5f) : ShieldColor;
-            }
-        }
-
-        /// <summary>Centre message; null or empty hides it. Pass cached strings to avoid allocation.</summary>
-        public void SetCenter(string message)
-        {
-            bool show = !string.IsNullOrEmpty(message);
-            if (_center.gameObject.activeSelf != show)
-            {
-                _center.gameObject.SetActive(show);
-            }
-
-            if (show && !ReferenceEquals(_center.text, message))
-            {
-                _center.text = message;
-            }
-        }
-
-        public void ShowToast(string title, string line)
-        {
-            if (!ReferenceEquals(_toastTitle.text, title))
-            {
-                _toastTitle.text = title;
-            }
-
-            if (!ReferenceEquals(_toastLine.text, line))
-            {
-                _toastLine.text = line;
-            }
-
-            if (!_toast.activeSelf)
-            {
-                _toast.SetActive(true);
-            }
-        }
-
-        public void HideToast()
-        {
-            if (_toast.activeSelf)
-            {
-                _toast.SetActive(false);
-            }
-        }
-
-        /// <summary>Slow-time help glyph (wordless arrows); null hides it.</summary>
-        public void SetHelp(string glyph)
-        {
-            bool show = !string.IsNullOrEmpty(glyph);
-            if (_help.gameObject.activeSelf != show)
-            {
-                _help.gameObject.SetActive(show);
-            }
-
-            if (show && !ReferenceEquals(_help.text, glyph))
-            {
-                _help.text = glyph;
-            }
-        }
-
-        /// <summary>Opens the results; numbers count up over <paramref name="countUpTime"/> (any tap completes them).</summary>
         public void ShowResults(RunResults results, float countUpTime)
         {
-            _resultsData = results;
-            _countUpTime = Mathf.Max(0.01f, countUpTime);
-            _countUp = 0f;
-            _counting = true;
-            _resultsTitle.text = results.Title;
-            _record.gameObject.SetActive(results.NewRecord);
-            _objectiveText.text = ObjectiveLine(results.Objective);
-            _objective.transform.parent.gameObject.SetActive(results.Objective.Kind != ObjectiveKind.None);
-            RefreshResults(0f);
-            _results.SetActive(true);
-            _upgrade.SetActive(false);
+            _nav.Reset(UiScreen.Results);
+            HideRevive();
+            _results.Show(results, countUpTime, ReducedMotion);
+            SyncScreens(false);
         }
 
         public void HideResults()
         {
-            _results.SetActive(false);
-            _upgrade.SetActive(false);
-            _counting = false;
+            if (_nav.Root == UiScreen.Results)
+            {
+                ShowHudOnly();
+            }
+
+            _results.Hide();
         }
 
-        /// <summary>Completes the count-up (a tap on the results).</summary>
         public void CompleteCountUp()
         {
-            if (_counting)
-            {
-                _counting = false;
-                RefreshResults(1f);
-            }
-        }
-
-        /// <summary>Per frame (results screen only).</summary>
-        public void Tick(float seconds)
-        {
-            if (!_counting || _resultsData == null)
-            {
-                return;
-            }
-
-            _countUp += seconds;
-            float t = Mathf.Clamp01(_countUp / _countUpTime);
-            RefreshResults(t);
-            if (t >= 1f)
-            {
-                _counting = false;
-            }
+            _results.CompleteCountUp();
         }
 
         public void ShowUpgrade(AbilityDefinition ability, int coins, int crystals, bool canLearn, bool owned)
         {
-            _upgradeName.text = ability.Name;
-            var b = new StringBuilder();
-            b.Append(ability.Line).Append("\n\n");
-            b.Append("Cost  ").Append(ability.CostCoins.ToString(Invariant)).Append(" coins");
-            if (ability.CostCrystals > 0)
-            {
-                b.Append(" · ").Append(ability.CostCrystals.ToString(Invariant)).Append(" crystals");
-            }
-
-            b.Append("\nYou have  ").Append(coins.ToString(Invariant)).Append(" coins · ").Append(crystals.ToString(Invariant)).Append(" crystals");
-            _upgradeBody.text = b.ToString();
-            _learn.interactable = canLearn && !owned;
-            _learnLabel.text = owned ? "LEARNED" : "LEARN";
-            _learned.gameObject.SetActive(false);
-            _upgrade.SetActive(true);
-            _results.SetActive(false);
+            _results.CompleteCountUp();
+            _upgrade.Fill(ability, coins, crystals, canLearn, owned);
+            _nav.Push(UiScreen.Upgrade);
+            SyncScreens(false);
         }
 
-        /// <summary>The 1.2 s unlock moment.</summary>
         public void ShowLearned(string name)
         {
-            _learned.text = name.ToUpperInvariant() + " LEARNED";
-            _learned.gameObject.SetActive(true);
-            _learn.interactable = false;
-            _learnLabel.text = "LEARNED";
+            _upgrade.ShowLearned(name);
         }
 
-        public void HideUpgrade(bool backToResults)
+        /// <summary>Closes the ability card back to the screen under it (results or abilities).</summary>
+        public void HideUpgrade(bool backToPrevious)
         {
-            _upgrade.SetActive(false);
-            if (backToResults)
+            if (_nav.Current == UiScreen.Upgrade)
             {
-                _results.SetActive(true);
+                _nav.Back();
+                if (_nav.Current == UiScreen.Abilities)
+                {
+                    _abilities.Refresh(_profile?.Invoke());
+                }
+
+                SyncScreens(false);
             }
         }
 
-        /// <summary>After LEARN: the objective card shows the result and RUN AGAIN is highlighted.</summary>
+        /// <summary>After LEARN: the objective card shows the learned line and RUN AGAIN is highlighted.</summary>
         public void SetObjective(string text, bool highlightRunAgain)
         {
-            _objectiveText.text = text;
-            _runAgain.transform.localScale = highlightRunAgain ? new Vector3(1.08f, 1.08f, 1f) : Vector3.one;
+            _results.SetObjectiveLearned(text, highlightRunAgain);
         }
+
+        // ---- debug ----
 
         public void SetDebugVisible(bool visible)
         {
@@ -542,85 +421,162 @@ namespace JungleBooze.UI.Expedition
             _debug.text = text;
         }
 
+        public string DebugText => _debug != null ? _debug.text : string.Empty;
+
         public void SetHint(string text)
         {
-            _hint.text = text;
-            _hint.gameObject.SetActive(!string.IsNullOrEmpty(text));
+            _desktopHint.text = text ?? string.Empty;
+            _desktopHint.gameObject.SetActive(!string.IsNullOrEmpty(text));
         }
 
-        /// <summary>True if a screen pixel is over a HUD control (touches there belong to the UI).</summary>
+        /// <summary>True if a screen pixel is over a UI control (touches there belong to the UI, not steering).</summary>
         public bool HitsControl(Vector2 screenPixel)
         {
-            if (RectTransformUtility.RectangleContainsScreenPoint(_pauseButton, screenPixel, null))
+            if (_nav.Current != UiScreen.Hud || ReviveVisible)
             {
                 return true;
             }
 
-            if (UpgradeVisible && RectTransformUtility.RectangleContainsScreenPoint(_upgradeRect, screenPixel, null))
-            {
-                return true;
-            }
-
-            if (ReviveVisible && RectTransformUtility.RectangleContainsScreenPoint(_reviveRect, screenPixel, null))
-            {
-                return true;
-            }
-
-            return ResultsVisible && RectTransformUtility.RectangleContainsScreenPoint(_resultsRect, screenPixel, null);
+            Camera cam = _canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : _canvas.worldCamera;
+            return RectTransformUtility.RectangleContainsScreenPoint(_hud.PauseRect, screenPixel, cam);
         }
 
-        public static string ObjectiveLine(NextObjective objective)
+        /// <summary>Per frame: transitions, count-ups, toast/hint motion, relayout on rotation or safe-area change.</summary>
+        public void Tick(float seconds)
         {
-            if (objective == null || objective.Kind == ObjectiveKind.None)
-            {
-                return string.Empty;
-            }
-
-            return string.IsNullOrEmpty(objective.Detail) ? objective.Title : objective.Title + "\n" + objective.Detail;
+            Relayout(false);
+            bool reduced = ReducedMotion;
+            _hud.Tick(seconds, reduced);
+            _results.Tick(seconds);
+            _home.Fader.Tick(seconds);
+            _pause.Shell.Fader.Tick(seconds);
+            _settings.Shell.Fader.Tick(seconds);
+            _credits.Shell.Fader.Tick(seconds);
+            _journal.Shell.Fader.Tick(seconds);
+            _abilities.Shell.Fader.Tick(seconds);
+            _results.Shell.Fader.Tick(seconds);
+            _upgrade.Shell.Fader.Tick(seconds);
+            _revive.Shell.Fader.Tick(seconds);
         }
 
-        private void RefreshResults(float t)
+        /// <summary>
+        /// Tools: render the UI through <paramref name="cam"/> into a <paramref name="widthPx"/>×<paramref name="heightPx"/>
+        /// target (screenshots, video). Sets the scale directly (the scaler doesn't tick outside Play mode).
+        /// </summary>
+        public void ConfigureForCapture(Camera cam, int widthPx, int heightPx)
         {
-            RunResults r = _resultsData;
-            float e = 1f - ((1f - t) * (1f - t));
-            var b = new StringBuilder(256);
-            b.Append("Distance  ").Append(ProgressionRules.Metres(r.Distance * e)).Append('\n');
-            b.Append(r.FirstExpedition ? "Best  " + ProgressionRules.Metres(r.Best) + " · first expedition" : "Best  " + ProgressionRules.Metres(r.Best)).Append('\n');
-            b.Append("Coins  ").Append(((int)(r.TotalCoins * e)).ToString(Invariant));
-            if (r.CleanLineCoins > 0)
+            _canvas.renderMode = RenderMode.ScreenSpaceCamera;
+            _canvas.worldCamera = cam;
+            _canvas.planeDistance = cam.nearClipPlane + 0.05f;
+            _scaler.enabled = false;
+            _canvas.scaleFactor = Mathf.Min(widthPx, heightPx) / ScreenFrame.ShortSide;
+            foreach (SafeAreaFitter fitter in GetComponentsInChildren<SafeAreaFitter>(true))
             {
-                b.Append("   +").Append(r.CleanLineCoins.ToString(Invariant)).Append(" Clean Line");
+                fitter.Refresh();
             }
 
-            if (r.PerfectCoins > 0)
+            ForceLayout();
+        }
+
+        /// <summary>Forces a layout pass (tools after changing the simulated device).</summary>
+        public void ForceLayout()
+        {
+            Canvas.ForceUpdateCanvases();
+            Relayout(true);
+            Canvas.ForceUpdateCanvases();
+        }
+
+        /// <summary>Called by the settings screen and the App after any preference change.</summary>
+        public void ApplyTextScale()
+        {
+            if (_prefs == null)
             {
-                b.Append("   +").Append(r.PerfectCoins.ToString(Invariant)).Append(" Perfect");
+                return;
             }
 
-            if (r.DiscoveryCoins > 0)
+            _texts.SetScales(_prefs.TextScale, _prefs.HudTextScale);
+            float s = _prefs.TextScale;
+            _settings?.Shell.ScaleRows(s);
+            _journal?.Shell.ScaleRows(s);
+            _abilities?.Shell.ScaleRows(s);
+            Relayout(true);
+        }
+
+        private void Relayout(bool force)
+        {
+            if (_rootRect == null)
             {
-                b.Append("   +").Append(r.DiscoveryCoins.ToString(Invariant)).Append(" Discovery");
+                return;
             }
 
-            b.Append('\n');
-            b.Append("Crystals  ").Append(((int)(r.Crystals * e)).ToString(Invariant)).Append('\n');
-            if (r.NewDiscoveryNames.Count > 0)
+            Vector2 size = _rootRect.rect.size;
+            if (size.x <= 1f || size.y <= 1f)
             {
-                b.Append("New: ");
-                for (int i = 0; i < r.NewDiscoveryNames.Count; i++)
-                {
-                    b.Append(i > 0 ? ", " : string.Empty).Append(r.NewDiscoveryNames[i]);
-                }
-
-                b.Append('\n');
+                return;
             }
 
-            if (!string.IsNullOrEmpty(r.CategoryCounts))
+            bool landscape = size.x >= size.y;
+            if (_scaler != null && Mathf.Abs(_scaler.matchWidthOrHeight - (landscape ? 1f : 0f)) > 0.01f)
             {
-                b.Append(r.CategoryCounts).Append('\n');
+                SetOrientation(landscape);
             }
 
-            _resultsBody.text = b.ToString();
+            Rect safe = SafeAreaFitter.CurrentNormalized();
+            float scale = _prefs != null ? _prefs.TextScale : 1f;
+            bool hand = _prefs != null && _prefs.LeftHanded;
+            if (!force && size == _laidOutSize && safe == _laidOutSafe && scale == _laidOutScale && hand == _laidOutHand)
+            {
+                return;
+            }
+
+            _laidOutSize = size;
+            _laidOutSafe = safe;
+            _laidOutScale = scale;
+            _laidOutHand = hand;
+            _frame = new ScreenFrame(size.x, size.y, safe.xMin * size.x, (1f - safe.xMax) * size.x, (1f - safe.yMax) * size.y, safe.yMin * size.y);
+            float hudScale = _prefs != null ? _prefs.HudTextScale : 1f;
+            _hud.Layout(_frame, hand, hudScale);
+            _home.Layout(_frame, scale);
+            _results.Layout(_frame, Mathf.Min(scale, UiPreferences.HudTextScaleMax));
+            _pause.Shell.Layout(_frame);
+            _settings.Shell.Layout(_frame);
+            _credits.Shell.Layout(_frame);
+            _journal.Shell.Layout(_frame);
+            _abilities.Shell.Layout(_frame);
+            _upgrade.Shell.Layout(_frame);
+            _revive.Shell.Layout(_frame);
+        }
+
+        private void SyncScreens(bool instant)
+        {
+            bool fast = instant || ReducedMotion;
+            UiScreen current = _nav.Current;
+            UiScreen root = _nav.Root;
+            _hud.SetVisible(root == UiScreen.Hud);
+            _home.Show(root == UiScreen.Home, fast);
+            _home.SetContentVisible(current == UiScreen.Home);
+            _pause.Shell.Show(current == UiScreen.Pause, fast);
+            _settings.Shell.Show(current == UiScreen.Settings, fast);
+            _credits.Shell.Show(current == UiScreen.Credits, fast);
+            _journal.Shell.Show(current == UiScreen.Journal, fast);
+            _abilities.Shell.Show(current == UiScreen.Abilities, fast);
+            _results.Shell.Show(current == UiScreen.Results, fast);
+            _upgrade.Shell.Show(current == UiScreen.Upgrade, fast);
+            if (current == UiScreen.Results && root == UiScreen.Results)
+            {
+                _results.Shell.Root.gameObject.SetActive(true);
+            }
+        }
+
+        private RectTransform SubCanvas(string name, int order)
+        {
+            RectTransform rt = UiFactory.Rect(transform, name);
+            UiFactory.Stretch(rt);
+            Canvas c = rt.gameObject.AddComponent<Canvas>();
+            c.overrideSorting = true;
+            c.sortingOrder = _canvas.sortingOrder + 1 + order;
+            rt.gameObject.AddComponent<GraphicRaycaster>();
+            return rt;
         }
     }
 }

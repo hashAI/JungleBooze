@@ -38,6 +38,18 @@ namespace JungleBooze.Editor.LookTest
 
         private readonly string _folder;
 
+        // Environment set materials made in this build, by name (used when ShareEnvironmentSets is on). Pieces sharing
+        // an atlas (FP_CanopyCrown_A..D, FP_Canopy_Clump, the vines' crest slot) need one material: saving a second
+        // one under the same path deletes the first, leaving the earlier pieces with a destroyed material, so they
+        // silently fall back to stand-ins (procedural photo-leaf crowns, no fern clumps, no vine crests).
+        private readonly System.Collections.Generic.Dictionary<string, Material> _environmentSets = new System.Collections.Generic.Dictionary<string, Material>();
+
+        /// <summary>
+        /// Share one material per environment texture set (fixes the stand-in fallback above). Off by default so the
+        /// look test and the realistic hero basin keep their reviewed output; the painterly hero basin turns it on.
+        /// </summary>
+        public bool ShareEnvironmentSets { get; set; }
+
         public LookTestMaterials(LookTestConfigAsset config, LookTestAssets assets)
             : this(config, assets, Folder)
         {
@@ -351,6 +363,11 @@ namespace JungleBooze.Editor.LookTest
 
         private Material ForEnvironmentSet(string name, EnvironmentKit.TextureSet textures, EnvironmentRole role)
         {
+            if (ShareEnvironmentSets && _environmentSets.TryGetValue(name, out Material made) && made != null)
+            {
+                return made;
+            }
+
             var set = new LookTestAssets.TextureSet
             {
                 Albedo = textures.Albedo,
@@ -393,7 +410,9 @@ namespace JungleBooze.Editor.LookTest
                     break;
             }
 
-            return Save(m);
+            m = Save(m);
+            _environmentSets[name] = m;
+            return m;
         }
 
         /// <summary>Matte-painted backdrop layer (Backdrop Card shader); farther layers draw first.</summary>

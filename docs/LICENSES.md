@@ -7,6 +7,19 @@ Every generated or imported asset, tool, and SDK, with its license. Required by 
 | Concept images, 2026-10-07 (hero and macaw turnarounds, hero key art, macaw recolors) in `archive/pre-aurelia/design/concepts/2026-10-07/` | AI-generated 2D concept art | OpenAI Images API, model `gpt-image-2` (via the owner's API key) | Pay-as-you-go API. Under the OpenAI Terms of Use, as between the user and OpenAI, the user owns the output (OpenAI assigns its rights in output to the user). **Re-check the current OpenAI terms and usage policies before launch** | Yes, per the OpenAI terms at generation time (re-check before launch). Concept and reference use only; final in-game art is 3D models built from these | 2026-10-07 |
 | Run SFX, Duko voice, Jungle/menu music in `UnityProject/Assets/_Game/Audio/` | AI-generated audio | ElevenLabs Sound Generation, Speech, and Music (owner Starter plan) | ElevenLabs Terms of Service / paid API. Voice lines recovered from history, then trimmed. SFX and music regenerated 2026-10-07. **Re-check current ElevenLabs commercial terms before launch** | Yes, per the paid-plan terms at generation time (re-check before launch) | 2026-10-07 |
 
+## AURELIA audio, ElevenLabs (audio-director, 2026-10-09)
+
+Owner decision 2026-10-09: ElevenLabs on the owner's existing plan (verified via the API: **Starter**, active; no top-ups or
+overage possible on this account). Generated with `tools/assetgen/elevenlabs_audio.py` (sound effects `eleven_text_to_sound_v2`,
+music `music_v2_5`, stem separation, music upload for conditioning); prompts in `design/prompts/audio/aurelia_audio.json`;
+every call with its credit cost in `art_source/audio/elevenlabs/calls.jsonl`. Raw takes stay local (`art_source/audio/`).
+Processed by `tools/assetgen/audio_build.py` (trim, filters, loudness, loops). The old lane-era audio row above is archived and not used.
+
+| Item | Type | Source / tool | Plan / license | Commercial use OK | Added |
+|---|---|---|---|---|---|
+| SFX, footsteps, creature calls, UI sounds and ambience loops in `UnityProject/Assets/_Game/Audio/{SFX,Footsteps,Creatures,UI,Ambience}/` (99 files) | AI-generated sound effects | ElevenLabs Sound Effects API (`eleven_text_to_sound_v2`), owner's Starter plan | ElevenLabs Terms of Service; paid plans include a commercial license. Prompts name no brands, artists or works | Yes (paid-plan commercial license at generation time). **Re-check the ElevenLabs terms before launch** | 2026-10-09 |
+| Adaptive music (intro, explore melody/drums stems, danger section, percussion layer, results loop) and stings in `UnityProject/Assets/_Game/Audio/Music/` (11 files) | AI-generated music (+ stems separated by ElevenLabs) | Eleven Music API (`music_v2_5`, composition plans; stem separation; one upload of our own generated theme for conditioning), owner's Starter plan | Eleven Music Model-Specific Terms (updated 26 May 2026), Starter row: commercial use allowed **except film, TV, radio and "Studio Games"** (§5(g): commercialised video games made available on **more than one platform**); no streaming-platform distribution; no resale/music libraries; no attribution required; individual use only; output stays under the plan in force when it was created (§2(c)). Prompts contain no artist/song/label names (§2(b)) | **Yes only while the game ships on a single platform (iOS App Store).** An Android (or any second-platform) release makes it a "Studio Game": the music must then be replaced or relicensed (Enterprise Music) before that release. Flagged to the owner | 2026-10-09 |
+
 ## Game UI (ui-engineer, 2026-10-09)
 
 | Item | Type | Source | License | Commercial use OK | Added |

@@ -1,0 +1,1 @@
+{"file": "art_source/environment/openai/forest/f_bd_forest_far_key.png", "output_tokens": 1372, "est_usd": 0.084}

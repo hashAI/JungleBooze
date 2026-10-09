@@ -46,6 +46,20 @@ namespace JungleBooze.Editor.HeroBasin
         // the stemless hanging leaf are left out; the dressing places painted kit clumps instead.
         private bool Dressed => _h.Style == HeroBasinStyle.Painterly && _h.Dressing != null && _h.Dressing.Enabled;
 
+        /// <summary>Painterly v4 cards (ADR 0011): arch matte card, pillar impostors, painted cascades; null = off.</summary>
+        public HeroBasinCards Cards { get; set; }
+
+        private HeroCards C => _h.Cards;
+
+        /// <summary>A short fall: a painted sheet when the cards allow it, else the layered procedural fall.</summary>
+        internal void ShortFall(Vector3 lip, float footY, float width, float setback, int layers)
+        {
+            if (Cards == null || !Cards.Cascade(_rng, lip, footY, width, _eye, setback))
+            {
+                LookTestLandmarks.Fall(_ctx, _rng, Seg, "Falls", lip, footY, width, _eye, setback, LookTestLandmarks.FallFoot.Pool, layers);
+            }
+        }
+
         public HeroBasinWorld(LookTestBuildContext ctx, HeroBasinConfigAsset h, HeroBasinBuilder.PlantMaterials plants, IRandom rng, Vector3 eye)
         {
             _ctx = ctx;
@@ -342,7 +356,7 @@ namespace JungleBooze.Editor.HeroBasin
                     Notches.Add(new KeyValuePair<Vector3, Vector3>(left, right));
                     Vector3 run = foot - lip;
                     run.y = 0f;
-                    LookTestLandmarks.Fall(_ctx, _rng, Seg, "Falls", lip, foot.y, width, _eye, Mathf.Clamp(run.magnitude, 0.3f, 4f), LookTestLandmarks.FallFoot.Pool, 2);
+                    ShortFall(lip, foot.y, width, Mathf.Clamp(run.magnitude, 0.3f, 4f), 2);
                     if (foot.y < _h.BasinWaterY + 0.8f)
                     {
                         _footFoam.Add(new Vector3(foot.x, foot.z, width));
@@ -435,6 +449,14 @@ namespace JungleBooze.Editor.HeroBasin
         private void KitPillars(List<System.Action> rock)
         {
             List<EnvironmentKit.Piece> pillars = _ctx.Kit.Of(EnvironmentRole.Pillar);
+            if (Cards != null && C != null)
+            {
+                // v4: the far pillars become painted impostors; a few near ones are slab meshes with painted crowns.
+                Cards.Pillars(Height, _eye);
+                NearPillars(rock, pillars);
+                return;
+            }
+
             Vector4[] spots = _h.KitPillars;
             if (pillars.Count == 0 || spots == null)
             {
@@ -448,6 +470,35 @@ namespace JungleBooze.Editor.HeroBasin
                 var foot = new Vector3(spots[i].x, Height(spots[i].x, spots[i].y) - 1.5f, spots[i].y);
                 Matrix4x4 placement = EnvironmentKit.Stand(piece, foot, spots[i].w, spots[i].z, 0f);
                 rock.Add(() => _ctx.AppendPiece(piece, placement, stone, Seg, "L2", "Pillars", false, LookTestBatchSet.Group.Ground, LookTestBuildContext.Open));
+            }
+        }
+
+        /// <summary>Near slab pillars (RS_PillarA_P / B_P) with a painted canopy crown on each top.</summary>
+        private void NearPillars(List<System.Action> rock, List<EnvironmentKit.Piece> pillars)
+        {
+            Vector4[] spots = C.NearPillars;
+            if (pillars.Count == 0 || spots == null)
+            {
+                return;
+            }
+
+            LookTestMeshAccumulator stone = B.Get(Seg, "L2", "Arch", _ctx.Rootstone, false, LookTestBatchSet.Group.Ground);
+            for (int i = 0; i < spots.Length; i++)
+            {
+                EnvironmentKit.Piece piece = pillars[i % pillars.Count];
+                var foot = new Vector3(spots[i].x, Height(spots[i].x, spots[i].y) - 2f, spots[i].y);
+                float height = spots[i].w;
+                Matrix4x4 placement = EnvironmentKit.Stand(piece, foot, spots[i].z, height, 0f);
+                rock.Add(() => _ctx.AppendPiece(piece, placement, stone, Seg, "L2", "Pillars", false, LookTestBatchSet.Group.Ground, LookTestBuildContext.Open));
+                float crown = height * C.NearPillarCrown;
+                Vector3 top = foot + Vector3.up * (height - crown * 0.15f);
+                KitCrown(top, crown);
+                // Two smaller crowns spilling over the rim, either side.
+                Vector3 toEye = _eye - top;
+                toEye.y = 0f;
+                Vector3 side = Vector3.Cross(Vector3.up, toEye.normalized);
+                KitCrown(top + side * crown * 0.45f - Vector3.up * crown * 0.25f, crown * 0.7f);
+                KitCrown(top - side * crown * 0.4f - Vector3.up * crown * 0.3f, crown * 0.6f);
             }
         }
 
@@ -571,6 +622,14 @@ namespace JungleBooze.Editor.HeroBasin
             LookTestMeshAccumulator stone = B.Get(Seg, "L2", "Arch", _ctx.Rootstone, false, LookTestBatchSet.Group.Ground);
             EnvironmentKit.Piece piece = _ctx.Kit.Pick(EnvironmentRole.HeroArch, EnvironmentRole.Arch, _rng);
             LookTestMeshAccumulator canopy = B.Get(Seg, "L3", "Arch canopy", _ctx.Leaves, false, LookTestBatchSet.Group.Trees);
+            if (Cards?.Mouth != null)
+            {
+                // v4 (ADR 0011): the painted arch card replaces both mesh instances and their vine curtains; the
+                // tall fall pours from the card's window.
+                _mouth = Cards.Mouth;
+                return;
+            }
+
             if (piece != null)
             {
                 Matrix4x4 placement = EnvironmentKit.Span(piece, _h.ArchFootA, _h.ArchFootB, _h.ArchTopY, _h.ArchDepthScale);
@@ -676,10 +735,17 @@ namespace JungleBooze.Editor.HeroBasin
             for (int i = 0; i < falls.Length; i++)
             {
                 HeroFall f = falls[i];
+                if (i == 0 && Cards != null && Cards.HasFallCard)
+                {
+                    // v4: the painted fall card (behind the arch window) replaces the 3D plunge.
+                    continue;
+                }
+
                 if (i == 0 && _mouth.HasValue)
                 {
                     // The tall fall pours from the hero arch's cave mouth (RS_HeroArch_WaterfallMouth).
-                    f.Top = _mouth.Value + _h.TallFallOffset;
+                    // With the arch card the mouth is already placed inside the painted window (ADR 0011).
+                    f.Top = _mouth.Value + (Cards?.Mouth != null ? Vector3.zero : _h.TallFallOffset);
                     tallFoot = new Vector3(f.Top.x, f.FootY, f.Top.z);
                     TallFoot = tallFoot;
                 }
@@ -777,6 +843,18 @@ namespace JungleBooze.Editor.HeroBasin
                     LookTestLandmarks.Fall(_ctx, _rng, Seg, "Falls", lip, footY, width * c.y, _eye, 1.5f + 0.5f * i, LookTestLandmarks.FallFoot.None, i < 3 ? layers : 2, TallSheets);
                 }
             }
+            else if (Cards != null && Cards.Cascade(_rng, top, footY, width, _eye, 1.5f))
+            {
+                // Painted cascade sheet: its own lip roll, strands and foot spray; no impact disc, two soft billows.
+                LookTestMeshAccumulator mistP = B.Get(Seg, "W", "Mist", _ctx.MistCard, false, LookTestBatchSet.Group.Water);
+                Vector3 footP = new Vector3(top.x, footY, top.z) + toEye * 1.5f;
+                for (int i = 0; i < 2; i++)
+                {
+                    mistP.AppendCard(footP + toEye * width * 0.3f + side * (i - 0.5f) * width * 0.6f + Vector3.up * height * 0.4f, Vector3.up, width * 0.9f, height * 0.9f, _rng.NextFloat(0f, 10f));
+                }
+
+                return;
+            }
             else
             {
                 int strands = Mathf.Clamp(Mathf.RoundToInt(width / 9f), 1, 6);
@@ -810,7 +888,7 @@ namespace JungleBooze.Editor.HeroBasin
 
             LookTestMeshAccumulator mist = B.Get(Seg, "W", "Mist", _ctx.MistCard, false, LookTestBatchSet.Group.Water);
             // Spray burst at the foot (Atmos Card kind 1: bright, broken; above 1 = denser).
-            int sprays = tall ? 12 : 6;
+            int sprays = tall ? (C != null ? C.TallFallSprayPlume.x : 12) : 6;
             for (int i = 0; i < sprays; i++)
             {
                 float w = width * _rng.NextFloat(0.45f, tall ? 1.3f : 0.8f);
@@ -821,7 +899,7 @@ namespace JungleBooze.Editor.HeroBasin
             // The plume: soft billows stacked up the face of the fall, widest near the foot, climbing about half of a
             // tall fall's height and drifting a little toward the viewer.
             float plume = tall ? height * 0.55f : Mathf.Min(height * 0.85f, width * 2.2f);
-            int billows = tall ? 16 : 5;
+            int billows = tall ? (C != null ? C.TallFallSprayPlume.y : 16) : 5;
             for (int i = 0; i < billows; i++)
             {
                 float t = i / (float)(billows - 1);
@@ -928,6 +1006,12 @@ namespace JungleBooze.Editor.HeroBasin
                 {
                     height *= _h.ForestUnderArchScale;
                 }
+                // v4: keep the arch window clear for the painted fall (no crown rising into it).
+                if (Cards != null && (Cards.InWindow(new Vector3(x, y + height, z)) || Cards.InWindow(new Vector3(x, y + height * 0.6f, z))))
+                {
+                    continue;
+                }
+
                 // Keep the low sun visible (keyframe: it bursts through a gap in the left foliage).
                 if (BlocksSun(new Vector3(x, y + height * 0.6f, z), height * 0.7f))
                 {
@@ -1117,7 +1201,9 @@ namespace JungleBooze.Editor.HeroBasin
         {
             LookTestMeshAccumulator mist = B.Get(Seg, "W", "Mist", _ctx.MistCard, false, LookTestBatchSet.Group.Water);
             float water = _h.BasinWaterY;
-            for (int i = 0; i < 14; i++)
+            int haze = C != null ? Mathf.RoundToInt(14 * C.MistShare) : 14;
+            int feet = C != null ? Mathf.Max(1, Mathf.RoundToInt(3 * C.MistShare)) : 3;
+            for (int i = 0; i < haze; i++)
             {
                 var p = new Vector3(_rng.NextFloat(-60f, 90f), water + _rng.NextFloat(3f, 8f), _rng.NextFloat(70f, 260f));
                 mist.AppendCard(p, Vector3.up, _rng.NextFloat(30f, 70f), _rng.NextFloat(8f, 16f), _rng.NextFloat(0f, 10f));
@@ -1132,8 +1218,8 @@ namespace JungleBooze.Editor.HeroBasin
             }
 
             // Low mist around the arch feet: kept under the sun (tall billows there washed out the sky and hid the sun).
-            LookTestLandmarks.Billows(mist, _rng, _h.ArchFootA + Vector3.up * 10f, 3, 16f, new Vector2(40f, 60f), new Vector2(12f, 20f));
-            LookTestLandmarks.Billows(mist, _rng, _h.ArchFootB + Vector3.up * 10f, 3, 16f, new Vector2(40f, 60f), new Vector2(12f, 20f));
+            LookTestLandmarks.Billows(mist, _rng, _h.ArchFootA + Vector3.up * 10f, feet, 16f, new Vector2(40f, 60f), new Vector2(12f, 20f));
+            LookTestLandmarks.Billows(mist, _rng, _h.ArchFootB + Vector3.up * 10f, feet, 16f, new Vector2(40f, 60f), new Vector2(12f, 20f));
         }
 
         private static LookTestMeshAccumulator.Painter Foliage(float baseY, float height)

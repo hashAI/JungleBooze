@@ -92,7 +92,7 @@ MonoBehaviour:
   _falls:
   - Top: {x: 60, y: 112, z: 330}
     FootY: -3.7
-    WidthM: 22
+    WidthM: 30
     Layers: 4
     IntoPool: 0
   - Top: {x: 15, y: -3.5, z: 76}
@@ -224,3 +224,54 @@ MonoBehaviour:
   _archBraidFootB: {x: 150, y: -25, z: 210}
   _archBraidTopY: 80
   _archBraidDepthScale: 0.45
+  _cards:
+    ArchCard: 1
+    ArchTexture: BD_F4f_ArchCard
+    ArchScreenRect: {x: 0.154, y: -0.07, z: 1.01, w: 1.12}
+    ArchDistanceM: 215
+    ArchMouthUv: {x: 0.545, y: 0.69}
+    ArchMouthSetbackM: 14
+    ArchWindowRect: {x: 0.5, y: 0.22, z: 0.73, w: 0.62}
+    ArchExposure: 1.25
+    ArchFogShare: 0.08
+    FallCard: 1
+    FallTexture: BD_F4f_FarFalls
+    FallScreenRect: {x: 0.506, y: 0.05, z: 0.734, w: 0.95}
+    FallDistanceM: 330
+    FallFlow: {x: 0.45, y: 0.035}
+    FallFogShare: 0
+    FallExposure: 1.15
+    PillarTexture: BD_F4f_PillarCards
+    PillarRects:
+    - {x: 0.0358, y: 0.0146, z: 0.1921, w: 0.8105}
+    - {x: 0.2435, y: 0.0127, z: 0.457, w: 0.9248}
+    - {x: 0.5059, y: 0.0049, z: 0.6979, w: 0.9355}
+    - {x: 0.7279, y: 0.0049, z: 0.9714, w: 0.8584}
+    PillarCards:
+    - {x: -122, y: 335, z: 120, w: 0}
+    - {x: 300, y: 330, z: 200, w: 3}
+    - {x: -210, y: 380, z: 160, w: 2}
+    - {x: -95, y: 420, z: 150, w: 1}
+    - {x: 185, y: 215, z: 150, w: 2}
+    PillarFogShare: 0.35
+    NearPillars:
+    - {x: -92, y: 175, z: 20, w: 70}
+    NearPillarCrown: 0.3
+    PaintedFoam: 1
+    FoamTexture: FX_Foam_P
+    FoamCellM: {x: 3.2, y: 6}
+    FoamMaxAlpha: 0.85
+    PaintedCascades: 1
+    CascadeTexture: FX_Cascade_P
+    CascadeRows:
+    - {x: 0.0156, y: 0.6758, z: 0.9697, w: 0.9264}
+    - {x: 0.0215, y: 0.3639, z: 0.9814, w: 0.6146}
+    - {x: 0.0254, y: 0.0449, z: 0.9736, w: 0.2891}
+    CascadeMaxHeightM: 14
+    CascadeOverscan: {x: 1.12, y: 0.22}
+    LowTierDrops:
+    - W Shafts
+    - L5 Layer 04
+    - L5 Layer 07
+    MistShare: 0.5
+    TallFallSprayPlume: {x: 6, y: 8}

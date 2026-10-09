@@ -8,7 +8,9 @@
         "JungleBooze.Editor",
         "JungleBooze.App",
         "UnityEngine.TestRunner",
-        "UnityEditor.TestRunner"
+        "UnityEditor.TestRunner",
+        "JungleBooze.UI",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [
         "Editor"
