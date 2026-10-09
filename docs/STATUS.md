@@ -53,13 +53,13 @@ Duko/continue, audio files) compiled clean on the Mac.
 | Agent | State | Current / last task | Output | Next for this agent |
 |---|---|---|---|---|
 | producer | not used yet | (the coordinating session does this role for now) | this file | — |
-| game-designer | done (2026-10-09) | AURELIA GDD, spec 101 movement/camera (46 ACs, 61 s feel course), spec 102 chunks/routes/World Director | `design/aurelia/GDD.md`, `design/aurelia/specs/` | Phase 2 chunk catalog detail; FTUE script |
+| game-designer | working (2026-10-09) | Spec 103: 5-minute vertical slice (chunks, swim, vine, canopy, creature, secret, results, first upgrade) | `design/aurelia/GDD.md`, `design/aurelia/specs/` | Phase 2 chunk catalog detail; FTUE script |
 | balance-simulator | done (A3) | Python reference model, golden traces, S1–S9 report (`archive/pre-aurelia/docs/sim-reports/2026-10-07-spec001.md`) | `tools/sim/`, `docs/sim-reports/` | Phase 1: new movement/chunk model from the AURELIA spec (old model kept as reference) |
-| tech-architect | done (2026-10-09) | Look test v2 graybox + light (ADR 0007): 59–95 draws, 206–277k tris; Checkpoint A partly passed (F2–F4 good; waterfalls flat, roots black, P1 scale weak). Generated meshes/scene now git-ignored (rebuild with LookTestBatch.BuildScene) | `Assets/_Game/Editor/Setup/`, `docs/adr/0003-first-playable-bootstrap.md`, `docs/PLAY_FIRST_BUILD.md` | Add EditMode tests for `ProjectSetupRules`; Roslyn analyzers |
-| gameplay-engineer | done (2026-10-09) | Real Pista (Humanoid, sim-driven animation, no foot skating), edge-brush leaves, haptics hooks (JBHaptics.mm unbuilt), sensitivity/reduced motion settings, portrait+landscape, gameplay video capture `FeelTestVideo.Capture`. EditMode 260/260, PlayMode 8/8 | `Scripts/Gameplay/PowerUps`, `Hazards`, `Companion`, `Views`, `App/RunSceneBootstrap.cs` | Wire audio events; then Batch 3 |
+| tech-architect | working (2026-10-09) | Look test: layered waterfalls, mist, roots, P1 scale, water; integration path for Art/Environment assets | `Assets/_Game/Editor/Setup/`, `docs/adr/0003-first-playable-bootstrap.md`, `docs/PLAY_FIRST_BUILD.md` | Add EditMode tests for `ProjectSetupRules`; Roslyn analyzers |
+| gameplay-engineer | working (2026-10-09) | Fix Phase 1 review findings (blocker: swipe after resting thumb), camera framing 19–22%/14–16% [ASSUMED], dodge from current position [ASSUMED], re-record videos | `Scripts/Gameplay/PowerUps`, `Hazards`, `Companion`, `Views`, `App/RunSceneBootstrap.cs` | Wire audio events; then Batch 3 |
 | ui-engineer | done (C2) | Track wired into the Run scene with gray-box views and HUD | `Scripts/Gameplay/Views`, `Scripts/App`, `Scripts/UI/Hud` | Fix errors the owner sends from Unity |
 | art-director | done (2026-10-09) | Meshy keyframes F1–F4 + P1 (93 credits) → design/aurelia/keyframes/ | `design/aurelia/ENVIRONMENT_STRATEGY.md` | Store art later |
-| asset-pipeline | done (2026-10-09) | Pista game-ready: 19.9k tris, 27 bones, 18 clips (`Art/Characters/Pista/`). Run clip matches 5 m/s (use 1.3x or Run_Alt); hair glossy/stringy; Unity import not yet verified | `art_source/pista/`, `tools/blender/pista/` | Report → import rigged Pista into LookTest |
+| asset-pipeline | working (2026-10-09) | Rootstone Blender kit + hero arch, Meshy stiltwoods ×3 + leaf cards, backdrop layers (cap 450 credits) → Art/Environment/ | `art_source/pista/`, `tools/blender/pista/` | Report → import rigged Pista into LookTest |
 | audio-director | done (files) | SFX, Duko voice (from history), Jungle/menu music, `AudioPlayback` | `Assets/_Game/Audio`, `Scripts/Services/Audio` | Wire playback into the Run scene |
 | qa-engineer | waiting | — | — | FP1 stage F: test plan + owner play-test script |
 | performance-engineer | waiting | — | — | Benchmark scene (week 2+) |
@@ -124,6 +124,7 @@ Meshy: 3 (image edit test) + 30 (Pista 3D v1) = **33 credits used**; balance 2,4
 
 ## Log
 Newest first. One line per event.
+- 2026-10-09: Launched gameplay-engineer (review fixes), game-designer (spec 103 vertical slice), asset-pipeline (environment kit, cap 450 credits), tech-architect (water/mist/roots + integration). Sent owner gameplay videos, keyframes, look test v2.
 - 2026-10-09: Owner picked store name "Aurelia: Wildward"; focus today = build the game, other work later. Reports in: real Pista + gameplay videos, Phase 1 review (1 blocker), keyframes, look test v2.
 - 2026-10-09: Phase 1 Feel implemented and verified in Unity (dcc0721). Launched gameplay-engineer (real Pista + video), code-reviewer (Phase 1), art-director (Meshy keyframes, cap 100).
 - 2026-10-09: Environment strategy revised to Meshy + CC0 + in-house: shopping list 831 credits (reserve 107); possible extra ask up to 600 credits only if a checkpoint shows a layer below the bar (near foliage most at risk). Launching keyframes (item 1, ~75 credits).
