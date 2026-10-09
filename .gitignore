@@ -114,3 +114,18 @@ __pycache__/
 /UnityProject/Assets/_Game/Scenes/HeroBasin.unity.meta
 /UnityProject/Assets/_Game/Scenes/HeroBasin/
 /UnityProject/Assets/_Game/Scenes/HeroBasin.meta
+
+# Raw art stays local (owner, 2026-10-09: keep GitHub LFS under the free 1 GB).
+# Text (README, prompts, *.json/*.jsonl spend logs, scripts) stays tracked; binaries don't.
+/art_source/**/*.png
+/art_source/**/*.jpg
+/art_source/**/*.jpeg
+/art_source/**/*.webp
+/art_source/**/*.glb
+/art_source/**/*.gltf
+/art_source/**/*.fbx
+/art_source/**/*.obj
+/art_source/**/*.blend
+/art_source/**/*.blend1
+/art_source/**/*.exr
+/art_source/**/*.mp4

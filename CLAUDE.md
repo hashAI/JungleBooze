@@ -45,6 +45,9 @@ defined in `.claude/agents/`. Read `docs/AGENT_PLAN.md` for the full plan.
      watchdog; recreate it before its 7-day expiry). Pending owner answers never stop the other work.
    - **Lean coordinator.** The coordinating session delegates most work to subagents (`.claude/agents/`) and only
      plans, launches, verifies and commits. It hands off to a fresh session when continuing would cost more.
+   - **Git storage:** GitHub LFS stays under the free 1 GB (owner, 2026-10-09). Raw art in `art_source/` (images,
+     models, .blend, previews) is git-ignored and stays on the Mac; commit only game-ready assets and small references.
+     Keep game textures/models lean. Check usage before big art commits.
    - **Show the owner.** The owner watches remotely. Send screenshots, renders, previews and gameplay videos
      (SendUserFile) whenever there is something visual worth seeing or judging, with a one-line caption.
 

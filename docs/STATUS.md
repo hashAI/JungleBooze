@@ -22,7 +22,7 @@ animations (approved cap 150 credits). Then import rigged Pista into the LookTes
 - **Owner: TRY Option D (painterly / stylized-realistic) on the hero basin first (2026-10-09); adopt only if the render convinces.** Look gate target is now `design/aurelia/keyframes/F4_f_painterly_openai.jpg`. Earlier context: hero basin v3 ~64% of the realistic F4 keyframe (sent). Coordinator's rethink: realism stalls on organic density (~70% ceiling with AI + procedural). Options sent to owner: **B** realistic + buy a few pro nature packs (~$50–150, owner must approve; shortlist exact packs first), **D** painterly/stylized-realistic at no cost (OpenAI style test: `design/aurelia/keyframes/F4_f_painterly_openai.jpg`; Pista would need a light shading restyle), A keep going, C freelance artist. Coordinator recommends B. Don't start new environment work until the owner picks.
 - **Gameplay:** vertical slice parts A (9835543) and B (d58990d) committed; Expedition 1 fully playable in gray-box (bot 0 hits). Running: code-reviewer on the slice; asset-pipeline on Pista clips (Swim_Surface, Swim_Dive, Swim_Underwater, Swim_Leap, Vine_Release, Water_Wade, BalanceRun, Death fix, SlideEntry fix; cap 80 Meshy).
 - **Next:** fix review findings; wire new clips into PistaExpedition prefab; creature/vine visuals; then apply the chosen art style to the slice.
-- **Git LFS:** ~0.5 GB of GitHub's free 1 GB used; tell the owner before it runs out (~$5/mo per 50 GB).
+- **Git LFS:** ~0.75 GB of GitHub's free 1 GB used. Owner: stay free; raw art in art_source/ is git-ignored and local-only.
 - Unity process check: `pgrep -x Unity`.
 
 ## Current milestone
@@ -135,6 +135,7 @@ Meshy: 3 (image edit test) + 30 (Pista 3D v1) = **33 credits used**; balance 2,4
 
 ## Log
 Newest first. One line per event.
+- 2026-10-09: LFS at ~750 MB of 1 GB. Owner: stay free; raw art binaries in art_source/ untracked (148 files, kept on disk) and git-ignored. Painterly kit committed; launched stacked-slab rock generator.
 - 2026-10-09: Slice review fixes committed (d1f343b). Push hang fixed (git config lfs.ssh.automultiplex false). Dressing map done; launched set-dressing pass.
 - 2026-10-09: Painterly switch committed (~55% of F4_f). Diagnosis: both styles stall on content density/set dressing, not style. Next: dressing map (art-director) → dense set-dressing pass (tech-architect) with asset-pipeline's painted kit.
 - 2026-10-09: Pista +11 clips (swim/dive/underwater/leap, vine release, wade, balance run, water entry/exit, Death_Stumble, Slide_Clean), 79 Meshy credits. Swim is breaststroke (no crawl in Meshy).
