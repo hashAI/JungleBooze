@@ -63,3 +63,18 @@ variants in the same folders as the realistic kit.
   defaults for the painterly block).
 - Rebuild the F4_f LUT after any lighting change (contribution 0, render, match, contribution 1).
 - Tests: `PaintedVariantsCarryAPToken`, `PaintedTokenIsRemovedForTheBaseName`.
+
+## Addendum (2026-10-09): set-dressing pass and frame-budget measurement
+- **Dressing** (`HeroBasinDressing`, painterly only, `HeroBasinConfigAsset.Dressing`): runs after the world is built
+  and before batches are emitted. Temporary mesh colliders come from the merged batches. Every item is placed by a
+  ray from the landscape camera through the screen points of `design/aurelia/HERO_BASIN_DRESSING.md`, with a fixed
+  seed. Sizes are screen fractions turned into metres at the hit distance. Items join the existing merged batches, so
+  draws stay flat (43 landscape) and the pass costs triangles only. In dressed mode the world also drops the procedural
+  arch crowns, hero-tree crowns, forest stick trunks, canopy-mass blobs and the stemless hanging leaf.
+- **Measurement** (`HeroBasinSegmentation`, editor `SegmentId.shader`): an unlit ID pass per budget category (alpha
+  cut like Nature Lit), plus foam and orange read from the beauty frame. Results go to `stats.txt` and `F4_mask.png`.
+- **Shared atlas materials:** `LookTestMaterials.ShareEnvironmentSets`. Saving a second material under the same
+  path deleted the first, so pieces sharing an atlas (canopy crowns, ferns, vine crests) silently fell back to
+  stand-ins. On for painterly only. The realistic hero basin and the look test still rely on the old fallback, and
+  turning it on there visibly changes their reviewed output (kit crowns on bare trunks). Enable it there only after a
+  look review.

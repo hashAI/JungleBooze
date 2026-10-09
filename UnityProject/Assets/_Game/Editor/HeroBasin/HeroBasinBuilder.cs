@@ -80,7 +80,9 @@ namespace JungleBooze.Editor.HeroBasin
             LookTestConfigAsset look = BuildLook(h, paths.Look);
 
             var assets = new LookTestAssets();
-            var materials = new LookTestMaterials(look, assets, paths.Materials);
+            // Painterly: one material per shared atlas (painted crowns, ferns, vine crests). Realistic keeps its reviewed
+            // output, which relies on the old stand-in fallback (ADR 0009 addendum).
+            var materials = new LookTestMaterials(look, assets, paths.Materials) { ShareEnvironmentSets = style == HeroBasinStyle.Painterly };
             var layout = new LookTestStretchLayout(look);
             var batches = new LookTestBatchSet();
             var ctx = new LookTestBuildContext(look, layout, batches);
@@ -134,10 +136,12 @@ namespace JungleBooze.Editor.HeroBasin
             EditorUtility.SetDirty(ctx.LightShaft);
             Material sky = materials.Sky(hdri);
             ctx.Kit = EnvironmentKit.Scan(style == HeroBasinStyle.Painterly);
+            // Pieces sharing an atlas share one material: tint each material once.
+            var tinted = new HashSet<Material>();
             for (int i = 0; i < ctx.Kit.Pieces.Count; i++)
             {
                 ctx.Kit.Pieces[i].Material = materials.ForEnvironmentPiece(ctx.Kit.Pieces[i]);
-                if (ctx.Kit.Pieces[i].Role == EnvironmentRole.PlantClump && ctx.Kit.Pieces[i].Material != null)
+                if (ctx.Kit.Pieces[i].Role == EnvironmentRole.PlantClump && ctx.Kit.Pieces[i].Material != null && tinted.Add(ctx.Kit.Pieces[i].Material))
                 {
                     ctx.Kit.Pieces[i].Material.SetColor("_BaseColor", ctx.Kit.Pieces[i].Material.GetColor("_BaseColor") * h.PlantTint);
                     EditorUtility.SetDirty(ctx.Kit.Pieces[i].Material);
@@ -186,6 +190,12 @@ namespace JungleBooze.Editor.HeroBasin
             var world = new HeroBasinWorld(ctx, h, plants, rng, camera.transform.position);
             world.Build();
             Backdrops(ctx, h, materials, camera.transform.position, report);
+            if (style == HeroBasinStyle.Painterly && h.Dressing != null && h.Dressing.Enabled)
+            {
+                // Set dressing (HERO_BASIN_DRESSING.md): placed by rays through the landscape frame, merged into the
+                // same batches before they are emitted.
+                new HeroBasinDressing(ctx, h, world, camera, report).Build();
+            }
 
             var root = new GameObject("HeroBasin").transform;
             var groups = new Dictionary<int, Transform>();

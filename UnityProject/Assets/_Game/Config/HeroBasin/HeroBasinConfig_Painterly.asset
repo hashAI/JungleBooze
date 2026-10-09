@@ -22,8 +22,8 @@ MonoBehaviour:
   _pistaPosition: {x: 0, y: 0, z: 0}
   _pistaYawDeg: 8
   _pistaIdleTimeS: 1.2
-  _sunElevationDeg: 20
-  _sunAzimuthDeg: -31
+  _sunElevationDeg: 17
+  _sunAzimuthDeg: -38
   _sunColor: {r: 1, g: 0.86, b: 0.64, a: 1}
   _sunIntensity: 3.6
   _skyExposure: 0.9
@@ -109,7 +109,7 @@ MonoBehaviour:
   _ledgeStandOffset: {x: 2.4, y: 0, z: 1.2}
   _basinFloorY: -17
   _leftHills: {x: -50, y: -150, z: 4}
-  _rightHills: {x: 68, y: 150, z: 34}
+  _rightHills: {x: 68, y: 150, z: 24}
   _ledge: {x: 1.5, y: 1.5, z: -1.4}
   _rightBank: {x: 8, y: 1.5, z: 4.5, w: -1}
   _forestTrees: 520
@@ -126,7 +126,7 @@ MonoBehaviour:
     DistanceM: 2800
     AzimuthDeg: -50
     WidthDeg: 62
-    BaseElevationDeg: -4
+    BaseElevationDeg: -9
     Mirror: 0
     FogShare: 0.25
     Exposure: 1
@@ -134,7 +134,7 @@ MonoBehaviour:
     DistanceM: 2700
     AzimuthDeg: 30
     WidthDeg: 58
-    BaseElevationDeg: -4
+    BaseElevationDeg: -8
     Mirror: 1
     FogShare: 0.25
     Exposure: 1
@@ -158,7 +158,7 @@ MonoBehaviour:
     DistanceM: 640
     AzimuthDeg: 8
     WidthDeg: 56
-    BaseElevationDeg: -13
+    BaseElevationDeg: -18
     Mirror: 0
     FogShare: 0.1
     Exposure: 1
@@ -217,6 +217,6 @@ MonoBehaviour:
   _travertineTint: {r: 1, g: 1, b: 1, a: 1}
   _travertineMoss: 0.65
   _frameLeft: {x: -3.0, y: -1.6, z: 30, w: 1.6}
-  _frameRight: {x: 6.2, y: 0.4, z: -30, w: 1.1}
+  _frameRight: {x: 6.2, y: 0.4, z: -30, w: 0.75}
   _style: 1
   _gradeLutPath: Assets/_Game/Art/HeroBasin/Grade/HeroBasin_F4f_Lut.png

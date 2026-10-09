@@ -109,12 +109,15 @@ namespace JungleBooze.Editor.HeroBasin
             Texture2D landscape = LookTestBatch.Render(camera, landscapeSize);
             File.WriteAllBytes(Path.Combine(outDir, "F4_landscape.png"), landscape.EncodeToPNG());
             stats.AppendLine().AppendLine("F4 landscape").Append(LookTestFrameBudget.Measure(camera, look));
+            Segment(camera, landscape, h, outDir, "F4", stats);
 
             var portraitSize = new Vector2Int(1170, 2532);
             HeroBasinBuilder.PoseCamera(camera, h, true, (float)portraitSize.x / portraitSize.y);
             Texture2D portrait = LookTestBatch.Render(camera, portraitSize);
             File.WriteAllBytes(Path.Combine(outDir, "P1_portrait.png"), portrait.EncodeToPNG());
             stats.AppendLine().AppendLine("P1 portrait").Append(LookTestFrameBudget.Measure(camera, look));
+            Segment(camera, portrait, h, outDir, "P1", stats);
+            stats.AppendLine().AppendLine("Pista (skinned, not in the tallies above): " + PistaTriangles().ToString("N0", System.Globalization.CultureInfo.InvariantCulture) + " tris");
             camera.ResetAspect();
 
             string keyframeFile = Path.GetFullPath(Path.Combine(Application.dataPath, "../..", style == HeroBasinStyle.Painterly ? PainterlyKeyframePath : KeyframePath));
@@ -139,6 +142,43 @@ namespace JungleBooze.Editor.HeroBasin
             }
 
             return 0;
+        }
+
+        /// <summary>Frame budgets by ID segmentation (painterly dressing, HERO_BASIN_DRESSING.md s2) and the ID mask image.</summary>
+        private static void Segment(Camera camera, Texture2D beauty, HeroBasinConfigAsset h, string outDir, string name, StringBuilder stats)
+        {
+            if (h.Style != HeroBasinStyle.Painterly)
+            {
+                return;
+            }
+
+            HeroBasinSegmentation.Result r = HeroBasinSegmentation.Measure(camera, beauty, h.SunLightDirection);
+            stats.Append(HeroBasinSegmentation.Format(name, r));
+            if (r?.Mask != null)
+            {
+                File.WriteAllBytes(Path.Combine(outDir, name + "_mask.png"), r.Mask.EncodeToPNG());
+                Object.DestroyImmediate(r.Mask);
+            }
+        }
+
+        private static long PistaTriangles()
+        {
+            long tris = 0;
+            GameObject pista = GameObject.Find("Pista");
+            if (pista == null)
+            {
+                return 0;
+            }
+
+            foreach (SkinnedMeshRenderer skinned in pista.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+            {
+                if (skinned.sharedMesh != null)
+                {
+                    tris += LookTestMeshFactory.TriangleCount(skinned.sharedMesh);
+                }
+            }
+
+            return tris;
         }
 
         /// <summary>Images scaled to one height, left to right, with a dark gap between them.</summary>

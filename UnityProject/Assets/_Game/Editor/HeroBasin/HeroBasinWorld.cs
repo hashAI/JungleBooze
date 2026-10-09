@@ -27,6 +27,25 @@ namespace JungleBooze.Editor.HeroBasin
         // Cascade feet that land on the basin water: (x, z, width). Foam is painted around them.
         private readonly List<Vector3> _footFoam = new List<Vector3>();
 
+        /// <summary>Travertine lip polylines in world space (crest height), left to right; for the rim dressing.</summary>
+        public readonly List<Vector3[]> Lips = new List<Vector3[]>();
+
+        /// <summary>Travertine cascade notches: (left end, right end) on the lip, world space.</summary>
+        public readonly List<KeyValuePair<Vector3, Vector3>> Notches = new List<KeyValuePair<Vector3, Vector3>>();
+
+        /// <summary>Rock shelves the wide cascades pour from: (centre x, top y, centre z, radius).</summary>
+        public readonly List<Vector4> Shelves = new List<Vector4>();
+
+        /// <summary>Lips of the wide cascades (centre at the brink) with their widths: (x, y, z, width).</summary>
+        public readonly List<Vector4> CascadeLips = new List<Vector4>();
+
+        /// <summary>Tall fall foot (plunge point), if any.</summary>
+        public Vector3? TallFoot { get; private set; }
+
+        // Painterly with the set-dressing pass (HeroBasinDressing): the procedural photo-leaf crowns on the arch and
+        // the stemless hanging leaf are left out; the dressing places painted kit clumps instead.
+        private bool Dressed => _h.Style == HeroBasinStyle.Painterly && _h.Dressing != null && _h.Dressing.Enabled;
+
         public HeroBasinWorld(LookTestBuildContext ctx, HeroBasinConfigAsset h, HeroBasinBuilder.PlantMaterials plants, IRandom rng, Vector3 eye)
         {
             _ctx = ctx;
@@ -260,12 +279,31 @@ namespace JungleBooze.Editor.HeroBasin
                 rock.Add(() => _ctx.AppendPiece(tiers, m, stone, Seg, "L0", "Travertine", true, LookTestBatchSet.Group.Ground, _ctx.OpenWet));
 
                 var lips = new List<Vector3>();
+                var lipLines = new SortedDictionary<string, SortedDictionary<string, Vector3>>(System.StringComparer.Ordinal);
                 foreach (KeyValuePair<string, Vector3> anchor in tiers.Anchors)
                 {
                     if (anchor.Key.StartsWith("Lip", System.StringComparison.Ordinal))
                     {
-                        lips.Add(m.MultiplyPoint3x4(anchor.Value));
+                        Vector3 w = m.MultiplyPoint3x4(anchor.Value);
+                        lips.Add(w);
+                        int p = anchor.Key.IndexOf('P');
+                        if (p > 3)
+                        {
+                            string lip = anchor.Key.Substring(0, p);
+                            if (!lipLines.TryGetValue(lip, out SortedDictionary<string, Vector3> line))
+                            {
+                                line = new SortedDictionary<string, Vector3>(System.StringComparer.Ordinal);
+                                lipLines.Add(lip, line);
+                            }
+
+                            line[anchor.Key.Substring(p)] = w;
+                        }
                     }
+                }
+
+                foreach (SortedDictionary<string, Vector3> line in lipLines.Values)
+                {
+                    Lips.Add(new List<Vector3>(line.Values).ToArray());
                 }
 
                 if (waters.Count > 0)
@@ -301,6 +339,7 @@ namespace JungleBooze.Editor.HeroBasin
                     Vector3 foot = m.MultiplyPoint3x4(f);
                     Vector3 lip = (left + right) * 0.5f + Vector3.up * 0.05f;
                     float width = Vector3.Distance(left, right);
+                    Notches.Add(new KeyValuePair<Vector3, Vector3>(left, right));
                     Vector3 run = foot - lip;
                     run.y = 0f;
                     LookTestLandmarks.Fall(_ctx, _rng, Seg, "Falls", lip, foot.y, width, _eye, Mathf.Clamp(run.magnitude, 0.3f, 4f), LookTestLandmarks.FallFoot.Pool, 2);
@@ -580,7 +619,7 @@ namespace JungleBooze.Editor.HeroBasin
                     }
                 }
 
-                for (int i = 0; i < _h.ArchCrowns && tops.Count > 0; i++)
+                for (int i = 0; !Dressed && i < _h.ArchCrowns && tops.Count > 0; i++)
                 {
                     Vector3 p = tops[_rng.NextInt(0, tops.Count)];
                     float height = _rng.NextFloat(6f, 13f);
@@ -630,6 +669,7 @@ namespace JungleBooze.Editor.HeroBasin
                     // The tall fall pours from the hero arch's cave mouth (RS_HeroArch_WaterfallMouth).
                     f.Top = _mouth.Value + _h.TallFallOffset;
                     tallFoot = new Vector3(f.Top.x, f.FootY, f.Top.z);
+                    TallFoot = tallFoot;
                 }
 
                 BrokenFall(f.Top, f.FootY, f.WidthM, f.Layers, f.IntoPool);
@@ -662,11 +702,13 @@ namespace JungleBooze.Editor.HeroBasin
                 }
 
                 Vector3 brink = f.Top;
+                CascadeLips.Add(new Vector4(f.Top.x, f.Top.y, f.Top.z, f.WidthM));
                 LookTestMeshAccumulator shelfWater = B.Get(Seg, "W", "Pools", _ctx.Pool, false, LookTestBatchSet.Group.Water);
                 for (int k = 0; k < shelfCenters.Count; k++)
                 {
                     Vector3 c = shelfCenters[k];
                     float r = radius * (k == 0 ? 1f : _rng.NextFloat(1.0f, 1.25f));
+                    Shelves.Add(new Vector4(c.x, f.Top.y - 0.4f, c.z, r));
                     Mesh shelf = LookTestLandmarks.Pillar(_rng, new Vector3(c.x, 0f, c.z), _h.BasinFloorY - 2f, f.Top.y - 0.4f, r, true, 22, 2.5f);
                     rock.Add(() => stone.Append(shelf, Matrix4x4.identity, _ctx.OpenWet));
                     // White rapids toward the brink and around the plunge, clear water between.
@@ -878,10 +920,14 @@ namespace JungleBooze.Editor.HeroBasin
                     continue;
                 }
                 var foot = new Vector3(x, y - 0.5f, z);
-                if (palms != null && _rng.Chance(0.1f))
+                if (!Dressed && palms != null && _rng.Chance(0.1f))
                 {
                     wood.Append(LookTestMeshFactory.Trunk(_rng, height, 0.35f + height * 0.012f, 2f, 7, 8), Matrix4x4.Translate(foot), LookTestBuildContext.Open);
                     HeroBasinPlants.PalmCrown(palms, _rng, foot + Vector3.up * height, height * 0.32f, Foliage(foot.y + height, height * 0.3f));
+                }
+                else if (Dressed && KitCrown(foot + Vector3.up * height * 0.3f, height * 0.75f))
+                {
+                    // Painterly: round canopy puffs sitting on the slope (map s3.6), no stick trunks under them.
                 }
                 else
                 {
@@ -908,8 +954,9 @@ namespace JungleBooze.Editor.HeroBasin
             }
 
             // Canopy mass under the crowns: lumpy forest so the hills never read as bare ground.
+            // Dressed: the smooth blobs read as lawn mounds; the painted canopy puffs cover the hills instead.
             LookTestMeshAccumulator mass = B.Get(Seg, "L4", "Canopy mass", _ctx.FarCanopy, false, LookTestBatchSet.Group.Trees);
-            for (int i = 0; i < 220; i++)
+            for (int i = 0; !Dressed && i < 220; i++)
             {
                 bool left = _rng.Chance(0.55f);
                 float x = left ? _rng.NextFloat(-230f, -30f) : _rng.NextFloat(48f, 230f);
@@ -953,7 +1000,8 @@ namespace JungleBooze.Editor.HeroBasin
                 Vector4 t = trees[i];
                 var foot = new Vector3(t.x, Height(t.x, t.y) - 0.5f, t.y);
                 wood.Append(LookTestMeshFactory.Trunk(_rng, t.z, 1.2f + 0.1f * i, 2f, 14, 18), Matrix4x4.Translate(foot), LookTestBuildContext.Open);
-                if (!KitCrown(foot + Vector3.up * t.z * 0.55f, t.z * 0.75f))
+                // Dressed: trunk only; the dressing hangs backlit leaf clusters into the corner and keeps the sun clear.
+                if (!Dressed && !KitCrown(foot + Vector3.up * t.z * 0.55f, t.z * 0.75f))
                 {
                     crowns.Append(LookTestMeshFactory.Crown(_rng, t.z, Mathf.RoundToInt(15f * t.w), t.w), Matrix4x4.Translate(foot), Foliage(foot.y + t.z * 0.65f, t.z * 0.4f));
                 }
@@ -989,9 +1037,12 @@ namespace JungleBooze.Editor.HeroBasin
                     }
                 }
 
-                // A big leaf hanging into the top-right corner.
+                // A big leaf hanging into the top-right corner (dressed: the right framing plant carries it instead).
                 Mesh hanging = HeroBasinPlants.Card(HeroBasinPlants.Broadleaf[1], 1.6f, -55f, 0.15f, 0.15f);
-                broad.Append(hanging, Matrix4x4.TRS(new Vector3(5.2f, 4.6f, 0.6f), Quaternion.Euler(0f, -140f, 25f), Vector3.one), HeroBasinPlants.Open);
+                if (!Dressed)
+                {
+                    broad.Append(hanging, Matrix4x4.TRS(new Vector3(5.2f, 4.6f, 0.6f), Quaternion.Euler(0f, -140f, 25f), Vector3.one), HeroBasinPlants.Open);
+                }
             }
 
             if (_plants.Bellcap != null)
