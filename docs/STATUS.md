@@ -57,11 +57,11 @@ Duko/continue, audio files) compiled clean on the Mac.
 | producer | not used yet | (the coordinating session does this role for now) | this file | — |
 | game-designer | done (2026-10-09) | Spec 103 vertical slice: scripted "Expedition 1", 13 chunks ~4:05, swim/vine/canopy/sailback/Veil Grotto secret/Shield/Deep Breath upgrade, AC-103-01–50 | `design/aurelia/GDD.md`, `design/aurelia/specs/` | Phase 2 chunk catalog detail; FTUE script |
 | balance-simulator | done (A3) | Python reference model, golden traces, S1–S9 report (`archive/pre-aurelia/docs/sim-reports/2026-10-07-spec001.md`) | `tools/sim/`, `docs/sim-reports/` | Phase 1: new movement/chunk model from the AURELIA spec (old model kept as reference) |
-| tech-architect | working (2026-10-09) | Look test: layered waterfalls, mist, roots, P1 scale, water; integration path for Art/Environment assets | `Assets/_Game/Editor/Setup/`, `docs/adr/0003-first-playable-bootstrap.md`, `docs/PLAY_FIRST_BUILD.md` | Add EditMode tests for `ProjectSetupRules`; Roslyn analyzers |
+| tech-architect | working (2026-10-09) | Hero basin v1 done (01b77e5, ~55% of keyframe, 40 draws/317k tris). Now iteration 2: lighting/grade, water, falls, Pista rim, composition | `Assets/_Game/Editor/Setup/`, `docs/adr/0003-first-playable-bootstrap.md`, `docs/PLAY_FIRST_BUILD.md` | Add EditMode tests for `ProjectSetupRules`; Roslyn analyzers |
 | gameplay-engineer | working (2026-10-09) | Review fixes done (238fbe0, EditMode 357/357, PlayMode 12/12). Now vertical slice part A: chunks, streaming, World Director, Expedition 1 script, collectibles, results, save, Deep Breath upgrade, Expedition scene | `Scripts/Gameplay/PowerUps`, `Hazards`, `Companion`, `Views`, `App/RunSceneBootstrap.cs` | Wire audio events; then Batch 3 |
 | ui-engineer | done (C2) | Track wired into the Run scene with gray-box views and HUD | `Scripts/Gameplay/Views`, `Scripts/App`, `Scripts/UI/Hud` | Fix errors the owner sends from Unity |
 | art-director | done (2026-10-09) | Meshy keyframes F1–F4 + P1 (93 credits) → design/aurelia/keyframes/ | `design/aurelia/ENVIRONMENT_STRATEGY.md` | Store art later |
-| asset-pipeline | done (2026-10-09) | Hero-basin kit: procedural rootstone (hero arch 10k tris 2k, pillars, small arch, outcrop, pool terraces, ledge), 3 plant clumps (OpenAI atlases), 7 OpenAI backdrop layers. Meshy 121 credits, OpenAI ~$0.65 | `art_source/pista/`, `tools/blender/pista/` | Report → import rigged Pista into LookTest |
+| asset-pipeline | working (2026-10-09) | Hero basin iteration 2 assets: arch v2 (braided gaps, 2×2k, vine curtains), travertine terraces v2, rocky ledge, framing plants, canopy cards (caps OpenAI $10, Meshy 150) | `art_source/pista/`, `tools/blender/pista/` | Report → import rigged Pista into LookTest |
 | audio-director | waiting | Old lane-era audio archived (2026-10-09) | — | AURELIA audio after the vertical slice (ElevenLabs needs owner OK) |
 | qa-engineer | waiting | — | — | FP1 stage F: test plan + owner play-test script |
 | performance-engineer | waiting | — | — | Benchmark scene (week 2+) |
@@ -128,6 +128,7 @@ Meshy: 3 (image edit test) + 30 (Pista 3D v1) = **33 credits used**; balance 2,4
 
 ## Log
 Newest first. One line per event.
+- 2026-10-09: Hero basin v1 comparison sent to owner (~55%). Launched iteration 2 (grade/water/falls + arch/terraces/foreground assets).
 - 2026-10-09: asset-pipeline done: hero-basin kit exported to Art/Environment (raw Meshy downloads git-ignored).
 - 2026-10-09: Phase 1 review fixes committed (238fbe0). [ASSUMED] high obstacles = thin branch + see-through vine curtain (readability). Launched vertical slice part A (world structure); part B (swim/vine/canopy/creature/secret) follows.
 - 2026-10-09: Owner: gameplay is fine (coordinator improves it autonomously); worried about look quality. Plan: one hero scene first (waterfall basin matching the OpenAI F4 keyframe), side-by-side comparison with honest per-layer gap, then other scenes with the same recipe. Redirected tech-architect and asset-pipeline to the hero scene.
