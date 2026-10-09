@@ -144,14 +144,19 @@ Previews: `RS_HeroArch_P_hero_compare.jpg` (F4_f crop | arch + vines), `RS_*_P_v
 previews use neutral light and Principled shading; the painterly look depends on the AD s4 shader (wrapped diffuse,
 teal shadows, warm terminator), which is tech-architect's.
 
+## Expedition forest kit (spec 103 chunks, painterly)
+Obstacles, pickups and discovery markers: `Obstacles/README.md`. Path ground, canopy beams/platform, path edges,
+riverbank, stiltwoods and mid trees: `Forest/README.md`. Sailback creature: `Creatures/README.md`. Backdrops
+`Backdrops/BD_Forest_Far`, `BD_Forest_Mid`, `BD_River_Valley`. Generators: `tools/blender/environment/forestlib.py`,
+`forest_kit.py`, `forest_trees.py`, `forest_sailback.py`, `forest_preview.py`, `forest_readme.py`, `tools/art/forest_finish.py`.
+
 ## Not delivered (yet)
 - Slab pieces: tops are lumpy painted bush shells, not leaf cards; from near they read as mossy mounds. For F4_f's
   tree crowns on the towers, place `FP_CanopyCrown_P_*` on the pillar tops in the scene. Texel density is low for a
   near view (~20 px/m at 1024): they are mid/far pieces.
 - Hero arch: strands are now round, even and cleanly seamed, crown leafier; F4_f still shows more (thinner) strands
   and more crossings and a fully green crown face. AD s2 caps strands at 5–8; judge in Unity with the AD s4 shader.
-- Stiltwoods: Meshy meshes exist (`art_source/environment/meshy/models/stilt_A/B/C.glb`), not cleaned/baked
-  (the coordinator paused them on 2026-10-09).
+- Stiltwoods: delivered procedurally in `Forest/` (the Meshy stilt meshes were reviewed and not used).
 - Palm frond clump: built and dropped (below the bar). Waterfall sheets, mist and water shading are tech-architect's.
 - Travertine tiers: each tier's drop is a fairly even wall band; the keyframe's drops are more broken into boulders.
   Worth one more pass once it's seen in engine with the cascade sheets.
