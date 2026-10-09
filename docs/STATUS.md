@@ -18,6 +18,13 @@ Baseline after the archive: all assemblies compile, EditMode 57/57 pass.
 animations (approved cap 150 credits). Then import rigged Pista into the LookTest scene, AI/CC0 environment props from
 `design/aurelia/LOOK_TEST_BRIEF.md`, screenshots to the owner, owner opens it on Mac + iPhone (P0-E).
 
+## Snapshot / handoff (2026-10-09 ~10:30 IST)
+- **Look gate:** hero basin (Scenes/HeroBasin, rebuilt by `HeroBasinBatch.BuildAndCapture`) vs `design/aurelia/keyframes/F4_e_openai_medium.jpg`: v1 ~55%, v2 ~60% (sent to owner). Iteration 3 running (tech-architect). If v3 isn't clearly >70%, rethink the approach (coordinator promised the owner). Owner approves the final render before any other scenes are built.
+- **Gameplay:** vertical slice part A committed (9835543). Part B (swim, vine, canopy, sailback, Veil Grotto, Deep Breath, revive, validator gaps, analytics hooks) running (gameplay-engineer); its in-progress files may break the main compile, so art agents use a temp project copy.
+- **Next after those:** commit; iteration 4 or approach rethink; part B review (code-reviewer); Pista swim clips (asset-pipeline, Meshy); travertine re-pass.
+- **Git LFS:** ~0.4 GB uploaded (GitHub free tier 1 GB); tell the owner before it's needed (~$5/mo per 50 GB).
+- Unity process check: use `pgrep -x Unity` (pgrep -f matches its own shell).
+
 ## Current milestone
 **LOOK GATE (owner, 2026-10-09):** no further scenes/environment content until the owner approves the final render of the waterfall-basin hero scene. Gameplay systems continue in gray-box.
 
@@ -57,11 +64,11 @@ Duko/continue, audio files) compiled clean on the Mac.
 | producer | not used yet | (the coordinating session does this role for now) | this file | — |
 | game-designer | done (2026-10-09) | Spec 103 vertical slice: scripted "Expedition 1", 13 chunks ~4:05, swim/vine/canopy/sailback/Veil Grotto secret/Shield/Deep Breath upgrade, AC-103-01–50 | `design/aurelia/GDD.md`, `design/aurelia/specs/` | Phase 2 chunk catalog detail; FTUE script |
 | balance-simulator | done (A3) | Python reference model, golden traces, S1–S9 report (`archive/pre-aurelia/docs/sim-reports/2026-10-07-spec001.md`) | `tools/sim/`, `docs/sim-reports/` | Phase 1: new movement/chunk model from the AURELIA spec (old model kept as reference) |
-| tech-architect | working (2026-10-09) | Hero basin v1 done (01b77e5, ~55% of keyframe, 40 draws/317k tris). Now iteration 2: lighting/grade, water, falls, Pista rim, composition | `Assets/_Game/Editor/Setup/`, `docs/adr/0003-first-playable-bootstrap.md`, `docs/PLAY_FIRST_BUILD.md` | Add EditMode tests for `ProjectSetupRules`; Roslyn analyzers |
+| tech-architect | working (2026-10-09) | Hero basin iteration 3: integrate arch v2 (2×2k) + vines, travertine tiers + cascades, ledge v2, framing clusters, canopy; powerful falls; value structure; target >70% → /tmp/junglebooze-hero/F4_compare_v3.jpg | `Assets/_Game/Editor/Setup/`, `docs/adr/0003-first-playable-bootstrap.md`, `docs/PLAY_FIRST_BUILD.md` | Add EditMode tests for `ProjectSetupRules`; Roslyn analyzers |
 | gameplay-engineer | working (2026-10-09) | Part A done (9835543: 15 chunks, World Director, Expedition scene, save; EditMode 411/411, PlayMode 15/15). Now part B: swim, vine, canopy, sailback, Veil Grotto, Deep Breath effect, validator gaps, revive, analytics hooks | `Scripts/Gameplay/PowerUps`, `Hazards`, `Companion`, `Views`, `App/RunSceneBootstrap.cs` | Wire audio events; then Batch 3 |
 | ui-engineer | done (C2) | Track wired into the Run scene with gray-box views and HUD | `Scripts/Gameplay/Views`, `Scripts/App`, `Scripts/UI/Hud` | Fix errors the owner sends from Unity |
 | art-director | done (2026-10-09) | Meshy keyframes F1–F4 + P1 (93 credits) → design/aurelia/keyframes/ | `design/aurelia/ENVIRONMENT_STRATEGY.md` | Store art later |
-| asset-pipeline | working (2026-10-09) | Hero basin iteration 2 assets: arch v2 (braided gaps, 2×2k, vine curtains), travertine terraces v2, rocky ledge, framing plants, canopy cards (caps OpenAI $10, Meshy 150) | `art_source/pista/`, `tools/blender/pista/` | Report → import rigged Pista into LookTest |
+| asset-pipeline | done (2026-10-09) | Iteration 2 assets (4e959d8): arch v2 14k tris 2×2k ~25 px/m, FP_ArchVines, travertine tiers (weakest; re-pass after seeing cascades), ledge v2, framing clusters, canopy. OpenAI $0.59 | `art_source/pista/`, `tools/blender/pista/` | Report → import rigged Pista into LookTest |
 | audio-director | waiting | Old lane-era audio archived (2026-10-09) | — | AURELIA audio after the vertical slice (ElevenLabs needs owner OK) |
 | qa-engineer | waiting | — | — | FP1 stage F: test plan + owner play-test script |
 | performance-engineer | waiting | — | — | Benchmark scene (week 2+) |
@@ -128,6 +135,7 @@ Meshy: 3 (image edit test) + 30 (Pista 3D v1) = **33 credits used**; balance 2,4
 
 ## Log
 Newest first. One line per event.
+- 2026-10-09: Hero basin iteration 2 committed (~60%; HDR capture fix). Iteration 2 assets committed. Launched iteration 3.
 - 2026-10-09: Vertical slice part A committed (9835543). [ASSUMED] first-run 60 s: crash becomes a side-clip; RandomStreamIds.Discovery = 7. Launched part B.
 - 2026-10-09: Hero basin v1 comparison sent to owner (~55%). Launched iteration 2 (grade/water/falls + arch/terraces/foreground assets).
 - 2026-10-09: asset-pipeline done: hero-basin kit exported to Art/Environment (raw Meshy downloads git-ignored).
