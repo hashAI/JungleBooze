@@ -135,6 +135,7 @@ Meshy: 3 (image edit test) + 30 (Pista 3D v1) = **33 credits used**; balance 2,4
 
 ## Log
 Newest first. One line per event.
+- 2026-10-09 13:31: Usage limit (reset 12:30) stopped all 3 agents (part B had EditMode 462/462; iteration 3 not yet implemented; swim clips mid-review). Resumed all three with their context.
 - 2026-10-09: Hero basin iteration 2 committed (~60%; HDR capture fix). Iteration 2 assets committed. Launched iteration 3.
 - 2026-10-09: Vertical slice part A committed (9835543). [ASSUMED] first-run 60 s: crash becomes a side-clip; RandomStreamIds.Discovery = 7. Launched part B.
 - 2026-10-09: Hero basin v1 comparison sent to owner (~55%). Launched iteration 2 (grade/water/falls + arch/terraces/foreground assets).
