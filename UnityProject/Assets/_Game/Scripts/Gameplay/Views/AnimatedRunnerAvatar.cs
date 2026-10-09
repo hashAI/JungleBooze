@@ -21,11 +21,28 @@ namespace JungleBooze.Gameplay.Views
         private static readonly int StateRateId = Animator.StringToHash("StateRate");
         private static readonly int LocomotionHash = Animator.StringToHash("Locomotion");
 
-        private static readonly string[] StateNames = { "Idle", "Locomotion", "Jump", "Fall", "Slide", "Stumble", "LandHard", "Death", "Swim", "Dive", "Grab", "Hang" };
-        private static readonly string[] StateClips = { "Idle", "Run_Alt", "Jump", "Fall", "Slide", "Stumble", "Land_Run", "Death_Backward", "Run", "Fall", "Vine_Grab", "Vine_Hang" };
+        private static readonly string[] StateNames =
+        {
+            "Idle", "Locomotion", "Jump", "Fall", "Slide", "Stumble", "LandHard", "Death", "Swim", "Dive", "Grab", "Hang",
+            "Leap", "Underwater", "VineRelease", "Balance", "Wade",
+        };
 
-        /// <summary>Fallback when a controller predates the traversal states: Swim → Locomotion, Dive → Fall, Grab → Jump, Hang → Fall.</summary>
-        private static readonly int[] Fallback = { 0, 1, 2, 3, 4, 5, 6, 7, 1, 3, 2, 3 };
+        /// <summary>
+        /// Clip per state ('|' = alternatives, newest first: the 2026-10-09 clips replace Slide and Death_Backward;
+        /// Swim/Dive without swim clips reuse Run/Fall and are detected by Vine_Hang). Used for lengths and detection.
+        /// </summary>
+        private static readonly string[] StateClips =
+        {
+            "Idle", "Run_Alt", "Jump", "Fall", "Slide_Clean|Slide", "Stumble", "Land_Run", "Death_Stumble|Death_Backward",
+            "Swim_Surface|Vine_Hang", "Swim_Dive|Vine_Hang", "Vine_Grab", "Vine_Hang",
+            "Swim_Leap", "Swim_Underwater", "Vine_Release", "Balance_Run", "Water_Wade",
+        };
+
+        /// <summary>
+        /// Fallback when a controller lacks a state (followed until a state exists): Swim → Locomotion, Dive → Fall,
+        /// Grab → Jump, Hang → Fall, Leap → Jump, Underwater → Dive, VineRelease → Fall, Balance/Wade → Locomotion.
+        /// </summary>
+        private static readonly int[] Fallback = { 0, 1, 2, 3, 4, 5, 6, 7, 1, 3, 2, 3, 2, 9, 3, 1, 1 };
 
         /// <summary>Hip height above the feet (pivot of the procedural body pitch), m.</summary>
         private const float HipHeight = 0.95f;
@@ -56,6 +73,7 @@ namespace JungleBooze.Gameplay.Views
         private Vector3 _lastVelocity;
         private bool _hasLast;
         private bool _ready;
+        private float _swimLineHeight = 0.35f;
 
         public RunnerAnimationModel Model => _model;
 
@@ -81,8 +99,9 @@ namespace JungleBooze.Gameplay.Views
             }
 
             _values.SlideDuration = config.JumpSlide.SlideDuration;
+            _swimLineHeight = config.Swim.SwimLineHeight;
             JumpArc arc = JumpArc.Measure(config.JumpSlide, FixedStep);
-            _model = new RunnerAnimationModel(_values, arc.Airtime);
+            _model = new RunnerAnimationModel(_values, arc.Airtime) { TraversalClips = TraversalClips };
         }
 
         public override void Apply(in RunnerVisualState state, float frameSeconds)
@@ -117,7 +136,19 @@ namespace JungleBooze.Gameplay.Views
 
             Quaternion rotation = state.Facing * Quaternion.Euler(0f, o.YawDeg, -o.RollDeg);
             Vector3 position = state.Position;
-            if (Mathf.Abs(o.BodyPitchDeg) > 0.01f || o.SwimWeight > 0.001f)
+            if (_model.TraversalClips)
+            {
+                // Swim clips use the water surface as their origin; the simulation's body line is swimLineHeight
+                // above it (IMPORT_NOTES 2026-10-09). The clips carry the body pitch; only the swing pitches here.
+                position -= Vector3.up * (_swimLineHeight * o.SwimWeight);
+                if (Mathf.Abs(o.BodyPitchDeg) > 0.01f)
+                {
+                    Vector3 pivot = position + (Vector3.up * HipHeight);
+                    rotation = Quaternion.AngleAxis(o.BodyPitchDeg, rotation * Vector3.right) * rotation;
+                    position = pivot - (rotation * new Vector3(0f, HipHeight, 0f));
+                }
+            }
+            else if (Mathf.Abs(o.BodyPitchDeg) > 0.01f || o.SwimWeight > 0.001f)
             {
                 // Pitch about the hips; in water the position is the body line, so the hips sit on it (spec 103 §4).
                 Vector3 pivot = position + (Vector3.up * (HipHeight * (1f - o.SwimWeight)));
@@ -220,12 +251,10 @@ namespace JungleBooze.Gameplay.Views
                 AnimationClip[] clips = _animator.runtimeAnimatorController.animationClips;
                 for (int s = 0; s < StateClips.Length; s++)
                 {
-                    for (int c = 0; c < clips.Length; c++)
+                    AnimationClip clip = FindClip(clips, StateClips[s]);
+                    if (clip != null)
                     {
-                        if (clips[c].name == StateClips[s])
-                        {
-                            _stateLengths[s] = clips[c].length;
-                        }
+                        _stateLengths[s] = clip.length;
                     }
                 }
             }
@@ -250,8 +279,10 @@ namespace JungleBooze.Gameplay.Views
             _hairTipLength = _hair[1] != null && _hair[2] != null ? Vector3.Distance(_hair[1].position, _hair[2].position) : 0.1f;
             for (int i = 8; i < StateNames.Length; i++)
             {
-                _hasState[i] = _animator.runtimeAnimatorController != null && HasControllerState(StateNames[i]);
+                _hasState[i] = _animator.runtimeAnimatorController != null && FindClip(_animator.runtimeAnimatorController.animationClips, StateClips[i]) != null;
             }
+
+            _model.TraversalClips = TraversalClips;
             _spring.Stiffness = _values.HairStiffness;
             _spring.Damping = _values.HairDamping;
             _spring.Gravity = _values.HairGravity;
@@ -259,39 +290,35 @@ namespace JungleBooze.Gameplay.Views
             _animator.Rebind();
         }
 
+        /// <summary>The controller has the 2026-10-09 traversal clips (Swim_Leap stands for the set).</summary>
+        public bool TraversalClips => _hasState[12];
+
         private int Resolve(int index)
         {
-            return index < _hasState.Length && _hasState[index] ? index : Fallback[index];
+            for (int guard = 0; guard < 4 && index < _hasState.Length && !_hasState[index]; guard++)
+            {
+                index = Fallback[index];
+            }
+
+            return index;
         }
 
-        private bool HasControllerState(string state)
+        private static AnimationClip FindClip(AnimationClip[] clips, string names)
         {
-            // Setup time: the controller's clip list names the traversal clips only if the states exist.
-            AnimationClip[] clips = _animator.runtimeAnimatorController.animationClips;
-            string clip = null;
-            for (int i = 0; i < StateNames.Length; i++)
+            // Setup time only (allocates on '|').
+            string[] options = names.Split('|');
+            for (int o = 0; o < options.Length; o++)
             {
-                if (StateNames[i] == state)
+                for (int c = 0; c < clips.Length; c++)
                 {
-                    clip = StateClips[i];
+                    if (clips[c].name == options[o])
+                    {
+                        return clips[c];
+                    }
                 }
             }
 
-            if (state == "Swim" || state == "Dive")
-            {
-                // Swim/Dive reuse Run/Fall: they exist when the traversal clips (Vine_Hang) are in the controller.
-                clip = "Vine_Hang";
-            }
-
-            for (int i = 0; i < clips.Length; i++)
-            {
-                if (clips[i].name == clip)
-                {
-                    return true;
-                }
-            }
-
-            return false;
+            return null;
         }
 
         private float LocomotionPhase()

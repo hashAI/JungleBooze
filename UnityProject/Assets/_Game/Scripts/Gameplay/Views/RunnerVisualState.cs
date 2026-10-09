@@ -49,5 +49,14 @@ namespace JungleBooze.Gameplay.Views
 
         /// <summary>Hand point on the vine (world) while swinging.</summary>
         public Vector3 Hand;
+
+        /// <summary>Airborne after a vine release.</summary>
+        public bool VineAir;
+
+        /// <summary>On canopy beams (balance run).</summary>
+        public bool Canopy;
+
+        /// <summary>Water depth over the feet while running (0 = dry), m.</summary>
+        public float WadeDepth;
     }
 }

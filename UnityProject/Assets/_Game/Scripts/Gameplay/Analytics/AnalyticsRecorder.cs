@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using System.Text;
+using JungleBooze.Core.Analytics;
 using JungleBooze.Gameplay.Expedition;
 using JungleBooze.Gameplay.Movement;
 using JungleBooze.Gameplay.World;
@@ -13,12 +14,16 @@ namespace JungleBooze.Gameplay.Analytics
     /// <c>ability_unlocked</c>, plus run_started / run_ended / death / revive / route_selected. Recording is a
     /// fixed ring (no allocation per tick); <see cref="Flush"/> serializes to JSON lines for an
     /// <see cref="IAnalyticsSink"/> at the results screen (allocates there). On-device only: there is no upload.
+    /// Privacy (review S8): no value derived from the install (the run seed is not logged); <c>session_id</c> is random
+    /// per launch. A run left by restart is closed with <c>run_ended</c> cause "abandoned" (N3).
     /// </summary>
     public sealed class AnalyticsRecorder
     {
         private static readonly string[] TraversalNames = { "jump", "slide", "dodge", "swim_dive", "swim_leap", "vine_good", "vine_perfect", "beam_gap" };
         private static readonly string[] CauseNames = { "none", "health", "crash", "fall" };
         private static readonly string[] RouteNames = { "main", "safe", "risky", "secret" };
+        private static readonly string[] PhaseNames = { "learning", "rhythm", "decision", "challenge", "danger", "mastery" };
+        private const string Abandoned = "abandoned";
 
         private readonly ExpeditionContent _content;
         private readonly AnalyticsEvent[] _events;
@@ -55,16 +60,15 @@ namespace JungleBooze.Gameplay.Analytics
             return n;
         }
 
-        public void BeginRun(int runIndex, ulong seed, int abilities, float skill, bool landscape)
+        /// <summary>True between <see cref="BeginRun"/> and <see cref="RecordRunEnded"/> / <see cref="RecordRunAbandoned"/>.</summary>
+        public bool RunOpen { get; private set; }
+
+        public void BeginRun(int runIndex, int abilities, float skill, bool landscape)
         {
             _runId = runIndex;
-            Add(new AnalyticsEvent { Type = AnalyticsEventType.RunStarted, Int = runIndex, Text = landscape ? "landscape" : "portrait", Value = skill, Text2 = null, Flag = abilities != 0 });
-            _lastSeed = seed;
-            _lastAbilities = abilities;
+            RunOpen = true;
+            Add(new AnalyticsEvent { Type = AnalyticsEventType.RunStarted, Int = runIndex, Text = landscape ? "landscape" : "portrait", Value = skill, Text2 = null, Flag = abilities != 0, Int2 = abilities });
         }
-
-        private ulong _lastSeed;
-        private int _lastAbilities;
 
         /// <summary>Feed every run event of the session (after each step).</summary>
         public void OnRunEvent(in RunEvent e, ExpeditionSession session)
@@ -126,6 +130,7 @@ namespace JungleBooze.Gameplay.Analytics
                         Text2 = session.Stats.CurrentChunk,
                         Int = e.Id,
                         Value = session.Simulation.State.Distance,
+                        Text3 = PhaseNames[Math.Min((int)session.Director.PhaseAt(session.Simulation.State.Distance).Phase, PhaseNames.Length - 1)],
                     });
                     break;
             }
@@ -133,7 +138,33 @@ namespace JungleBooze.Gameplay.Analytics
 
         public void RecordRunEnded(RunStats stats, float seconds, int revives)
         {
-            Add(new AnalyticsEvent { Type = AnalyticsEventType.RunEnded, TimeMs = (long)(seconds * 1000f), Value = stats.Distance, Int = stats.TotalCoins, Text = CauseNames[Math.Min((int)stats.Cause, 3)], Text2 = stats.DeathLabel, Flag = revives > 0 });
+            RunEnded(stats, seconds, revives, CauseNames[Math.Min((int)stats.Cause, 3)]);
+        }
+
+        /// <summary>Review N3: a run left by restart (or never finished) still gets its <c>run_ended</c>.</summary>
+        public void RecordRunAbandoned(RunStats stats, float seconds)
+        {
+            RunEnded(stats, seconds, stats.Revives, Abandoned);
+        }
+
+        private void RunEnded(RunStats stats, float seconds, int revives, string cause)
+        {
+            // The ring keeps the last slot for run_ended so the run is always closed.
+            Add(new AnalyticsEvent
+            {
+                Type = AnalyticsEventType.RunEnded,
+                TimeMs = (long)(seconds * 1000f),
+                Value = stats.Distance,
+                Int = stats.TotalCoins,
+                Int2 = stats.TotalCrystals,
+                Int3 = stats.Hits,
+                Int4 = revives,
+                Int5 = Dropped,
+                Text = cause,
+                Text2 = stats.DeathLabel,
+                Flag = revives > 0,
+            }, true);
+            RunOpen = false;
         }
 
         public void RecordAbilityUnlocked(AbilityDefinition ability, int runIndex)
@@ -156,9 +187,12 @@ namespace JungleBooze.Gameplay.Analytics
                 {
                     sink.Write(ToJson(_events[i]));
                 }
+
+                sink.Commit();
             }
 
             _count = 0;
+            Dropped = 0;
             return n;
         }
 
@@ -201,8 +235,7 @@ namespace JungleBooze.Gameplay.Analytics
                     break;
                 case AnalyticsEventType.RunStarted:
                     b.Append(",\"run_index\":").Append(e.Int.ToString(CultureInfo.InvariantCulture));
-                    b.Append(",\"seed\":").Append(_lastSeed.ToString(CultureInfo.InvariantCulture));
-                    b.Append(",\"abilities_mask\":").Append(_lastAbilities.ToString(CultureInfo.InvariantCulture));
+                    b.Append(",\"abilities_mask\":").Append(e.Int2.ToString(CultureInfo.InvariantCulture));
                     b.Append(",\"skill_S\":").Append(e.Value.ToString("0.###", CultureInfo.InvariantCulture));
                     Field(b, "orientation", e.Text);
                     break;
@@ -210,12 +243,17 @@ namespace JungleBooze.Gameplay.Analytics
                     b.Append(",\"distance_m\":").Append(((int)e.Value).ToString(CultureInfo.InvariantCulture));
                     b.Append(",\"duration_s\":").Append((e.TimeMs / 1000.0).ToString("0.0", CultureInfo.InvariantCulture));
                     b.Append(",\"coins\":").Append(e.Int.ToString(CultureInfo.InvariantCulture));
+                    b.Append(",\"crystals\":").Append(e.Int2.ToString(CultureInfo.InvariantCulture));
+                    b.Append(",\"hits\":").Append(e.Int3.ToString(CultureInfo.InvariantCulture));
+                    b.Append(",\"revives\":").Append(e.Int4.ToString(CultureInfo.InvariantCulture));
+                    b.Append(",\"dropped\":").Append(e.Int5.ToString(CultureInfo.InvariantCulture));
                     Field(b, "cause", e.Text);
                     break;
                 case AnalyticsEventType.Death:
                     Field(b, "cause", e.Text);
                     b.Append(",\"obstacle_id\":").Append(e.Int.ToString(CultureInfo.InvariantCulture));
                     Field(b, "chunk_id", e.Text2);
+                    Field(b, "phase", e.Text3);
                     b.Append(",\"distance_m\":").Append(((int)e.Value).ToString(CultureInfo.InvariantCulture));
                     break;
                 case AnalyticsEventType.ReviveOffered:
@@ -261,9 +299,9 @@ namespace JungleBooze.Gameplay.Analytics
             }
         }
 
-        private void Add(AnalyticsEvent e)
+        private void Add(AnalyticsEvent e, bool runEnd = false)
         {
-            if (_count == _events.Length)
+            if (_count >= _events.Length - (runEnd ? 0 : 1))
             {
                 Dropped++;
                 return;

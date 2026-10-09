@@ -41,6 +41,7 @@ namespace JungleBooze.Editor.Characters
             {
                 PistaImportSetup.ConfigureAll();
                 BuildAll();
+                BuildExpeditionPrefab();
                 AssetDatabase.SaveAssets();
             }
             catch (System.Exception e)
@@ -139,8 +140,8 @@ namespace JungleBooze.Editor.Characters
 
         /// <summary>
         /// The Expedition's Pista (spec 103): same model and tuning, a controller with the traversal states too
-        /// (Swim = Run, Dive = Fall, Grab = Vine_Grab, Hang = Vine_Hang; procedural body pitch on top). Written next to
-        /// Pista.prefab; the shared prefab and controller are not touched.
+        /// (Swim = Swim_Surface, Dive = Swim_Dive, Underwater, Leap, Grab = Vine_Grab, Hang = Vine_Hang, VineRelease,
+        /// Balance = Balance_Run, Wade = Water_Wade). Written next to Pista.prefab.
         /// </summary>
         [MenuItem("JungleBooze/Characters/Build Pista Expedition Prefab", false, 32)]
         public static GameObject BuildExpeditionPrefab()
@@ -195,16 +196,22 @@ namespace JungleBooze.Editor.Characters
             AddState(machine, "Locomotion", tree, "RunRate", new Vector3(250f, 80f));
             AddState(machine, "Jump", Clip("Jump"), "StateRate", new Vector3(500f, 0f));
             AddState(machine, "Fall", Clip("Fall"), "StateRate", new Vector3(500f, 80f));
-            AddState(machine, "Slide", Clip("Slide"), "StateRate", new Vector3(500f, 160f));
+            AddState(machine, "Slide", Clip("Slide_Clean"), "StateRate", new Vector3(500f, 160f));
             AddState(machine, "Stumble", Clip("Stumble"), "StateRate", new Vector3(250f, 160f));
             AddState(machine, "LandHard", Clip(PistaImportSetup.LandRunClip), "StateRate", new Vector3(500f, 240f));
-            AddState(machine, "Death", Clip("Death_Backward"), "StateRate", new Vector3(250f, 240f));
+            AddState(machine, "Death", Clip("Death_Stumble"), "StateRate", new Vector3(250f, 240f));
             if (traversal)
             {
-                AddState(machine, "Swim", Clip("Run"), "StateRate", new Vector3(750f, 0f));
-                AddState(machine, "Dive", Clip("Fall"), "StateRate", new Vector3(750f, 80f));
+                // Traversal clips (IMPORT_NOTES 2026-10-09). State names match RunnerAnimState.
+                AddState(machine, "Swim", Clip("Swim_Surface"), "StateRate", new Vector3(750f, 0f));
+                AddState(machine, "Dive", Clip("Swim_Dive"), "StateRate", new Vector3(750f, 80f));
                 AddState(machine, "Grab", Clip("Vine_Grab"), "StateRate", new Vector3(750f, 160f));
                 AddState(machine, "Hang", Clip("Vine_Hang"), "StateRate", new Vector3(750f, 240f));
+                AddState(machine, "Leap", Clip("Swim_Leap"), "StateRate", new Vector3(1000f, 0f));
+                AddState(machine, "Underwater", Clip("Swim_Underwater"), "StateRate", new Vector3(1000f, 80f));
+                AddState(machine, "VineRelease", Clip("Vine_Release"), "StateRate", new Vector3(1000f, 160f));
+                AddState(machine, "Balance", Clip("Balance_Run"), "StateRate", new Vector3(1000f, 240f));
+                AddState(machine, "Wade", Clip("Water_Wade"), "StateRate", new Vector3(1000f, 320f));
             }
 
             machine.defaultState = idle;

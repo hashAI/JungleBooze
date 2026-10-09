@@ -60,11 +60,18 @@ namespace JungleBooze.Gameplay.Expedition
 
         public bool FirstExpedition => Setup.FirstExpedition;
 
+        /// <summary>
+        /// Optional replay recording (format 3): <see cref="BeginRun"/> restarts it with the run's seed and setup,
+        /// <see cref="Step"/> records the input of Running/Finishing ticks, <see cref="Revive"/> adds a marker.
+        /// </summary>
+        public InputRecording Recording { get; set; }
+
         /// <summary>Plans the opening chunks and starts the run at Ready (instant restart).</summary>
         public void BeginRun(in ExpeditionRunSetup setup)
         {
             Setup = setup;
             Events.Clear();
+            Recording?.Restart(setup.Seed, ExpeditionReplay.ToReplaySetup(setup, _content));
             var director = new DirectorRunSetup
             {
                 Seed = setup.Seed,
@@ -85,12 +92,18 @@ namespace JungleBooze.Gameplay.Expedition
                 DeepDiveDepth = deepBreath != null ? deepBreath.DeepDiveDepth : -2.5f,
                 DeepDiveTime = deepBreath != null ? deepBreath.DeepDiveTime : 2.4f,
             });
-            Tracker.BeginRun(setup.Owned, setup.Discovered);
+            Tracker.BeginRun(setup.Owned, setup.PendingShowcase, setup.Discovered);
             Creatures.BeginRun();
         }
 
         public void Step(InputFrame frame)
         {
+            RunPhase phase = Run.Phase;
+            if (Recording != null && (phase == RunPhase.Running || phase == RunPhase.Finishing))
+            {
+                Recording.Add(Run.SessionTick, frame);
+            }
+
             RunnerState before = Run.Simulation.State;
             Run.Step(frame);
             ref readonly RunnerState now = ref Run.Simulation.State;
@@ -101,6 +114,27 @@ namespace JungleBooze.Gameplay.Expedition
             }
 
             Streamer.Update(now.S);
+        }
+
+        /// <summary>
+        /// Revives the dead runner (no payment checks: see <see cref="ReviveRules.TryRevive"/>) and books the cost.
+        /// Recorded as a replay marker on the current session tick. False when not dying.
+        /// </summary>
+        public bool Revive(int cost)
+        {
+            long tick = Run.SessionTick;
+            if (!Run.TryRevive())
+            {
+                return false;
+            }
+
+            RunStats stats = Tracker.Stats;
+            stats.ReviveCrystals += cost;
+            stats.Revives++;
+            stats.Dead = false;
+            Tracker.OnRevived();
+            Recording?.AddMarker(tick, ReplayMarkerKind.Revive);
+            return true;
         }
     }
 }

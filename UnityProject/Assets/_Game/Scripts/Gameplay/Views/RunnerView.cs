@@ -115,8 +115,17 @@ namespace JungleBooze.Gameplay.Views
                 hand = WorldPoint(vine.AnchorS + (vine.Length * Mathf.Sin(rad)), vine.X, vine.AnchorY - (vine.Length * Mathf.Cos(rad)));
             }
 
+            float wade = 0f;
+            if (b.Mode == MoveMode.Run && s.Grounded && _sim.Traversal != null && _sim.Traversal.TryGetWater(s.S, s.X, out float surface))
+            {
+                wade = Mathf.Max(0f, surface - s.Y);
+            }
+
             var visual = new RunnerVisualState
             {
+                VineAir = b.VineAir,
+                Canopy = Frames != null && Frames.IsCanopy(s.S),
+                WadeDepth = wade,
                 Position = WorldPoint(s.S, s.X, s.Y),
                 Facing = Quaternion.Euler(0f, HeadingDeg(s.S), 0f),
                 Mode = b.Mode,

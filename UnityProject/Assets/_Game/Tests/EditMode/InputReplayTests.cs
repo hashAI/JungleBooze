@@ -99,7 +99,7 @@ namespace JungleBooze.Tests.EditMode
             InputRecording loaded = InputRecordingSerializer.Read(stream);
 
             Assert.AreEqual(InputRecording.CurrentFormatVersion, loaded.FormatVersion);
-            Assert.AreEqual(2, InputRecording.CurrentFormatVersion, "ADR 0006: steering replays are format 2.");
+            Assert.AreEqual(3, InputRecording.CurrentFormatVersion, "ADR 0006 amendment: expedition replays are format 3.");
             Assert.AreEqual(77UL, loaded.Seed);
             Assert.AreEqual(0xABCDEF0123UL, loaded.ConfigHash);
             Assert.AreEqual("1.2.3 (45)", loaded.BuildVersion);

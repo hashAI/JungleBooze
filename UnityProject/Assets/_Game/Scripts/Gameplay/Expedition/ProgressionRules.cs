@@ -51,7 +51,8 @@ namespace JungleBooze.Gameplay.Expedition
 
         /// <summary>
         /// Banks a finished run into <paramref name="profile"/> and returns the results. <paramref name="showcased"/>
-        /// are abilities whose Showcase chunk appeared this run (cleared from the pending set).
+        /// are abilities whose Showcase chunk the runner reached this run (<see cref="RunStats.ShowcaseReached"/>;
+        /// cleared from the pending set, review S1). Sightings of known entries are added to the journal (S9).
         /// </summary>
         public static RunResults ApplyRun(SaveData profile, RunStats stats, ExpeditionContent content, bool firstExpedition, AbilityFlags showcased)
         {
@@ -87,6 +88,16 @@ namespace JungleBooze.Gameplay.Expedition
             profile.runsCompleted++;
             profile.pendingShowcase &= ~(int)showcased;
             profile.skill = DifficultyModel.UpdateSkill(content.Director, profile.skill, DifficultyModel.RunScore(content.Director, stats.Distance, stats.Hits, stats.TraversalAttempts, stats.TraversalSuccesses));
+
+            for (int i = 0; i < content.Discoveries.Count && i < RunStats.MaxSightingEntries; i++)
+            {
+                int seen = stats.SightingsOf(i);
+                JournalRecord record = seen > 0 ? profile.FindJournal(content.Discoveries[i].Id) : null;
+                if (record != null)
+                {
+                    record.sightings += seen;
+                }
+            }
 
             for (int i = 0; i < stats.NewDiscoveryCount; i++)
             {

@@ -25,5 +25,23 @@ namespace JungleBooze.Gameplay.Animation
 
         /// <summary>Vine_Hang: hanging loop for the swing.</summary>
         Hang,
+
+        // ---- Traversal clips (2026-10-09). Fallbacks: Leap → Jump, Underwater → Dive, VineRelease → Fall,
+        // Balance → Locomotion, Wade → Locomotion. ----
+
+        /// <summary>Swim_Leap: dolphin leap out of the water.</summary>
+        Leap,
+
+        /// <summary>Swim_Underwater: streamlined glide loop (Deep Breath passage).</summary>
+        Underwater,
+
+        /// <summary>Vine_Release: lets go of the vine into the airborne tuck.</summary>
+        VineRelease,
+
+        /// <summary>Balance_Run: arms out on the canopy beams.</summary>
+        Balance,
+
+        /// <summary>Water_Wade: high-knee run through shallow water.</summary>
+        Wade,
     }
 }

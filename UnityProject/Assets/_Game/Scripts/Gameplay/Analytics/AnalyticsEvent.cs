@@ -27,5 +27,20 @@ namespace JungleBooze.Gameplay.Analytics
 
         /// <summary>distance_m and similar.</summary>
         public float Value;
+
+        /// <summary>abilities_mask / crystals.</summary>
+        public int Int2;
+
+        /// <summary>hits.</summary>
+        public int Int3;
+
+        /// <summary>revives.</summary>
+        public int Int4;
+
+        /// <summary>dropped events (run_ended).</summary>
+        public int Int5;
+
+        /// <summary>phase (death).</summary>
+        public string Text3;
     }
 }

@@ -14,6 +14,8 @@ namespace JungleBooze.Gameplay.Expedition
     /// </summary>
     public sealed class RunTracker : ICreatureDiscoverySink
     {
+        private static readonly string[] CauseLabels = { "None", "Health", "Crash", "Fall" };
+
         private readonly WorldPath _path;
         private readonly RunnerSimulation _sim;
         private readonly WorldDirector _director;
@@ -34,6 +36,9 @@ namespace JungleBooze.Gameplay.Expedition
         private int _cleanLineChunk;
         private int _spanChunk;
         private int _spanPerfects;
+        private AbilityFlags _pendingShowcase;
+        private float _countedForkS;
+        private int _rewardedVine;
 
         public RunTracker(WorldPath path, RunnerSimulation sim, WorldDirector director, ExpeditionContent content, RunEventBuffer events)
         {
@@ -58,7 +63,19 @@ namespace JungleBooze.Gameplay.Expedition
         /// </summary>
         public void BeginRun(AbilityFlags owned, Func<string, bool> discovered)
         {
+            BeginRun(owned, AbilityFlags.None, discovered);
+        }
+
+        /// <summary>
+        /// Starts a run. <paramref name="pendingShowcase"/> are abilities whose Showcase chunk is still owed: the
+        /// tracker reports them in <see cref="RunStats.ShowcaseReached"/> once the runner enters that chunk (review S1).
+        /// </summary>
+        public void BeginRun(AbilityFlags owned, AbilityFlags pendingShowcase, Func<string, bool> discovered)
+        {
             _owned = owned;
+            _pendingShowcase = pendingShowcase;
+            _countedForkS = float.NegativeInfinity;
+            _rewardedVine = -1;
             Stats.Reset();
             Array.Clear(_crystalTaken, 0, _crystalTaken.Length);
             Array.Clear(_powerUpTaken, 0, _powerUpTaken.Length);
@@ -130,7 +147,7 @@ namespace JungleBooze.Gameplay.Expedition
             {
                 Stats.Dead = true;
                 Stats.Cause = now.Cause;
-                Stats.DeathLabel = now.DeathObstacle >= 0 ? _path.GetObstacleLabel(now.DeathObstacle) : now.Cause.ToString();
+                Stats.DeathLabel = now.DeathObstacle >= 0 ? _path.GetObstacleLabel(now.DeathObstacle) : CauseLabels[Math.Min((int)now.Cause, CauseLabels.Length - 1)];
                 Stats.DeathChunk = Stats.CurrentChunk;
             }
         }
@@ -147,6 +164,12 @@ namespace JungleBooze.Gameplay.Expedition
             Stats.ChunksEntered++;
             ChunkRuntime chunk = _path.Chunk(serial).Chunk;
             Stats.CurrentChunk = chunk.Id;
+            ref readonly PlacedChunk placed = ref _path.Chunk(serial);
+            if (placed.Pick.Reason == PickReason.Showcase)
+            {
+                Stats.ShowcaseReached |= chunk.Definition.ShowcaseAbilities & _pendingShowcase;
+            }
+
             Emit(RunEventType.ChunkEntered, serial, 0, 0f, now.Tick);
         }
 
@@ -155,10 +178,13 @@ namespace JungleBooze.Gameplay.Expedition
             for (int i = 0; i < _path.ForkCount; i++)
             {
                 ForkPoint fork = _path.GetFork(i);
-                if (!(before.S < fork.SFront && now.S >= fork.SFront))
+                if (!(before.S < fork.SFront && now.S >= fork.SFront) || fork.SFront <= _countedForkS)
                 {
+                    // Review N1: a fork crossed again after a revive is not counted twice.
                     continue;
                 }
+
+                _countedForkS = fork.SFront;
 
                 if (!_path.TryGetForkChunk(fork.Id, out int serial, out _))
                 {
@@ -217,10 +243,13 @@ namespace JungleBooze.Gameplay.Expedition
             }
 
             Stats.VineReleases++;
-            if (now.Perfects == before.Perfects)
+            if (now.Perfects == before.Perfects || now.VineId <= _rewardedVine)
             {
+                // Review N1: a vine swung again after a revive pays its Perfect coins once.
                 return;
             }
+
+            _rewardedVine = now.VineId;
 
             Stats.PerfectReleases++;
             int coins = _content.Pickups.PerfectReleaseCoins;
@@ -257,6 +286,12 @@ namespace JungleBooze.Gameplay.Expedition
             }
         }
 
+        /// <summary>After a revive: an open Clean Line is lost (the run died on it).</summary>
+        public void OnRevived()
+        {
+            _cleanLineActive = false;
+        }
+
         /// <summary>From <see cref="SailbackSystem"/>: a spawn group was observed long enough (spec 103 §7.3).</summary>
         public void OnCreatureObserved(string entryId, int chunkSerial, long tick)
         {
@@ -277,6 +312,7 @@ namespace JungleBooze.Gameplay.Expedition
             if (IsDiscovered(entry))
             {
                 Stats.Sightings++;
+                Stats.AddSighting(entry);
                 Emit(RunEventType.Discovery, entry, 0, 0f, tick);
                 return;
             }

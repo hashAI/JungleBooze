@@ -212,6 +212,7 @@ namespace JungleBooze.Gameplay.Bots
             isFall = false;
             _probe.CopyFrom(_live);
             int hits = _probe.State.Hits;
+            int rescues = _probe.State.FallRescues;
             for (int k = 0; k < horizon; k++)
             {
                 if (_probe.State.S > passS || _probe.State.Finished)
@@ -223,6 +224,14 @@ namespace JungleBooze.Gameplay.Bots
                 _probe.Step(new InputFrame(command, SteerDelta(_probe)));
                 ProbeSteps++;
                 ref readonly RunnerState s = ref _probe.State;
+                if (s.FallRescues > rescues)
+                {
+                    // A fall caught by the post-revive guard is still a fall to avoid (the bot plays it straight).
+                    isFall = true;
+                    threatEnd = s.S + ThreatPassMargin;
+                    return k;
+                }
+
                 if (s.Hits > hits || s.Dead)
                 {
                     int obstacle = s.Dead && s.Cause == DeathCause.Fall ? -1 : s.LastHitObstacle;

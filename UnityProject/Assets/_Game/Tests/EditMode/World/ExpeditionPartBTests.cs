@@ -218,7 +218,7 @@ namespace JungleBooze.Tests.EditMode.World
             ExpeditionSession session = ShippedContent.Session();
             session.BeginRun(ShippedContent.FirstRun());
             var analytics = new AnalyticsRecorder(ShippedContent.Shared) { Build = "test", SessionId = "s1" };
-            analytics.BeginRun(0, 1UL, 0, -0.3f, true);
+            analytics.BeginRun(0, 0, -0.3f, true);
             Drive(session, ShippedContent.Bot(session, RouteType.Secret, RouteType.Safe), 2100f, analytics);
             analytics.RecordAbilityUnlocked(ShippedContent.Shared.FindAbility(AbilityFlags.DeepBreath), 1);
             var types = new HashSet<string>();

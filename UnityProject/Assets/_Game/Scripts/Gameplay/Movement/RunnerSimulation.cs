@@ -441,23 +441,41 @@ namespace JungleBooze.Gameplay.Movement
             {
                 limit = Math.Min(limit, vine.LipS - _config.Vine.ReviveBeforeLip);
             }
+            // Review S4: the most recent safe point (≤ limit, with floor) whose run-in is clear of gaps for
+            // ReviveRunInTime at the ramped speed; else the one with the longest clear run-in.
+            float runIn = ReviveRunIn(_config, BaseSpeed());
             float s = Math.Max(0f, limit);
             float x = 0f;
             float y = 0f;
             bool found = false;
-            for (int i = 0; i < _safeCount && !found; i++)
+            float bestClear = -1f;
+            for (int i = 0; i < _safeCount; i++)
             {
                 int index = (_safeHead - 1 - i + SafeRingSize) % SafeRingSize;
-                if (_safeS[index] <= limit)
+                if (_safeS[index] > limit)
                 {
-                    float cx = ClampToPath(_safeS[index], _safeX[index]);
-                    if (_path.TryGetFloor(_safeS[index], cx, out float floor))
-                    {
-                        s = _safeS[index];
-                        x = cx;
-                        y = floor;
-                        found = true;
-                    }
+                    continue;
+                }
+
+                float cx = ClampToPath(_safeS[index], _safeX[index]);
+                if (!_path.TryGetFloor(_safeS[index], cx, out float floor))
+                {
+                    continue;
+                }
+
+                float clear = ClearRunIn(_safeS[index], cx, runIn);
+                if (clear > bestClear + 1e-3f)
+                {
+                    bestClear = clear;
+                    s = _safeS[index];
+                    x = cx;
+                    y = floor;
+                    found = true;
+                }
+
+                if (clear >= runIn)
+                {
+                    break;
                 }
             }
 
@@ -474,6 +492,8 @@ namespace JungleBooze.Gameplay.Movement
             }
 
             long t = _state.Tick;
+            // Review N1: the distance re-run after moving back is not counted twice.
+            _state.Distance = Math.Max(0f, _state.DeathDistance - Math.Max(0f, _state.DeathS - s));
             _state.Dead = false;
             _state.Cause = DeathCause.None;
             _state.DeathObstacle = -1;
@@ -969,7 +989,10 @@ namespace JungleBooze.Gameplay.Movement
 
             if ((_state.BelowLip || !hasFloor) && y < _state.LastGroundY - js.FallKillDepth)
             {
-                Die(t, DeathCause.Fall, -1);
+                if (!TryFallRescue(t))
+                {
+                    Die(t, DeathCause.Fall, -1);
+                }
             }
         }
 
@@ -1360,6 +1383,8 @@ namespace JungleBooze.Gameplay.Movement
             _state.DeathObstacle = obstacleId;
             _state.DeathTick = t;
             _state.DeathSpeed = _state.Speed;
+            _state.DeathDistance = _state.Distance;
+            _state.DeathS = _state.S;
             _state.Buffered = InputCommand.None;
             Emit(RunEventType.Died, obstacleId, (byte)cause, 0f);
         }
@@ -1498,6 +1523,104 @@ namespace JungleBooze.Gameplay.Movement
             {
                 _safeCount++;
             }
+        }
+
+        /// <summary>
+        /// Distance a revive needs clear of gaps (review S4): <see cref="HealthConfig.ReviveRunInTime"/> at the revive
+        /// ramp (from <see cref="RunSpeedConfig.ReviveRampFrom"/> to full speed over the ramp time). Used by the
+        /// simulation and by validator V15.
+        /// </summary>
+        public static float ReviveRunIn(MovementConfig config, float speed)
+        {
+            RunSpeedConfig sp = config.Speed;
+            float time = config.Health.ReviveRunInTime;
+            float ramp = Math.Min(time, Math.Max(0f, sp.ReviveRampTime));
+            float from = Math.Max(0f, Math.Min(1f, sp.ReviveRampFrom));
+            // Linear ramp: the ramp part averages (from + 1) / 2 of full speed.
+            return speed * ((ramp * (from + 1f) * 0.5f) + (time - ramp));
+        }
+
+        /// <summary>
+        /// Metres of floor ahead of (s, x) before the first gap, up to <paramref name="max"/>. Water and vine grab
+        /// funnels count as clear (swimming and the grab need no action). No allocation.
+        /// </summary>
+        private float ClearRunIn(float s, float x, float max)
+        {
+            const float step = 0.5f;
+            for (float d = step; d <= max + 1e-3f; d += step)
+            {
+                float sd = s + d;
+                float xd = ClampToPath(sd, x);
+                if (_path.TryGetFloor(sd, xd, out _))
+                {
+                    continue;
+                }
+
+                if (_traversal != null && (_traversal.TryGetWater(sd, xd, out _) || (_traversal.TryFindVine(sd, _config.Vine.GrabBefore, 30f, out VinePoint v) && sd <= v.LandingS)))
+                {
+                    continue;
+                }
+
+                return d - step;
+            }
+
+            // The sampling may stop short of max: check the far end too.
+            float se = s + max;
+            float xe = ClampToPath(se, x);
+            bool endClear = _path.TryGetFloor(se, xe, out _) ||
+                            (_traversal != null && (_traversal.TryGetWater(se, xe, out _) || (_traversal.TryFindVine(se, _config.Vine.GrabBefore, 30f, out VinePoint ve) && se <= ve.LandingS)));
+            return endClear ? max : max - 0.01f;
+        }
+
+        /// <summary>
+        /// Review S4 [ASSUMED 2026-10-09]: while the post-revive i-frames last, a fall is caught like a ledge assist:
+        /// Pista is set on the far lip of the gap she fell into (searched from where she left the ground, up to
+        /// 8 m past her position) instead of dying. Outside the guard falls kill as before.
+        /// </summary>
+        private bool TryFallRescue(long t)
+        {
+            if (_state.ReviveTick == Never || t > _state.InvulnerableUntilTick || t - _state.ReviveTick > _reviveInvulnerableTicks)
+            {
+                return false;
+            }
+
+            const float step = 0.25f;
+            float from = LastGroundedS();
+            float to = Math.Max(_state.S, from) + 8f;
+            bool sawGap = false;
+            for (float sd = from + step; sd <= to; sd += step)
+            {
+                float xd = ClampToPath(sd, _state.X);
+                if (!_path.TryGetFloor(sd, xd, out float floor))
+                {
+                    sawGap = true;
+                    continue;
+                }
+
+                if (!sawGap)
+                {
+                    continue;
+                }
+
+                _state.S = sd;
+                _state.X = xd;
+                _state.XTarget = xd;
+                _state.VLat = 0f;
+                if (_state.OverGap)
+                {
+                    // A caught fall is not a clean beam crossing (DDA and analytics).
+                    _state.OverGap = false;
+                    EmitTraversal(TraversalKind.BeamGap, false);
+                }
+
+                _state.AirPeakY = floor;
+                Land(t, floor);
+                _state.FallRescues++;
+                Emit(RunEventType.LedgeAssist, -1, 1, 0f);
+                return true;
+            }
+
+            return false;
         }
 
         private float LastGroundedS()

@@ -328,5 +328,90 @@ namespace JungleBooze.Tests.EditMode.Animation
             Assert.AreEqual(RunnerAnimState.Idle, m.State);
             Assert.AreEqual(0f, m.Output.YawDeg);
         }
+
+        [Test]
+        public void TraversalClips_SwimDiveLeapUnderwater_NoProceduralPitch()
+        {
+            RunnerAnimationModel m = RunningModel();
+            m.TraversalClips = true;
+            RunnerVisualState s = Running();
+            s.Mode = MoveMode.Swim;
+            s.Grounded = false;
+            m.Update(s, Dt, 0.5f);
+            Assert.AreEqual(RunnerAnimState.Swim, m.State);
+            Assert.AreEqual(Cfg().SwimSurfaceRate, m.Output.StateRate, 1e-5f);
+            for (int i = 0; i < 30; i++)
+            {
+                m.Update(s, Dt, 0.5f);
+            }
+
+            Assert.AreEqual(0f, m.Output.BodyPitchDeg, 0.01f, "the clip carries the swim pose");
+            Assert.Greater(m.Output.SwimWeight, 0.9f, "the avatar lowers the root to the water surface");
+
+            s.Dive = DivePhase.Down;
+            m.Update(s, Dt, 0.5f);
+            Assert.AreEqual(RunnerAnimState.Dive, m.State);
+            s.Dive = DivePhase.None;
+            m.Update(s, Dt, 0.5f);
+            Assert.AreEqual(RunnerAnimState.Swim, m.State);
+
+            m.OnRunEvent(Ev(RunEventType.Leap));
+            s.Leaping = true;
+            m.Update(s, Dt, 0.5f);
+            Assert.AreEqual(RunnerAnimState.Leap, m.State, "on the leap tick");
+            s.Leaping = false;
+            s.Mode = MoveMode.DeepDive;
+            m.Update(s, Dt, 0.5f);
+            Assert.AreEqual(RunnerAnimState.Underwater, m.State);
+        }
+
+        [Test]
+        public void TraversalClips_BalanceOnBeams_WadeInShallows_VineRelease()
+        {
+            RunnerAnimationModel m = RunningModel();
+            m.TraversalClips = true;
+            RunnerVisualState s = Running();
+            s.Canopy = true;
+            m.Update(s, Dt, 0.5f);
+            Assert.AreEqual(RunnerAnimState.Balance, m.State);
+            Assert.AreEqual(Cfg().BalanceRunRate, m.Output.StateRate, 1e-5f);
+            s.Canopy = false;
+            s.WadeDepth = 0.3f;
+            m.Update(s, Dt, 0.5f);
+            Assert.AreEqual(RunnerAnimState.Wade, m.State);
+            s.WadeDepth = 0f;
+            m.Update(s, Dt, 0.5f);
+            Assert.AreEqual(RunnerAnimState.Locomotion, m.State);
+
+            s.Mode = MoveMode.Swing;
+            s.Grounded = false;
+            for (int i = 0; i < 30; i++)
+            {
+                m.Update(s, Dt, 0.5f);
+            }
+
+            Assert.AreEqual(RunnerAnimState.Hang, m.State);
+            s.Mode = MoveMode.Run;
+            s.VineAir = true;
+            m.Update(s, Dt, 0.5f);
+            Assert.AreEqual(RunnerAnimState.VineRelease, m.State);
+            for (int i = 0; i < 30; i++)
+            {
+                m.Update(s, Dt, 0.5f);
+            }
+
+            Assert.AreEqual(RunnerAnimState.Fall, m.State, "Fall takes over after the release clip");
+        }
+
+        [Test]
+        public void WithoutTraversalClips_BeamsAndShallowsStayLocomotion()
+        {
+            RunnerAnimationModel m = RunningModel();
+            RunnerVisualState s = Running();
+            s.Canopy = true;
+            s.WadeDepth = 0.5f;
+            m.Update(s, Dt, 0.5f);
+            Assert.AreEqual(RunnerAnimState.Locomotion, m.State);
+        }
     }
 }

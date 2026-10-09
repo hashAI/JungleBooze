@@ -55,3 +55,35 @@ steering, and replays must stay bit-exact.
   record → replay equality on the feel course and identical state for 1–5 ticks per frame (AC-101-03).
 - `ARCHITECTURE.md` §5.3 should be read with this ADR: `InputCommand` members and `ReadCommands` changed as above;
   the 150 ms buffer and 100 ms coyote time stay in the simulation (spec 101 values, not the old GDD ones).
+
+## Amendment 1 (2026-10-09): replay format 3, expedition runs
+
+- Status: Accepted (gameplay-engineer, after review `docs/reviews/2026-10-09-vertical-slice.md` B1)
+- Hard to undo: no (format versions are never migrated; old files simply stop loading)
+
+**Context.** Directed expedition runs depend on more than the input stream: the run seed
+(`RunSeed(worldSeed, runIndex)`), the profile state the World Director and tracker read (owned abilities, pending
+showcase, skill S, discovered journal entries), the test-only forced speed, and revives, which change the simulation
+outside the input stream. Format 2 stored none of these (the header seed was always 0), so a run 2+ replay could not
+reproduce the chunk sequence, and any revived run diverged at the revive tick.
+
+**Decision.**
+1. `InputRecording` gains `Setup` (`ReplaySetup`: first-expedition flag, owned and pending-showcase masks, skill,
+   forced speed, discovered ids) and **markers** (`ReplayMarker { long Tick; ReplayMarkerKind Kind }`, `Revive = 1`;
+   kind values are append-only). The header seed is the run's seed.
+2. `ExpeditionSession.Recording` records inputs of Running/Finishing ticks keyed by the session tick, restarts the
+   recording with the seed and setup on `BeginRun`, and adds a `Revive` marker on the session tick the revive was
+   accepted. A marker is applied **before** that tick's input is read (`ExpeditionReplay.Play`).
+3. Binary layout, format 3: magic `"JBRP"`, int32 3, uint64 seed, uint64 config hash, string build; uint8 setup
+   present; if present: uint8 flags (bit 0 first expedition), int32 owned, int32 pending showcase, float32 skill,
+   float32 forced speed, int32 discovered count, strings; int32 marker count, per marker int64 tick + uint8 kind;
+   int32 frame count, per frame int64 tick + uint8 commands + int16 lateral mm. Other versions throw
+   `NotSupportedException` (no migration, as before).
+4. The revive ready beat (`RunFlowConfig.ReviveReadyTime`, 1.0 s) is a Ready phase inside `RunSession`, so it is
+   reproduced by the replay without extra data.
+5. Debug-build replays are written to `Application.temporaryCachePath/replays` (iOS `Library/Caches`, not backed up).
+
+**Consequences.** EditMode test `SliceReviewFixTests.B1_Run2WithRevive_RecordsSetupAndRevive_AndReplaysBitExactly`
+records a run-2 profile with a paid revive, round-trips the file, replays it and compares the full `RunnerState`,
+the chunk sequence and the run stats. The feel-test scene still writes plain recordings (setup null), which stay
+valid as simulation-only replays.

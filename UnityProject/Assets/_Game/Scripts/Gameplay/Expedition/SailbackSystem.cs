@@ -15,7 +15,9 @@ namespace JungleBooze.Gameplay.Expedition
     public sealed class SailbackSystem
     {
         public const int Capacity = 24;
-        private const int GroupCapacity = 16;
+
+        /// <summary>Spawn groups tracked at once (live chunks × spawns per chunk, with headroom).</summary>
+        public const int GroupCapacity = 16;
 
         private readonly WorldPath _path;
         private readonly SailbackConfig _config;
@@ -126,7 +128,9 @@ namespace JungleBooze.Gameplay.Expedition
                 {
                     CreatureSpawn sp = p.Chunk.GetCreature(k);
                     int group = (p.Serial * ChunkRuntime.LocalIdStride) + k;
-                    int g = group % GroupCapacity;
+
+                    // Review S2: a free-slot search (not group % capacity, which made chunk n and n + 2 share slots).
+                    int g = FreeGroupSlot();
                     _groupId[g] = group;
                     _groupObserved[g] = 0;
                     _groupFired[g] = false;
@@ -167,6 +171,38 @@ namespace JungleBooze.Gameplay.Expedition
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// A group slot that is unused, or whose chunk has streamed out; else the oldest group (lowest serial) that has
+        /// already reported or has no journal entry; else the oldest. No allocation.
+        /// </summary>
+        private int FreeGroupSlot()
+        {
+            for (int g = 0; g < GroupCapacity; g++)
+            {
+                if (_groupId[g] < 0 || !_path.IsLive(_groupSerial[g]))
+                {
+                    return g;
+                }
+            }
+
+            int best = -1;
+            for (int pass = 0; pass < 2 && best < 0; pass++)
+            {
+                for (int g = 0; g < GroupCapacity; g++)
+                {
+                    bool done = _groupFired[g] || _groupEntry[g] == null;
+                    if ((pass == 0 && !done) || (best >= 0 && _groupId[best] <= _groupId[g]))
+                    {
+                        continue;
+                    }
+
+                    best = g;
+                }
+            }
+
+            return best;
         }
 
         private int FreeSlot()

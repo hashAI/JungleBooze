@@ -35,6 +35,11 @@ namespace JungleBooze.Editor.Characters
             ("Strafe_Left", true, true), ("Strafe_Right", true, true), ("Jump", false, false), ("Jump_Standing", false, false),
             ("Fall", true, false), ("Land", false, true), ("Slide", false, true), ("Stumble", false, true),
             ("Death_Backward", false, true), ("Vine_Grab", false, true), ("Vine_Hang", true, true), ("Vine_Swing", false, true),
+
+            // Vertical-slice clips (IMPORT_NOTES 2026-10-09). Swim clips: root = water surface line.
+            ("Swim_Surface", true, true), ("Swim_Dive", false, false), ("Swim_Underwater", true, false), ("Swim_Leap", false, false),
+            ("Water_Wade", true, true), ("Water_Entry", false, true), ("Water_Exit", false, true), ("Balance_Run", true, true),
+            ("Vine_Release", false, false), ("Death_Stumble", false, true), ("Slide_Clean", false, true),
         };
 
         public const string LandRunClip = "Land_Run";

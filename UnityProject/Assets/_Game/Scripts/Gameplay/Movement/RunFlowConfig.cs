@@ -24,6 +24,12 @@ namespace JungleBooze.Gameplay.Movement
         /// <summary>Pause: resume after this "ready" beat, s (spec 101 §9).</summary>
         public float ResumeReadyTime = 1f;
 
+        /// <summary>
+        /// Revive: the simulation waits this long at the revive point before running again (review S4,
+        /// [ASSUMED 2026-10-09] same 1.0 s beat as resume). Inside the simulation, so replays reproduce it.
+        /// </summary>
+        public float ReviveReadyTime = 1f;
+
         public RunFlowConfig Clone()
         {
             return (RunFlowConfig)MemberwiseClone();

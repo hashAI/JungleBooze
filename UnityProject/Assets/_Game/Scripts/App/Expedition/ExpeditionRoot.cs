@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using System.IO;
+using System.Security.Cryptography;
 using System.Text;
 using JungleBooze.App.FeelTest;
 using JungleBooze.Core;
@@ -18,6 +19,7 @@ using JungleBooze.Gameplay.Run;
 using JungleBooze.Gameplay.Views;
 using JungleBooze.Gameplay.Views.World;
 using JungleBooze.Gameplay.World;
+using JungleBooze.Services.Analytics;
 using JungleBooze.Services.Haptics;
 using JungleBooze.Services.Save;
 using JungleBooze.Services.Settings;
@@ -92,7 +94,7 @@ namespace JungleBooze.App.Expedition
         private ToastQueue _toasts;
         private SaveService _save;
         private SaveData _profile;
-        private Func<string, bool> _discovered;
+        private ExpeditionFlow _flow;
         private RunResults _results;
         private readonly StringBuilder _debugText = new StringBuilder(512);
         private bool _built;
@@ -129,6 +131,12 @@ namespace JungleBooze.App.Expedition
         public SaveData Profile => _profile;
 
         public SaveService SaveService => _save;
+
+        /// <summary>Economy/save/analytics flow (plain C#, review S10).</summary>
+        public ExpeditionFlow Flow => _flow;
+
+        /// <summary>The current run's replay recording (format 3).</summary>
+        public InputRecording Recording => _recording;
 
         public RunResults LastResults => _results;
 
@@ -207,7 +215,9 @@ namespace JungleBooze.App.Expedition
             _help = new HelpTracker(_session.Path, _session.Simulation);
             _toasts = new ToastQueue(8, 2f, 0.5f);
             ulong configHash = MovementConfigAssets.Mix(_movement.ComputeHash(), _content.ComputeHash().ToString(CultureInfo.InvariantCulture));
+            // Replay format 3: the session restarts it per run with the run seed and setup and records revives.
             _recording = new InputRecording(0UL, configHash, Application.version, 60 * 60 * 10);
+            _session.Recording = _recording;
 
             // Save: on device in play mode, memory for tools and tests.
             SaveData seeded = _profile;
@@ -219,8 +229,6 @@ namespace JungleBooze.App.Expedition
             {
                 Debug.LogWarning("[JungleBooze] Save loaded with outcome " + _save.LastOutcome + (_save.LastError != null ? ": " + _save.LastError : string.Empty));
             }
-
-            _discovered = id => _profile.IsDiscovered(id);
 
             _gestureRecognizer = new GestureRecognizer(_gestures.Values);
             _dispatcher = new FrameInputDispatcher(_gestureRecognizer, _gestures.Values.CommandQueueSize);
@@ -259,9 +267,11 @@ namespace JungleBooze.App.Expedition
                 Modifiers = _cameraModifiers != null ? _cameraModifiers.Values.Clone() : new CameraModifiers(),
             };
 
-            // Analytics: on-device log only (memory for tools and tests); no network.
+            // Analytics: on-device log only (memory for tools and tests); no network. Library/Caches on iOS (not
+            // backed up to iCloud, review S7).
             _analytics = new AnalyticsRecorder(_expedition) { Build = Application.version, SessionId = Guid.NewGuid().ToString("N") };
-            _analyticsLog = new LocalAnalyticsLog(_memorySave || !Application.isPlaying ? null : Application.persistentDataPath);
+            _analyticsLog = new LocalAnalyticsLog(_memorySave || !Application.isPlaying ? null : Application.temporaryCachePath);
+            _flow = new ExpeditionFlow(_expedition, _session, _save, _profile, _analytics, _analyticsLog);
 
             if (Application.isPlaying)
             {
@@ -281,16 +291,9 @@ namespace JungleBooze.App.Expedition
         /// <summary>New run from the current profile (instant restart; Expedition 1 when no run was finished yet).</summary>
         public void StartRun()
         {
-            bool first = _profile.runsCompleted == 0;
-            var setup = new ExpeditionRunSetup
-            {
-                FirstExpedition = first,
-                Seed = ExpeditionRunSetup.RunSeed(_profile.worldSeed, _profile.runsCompleted),
-                Owned = (AbilityFlags)_profile.abilities,
-                PendingShowcase = (AbilityFlags)_profile.pendingShowcase,
-                Skill = _profile.skill,
-                Discovered = _discovered,
-            };
+            _flow.SafePoint(true);
+            ExpeditionRunSetup setup = _flow.NextRunSetup();
+            bool first = setup.FirstExpedition;
             BeginRun(setup);
             _establishing = first && _runsThisSession == 0 && Application.isPlaying ? _expedition.Results.EstablishingShotTime : 0f;
             _runsThisSession++;
@@ -299,12 +302,11 @@ namespace JungleBooze.App.Expedition
         /// <summary>Tools and tests: start a run with an explicit setup (forced speed, seeds).</summary>
         public void BeginRun(in ExpeditionRunSetup setup)
         {
-            _session.BeginRun(setup);
+            _flow.BeginRun(setup, _landscapeActive);
             _time.Reset();
             _dispatcher.Clear();
             _gestureRecognizer.Reset();
             _bot.Reset();
-            _recording.Clear();
             _worldView.ResetRun();
             _runnerView.ResetRun();
             _feedback.Reset();
@@ -320,7 +322,6 @@ namespace JungleBooze.App.Expedition
             _reviveOffer = 0f;
             _reviveHandledTick = -1;
             _curtainFlash = 0f;
-            _analytics.BeginRun(_profile.runsCompleted, setup.Seed, (int)setup.Owned, setup.Skill, _landscapeActive);
             _runnerView.Sync(1f, 0f);
             _rig.Snap(CameraTarget(_runnerView.Interpolated));
             ApplyCamera(_rig.Pose);
@@ -442,15 +443,13 @@ namespace JungleBooze.App.Expedition
         /// <summary>LEARN: deducts the cost once, saves, plays the unlock moment, then returns to the results.</summary>
         public bool Learn()
         {
-            if (_upgradeAbility == null || !ProgressionRules.TryLearn(_profile, _upgradeAbility))
+            if (!_flow.Learn(_upgradeAbility))
             {
                 return false;
             }
 
-            _save.Save(_profile);
-            _analytics.RecordAbilityUnlocked(_upgradeAbility, _profile.runsCompleted);
-            _analytics.Flush(_analyticsLog);
-            Debug.Log("[JungleBooze] Learned " + _upgradeAbility.Name + "; wallet " + _profile.coins + " coins, " + _profile.crystals + " crystals.");
+            Debug.Log("[JungleBooze] Learned " + _upgradeAbility.Name + "; wallet " + _profile.coins + " coins, " + _profile.crystals + " crystals." +
+                      (_flow.LastSaveOk ? string.Empty : " Save pending (" + _save.LastError + "); retried at the next safe point."));
             if (_hud != null)
             {
                 _hud.ShowLearned(_upgradeAbility.Name);
@@ -475,13 +474,12 @@ namespace JungleBooze.App.Expedition
             }
 
             int cost = ReviveRules.Cost(_expedition.Results, _session.Stats.Revives);
-            int index = _session.Stats.Revives;
-            if (!ReviveRules.TryRevive(_session, _expedition.Results, _profile))
+            if (!_flow.AcceptRevive(_session.Simulation.State.Tick * 1000L / StepsPerSecond))
             {
                 return false;
             }
 
-            _analytics.RecordRevive(true, cost, index, _session.Simulation.State.Tick * 1000L / StepsPerSecond);
+            // The simulation waits RunFlowConfig.ReviveReadyTime ("READY") at the revive point (review S4).
             _reviveOffer = 0f;
             _time.ClearAccumulator();
             _dispatcher.Clear();
@@ -508,13 +506,13 @@ namespace JungleBooze.App.Expedition
             _reviveHandledTick = s.DeathTick;
             RunStats stats = _session.Stats;
             ResultsConfig cfg = _expedition.Results;
-            if (_botDriving || !Application.isPlaying || !ReviveRules.CanOffer(cfg, _session.FirstExpedition, stats) || !ReviveRules.CanAfford(cfg, _profile, stats))
+            if (_botDriving || !Application.isPlaying || !_flow.CanOfferRevive())
             {
                 return;
             }
 
             _reviveOffer = cfg.ReviveOfferTime;
-            _analytics.RecordRevive(false, ReviveRules.Cost(cfg, stats.Revives), stats.Revives, s.Tick * 1000L / StepsPerSecond);
+            _flow.RecordReviveOffered(s.Tick * 1000L / StepsPerSecond);
             _hud?.ShowRevive(ReviveRules.Cost(cfg, stats.Revives), true, _reviveOffer);
         }
 
@@ -553,6 +551,7 @@ namespace JungleBooze.App.Expedition
 
             _gestureRecognizer.CancelAll(Time.realtimeSinceStartupAsDouble);
             _dispatcher.Clear();
+            _flow?.SafePoint(true);
             if (_session.Phase != RunPhase.Results)
             {
                 _paused = true;
@@ -650,12 +649,6 @@ namespace JungleBooze.App.Expedition
         {
             InputFrame player = _dispatcher.ReadInput(_session.Run.SessionTick);
             InputFrame frame = _botDriving ? _bot.ReadInput(_session.Run.SessionTick) : player;
-            RunPhase phase = _session.Phase;
-            if (phase == RunPhase.Running || phase == RunPhase.Finishing)
-            {
-                _recording.Add(_session.Run.SessionTick, frame);
-            }
-
             _session.Step(frame);
             _time.Step();
             _help.Update();
@@ -734,6 +727,11 @@ namespace JungleBooze.App.Expedition
                 _resultsShown = true;
                 FinishRun();
             }
+            else if (_resultsShown)
+            {
+                // A save that failed at run end is retried with back-off while the results show (review S3).
+                _flow.SafePoint(false);
+            }
 
             if (_hud == null)
             {
@@ -811,10 +809,15 @@ namespace JungleBooze.App.Expedition
         {
             RunStats stats = _session.Stats;
             bool first = _session.FirstExpedition;
-            _results = ProgressionRules.ApplyRun(_profile, stats, _expedition, first, _session.Director.ShowcasedAbilities);
-            bool saved = _save.Save(_profile);
-            _analytics.RecordRunEnded(stats, _session.Run.RunSeconds, stats.Revives);
-            _analytics.Flush(_analyticsLog);
+
+            // Never throws on a storage failure (review S3): the results always show; the save is retried.
+            _results = _flow.FinishRun();
+            bool saved = _flow.LastSaveOk;
+            if (_session.Director.LastResortPicks > 0)
+            {
+                Debug.LogWarning("[JungleBooze] World Director used " + _session.Director.LastResortPicks + " last-resort pick(s) this run (content gap).");
+            }
+
             _resultsShownAt = Time.realtimeSinceStartup;
             if (_hud != null)
             {
@@ -830,7 +833,7 @@ namespace JungleBooze.App.Expedition
                       "), crystals " + stats.TotalCrystals + ", hits " + stats.Hits + ", discoveries " + stats.NewDiscoveryCount + ", routes risky/safe/secret " +
                       stats.RiskyRoutes + "/" + stats.SafeRoutes + "/" + stats.SecretRoutes + ", cause " + stats.Cause + " " + stats.DeathLabel +
                       ", objective \"" + ExpeditionHud.ObjectiveLine(_results.Objective).Replace('\n', ' ') + "\", skill " +
-                      _profile.skill.ToString("0.00", CultureInfo.InvariantCulture) + (saved ? string.Empty : " (save read-only)") +
+                      _profile.skill.ToString("0.00", CultureInfo.InvariantCulture) + (saved ? string.Empty : _save.ReadOnly ? " (save read-only)" : " (save pending: " + _save.LastError + ")") +
                       (_botDriving ? ", bot" : string.Empty) + (replay != null ? ", replay " + replay : string.Empty));
         }
 
@@ -843,7 +846,8 @@ namespace JungleBooze.App.Expedition
 
             try
             {
-                string folder = Path.Combine(Application.persistentDataPath, "replays");
+                // Library/Caches on iOS: re-creatable debug data is not backed up (review S7).
+                string folder = Path.Combine(Application.temporaryCachePath, "replays");
                 Directory.CreateDirectory(folder);
                 string file = Path.Combine(folder, "expedition-last.jbr");
                 using (FileStream stream = File.Create(file))
@@ -1043,6 +1047,8 @@ namespace JungleBooze.App.Expedition
             DebugFormat.Int(b, _session.Director.FallbackPicks);
             b.Append("  emergency ");
             DebugFormat.Int(b, _session.Director.EmergencyPicks);
+            b.Append("  last resort ");
+            DebugFormat.Int(b, _session.Director.LastResortPicks);
             b.Append('\n');
             b.Append("skill S ");
             DebugFormat.Fixed(b, _session.Director.Skill, 2);
@@ -1054,8 +1060,15 @@ namespace JungleBooze.App.Expedition
 
         private static long NewWorldSeed()
         {
-            // Not simulation code: the install seed only has to differ between installs.
-            return DateTime.UtcNow.Ticks ^ ((long)Environment.TickCount << 32);
+            // Not simulation code: the install seed only has to differ between installs. From a CSPRNG, not the
+            // clock, so it can't be guessed from the install time (review S8).
+            var bytes = new byte[8];
+            using (RandomNumberGenerator rng = RandomNumberGenerator.Create())
+            {
+                rng.GetBytes(bytes);
+            }
+
+            return BitConverter.ToInt64(bytes, 0);
         }
 
         // ---- IRunFeedbackListener ----

@@ -7,8 +7,9 @@ namespace JungleBooze.Gameplay.Expedition
     /// <summary>
     /// Revive "Continue?" (GDD §11, spec 103 §9.2): never in Expedition 1; from run 2 up to
     /// <see cref="ResultsConfig.MaxRevives"/> per run at 1, 2, 4 crystals, paid from this run's crystals and the
-    /// wallet (banked at the results). The revive itself is the simulation's (last safe ground, 30 m cleared,
-    /// 2 s i-frames; swim/vine/canopy placements per spec 103 §16). Plain C#.
+    /// wallet (banked at the results). The revive itself is the simulation's (a validated safe point with a clear
+    /// run-in, 30 m cleared, 2 s i-frames that also catch a fall, swim/vine/canopy placements per spec 103 §16), after
+    /// a 1.0 s ready beat. Plain C#.
     /// </summary>
     public static class ReviveRules
     {
@@ -49,16 +50,7 @@ namespace JungleBooze.Gameplay.Expedition
                 return false;
             }
 
-            int cost = Cost(config, stats.Revives);
-            if (!session.Run.TryRevive())
-            {
-                return false;
-            }
-
-            stats.ReviveCrystals += cost;
-            stats.Revives++;
-            stats.Dead = false;
-            return true;
+            return session.Revive(Cost(config, stats.Revives));
         }
     }
 }

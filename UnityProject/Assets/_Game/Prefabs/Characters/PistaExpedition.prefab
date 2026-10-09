@@ -104,22 +104,6 @@ PrefabInstance:
       propertyPath: m_SkinnedMotionVectors
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: -653992566022304585, guid: 543295567fa1c4183be27fac915113b2, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 0.52706134
-      objectReference: {fileID: 0}
-    - target: {fileID: -653992566022304585, guid: 543295567fa1c4183be27fac915113b2, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: -0.43191004
-      objectReference: {fileID: 0}
-    - target: {fileID: -653992566022304585, guid: 543295567fa1c4183be27fac915113b2, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: -0.50602746
-      objectReference: {fileID: 0}
-    - target: {fileID: -653992566022304585, guid: 543295567fa1c4183be27fac915113b2, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: -0.5287688
-      objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 543295567fa1c4183be27fac915113b2, type: 3}
       propertyPath: m_Name
       value: Model

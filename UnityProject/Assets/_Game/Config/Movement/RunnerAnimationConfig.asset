@@ -31,20 +31,20 @@ MonoBehaviour:
     ContactBStart: 0.53
     ContactBEnd: 0.78
     StanceSpeedTable:
-    - 0.506165
-    - 0.562284
-    - 0.6159639
-    - 5.3507633
-    - 5.603506
-    - 5.7265587
-    - 5.738861
-    - 5.9909887
-    - 5.927138
-    - 5.8083053
-    - 5.6566567
-    - 5.1101727
-    - 4.740457
-    - 4.6184916
+    - 0.51365376
+    - 0.56915045
+    - 0.6219863
+    - 5.3304286
+    - 5.5847235
+    - 5.7090063
+    - 5.7216234
+    - 6.0737724
+    - 6.0115952
+    - 5.82005
+    - 5.5732436
+    - 5.166449
+    - 4.7088857
+    - 4.596462
     - -1
     - -1
     - -1
@@ -65,17 +65,17 @@ MonoBehaviour:
     - -1
     - -1
     - -1
-    - 3.3823996
-    - 6.836614
-    - 6.9111867
-    - 6.9213257
-    - 6.9031186
-    - 8.494892
-    - 8.4602165
-    - 8.27518
-    - 4.69325
-    - 4.31767
-    - 3.9900825
+    - 3.4118395
+    - 6.8464847
+    - 6.9096847
+    - 6.9141445
+    - 6.8867106
+    - 10.079125
+    - 10.007614
+    - 5.427732
+    - 5.3309436
+    - 4.7731013
+    - 3.9808843
     - -1
     - -1
     - -1
@@ -94,7 +94,7 @@ MonoBehaviour:
     - -1
     - -1
     - -1
-    - 0.4475498
+    - 0.45524594
     MinStanceSpeed: 1.5
     TouchdownRate: 8
     ContactEdge: 0.04
@@ -123,6 +123,19 @@ MonoBehaviour:
     LandHardRate: 1.6
     LandHardTime: 0.2
     DeathRate: 1.15
+    SwimSurfaceRate: 1.8
+    SwimDiveRate: 1
+    SwimUnderwaterRate: 1
+    SwimLeapStartFrame: 4
+    SwimLeapRate: 1
+    SwimLeapClipLength: 0.8
+    BalanceRunRate: 2.2
+    WadeRate: 2.2
+    VineReleaseRate: 1.2
+    VineReleaseTime: 0.33
+    WadeDepth: 0.15
+    FadeToSwim: 0.18
+    FadeTraversalLoop: 0.25
     FadeToIdle: 0.25
     FadeIdleToRun: 0.2
     FadeToJump: 0.04

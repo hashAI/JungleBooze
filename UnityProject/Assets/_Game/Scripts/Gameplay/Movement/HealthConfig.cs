@@ -26,6 +26,13 @@ namespace JungleBooze.Gameplay.Movement
         /// <summary>Revive point is the last grounded position at least this far before the hazard, m.</summary>
         public float ReviveBackDistance = 6f;
 
+        /// <summary>
+        /// Clear run-in after a revive, s at the ramped revive speed (review S4, [ASSUMED 2026-10-09]): the revive
+        /// point is the most recent safe point with floor (no gap) for this long ahead; vine funnels and water count
+        /// as clear. Validator V15 checks every chunk offers such a point before each gap.
+        /// </summary>
+        public float ReviveRunInTime = 1.2f;
+
         /// <summary>Obstacles in this distance after the revive point are removed, m.</summary>
         public float ReviveClearDistance = 30f;
 

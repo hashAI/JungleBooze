@@ -12,7 +12,7 @@ namespace JungleBooze.Gameplay.World
     /// Offline chunk validator (spec 102 §4; editor setup and CI, never at runtime). Static rules: V2 (action gaps),
     /// V3 (human-margin lateral rate), V4 (gap lengths, clear run-up), V5 (jump↔slide spacing), V6 (free corridor),
     /// V7 (camera visibility, both profiles, curved frame), V8 (seams, widths, narrowing, curvature), V9 (dividers),
-    /// V10 (secret entrances), V12 (locked routes have no path), V14 (canopy beams), W1–W5 (swim). V1: the Perfect
+    /// V10 (secret entrances), V12 (locked routes have no path), V14 (canopy beams), V15 (revive run-in), W1–W5 (swim). V1: the Perfect
     /// bot drives the real simulation through every open route (and the Deep Breath passage) at each requested speed
     /// and must take 0 hits. V13 (vines): every release tick at both speeds lands on the platform with 0 hits, keeps
     /// the 1 m corridor, and only Perfect arcs reach the perfect column. V11 is the director's (pick time).
@@ -111,6 +111,7 @@ namespace JungleBooze.Gameplay.World
             CheckLateral(chunk, vHigh, report);
             CheckWater(chunk, rule, vLow, vHigh, report);
             CheckBeams(chunk, rule, vLow, vHigh, report);
+            CheckRevivePoints(chunk, vHigh, report);
             CheckVineLayout(chunk, report);
             CheckCurve(chunk, report);
         }

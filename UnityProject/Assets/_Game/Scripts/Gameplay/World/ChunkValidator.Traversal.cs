@@ -401,12 +401,13 @@ namespace JungleBooze.Gameplay.World
                     report.Add("V14", b.SMin, "next beam offset " + F(offset) + " m (> " + F(cc.MaxBeamOffset) + ")");
                 }
 
-                // Required shift: from anywhere on beam a to the landing window of beam b (with the assist).
+                // Required shift (review S11): from the worst point of beam a (the far edge) into the landing window of
+                // beam b (with the assist).
                 float fromMin = a.XMin + margin;
                 float fromMax = a.XMax - margin;
                 float toMin = b.XMin - cc.BeamLandingAssist;
                 float toMax = b.XMax + cc.BeamLandingAssist;
-                float shift = fromMax < toMin ? toMin - fromMax : toMax < fromMin ? fromMin - toMax : 0f;
+                float shift = Math.Max(0f, Math.Max(toMin - fromMin, fromMax - toMax));
                 float previous = a.SMin;
                 for (int k = 0; k < actions.Count; k++)
                 {
@@ -416,11 +417,59 @@ namespace JungleBooze.Gameplay.World
                     }
                 }
 
-                float dt = (b.SMin - previous) / Math.Max(1f, vHigh);
-                float allowed = _director.HumanLateralRate * (dt - _director.HumanReactionTime);
+                // Ground time from the last action to the lip at the full human rate, air time over the gap at
+                // AirLateralFactor; the reaction time is taken from the ground part first.
+                float v = Math.Max(1f, vHigh);
+                float tGround = Math.Max(0f, a.SMax - previous) / v;
+                float tAir = gap / v;
+                float reactGround = Math.Min(tGround, _director.HumanReactionTime);
+                float reactAir = Math.Min(tAir, _director.HumanReactionTime - reactGround);
+                float dt = tGround + tAir;
+                float allowed = _director.HumanLateralRate * ((tGround - reactGround) + (_movement.Lateral.AirLateralFactor * (tAir - reactAir)));
                 if (shift > allowed + 0.01f)
                 {
                     report.Add("V14", b.SMin, "lateral shift " + F(shift) + " m to the next beam in " + F(dt) + " s exceeds the human margin");
+                }
+            }
+        }
+
+        // ---- V15: revive points (review S4) ----
+
+        /// <summary>
+        /// V15: a death at any gap must leave a revive point with a clear run-in (<see cref="RunnerSimulation.ReviveRunIn"/>
+        /// at <paramref name="vHigh"/>): the floor before each non-vine gap, back to the previous gap in the same lane
+        /// (or the chunk entry), must be at least that long within the simulation's safe-point reach.
+        /// </summary>
+        private void CheckRevivePoints(ChunkRuntime c, float vHigh, ValidationReport report)
+        {
+            float runIn = RunnerSimulation.ReviveRunIn(_movement, vHigh);
+            float back = _movement.Health.ReviveBackDistance;
+            List<CourseFloorPatch> gaps = EffectiveGaps(c);
+            gaps.Sort((u, w) => u.SMin.CompareTo(w.SMin));
+            for (int i = 0; i < gaps.Count; i++)
+            {
+                CourseFloorPatch g = gaps[i];
+                if (IsVineGap(c, g))
+                {
+                    continue;
+                }
+
+                float floorStart = 0f;
+                for (int k = i - 1; k >= 0; k--)
+                {
+                    CourseFloorPatch p = gaps[k];
+                    if (p.XMax > g.XMin && p.XMin < g.XMax)
+                    {
+                        // A vine gap ends at its landing platform (the swing is automatic).
+                        floorStart = p.SMax;
+                        break;
+                    }
+                }
+
+                float run = g.SMin - floorStart;
+                if (run + 0.01f < runIn || g.SMin - back - floorStart < 0f)
+                {
+                    report.Add("V15", g.SMin, "only " + F(run) + " m of floor before the gap: a revive needs " + F(runIn) + " m clear run-in at " + F(vHigh) + " m/s");
                 }
             }
         }
@@ -717,23 +766,56 @@ namespace JungleBooze.Gameplay.World
             c.GetLateralBounds(s, o.CenterX, out float laneMin, out float laneMax);
             float laneCentre = (laneMin + laneMax) * 0.5f;
             float sr = o.SMin - (speed * lead);
-            c.GetLateralBounds(Math.Max(0f, sr), laneCentre, out float rMin, out float rMax);
-            float xr = Mathf.Clamp(laneCentre, rMin + 0.3f, Math.Max(rMin + 0.3f, rMax - 0.3f));
+            float xr;
             float ground;
-            if (c.TryGetWater(Math.Max(0f, sr), xr, out float surface))
+            if (sr >= 0f)
             {
-                ground = surface;
+                c.GetLateralBounds(sr, laneCentre, out float rMin, out float rMax);
+                xr = Mathf.Clamp(laneCentre, rMin + 0.3f, Math.Max(rMin + 0.3f, rMax - 0.3f));
+                if (c.TryGetWater(sr, xr, out float surface))
+                {
+                    ground = surface;
+                }
+                else if (!c.TryGetFloor(sr, xr, out ground))
+                {
+                    ground = c.BaseHeight(sr, xr);
+                }
             }
-            else if (!c.TryGetFloor(Math.Max(0f, sr), xr, out ground))
+            else
             {
-                ground = c.BaseHeight(Math.Max(0f, sr), xr);
+                // Review S5: the viewpoint is inside the previous chunk. Seams only guarantee a 7 m wide, flat,
+                // straight run of SeamZone metres; before that the previous chunk may curve at the tightest allowed
+                // radius either way. Every case must see the obstacle.
+                xr = Mathf.Clamp(laneCentre, -SeamHalfWidth + 0.3f, SeamHalfWidth - 0.3f);
+                ground = 0f;
             }
 
+            int cases = sr < SeamZone + 10f ? 3 : 1; // the camera sits up to ~10 m behind the runner
+            for (int k = 0; k < cases; k++)
+            {
+                float kappa = k == 0 ? 0f : k == 1 ? _director.MaxCurvature : -_director.MaxCurvature;
+                if (!VisibleFrom(c, index, o, profile, aspect, speed, laneCentre, laneMin, laneMax, sr, xr, ground, kappa, out why))
+                {
+                    if (cases > 1)
+                    {
+                        why += k == 0 ? " (straight run-in)" : " (previous chunk curving " + (k == 1 ? "one way" : "the other way") + ")";
+                    }
+
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private bool VisibleFrom(ChunkRuntime c, int index, in ObstacleBox o, CameraProfile profile, float aspect, float speed, float laneCentre, float laneMin, float laneMax, float sr, float xr, float ground, float kappa, out string why)
+        {
+            why = string.Empty;
             var rig = new CameraRigModel(profile, _movement.Speed.V0, _movement.Speed.VMax, _movement.Lateral.VLatMax);
-            c.Curve.Evaluate(sr, out _, out _, out float runnerHeading);
+            ExtendedFrame(c, sr, kappa, out _, out _, out float runnerHeading);
             rig.Snap(new CameraTargetInput { S = sr, X = xr, Y = ground, GroundY = ground, Speed = speed, PathYawDeg = runnerHeading * Mathf.Rad2Deg });
             CameraPose pose = rig.Pose;
-            Vector3 camera = CurvedPoint(c, pose.S, pose.X, pose.Y);
+            Vector3 camera = ExtendedPoint(c, pose.S, pose.X, pose.Y, kappa);
             Quaternion rotation = Quaternion.Euler(pose.PitchDeg, pose.YawDeg, pose.RollDeg);
             Matrix4x4 view = Matrix4x4.Scale(new Vector3(1f, 1f, -1f)) * Matrix4x4.TRS(camera, rotation, Vector3.one).inverse;
             Matrix4x4 vp = Matrix4x4.Perspective(pose.FovDeg, aspect, profile.NearClip, profile.FarClip) * view;
@@ -762,6 +844,46 @@ namespace JungleBooze.Gameplay.World
 
             why = inFrustum ? "occluded" : "outside the frustum";
             return false;
+        }
+
+        /// <summary>
+        /// Centreline frame at s, extended before the chunk entry (s &lt; 0) by a straight seam zone and then an arc of
+        /// curvature <paramref name="kappa"/> (review S5). Heading in radians; forward = (sin h, cos h).
+        /// </summary>
+        private static void ExtendedFrame(ChunkRuntime c, float s, float kappa, out float cx, out float cz, out float heading)
+        {
+            if (s >= 0f)
+            {
+                c.Curve.Evaluate(s, out cx, out cz, out heading);
+                return;
+            }
+
+            c.Curve.Evaluate(0f, out float x0, out float z0, out float h0);
+            float straight = Math.Min(-s, SeamZone);
+            float px = x0 - ((float)Math.Sin(h0) * straight);
+            float pz = z0 - ((float)Math.Cos(h0) * straight);
+            float arc = -s - straight;
+            if (arc <= 0f || Math.Abs(kappa) < 1e-6f)
+            {
+                cx = px - ((float)Math.Sin(h0) * arc);
+                cz = pz - ((float)Math.Cos(h0) * arc);
+                heading = h0;
+                return;
+            }
+
+            // Walking back along an arc that ends (forward) at heading h0: start heading hs = h0 − κ·L.
+            float hs = h0 - (kappa * arc);
+            cx = px - (((float)Math.Cos(hs) - (float)Math.Cos(h0)) / kappa);
+            cz = pz - (((float)Math.Sin(h0) - (float)Math.Sin(hs)) / kappa);
+            heading = hs;
+        }
+
+        private static Vector3 ExtendedPoint(ChunkRuntime c, float s, float x, float y, float kappa)
+        {
+            ExtendedFrame(c, s, kappa, out float cx, out float cz, out float h);
+            float cos = (float)Math.Cos(h);
+            float sin = (float)Math.Sin(h);
+            return new Vector3(cx + (cos * x), y, cz - (sin * x));
         }
 
         private static Vector3 CurvedPoint(ChunkRuntime c, float s, float x, float y)

@@ -43,6 +43,8 @@ namespace JungleBooze.Gameplay.Animation
         private float _roll;
         private float _anchor;
         private float _forwardLean;
+        private bool _canopy;
+        private float _wade;
 
         /// <param name="config">Presentation tuning.</param>
         /// <param name="jumpAirtime">The simulation's flat-ground jump airtime (s), from <see cref="JumpArc"/>.</param>
@@ -58,6 +60,13 @@ namespace JungleBooze.Gameplay.Animation
         public ref readonly RunnerAnimationOutput Output => ref _out;
 
         public RunnerAnimState State => _state;
+
+        /// <summary>
+        /// The controller has the traversal clips (Swim_Surface, Swim_Dive, Swim_Underwater, Swim_Leap, Vine_Release,
+        /// Balance_Run, Water_Wade): water poses come from the clips (no procedural body pitch) and the run switches to
+        /// Balance on beams and Wade in shallow water. Off = the procedural fallbacks.
+        /// </summary>
+        public bool TraversalClips { get; set; }
 
         /// <summary>Seconds in the current state.</summary>
         public float TimeInState => _timeInState;
@@ -142,6 +151,8 @@ namespace JungleBooze.Gameplay.Animation
             dt = Math.Max(0f, dt);
             _dt = dt;
             _out.Changed = false;
+            _canopy = s.Canopy;
+            _wade = s.WadeDepth;
             _timeInState += dt;
             _clipFrame += _out.StateRate * dt * FramesPerSecond;
             _sinceDodge += dt;
@@ -250,6 +261,17 @@ namespace JungleBooze.Gameplay.Animation
                     }
 
                     return;
+                case RunnerAnimState.VineRelease:
+                    if (s.Grounded)
+                    {
+                        Enter(RunnerAnimState.Locomotion, _c.FadeLandToRun, _c.LandingRunPhase, 1f, false);
+                    }
+                    else if (_timeInState >= _c.VineReleaseTime)
+                    {
+                        Enter(RunnerAnimState.Fall, _c.FadeToFall, 0f, _c.FallRate, false);
+                    }
+
+                    return;
                 case RunnerAnimState.Stumble:
                     if (_timeInState >= _c.StumbleTime)
                     {
@@ -283,9 +305,14 @@ namespace JungleBooze.Gameplay.Animation
             {
                 Enter(RunnerAnimState.Locomotion, _c.FadeIdleToRun, 0f, 1f, false);
             }
-            else if (_state == RunnerAnimState.Locomotion && s.Speed < _c.IdleSpeed)
+            else if (IsGroundLoop(_state) && s.Speed < _c.IdleSpeed)
             {
                 Enter(RunnerAnimState.Idle, _c.FadeToIdle, 0f, 1f, false);
+            }
+            else if (IsGroundLoop(_state) && GroundLoop() != _state)
+            {
+                // Onto or off the beams, into or out of shallow water.
+                Enter(RunnerAnimState.Locomotion, _c.FadeTraversalLoop, 0f, 1f, false);
             }
         }
 
@@ -318,12 +345,17 @@ namespace JungleBooze.Gameplay.Animation
             bool water = s.Mode == MoveMode.Swim || s.Mode == MoveMode.DeepDive;
             if (!water)
             {
-                if (_state == RunnerAnimState.Swim || _state == RunnerAnimState.Dive || _state == RunnerAnimState.Grab || _state == RunnerAnimState.Hang)
+                if (_state == RunnerAnimState.Swim || _state == RunnerAnimState.Dive || _state == RunnerAnimState.Grab || _state == RunnerAnimState.Hang ||
+                    _state == RunnerAnimState.Leap || _state == RunnerAnimState.Underwater)
                 {
                     // Out of the water or off the vine: back to the land states.
                     if (s.Grounded)
                     {
                         Enter(RunnerAnimState.Locomotion, _c.FadeLandToRun, _c.LandingRunPhase, 1f, true);
+                    }
+                    else if (TraversalClips && s.VineAir && (_state == RunnerAnimState.Grab || _state == RunnerAnimState.Hang))
+                    {
+                        Enter(RunnerAnimState.VineRelease, _c.FadeToJump, 0f, _c.VineReleaseRate, true);
                     }
                     else
                     {
@@ -334,6 +366,12 @@ namespace JungleBooze.Gameplay.Animation
                 }
 
                 return false;
+            }
+
+            if (TraversalClips)
+            {
+                ResolveWaterClips(s);
+                return true;
             }
 
             if (_evLeap)
@@ -366,6 +404,57 @@ namespace JungleBooze.Gameplay.Animation
             return true;
         }
 
+        /// <summary>Water with the swim clips: Swim_Surface, Swim_Dive, Swim_Underwater, Swim_Leap.</summary>
+        private void ResolveWaterClips(in RunnerVisualState s)
+        {
+            float leapStart = _c.SwimLeapStartFrame / FramesPerSecond / Math.Max(0.05f, _c.SwimLeapClipLength);
+            if (_evLeap)
+            {
+                Enter(RunnerAnimState.Leap, _c.FadeToJump, leapStart, _c.SwimLeapRate, true);
+                return;
+            }
+
+            if (s.Leaping)
+            {
+                Enter(RunnerAnimState.Leap, _c.FadeToJump, leapStart, _c.SwimLeapRate, false);
+                return;
+            }
+
+            if (s.Mode == MoveMode.DeepDive)
+            {
+                Enter(RunnerAnimState.Underwater, 0.2f, 0f, _c.SwimUnderwaterRate, false);
+            }
+            else if (s.Dive != DivePhase.None)
+            {
+                Enter(RunnerAnimState.Dive, 0.1f, 0f, _c.SwimDiveRate, false);
+            }
+            else
+            {
+                Enter(RunnerAnimState.Swim, _evSplash ? 0.08f : _c.FadeToSwim, 0f, _c.SwimSurfaceRate, false);
+            }
+        }
+
+        private static bool IsGroundLoop(RunnerAnimState state)
+        {
+            return state == RunnerAnimState.Locomotion || state == RunnerAnimState.Balance || state == RunnerAnimState.Wade;
+        }
+
+        /// <summary>The ground loop for the current surface (Locomotion without the traversal clips).</summary>
+        private RunnerAnimState GroundLoop()
+        {
+            if (!TraversalClips)
+            {
+                return RunnerAnimState.Locomotion;
+            }
+
+            if (_canopy)
+            {
+                return RunnerAnimState.Balance;
+            }
+
+            return _wade >= _c.WadeDepth ? RunnerAnimState.Wade : RunnerAnimState.Locomotion;
+        }
+
         private void UpdateBody(in RunnerVisualState s, float dt)
         {
             float pitch = 0f;
@@ -376,11 +465,11 @@ namespace JungleBooze.Gameplay.Animation
                 {
                     case MoveMode.Swim:
                         swim = 1f;
-                        pitch = s.Leaping ? 20f : s.Dive == DivePhase.Down ? 115f : s.Dive == DivePhase.Under ? 90f : s.Dive == DivePhase.Up ? 55f : 72f;
+                        pitch = TraversalClips ? 0f : s.Leaping ? 20f : s.Dive == DivePhase.Down ? 115f : s.Dive == DivePhase.Under ? 90f : s.Dive == DivePhase.Up ? 55f : 72f;
                         break;
                     case MoveMode.DeepDive:
                         swim = 1f;
-                        pitch = 95f;
+                        pitch = TraversalClips ? 0f : 95f;
                         break;
                     case MoveMode.Swing:
                         // The body trails the vine a little (the rope carries the full angle).
@@ -409,6 +498,19 @@ namespace JungleBooze.Gameplay.Animation
 
         private void Enter(RunnerAnimState state, float fade, float startNormalized, float rate, bool restart)
         {
+            if (state == RunnerAnimState.Locomotion)
+            {
+                state = GroundLoop();
+                if (state == RunnerAnimState.Balance)
+                {
+                    rate = _c.BalanceRunRate;
+                }
+                else if (state == RunnerAnimState.Wade)
+                {
+                    rate = _c.WadeRate;
+                }
+            }
+
             if (state == _state && !restart)
             {
                 return;
@@ -436,6 +538,8 @@ namespace JungleBooze.Gameplay.Animation
                     return _c.StumbleClipLength * FramesPerSecond;
                 case RunnerAnimState.LandHard:
                     return _c.LandHardClipLength * FramesPerSecond;
+                case RunnerAnimState.Leap:
+                    return _c.SwimLeapClipLength * FramesPerSecond;
                 default:
                     return 0f;
             }

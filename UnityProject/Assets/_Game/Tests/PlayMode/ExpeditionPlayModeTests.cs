@@ -199,7 +199,22 @@ namespace JungleBooze.Tests.PlayMode
             Assert.IsTrue(root.AcceptRevive());
             Assert.IsFalse(root.Simulation.State.Dead);
             Assert.AreEqual(1, root.Session.Stats.ReviveCrystals);
+            Assert.AreEqual(RunPhase.Ready, root.Session.Phase, "a 1.0 s ready beat at the revive point (review S4)");
+            float s0 = root.Simulation.State.S;
+            for (int i = 0; i < 58; i++)
+            {
+                root.StepTicks(1);
+            }
+
+            Assert.AreEqual(s0, root.Simulation.State.S, "frozen during the ready beat");
+            for (int i = 0; i < 4; i++)
+            {
+                root.StepTicks(1);
+            }
+
             Assert.AreEqual(RunPhase.Running, root.Session.Phase);
+            Assert.Greater(root.Simulation.State.S, s0);
+            Assert.AreEqual(1, root.Recording.MarkerCount, "the revive is in the replay (format 3)");
             root.Tick(1f / 60f, Time.realtimeSinceStartupAsDouble);
             Assert.IsFalse(root.Hud.ReviveVisible);
             yield return null;

@@ -11,7 +11,11 @@ namespace JungleBooze.Gameplay.Expedition
     {
         public const int MaxNewDiscoveries = 16;
 
+        /// <summary>Entries whose sightings are counted per run (spec 103 §7.3; entry index &lt; this).</summary>
+        public const int MaxSightingEntries = 32;
+
         private readonly int[] _newDiscoveries = new int[MaxNewDiscoveries];
+        private readonly int[] _sightings = new int[MaxSightingEntries];
 
         public float Distance;
         public long Ticks;
@@ -63,6 +67,20 @@ namespace JungleBooze.Gameplay.Expedition
 
         public int NewDiscovery(int index) => _newDiscoveries[index];
 
+        /// <summary>Abilities whose Showcase chunk the runner actually entered this run (review S1).</summary>
+        public AbilityFlags ShowcaseReached;
+
+        /// <summary>Sightings of an already-discovered entry this run (review S9).</summary>
+        public int SightingsOf(int entryIndex) => entryIndex >= 0 && entryIndex < MaxSightingEntries ? _sightings[entryIndex] : 0;
+
+        public void AddSighting(int entryIndex)
+        {
+            if (entryIndex >= 0 && entryIndex < MaxSightingEntries)
+            {
+                _sightings[entryIndex]++;
+            }
+        }
+
         public void AddNewDiscovery(int entryIndex)
         {
             if (NewDiscoveryCount < MaxNewDiscoveries)
@@ -90,6 +108,8 @@ namespace JungleBooze.Gameplay.Expedition
             CurrentChunk = string.Empty;
             NewDiscoveryCount = 0;
             MissedDiscoveries = 0;
+            ShowcaseReached = AbilityFlags.None;
+            System.Array.Clear(_sightings, 0, _sightings.Length);
         }
 
         public void CountRoute(RouteType route)

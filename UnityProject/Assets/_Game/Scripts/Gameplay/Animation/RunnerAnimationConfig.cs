@@ -148,6 +148,41 @@ namespace JungleBooze.Gameplay.Animation
 
         public float DeathRate = 1.15f;
 
+        // ---- Traversal clips (IMPORT_NOTES 2026-10-09; used when the controller has the clip states) ----------
+
+        /// <summary>Swim_Surface (breaststroke, 2.1 s per stroke at 1.0x): play rate at swim speed.</summary>
+        public float SwimSurfaceRate = 1.8f;
+
+        /// <summary>Swim_Dive (26 frames ≈ the 51-tick dive at 1.0x).</summary>
+        public float SwimDiveRate = 1.0f;
+
+        public float SwimUnderwaterRate = 1.0f;
+
+        /// <summary>Swim_Leap: start frame (kick) and rate; frames 6–20 cover the 0.55 s airtime at 1.0x.</summary>
+        public float SwimLeapStartFrame = 4f;
+
+        public float SwimLeapRate = 1.0f;
+
+        public float SwimLeapClipLength = 24f / 30f;
+
+        /// <summary>Balance_Run on canopy beams (stance foot 1.76 m/s at 1.0x).</summary>
+        public float BalanceRunRate = 2.2f;
+
+        /// <summary>Water_Wade through shallow water (stance foot 0.8 m/s at 1.0x; the water hides the slide).</summary>
+        public float WadeRate = 2.2f;
+
+        /// <summary>Vine_Release (12 frames): play rate and time before Fall takes over, s.</summary>
+        public float VineReleaseRate = 1.2f;
+
+        public float VineReleaseTime = 0.33f;
+
+        /// <summary>Water depth over the feet that switches the run to Water_Wade, m.</summary>
+        public float WadeDepth = 0.15f;
+
+        public float FadeToSwim = 0.18f;
+
+        public float FadeTraversalLoop = 0.25f;
+
         // ---- Fades (s) ---------------------------------------------------------------------------------------------
 
         public float FadeToIdle = 0.25f;

@@ -91,6 +91,15 @@ namespace JungleBooze.Gameplay.Movement
 
         public float DeathSpeed;
 
+        /// <summary>Run distance on the death tick (a revive rewinds <see cref="Distance"/> to the revive point).</summary>
+        public float DeathDistance;
+
+        /// <summary>Path position on the death tick.</summary>
+        public float DeathS;
+
+        /// <summary>Falls caught by the post-revive guard (spec 101 §4.2 i-frames extended to falls, review S4).</summary>
+        public int FallRescues;
+
         public bool Finished;
 
         public long FinishTick;

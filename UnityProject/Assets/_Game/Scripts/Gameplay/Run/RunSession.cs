@@ -15,6 +15,8 @@ namespace JungleBooze.Gameplay.Run
         private readonly int _dyingTicks;
         private readonly int _fallDyingTicks;
         private readonly int _finishTicks;
+        private readonly int _reviveReadyTicks;
+        private int _readyLimit;
         private RunOptions _options;
 
         public RunSession(MovementConfig config, IPathQuery path, ITimeSource time, RunEventBuffer events)
@@ -31,6 +33,7 @@ namespace JungleBooze.Gameplay.Run
             _dyingTicks = Math.Max(1, (int)Math.Round(flow.DyingTime / dt));
             _fallDyingTicks = Math.Max(1, (int)Math.Round(flow.FallDyingTime / dt));
             _finishTicks = Math.Max(1, (int)Math.Round(flow.FinishCoastTime / dt));
+            _reviveReadyTicks = Math.Max(0, (int)Math.Round(flow.ReviveReadyTime / dt));
             Phase = RunPhase.Results;
         }
 
@@ -65,6 +68,7 @@ namespace JungleBooze.Gameplay.Run
         {
             _options = options;
             Simulation.Reset(options);
+            _readyLimit = _readyTicks;
             Phase = _readyTicks > 0 ? RunPhase.Ready : RunPhase.Running;
             PhaseTicks = 0;
             SessionTick = 0;
@@ -78,7 +82,7 @@ namespace JungleBooze.Gameplay.Run
             switch (Phase)
             {
                 case RunPhase.Ready:
-                    if (PhaseTicks >= _readyTicks)
+                    if (PhaseTicks >= _readyLimit)
                     {
                         SetPhase(RunPhase.Running);
                     }
@@ -120,15 +124,20 @@ namespace JungleBooze.Gameplay.Run
             }
         }
 
-        /// <summary>Revive after death (GDD §11). Returns false when not dead.</summary>
+        /// <summary>
+        /// Revive after death (GDD §11), only while dying (review N2: once the results show, the run is banked).
+        /// The run resumes after the revive ready beat (<see cref="RunFlowConfig.ReviveReadyTime"/>, Ready phase).
+        /// Returns false when not dying.
+        /// </summary>
         public bool TryRevive()
         {
-            if ((Phase != RunPhase.Dying && Phase != RunPhase.Results) || !Simulation.Revive())
+            if (Phase != RunPhase.Dying || !Simulation.Revive())
             {
                 return false;
             }
 
-            SetPhase(RunPhase.Running);
+            _readyLimit = _reviveReadyTicks;
+            SetPhase(_reviveReadyTicks > 0 ? RunPhase.Ready : RunPhase.Running);
             return true;
         }
 

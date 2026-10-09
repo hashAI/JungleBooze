@@ -84,6 +84,9 @@ namespace JungleBooze.Gameplay.World
         /// <summary>Picks that broke a repetition rule because nothing else was valid (content gap; should stay 0).</summary>
         public int EmergencyPicks { get; private set; }
 
+        /// <summary>Picks where even the emergency level found nothing (review S6; logged by the scene, should stay 0).</summary>
+        public int LastResortPicks { get; private set; }
+
         public float Skill => _skill;
 
         public int BandShift => DifficultyModel.BandShift(_config, _skill);
@@ -119,6 +122,7 @@ namespace JungleBooze.Gameplay.World
             ShowcasedAbilities = AbilityFlags.None;
             FallbackPicks = 0;
             EmergencyPicks = 0;
+            LastResortPicks = 0;
         }
 
         /// <summary>A health-losing hit happened on <paramref name="tick"/> (mercy rule).</summary>
@@ -313,15 +317,81 @@ namespace JungleBooze.Gameplay.World
                 }
 
                 PickReason why = emergency ? PickReason.Emergency : step >= 5 ? PickReason.Fallback : reason;
-                return Finish(chosen, rule, speed, why, step, startS, emergency);
+
+                // Review S6: V11 is never ignored (Collect only admits definitions with a variant that passes it).
+                return Finish(chosen, rule, speed, why, step, startS);
             }
 
-            throw new InvalidOperationException("World Director found no chunk with a matching entry seam (content rule: ≥ 2 Recovery chunks per entry type).");
+            return LastResort(rule, speed, startS);
         }
 
-        private ChunkPick Finish(int def, in PhaseRule rule, float speed, PickReason reason, int level, float startS, bool ignoreSeam = false)
+        /// <summary>
+        /// Review S6: nothing passed even the emergency level. Any pool Recovery chunk whose variant passes V11 (phase,
+        /// band and repetition rules ignored); if none, any pool chunk passing V11; if the seam can't be met at all,
+        /// the Recovery variant with the largest entry margin. Never throws mid-run unless the library has no pool
+        /// chunk at all (a content error the catalog validation rejects).
+        /// </summary>
+        private ChunkPick LastResort(in PhaseRule rule, float speed, float startS)
         {
-            int variantCount = EligibleVariants(def, rule, speed, ignoreSeam);
+            LastResortPicks++;
+            EmergencyPicks++;
+            for (int pass = 0; pass < 2; pass++)
+            {
+                for (int d = 0; d < _library.DefinitionCount; d++)
+                {
+                    ChunkDefinition def = _library.GetDefinition(d);
+                    if (def.RunOpener || !def.PoolEnabled || (def.RequiredAbilities & ~_setup.Owned) != 0)
+                    {
+                        continue;
+                    }
+
+                    if (pass == 0 && def.Category != ChunkCategory.Recovery)
+                    {
+                        continue;
+                    }
+
+                    if (EligibleVariants(d, rule, speed, false) > 0)
+                    {
+                        return Finish(d, rule, speed, PickReason.Emergency, MaxRelaxLevel, startS);
+                    }
+                }
+            }
+
+            int best = -1;
+            float bestMargin = float.NegativeInfinity;
+            for (int d = 0; d < _library.DefinitionCount; d++)
+            {
+                ChunkDefinition def = _library.GetDefinition(d);
+                if (def.RunOpener || !def.PoolEnabled || (def.RequiredAbilities & ~_setup.Owned) != 0)
+                {
+                    continue;
+                }
+
+                int first = _library.FirstEntryOf(d);
+                for (int v = 0; v < def.Variants.Count; v++)
+                {
+                    ChunkRuntime entry = _library.GetEntry(first + v);
+                    float margin = entry.EntryMarginM + (def.Category == ChunkCategory.Recovery ? 1000f : 0f);
+                    if (_library.IsPoolVariant(entry, _requireValidated) && margin > bestMargin)
+                    {
+                        bestMargin = margin;
+                        best = first + v;
+                    }
+                }
+            }
+
+            if (best < 0)
+            {
+                throw new InvalidOperationException("World Director: the library has no pool chunk (content error).");
+            }
+
+            ChunkRuntime chunk = _library.GetEntry(best);
+            return Dress(chunk, PickReason.Emergency, rule.Phase, startS, MaxRelaxLevel);
+        }
+
+        private ChunkPick Finish(int def, in PhaseRule rule, float speed, PickReason reason, int level, float startS)
+        {
+            int variantCount = EligibleVariants(def, rule, speed, false);
             int entry = _variantScratch[variantCount > 1 ? _variants.NextInt(0, variantCount) : 0];
             ChunkRuntime chunk = _library.GetEntry(entry);
             ChunkPick pick = Dress(chunk, reason, rule.Phase, startS, level);
@@ -652,7 +722,16 @@ namespace JungleBooze.Gameplay.World
             float crystalChance = _config.RiskyCrystalChance * (def.Reward == RewardProfile.Rich ? _config.RichCrystalFactor : 1f);
             for (int i = 0; i < chunk.CrystalCount && i < 31; i++)
             {
-                if (!chunk.GetCrystal(i).Always && _pickups.NextFloat() < crystalChance)
+                CrystalAnchor anchor = chunk.GetCrystal(i);
+                if (anchor.Always)
+                {
+                    continue;
+                }
+
+                // Review N8: the risky-crystal roll applies to anchors on Risky branches only (spec 102 §7). The roll is
+                // drawn for every optional anchor so the Pickups stream stays in step.
+                bool roll = _pickups.NextFloat() < crystalChance;
+                if (roll && chunk.RouteAt(anchor.S, anchor.X) == RouteType.Risky)
                 {
                     pick.CrystalMask |= 1 << i;
                 }
