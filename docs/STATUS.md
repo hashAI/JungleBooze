@@ -64,10 +64,10 @@ Duko/continue, audio files) compiled clean on the Mac.
 | producer | not used yet | (the coordinating session does this role for now) | this file | — |
 | game-designer | done (2026-10-09) | Spec 103 vertical slice: scripted "Expedition 1", 13 chunks ~4:05, swim/vine/canopy/sailback/Veil Grotto secret/Shield/Deep Breath upgrade, AC-103-01–50 | `design/aurelia/GDD.md`, `design/aurelia/specs/` | Phase 2 chunk catalog detail; FTUE script |
 | balance-simulator | done (A3) | Python reference model, golden traces, S1–S9 report (`archive/pre-aurelia/docs/sim-reports/2026-10-07-spec001.md`) | `tools/sim/`, `docs/sim-reports/` | Phase 1: new movement/chunk model from the AURELIA spec (old model kept as reference) |
-| tech-architect | done (2026-10-09) | Hero basin iteration 3 (4eaf693/05bffe5): ~64% of keyframe. Waiting for owner's style choice | `Assets/_Game/Editor/Setup/`, `docs/adr/0003-first-playable-bootstrap.md`, `docs/PLAY_FIRST_BUILD.md` | Add EditMode tests for `ProjectSetupRules`; Roslyn analyzers |
+| tech-architect | working (2026-10-09) | Painterly trial: stylized shading (rock/foliage/water/falls), grade to F4_f, Pista material restyle, style switch; → F4_compare_painterly.jpg | `Assets/_Game/Editor/Setup/`, `docs/adr/0003-first-playable-bootstrap.md`, `docs/PLAY_FIRST_BUILD.md` | Add EditMode tests for `ProjectSetupRules`; Roslyn analyzers |
 | gameplay-engineer | done (2026-10-09) | Vertical slice part B (d58990d): swim, vine, canopy, sailback, Deep Breath, revive, validator V3/V7/V13/V14/W1–W5, analytics (on-device). EditMode 464/464, PlayMode 18/18 | `Scripts/Gameplay/PowerUps`, `Hazards`, `Companion`, `Views`, `App/RunSceneBootstrap.cs` | Wire audio events; then Batch 3 |
 | ui-engineer | done (C2) | Track wired into the Run scene with gray-box views and HUD | `Scripts/Gameplay/Views`, `Scripts/App`, `Scripts/UI/Hud` | Fix errors the owner sends from Unity |
-| art-director | done (2026-10-09) | Meshy keyframes F1–F4 + P1 (93 credits) → design/aurelia/keyframes/ | `design/aurelia/ENVIRONMENT_STRATEGY.md` | Store art later |
+| art-director | working (2026-10-09) | ART_DIRECTION_PAINTERLY.md (painterly trial rules, palette from F4_f, Pista restyle, checklist) | `design/aurelia/ENVIRONMENT_STRATEGY.md` | Store art later |
 | asset-pipeline | done (2026-10-09) | Iteration 2 assets (4e959d8): arch v2 14k tris 2×2k ~25 px/m, FP_ArchVines, travertine tiers (weakest; re-pass after seeing cascades), ledge v2, framing clusters, canopy. OpenAI $0.59 | `art_source/pista/`, `tools/blender/pista/` | Report → import rigged Pista into LookTest |
 | audio-director | waiting | Old lane-era audio archived (2026-10-09) | — | AURELIA audio after the vertical slice (ElevenLabs needs owner OK) |
 | qa-engineer | waiting | — | — | FP1 stage F: test plan + owner play-test script |
@@ -135,6 +135,7 @@ Meshy: 3 (image edit test) + 30 (Pista 3D v1) = **33 credits used**; balance 2,4
 
 ## Log
 Newest first. One line per event.
+- 2026-10-09: Owner: try painterly (D) on the hero scene first. Launched art-director (rules), tech-architect (shading + grade), asset-pipeline #2 (hand-painted kit, caps OpenAI $10, Meshy 100). Gameplay-engineer fixing slice review; asset-pipeline #1 on Pista clips.
 - 2026-10-09: Owner chose art style D: painterly / stylized-realistic. Launching art direction update, stylized shading, hand-painted re-texture of the hero kit.
 - 2026-10-09: Hero basin v3 ~64% sent; style options B/D presented with an OpenAI painterly test. Vertical slice part B committed. Launched slice code review.
 - 2026-10-09 13:31: Usage limit (reset 12:30) stopped all 3 agents (part B had EditMode 462/462; iteration 3 not yet implemented; swim clips mid-review). Resumed all three with their context.
