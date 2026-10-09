@@ -1,6 +1,6 @@
 """Render a piece from the F4_e hero camera side (env HV_APPEND=<blend>[:...] adds objects from other files) (Blender +Y = Unity -Z, the side the basin camera sees) next to the
 keyframe crop, for side-by-side comparison. Usage: -- <blend> <out.jpg> [cam x y z] [target x y z] [lens] [crop l t r b]
-Clay if the meshes have no image textures; otherwise their materials. Sun warm, low, from upper left (keyframe)."""
+Env HV_KEYFRAME=<repo-relative image> swaps the keyframe (painterly: F4_f). Clay if the meshes have no image textures; otherwise their materials. Sun warm, low, from upper left (keyframe)."""
 import math, os, sys
 import bpy
 from mathutils import Vector
@@ -49,7 +49,7 @@ cam.location = cam_p
 cam.rotation_euler = (tgt - cam_p).to_track_quat('-Z', 'Y').to_euler()
 tmp = out + '.png'; sc.render.filepath = tmp; bpy.ops.render.render(write_still=True)
 r = Image.open(tmp).convert('RGB')
-kf = Image.open(os.path.join(E.REPO, 'design/aurelia/keyframes/F4_e_openai_medium.jpg')).convert('RGB')
+kf = Image.open(os.path.join(E.REPO, os.environ.get('HV_KEYFRAME', 'design/aurelia/keyframes/F4_e_openai_medium.jpg'))).convert('RGB')
 W, H = kf.size
 k = kf.crop((int(crop[0] * W), int(crop[1] * H), int(crop[2] * W), int(crop[3] * H)))
 k = k.resize((int(k.width * r.height / k.height), r.height))

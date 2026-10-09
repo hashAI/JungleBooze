@@ -7,7 +7,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 import envlib as E
 from PIL import Image, ImageDraw
 a = E.args(); bpy.ops.wm.open_mainfile(filepath=a[0]); out = a[1]
-sc = E.gpu_cycles(64); sc.cycles.use_denoising = True
+sc = E.gpu_cycles(int(os.environ.get('PV_SAMPLES', 64))); sc.cycles.use_denoising = True  # PV_SAMPLES: faster drafts
 sc.view_settings.view_transform = 'AgX'; sc.view_settings.look = 'AgX - Medium High Contrast'
 sc.render.resolution_x, sc.render.resolution_y = 1000, 667
 if not any(o.name.endswith('_Water') for o in sc.objects):

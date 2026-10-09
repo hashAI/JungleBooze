@@ -9,7 +9,7 @@ import envlib as E
 from PIL import Image
 
 a = E.args(); bpy.ops.wm.open_mainfile(filepath=a[0]); prefix = a[1]
-sc = E.gpu_cycles(64); sc.cycles.use_denoising = True
+sc = E.gpu_cycles(int(os.environ.get('PV_SAMPLES', 64))); sc.cycles.use_denoising = True  # PV_SAMPLES: faster drafts
 sc.view_settings.view_transform = 'AgX'; sc.view_settings.look = 'AgX - Medium High Contrast'
 W, H = 1280, 800
 sc.render.resolution_x, sc.render.resolution_y = W, H

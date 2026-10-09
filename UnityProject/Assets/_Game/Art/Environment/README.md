@@ -103,7 +103,51 @@ red = cascades, cyan = pools), `RS_LedgeLookout_v2_compare.jpg`, `RS_LedgeLookou
 `FP_FrameLeft_Clump_views.jpg`, `FP_FrameRight_Clump_views.jpg`, `FP_Canopy_Clump_compare.jpg`, `FP_v2_atlases.jpg`.
 The Blender previews use neutral light and a flat preview water material; the real look is the Unity build.
 
+## Painterly variants (F4_f trial, option D), `_P`
+Target: `design/aurelia/keyframes/F4_f_painterly_openai.jpg`; rules: `design/aurelia/ART_DIRECTION_PAINTERLY.md`. The
+realistic pieces above are untouched. Every painterly asset sits next to its realistic twin with `_P` in the name
+(clumps: `_P_Clump`, so the role rules still match), so the scene switches by name. Same units, axes, pivots, facing,
+LOD naming, texture channels (BaseColor sRGB, Normal OpenGL, ARM = AO/rough/0) and card vertex colours as above.
+**Integration:** `EnvironmentKit` searches the kit folders recursively and matches by prefix, so it now sees both
+`RS_HeroArch` and `RS_HeroArch_P` (etc.) as candidates for one role: the builder needs a style switch that keeps only
+`_P` names (painterly) or drops them (realistic). Mesh names are unique (`..._P_LODn`), so the mesh cache does not collide.
+
+| Asset | Size (m) W×D×H | Tris LOD0 / 1 / 2 | Texture | Notes |
+|---|---|---|---|---|
+| `RS_HeroArch_P` | 84.7 × 43.1 × 49.8 | 14,000 / 6,299 / 2,100 | 2 × 2048 (`RS_HeroArch_P_A_*`, `_B_*`) | Chunky braid: 8 thick strands in three ropes (v2: 14), no weathering, same spine/crown; splays ~6 m wider than v2. Halves split at Blender x = -1 as v2 (`RS_HeroArch_P_A_LODn` / `_B_LODn`). `RS_HeroArch_P_WaterfallMouth` refitted under the new crown (-1.0, -0.6, 33.3 Blender). ~24 px/m |
+| `RS_PillarA_P` / `RS_PillarB_P` | as realistic | 4,000 / 1,800 / 600 | 1024 | Simplified (no chips/grain), painted |
+| `RS_ArchSmall_P` | as realistic | 4,000 / 1,800 / 600 | 1024 | |
+| `RS_Outcrop_P` | as realistic | 2,500 / 1,100 / 400 | 1024 | |
+| `RS_TravertineTiers_P` | 29.6 × 24.5 × 7.8 | 5,000 / 2,200 / 800 | 1024 | Smoothed only (no remesh), so water levels and all anchors match: use the realistic `RS_TravertineTiers_Water` with it. Anchors renamed `RS_TravertineTiers_P_*` (same suffixes) |
+| `RS_LedgeLookout_P` | 7.6 × 7.6 × 2.0 | 2,500 / 1,100 / 400 | 1024 | `RS_LedgeLookout_P_Stand` copied from v2 (the top is within a few cm). ~96 px/m |
+| `FP_FrameLeft_P_Clump` / `FP_FrameRight_P_Clump` | as realistic | 956 / 236 / 80; 776 / 212 / 72 | slot 0 `FP_BigLeaf_P`, slot 1 `FP_Bellflower_P` | Same layout as the realistic frames, glossy painted leaves (dark core, light tips) |
+| `FP_Bellflower_P_Clump` (new) | 1.7 × 1.7 × 1.6 | 200 / 84 / 32 | `FP_Bellflower_P` | Bell stems + paddle leaves, for scattering (bellcap orange stays the risky-route cue) |
+| `FP_PalmFern_P_Clump` (new) | 3.9 × 4.1 × 2.0 | 476 / 204 / 80 | `FP_Fronds_P` | Palm fronds over a fern ring |
+| `FP_Fern_P_Clump` | 2.3 × 2.3 × 0.7 | 260 / 96 / 40 | `FP_Fronds_P` | Low fern clump |
+| `FP_Canopy_P_Clump`, `FP_CanopyCrown_P_A..D` | as realistic | 192 / 48 / 8; 24 / 6 / 2 | `FP_Canopy_P` | Painted crown blobs, same layout/facing |
+| `FP_ArchVines_P` | in `RS_HeroArch_P` space | 5,256 / 1,776 / 906 | slot 0 `FP_ArchVines_P`, slot 1 `FP_Canopy_P` | 620 leafy curtains/drapes + 140 leafy crests on the crown tops (F4_f's bushy top). 2 draws (v2: 1); ~800 tris over v2 |
+
+Backdrops (straight alpha, same import rules as the F4_e set): `BD_F4f_Sky` 1536×1024 (no alpha), `BD_F4f_FarRange`
+1536×813, `BD_F4f_FarFalls` 795×1453, `BD_F4f_MidPillars` 1536×973, `BD_F4f_JungleWall` 1536×689, `BD_F4f_Plate`
+1536×1024 (no alpha, fallback). `BD_MistBand` is shared. Composite: `previews/BD_F4f_stack_test.jpg`. Haze is light
+and warm in the paint; AD s7 wants warm golden fog per layer on top.
+
+Paint: big warm-to-cool gradient (warm cream-tan top and up-facing planes, cooler grey-mauve low and down-facing),
+broad tonal patches, painted warm-brown AO in seams, light edge highlights on convex top edges, broad painted moss on
+up-facing faces (OpenAI painted moss swatch), OpenAI painted rock swatch as a ~10 % brush-stroke overlay; no cracks
+inside strands (AD s2); normals carry broad forms only; roughness flat (stone 0.85, moss 0.9, wet travertine ~0.35).
+Albedo is a little less saturated than the AD s8 hexes (those are picked from the lit image; as albedo under the warm
+sun they rendered mustard). No UV1 detail normal is needed (AD s3: detail normals off).
+Previews: `RS_HeroArch_P_hero_compare.jpg` (F4_f crop | arch + vines), `RS_*_P_views.jpg`,
+`RS_TravertineTiers_P_view.jpg`, `FP_*_P_Clump_views.jpg`, `FP_P_atlases.jpg`, `BD_F4f_stack_test.jpg`. Blender
+previews use neutral light and Principled shading; the painterly look depends on the AD s4 shader (wrapped diffuse,
+teal shadows, warm terminator), which is tech-architect's.
+
 ## Not delivered (yet)
+- Painterly pillars (`RS_PillarA_P`/`B_P`), `RS_ArchSmall_P`, `RS_Outcrop_P` are the realistic shapes simplified and
+  repainted; AD_PAINTERLY s2 asks pillars to be stacked rounded slabs with flat mossy tops. Needs a new generator.
+- Painterly hero arch: strands are chunkier and clean, but F4_f's ropes are rounder and more evenly separated and its
+  crown is far leafier than `FP_ArchVines_P` covers; judge in Unity with the AD s4 shader before another pass.
 - Stiltwoods: Meshy meshes exist (`art_source/environment/meshy/models/stilt_A/B/C.glb`), not cleaned/baked
   (the coordinator paused them on 2026-10-09).
 - Palm frond clump: built and dropped (below the bar). Waterfall sheets, mist and water shading are tech-architect's.
@@ -120,6 +164,13 @@ The Blender previews use neutral light and a flat preview water material; the re
 - Plants: `plants_v2_build.py [frames|canopy|vines]` (iteration 2), `plants_build.py [name]` (v1).
 - Previews: `preview_render.py <game blend> <prefix>`, `hero_view.py <blend> <out.jpg> [cam xyz] [target xyz] [lens]
   [keyframe crop]` (env `HV_APPEND=<blend>` adds objects, e.g. the vines on the arch).
+- Painterly (`_P`): images `tools/assetgen/openai_images.py edit` with F4_f as reference and prompts
+  `art_source/environment/openai/prompts/p_*.txt` → `chroma_unmix.py` (atlases `--nocrop [--foliage]`) →
+  `tools/art/painterly_finish.py [atlases|backdrops|swatches]` (kit textures, mist despill, tileable bake swatches) →
+  `painterly_arch_high.py` (hero arch high) → `painterly_rock.py <piece|all>` (simplify, paint, bake, LODs, FBX) →
+  `painterly_plants.py [frames|clumps|canopy|vines]` (vines need the painterly arch) → `tools/art/painterly_stack.py`
+  (backdrop composite, atlas sheet). Previews: `HV_KEYFRAME=design/aurelia/keyframes/F4_f_painterly_openai.jpg
+  hero_view.py ...`; `PV_SAMPLES=20` speeds up `preview_render.py` / `travertine_view.py` drafts.
 - Images: `tools/assetgen/openai_images.py`, cut-outs with `tools/art/chroma_unmix.py` (`--nocrop`, `--foliage` for
   green/brown-only sheets), normals with `tools/art/normal_from_albedo.py`, mist with `tools/art/mist_band.py`. Run
   the `tools/art` scripts with Blender's Python 3.11 (it has numpy/scipy/Pillow). Meshy: `tools/assetgen/meshy_env.py`.
