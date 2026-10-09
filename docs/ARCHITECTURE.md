@@ -310,5 +310,7 @@ Hard limits (project rule 6). Measured on the **floor device** (to be confirmed 
 | [0004](adr/0004-realistic-look-on-mobile.md) | Realistic look on mobile: URP settings, lighting for streamed chunks, budgets, minimum device (AURELIA Phase 0) | Accepted for Phase 0; device floor provisional |
 | [0005](adr/0005-cloud-compile-check.md) | Cloud compile check | Accepted |
 | [0006](adr/0006-steering-input-format.md) | Steering input format (replay format 2) | Accepted |
+| [0007](adr/0007-look-test-v2-world-structure-and-atmosphere.md) | Look test v2: path-space world, merge per segment, atmosphere | Accepted (look test) |
+| [0008](adr/0008-water-mist-and-environment-integration.md) | Layered water and mist without a depth texture; environment asset integration contract | Accepted (look test) |
 | (planned) | Save format, migrations and iCloud | Week 4 |
 | (planned) | Composition root: hand-rolled vs VContainer (if needed) | When needed |

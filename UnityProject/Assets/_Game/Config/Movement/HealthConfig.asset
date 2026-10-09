@@ -23,3 +23,5 @@ MonoBehaviour:
     ReviveClearDistance: 30
     StumbleAnimationTime: 0.35
     CrashStopTime: 0.1
+    SafePointSpacing: 1
+    InvulnerableBlinkHz: 8

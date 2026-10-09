@@ -17,6 +17,7 @@ namespace JungleBooze.Gameplay.CameraRig
         private float _blend = 1f;
         private CriticalSpring _ground;
         private CriticalSpring _air;
+        private bool _wasAirborne;
         private CriticalSpring _dip;
         private CriticalSpring _lateral;
         private CriticalSpring _fov;
@@ -66,6 +67,7 @@ namespace JungleBooze.Gameplay.CameraRig
         {
             _ground.Initialized = false;
             _air.Initialized = false;
+            _wasAirborne = false;
             _dip.Initialized = false;
             _lateral.Initialized = false;
             _fov.Initialized = false;
@@ -124,6 +126,18 @@ namespace JungleBooze.Gameplay.CameraRig
             float vLat = VLatMax > 0f ? Clamp(target.VLat / VLatMax, -1f, 1f) : 0f;
             float airHeight = Math.Max(0f, target.Y - target.GroundY);
 
+            // Landing on higher ground (a log) moves ground level up and air height down at once. Rebase that step
+            // from the ground spring onto the air spring so their sum stays continuous and rises on the air spring
+            // alone, instead of sagging then rising (two springs pulling opposite ways).
+            if (_wasAirborne && _ground.Initialized && _air.Initialized)
+            {
+                float step = target.GroundY - _ground.LastTarget;
+                _ground.Value += step;
+                _ground.LastTarget += step;
+                _air.Value -= step;
+            }
+
+            _wasAirborne = airHeight > 0f;
             float ground = _ground.Update(target.GroundY, b.GroundHalfLife, dt);
             float air = _air.Update(airHeight * airFollow, b.AirHalfLife, dt);
             float dip = _dip.Update(target.Sliding ? -slideDip : 0f, b.SlideDipHalfLife, dt);

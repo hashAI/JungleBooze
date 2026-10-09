@@ -9,5 +9,8 @@ namespace JungleBooze.Gameplay.Movement
         SideClip,
         Thorns,
         Crash,
+
+        /// <summary>Floor rise above <c>stepUpHeight</c> met on the ground (minor; Pista clambers up).</summary>
+        Wall,
     }
 }

@@ -122,6 +122,34 @@ namespace JungleBooze.Tests.EditMode.CameraRig
             Assert.LessOrEqual(worst, 0.01f);
         }
 
+        [TestCase(30)]
+        [TestCase(60)]
+        [TestCase(120)]
+        public void LandingOnHigherGroundRisesWithoutSagging(int hz)
+        {
+            // Review nit 11: ground level up and air height down at the same moment must not dip the camera.
+            var rig = new CameraRigModel(new CameraProfile(), V0, VMax, VLatMax);
+            var target = new CameraTargetInput { S = 0f, Y = 1.2f, GroundY = 0f, Speed = 12f };
+            rig.Snap(target);
+            for (int i = 0; i < hz; i++)
+            {
+                rig.Update(target, 1f / hz);
+            }
+
+            float before = rig.Pose.Y;
+            target.Y = 0.9f;
+            target.GroundY = 0.9f;
+            float last = before;
+            for (int i = 0; i < hz * 2; i++)
+            {
+                float y = rig.Update(target, 1f / hz).Y;
+                Assert.GreaterOrEqual(y, last - 1e-4f, "frame " + i);
+                last = y;
+            }
+
+            Assert.AreEqual(0.9f + new CameraProfile().Height, last, 0.01f);
+        }
+
         [Test]
         public void AC43_ShakeIsCappedAndReducedMotionRemovesShakeAndBank()
         {
@@ -193,76 +221,43 @@ namespace JungleBooze.Tests.EditMode.CameraRig
             rig.Snap(target);
             rig.SetProfile(port, false);
             CameraPose mid = rig.Update(target, 0.2f);
-            Assert.Greater(mid.PitchDeg, land.PitchDeg);
-            Assert.Less(mid.PitchDeg, port.PitchDeg);
+            Assert.Greater(mid.PitchDeg, Math.Min(land.PitchDeg, port.PitchDeg));
+            Assert.Less(mid.PitchDeg, Math.Max(land.PitchDeg, port.PitchDeg));
+            Assert.Greater(mid.Y, Math.Min(land.Height, port.Height));
+            Assert.Less(mid.Y, Math.Max(land.Height, port.Height));
             CameraPose end = rig.Update(target, 0.25f);
             Assert.AreEqual(port.PitchDeg, end.PitchDeg, 1e-4f);
         }
 
-        [TestCase(2532, 1170)]
-        [TestCase(1170, 2532)]
-        public void AC44_EveryObstacleVisible15sBeforeContactAtVMax(int width, int height)
+        // Framing [ASSUMED 2026-10-09]: Pista (1.65 m) is 19–22% of the screen height in landscape and 14–16% in
+        // portrait, at every speed from v0 (base FOV) to vMax (FOV + gain). AC-101-44 is the PlayMode test
+        // FeelTestCameraPlayModeTests (real camera, all obstacles, both branches, occlusion).
+        [TestCase(2532, 1170, 0.19f, 0.22f)]
+        [TestCase(1170, 2532, 0.14f, 0.16f)]
+        [TestCase(1920, 1080, 0.19f, 0.22f)]
+        [TestCase(1080, 1920, 0.14f, 0.16f)]
+        public void PistaScreenFractionIsWithinTheFramingTarget(int width, int height, float min, float max)
         {
             bool landscape = width >= height;
             CameraProfile profile = landscape
                 ? ShippedAssets.Load<CameraProfileAsset>(FeelTestPaths.CameraLandscape).Values
                 : ShippedAssets.Load<CameraProfileAsset>(FeelTestPaths.CameraPortrait).Values;
-            float aspect = (float)width / height;
-            MovementConfig config = ShippedAssets.Config();
-            var course = new CoursePath(ShippedAssets.Course());
-            var sim = new RunnerSimulation(config, course, 1f / 60f, new RunEventBuffer(256));
-            sim.Reset(new RunOptions { ForcedSpeed = VMax, SkipStartRamp = true });
-            var bot = new PerfectBot(sim, false);
-            var rig = new CameraRigModel(profile, config.Speed.V0, config.Speed.VMax, config.Lateral.VLatMax);
-            rig.Snap(Target(sim.State));
-            var checkedIds = new bool[course.ObstacleCount];
-            var failures = new List<string>();
-            float lead = 1.5f * VMax;
-            float halfDepth = config.Hitbox.RunDepth * 0.5f;
-            while (!sim.State.Finished && !sim.State.Dead)
+            foreach (float speed in new[] { V0, VMax })
             {
-                sim.Step(bot.ReadInput(sim.State.Tick));
-                sim.Events.Clear();
-                CameraPose pose = rig.Update(Target(sim.State), 1f / 60f);
-                Matrix4x4 vp = CameraMath.ViewProjection(pose, aspect, profile.NearClip, profile.FarClip);
-                for (int id = 0; id < course.ObstacleCount; id++)
-                {
-                    ObstacleBox box = course.GetObstacle(id);
-                    if (checkedIds[id] || sim.State.S + halfDepth < box.SMin - lead)
-                    {
-                        continue;
-                    }
-
-                    checkedIds[id] = true;
-                    var front = new Vector3(Mathf.Clamp(box.CenterX, -3.5f, 3.5f), (box.YMin + Math.Min(box.YMax, box.YMin + 1.5f)) * 0.5f, box.SMin);
-                    if (!CameraMath.Contains(vp, front))
-                    {
-                        failures.Add(course.GetObstacleLabel(id));
-                    }
-                }
+                var rig = new CameraRigModel(profile, V0, VMax, VLatMax);
+                var target = new CameraTargetInput { S = 100f, Speed = speed };
+                rig.Snap(target);
+                CameraPose pose = rig.Update(target, 1f / 60f);
+                Matrix4x4 vp = CameraMath.ViewProjection(pose, (float)width / height, profile.NearClip, profile.FarClip);
+                float feet = CameraMath.ScreenY(vp, new Vector3(0f, 0f, 100f));
+                float head = CameraMath.ScreenY(vp, new Vector3(0f, 1.65f, 100f));
+                float ahead = CameraMath.ScreenY(vp, new Vector3(0f, 0f, 100f + (landscape ? 35f : 45f)));
+                float fraction = head - feet;
+                Debug.Log("[JungleBooze] camera " + profile.Name + " at " + speed.ToString("0") + " m/s: Pista " + (fraction * 100f).ToString("0.0") + "% of screen height, feet at " +
+                          (feet * 100f).ToString("0.0") + "% from bottom, path " + (landscape ? 35 : 45) + " m ahead at " + (ahead * 100f).ToString("0") + "%");
+                Assert.That(fraction, Is.InRange(min, max), profile.Name + " at " + speed + " m/s");
+                Assert.IsTrue(ahead > feet && ahead < 1f, "path visible far ahead");
             }
-
-            Assert.IsTrue(sim.State.Finished);
-            CollectionAssert.IsEmpty(failures, "not on screen 1.5 s before contact (" + (landscape ? "landscape" : "portrait") + ")");
-        }
-
-        [TestCase(2532, 1170)]
-        [TestCase(1170, 2532)]
-        public void PistaScreenFraction_Report(int width, int height)
-        {
-            bool landscape = width >= height;
-            CameraProfile profile = landscape ? new CameraProfile() : CameraProfile.DefaultPortrait();
-            var rig = new CameraRigModel(profile, V0, VMax, VLatMax);
-            var target = new CameraTargetInput { S = 100f, Speed = V0 };
-            rig.Snap(target);
-            CameraPose pose = rig.Update(target, 1f / 60f);
-            Matrix4x4 vp = CameraMath.ViewProjection(pose, (float)width / height, profile.NearClip, profile.FarClip);
-            float feet = CameraMath.ScreenY(vp, new Vector3(0f, 0f, 100f));
-            float head = CameraMath.ScreenY(vp, new Vector3(0f, 1.65f, 100f));
-            float ahead = CameraMath.ScreenY(vp, new Vector3(0f, 0f, 100f + (landscape ? 35f : 45f)));
-            Debug.Log("[JungleBooze] camera " + profile.Name + ": Pista " + ((head - feet) * 100f).ToString("0") + "% of screen height, feet at " +
-                      (feet * 100f).ToString("0") + "% from bottom, path " + (landscape ? 35 : 45) + " m ahead at " + (ahead * 100f).ToString("0") + "%");
-            Assert.IsTrue(ahead > 0f && ahead < 1f, "path visible far ahead");
         }
 
         private static CameraTargetInput Target(in RunnerState s)

@@ -13,6 +13,8 @@ namespace JungleBooze.Gameplay.Bots
     /// it looks ahead with a probe copy of the simulation; if doing nothing leads to a hit or death, it tries the
     /// best action (jump or slide) at every delay up to that moment and schedules the action in the middle of the
     /// first window that passes the threat cleanly (maximum timing margin). Allocation-free after construction.
+    /// Cost: one planning tick can run up to ~90 × 240 probe steps, so a frame where the bot (re)plans can spike on a
+    /// phone. It is a test/tool driver (CI, videos, the B key): keep it out of frame-pacing measurements (M7).
     /// </summary>
     public sealed class PerfectBot : IInputProvider
     {

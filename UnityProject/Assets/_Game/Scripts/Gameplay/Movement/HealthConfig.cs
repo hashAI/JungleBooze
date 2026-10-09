@@ -35,6 +35,12 @@ namespace JungleBooze.Gameplay.Movement
         /// <summary>Forward speed reaches 0 this fast after a crash, s.</summary>
         public float CrashStopTime = 0.1f;
 
+        /// <summary>Revive safe points are sampled this often while grounded, m.</summary>
+        public float SafePointSpacing = 1f;
+
+        /// <summary>The view blinks Pista at this rate during i-frames, Hz (spec 101 §4.1).</summary>
+        public float InvulnerableBlinkHz = 8f;
+
         public HealthConfig Clone()
         {
             return (HealthConfig)MemberwiseClone();

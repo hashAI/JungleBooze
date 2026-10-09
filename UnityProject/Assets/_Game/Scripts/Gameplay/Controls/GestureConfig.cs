@@ -15,17 +15,26 @@ namespace JungleBooze.Gameplay.Controls
         /// <summary>No lateral output until the touch moved this far; then the full travel is applied, pt.</summary>
         public float TouchDeadZone = 4f;
 
-        /// <summary>Samples within this angle of vertical contribute no lateral delta, degrees.</summary>
-        public float VerticalIntentAngle = 30f;
-
         /// <summary>Vertical swipe threshold, pt …</summary>
         public float SwipeDistance = 24f;
 
         /// <summary>… reached within this window, s.</summary>
         public float SwipeWindow = 0.12f;
 
-        /// <summary>Swipe direction within this angle of vertical, degrees.</summary>
+        /// <summary>
+        /// The one swipe/steer angle, degrees from vertical: swipes must be within it, and touch motion within it is
+        /// "vertical" and does not steer.
+        /// </summary>
         public float SwipeAngleTolerance = 35f;
+
+        /// <summary>Hysteresis: after vertical motion, steering resumes only past this angle from vertical, degrees.</summary>
+        public float SteerResumeAngle = 55f;
+
+        /// <summary>Touch direction is judged over this much travel, pt (rate- and jitter-independent).</summary>
+        public float DirectionSegment = 6f;
+
+        /// <summary>Finger speed is measured over at least this long, s (jitter-robust; swipe take-back).</summary>
+        public float SpeedSampleTime = 0.033f;
 
         /// <summary>Same-direction re-fire on one touch needs a fresh swipe distance after this, s.</summary>
         public float SwipeRearmTime = 0.18f;

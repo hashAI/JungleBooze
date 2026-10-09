@@ -182,6 +182,40 @@ namespace JungleBooze.Tests.EditMode.Movement
         }
 
         [Test]
+        public void AC21_RiseAboveStepUpHeightIsAWallHit()
+        {
+            SimRig rig = SimRig.Flat(10f, c => SimRig.Floor(c, 20f, 500f, 0.5f));
+            rig.StepUntil(s => s.Y > 0f, 300);
+            Assert.AreEqual(1, rig.CountEvents(RunEventType.Hit), "one minor hit");
+            Assert.AreEqual((byte)HitKind.Wall, rig.LastEvent(RunEventType.Hit).Reason);
+            Assert.AreEqual(HitKind.Wall, rig.State.LastHitKind);
+            Assert.AreEqual(2, rig.State.Health);
+            Assert.IsTrue(rig.State.IsInvulnerable);
+            Assert.IsTrue(rig.State.Grounded, "she clambers up and keeps running");
+            Assert.AreEqual(0.5f, rig.State.Y, 1e-5f);
+            rig.Steps(120);
+            Assert.AreEqual(1, rig.CountEvents(RunEventType.Hit));
+        }
+
+        [Test]
+        public void AC21_WallDuringIFramesOrWithShieldCostsNothing()
+        {
+            SimRig shielded = SimRig.Flat(10f, c => SimRig.Floor(c, 20f, 500f, 0.5f));
+            shielded.Sim.GrantShield();
+            shielded.StepUntil(s => s.Y > 0f, 300);
+            Assert.AreEqual(3, shielded.State.Health);
+            Assert.AreEqual(1, shielded.CountEvents(RunEventType.ShieldConsumed));
+
+            SimRig ghost = SimRig.Flat(10f, c => SimRig.Floor(c, 20f, 500f, 0.5f));
+            RunnerState st = ghost.State;
+            st.InvulnerableUntilTick = 10000;
+            ghost.Sim.SetStateForTest(st);
+            ghost.StepUntil(s => s.Y > 0f, 300);
+            Assert.AreEqual(3, ghost.State.Health);
+            Assert.AreEqual(0, ghost.CountEvents(RunEventType.Hit));
+        }
+
+        [Test]
         public void AC21_SmallDropStaysGrounded_LargeDropStartsCoyote()
         {
             SimRig small = SimRig.Flat(10f, c => SimRig.Floor(c, 20f, 500f, -0.35f));

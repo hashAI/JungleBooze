@@ -9,13 +9,13 @@ namespace JungleBooze.Gameplay.CameraRig
         public string Name = "Landscape";
 
         /// <summary>Distance behind Pista along the path tangent.</summary>
-        public float OffsetBack = 5.5f;
+        public float OffsetBack = 6.5f;
 
         /// <summary>Height above Pista's ground level.</summary>
-        public float Height = 2.4f;
+        public float Height = 3.4f;
 
         /// <summary>Downward pitch.</summary>
-        public float PitchDeg = 9f;
+        public float PitchDeg = 13f;
 
         /// <summary>Vertical FOV at v0.</summary>
         public float FovBaseDeg = 55f;
@@ -93,9 +93,9 @@ namespace JungleBooze.Gameplay.CameraRig
             return new CameraProfile
             {
                 Name = "Portrait",
-                OffsetBack = 6.2f,
-                Height = 3.0f,
-                PitchDeg = 12f,
+                OffsetBack = 7.1f,
+                Height = 4.3f,
+                PitchDeg = 11f,
                 FovBaseDeg = 65f,
                 FovGainDeg = 5f,
                 LateralFollow = 0.80f,

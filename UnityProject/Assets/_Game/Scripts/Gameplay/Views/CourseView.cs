@@ -9,8 +9,8 @@ namespace JungleBooze.Gameplay.Views
     /// Builds the gray-box geometry of a <see cref="CoursePath"/> at setup (spec 101 §6 colours): a raised path
     /// slab with holes for gaps and raised ramps, the safe/risky branch tints, foliage hedges on the edges, a low
     /// forest floor so gaps read as drops, obstacle boxes (logs as cylinders, thorns with spikes, branches on
-    /// posts), the fork divider, spinning coins, section signs and the finish arch. Coins hide on pickup and come
-    /// back on restart. Setup allocates; per-frame work is a coin spin loop.
+    /// posts with a see-through vine curtain above), the fork divider, spinning coins, section signs and the finish arch. Coins hide on pickup and come
+    /// back on restart. Setup allocates; per-frame work is a coin spin loop (<see cref="Tick"/>).
     /// </summary>
     public sealed class CourseView : MonoBehaviour
     {
@@ -21,6 +21,10 @@ namespace JungleBooze.Gameplay.Views
         private const float StripStep = 2f;
         private const float CoinRadius = 0.28f;
         private const float CoinSpinDegPerSecond = 180f;
+        private const float HighBeamThickness = 0.25f;
+        private const float VineAboveTop = 2f;
+        private const float VineSpacing = 1.2f;
+        private const float VineWidth = 0.07f;
 
         private CoursePath _course;
         private FeelTestPalette _palette;
@@ -83,19 +87,33 @@ namespace JungleBooze.Gameplay.Views
             }
         }
 
-        private void Update()
+        /// <summary>
+        /// Per-frame coin spin, driven by the composition root (the only per-frame entry point, ARCHITECTURE §4).
+        /// Pass 0 while paused. Collected (hidden) coins are skipped.
+        /// </summary>
+        public void Tick(float frameSeconds)
         {
-            if (_coins == null)
+            if (_coins == null || frameSeconds <= 0f)
             {
                 return;
             }
 
-            _spin = Mathf.Repeat(_spin + (Time.unscaledDeltaTime * CoinSpinDegPerSecond), 360f);
+            _spin = Mathf.Repeat(_spin + (frameSeconds * CoinSpinDegPerSecond), 360f);
             Quaternion rotation = Quaternion.Euler(90f, _spin, 0f);
             for (int i = 0; i < _coins.Length; i++)
             {
-                _coins[i].transform.localRotation = rotation;
+                GameObject coin = _coins[i];
+                if (coin.activeSelf)
+                {
+                    coin.transform.localRotation = rotation;
+                }
             }
+        }
+
+        /// <summary>The view object of an obstacle (tests: visibility and occlusion checks).</summary>
+        public GameObject GetObstacleObject(int id)
+        {
+            return _obstacles[id];
         }
 
         private void BuildFloor()
@@ -276,7 +294,7 @@ namespace JungleBooze.Gameplay.Views
 
                         break;
                     case ObstacleClass.High:
-                        ViewUtil.Box("Branch", go.transform, _palette.High, min, max, true);
+                        BuildHigh(go.transform, box, min, max);
                         float postLeft = box.XMin;
                         float postRight = box.XMax;
                         ViewUtil.Box("PostL", go.transform, _palette.High, new Vector3(postLeft - 0.3f, box.YMin - 6f, box.SMin + 0.1f), new Vector3(postLeft, box.YMax, box.SMax - 0.1f), true);
@@ -303,6 +321,29 @@ namespace JungleBooze.Gameplay.Views
 
                         break;
                 }
+            }
+        }
+
+        /// <summary>
+        /// A High obstacle reads as a gate you slide under: a thin branch at the bottom of its box and a curtain of
+        /// vines hanging from the canopy down to it (you can't jump through). It is see-through above the branch, so
+        /// an obstacle right behind it (the slide→jump combos) is readable 1.5 s ahead (AC-101-44); a solid box hid it.
+        /// </summary>
+        private void BuildHigh(Transform parent, in ObstacleBox box, Vector3 min, Vector3 max)
+        {
+            float beamTop = Mathf.Min(box.YMax, box.YMin + HighBeamThickness);
+            ViewUtil.Box("Branch", parent, _palette.High, min, new Vector3(max.x, beamTop, max.z), true);
+            float vineTop = box.YMax + VineAboveTop;
+            _course.GetOuterBounds((box.SMin + box.SMax) * 0.5f, out float pathMin, out float pathMax);
+            float x0 = Mathf.Max(box.XMin, pathMin - HedgeWidth);
+            float x1 = Mathf.Min(box.XMax, pathMax + HedgeWidth);
+            int count = Mathf.Max(2, Mathf.RoundToInt((x1 - x0) / VineSpacing));
+            float sMid = (box.SMin + box.SMax) * 0.5f;
+            Material vine = _palette.Hedge != null ? _palette.Hedge : _palette.High;
+            for (int i = 0; i < count; i++)
+            {
+                float x = x0 + ((i + 0.5f) * (x1 - x0) / count);
+                ViewUtil.Box("Vine", parent, vine, new Vector3(x - (VineWidth * 0.5f), beamTop, sMid - (VineWidth * 0.5f)), new Vector3(x + (VineWidth * 0.5f), vineTop, sMid + (VineWidth * 0.5f)), false);
             }
         }
 

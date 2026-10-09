@@ -16,10 +16,12 @@ MonoBehaviour:
     DragSensitivity: 0.04
     SensitivityMultiplier: 1
     TouchDeadZone: 4
-    VerticalIntentAngle: 30
     SwipeDistance: 24
     SwipeWindow: 0.12
     SwipeAngleTolerance: 35
+    SteerResumeAngle: 55
+    DirectionSegment: 6
+    SpeedSampleTime: 0.033
     SwipeRearmTime: 0.18
     FlickMaxDuration: 0.22
     FlickMinDistance: 30

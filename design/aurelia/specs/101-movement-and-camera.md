@@ -2,7 +2,7 @@
 
 **Owner:** game-designer | **Implementers:** gameplay-engineer (simulation, input), ui-engineer/gameplay-engineer
 (camera rig view), balance-simulator (bots, sim targets), qa-engineer (feel course test plan)
-**Status:** v1, ready for implementation | **Last updated:** 2026-10-09
+**Status:** v1.1, implemented (Phase 1 review fixes applied) | **Last updated:** 2026-10-09
 **Sources:** `design/aurelia/BLUEPRINT.md` Parts III.2, V, VI, XVII, XXXVI, XLVI, LIV; `design/aurelia/GDD.md` §5–7, §11;
 `design/aurelia/ART_DIRECTION.md` §9; `docs/ARCHITECTURE.md` §4–5 (deterministic core).
 **Not in scope:** swimming, vines and canopy beams (spec 103), chunks/routes generation (spec 102), power-up effects other
@@ -75,13 +75,14 @@ Each tick:
 | `airLateralFactor` / `slideLateralFactor` | 1.0 / 1.0 | × | Full control everywhere (responsiveness first) |
 
 **Dodge** (`DodgeLeft`/`DodgeRight` command, sign `dir`):
-- `xT = clamp(xOrigin + dir · max(dodgeDistance, dir · (xT − xOrigin)), −xLim, +xLim)`, where `xOrigin` is the
-  target at the latest `TouchBegan` of the gesture that produced the dodge (keyboard: the current `xT`). The dodge
-  guarantees a total shift of at least `dodgeDistance` from where the gesture started; it never cancels drag motion
-  already made in that direction.
+- `xT = clamp(x + dir · dodgeDistance, −xLim, +xLim)`, where `x` is Pista's **current** lateral position
+  `[ASSUMED 2026-10-09]`. The dodge replaces any steering target still pending (in either direction), so a flick
+  right after a drag the other way moves her 2.2 m from where she is, never up to 4.4 m (review S1). Keyboard dodges
+  use the same rule. `TouchBegan` is still recorded but no longer used by the simulation.
 - For `dodgeBoostTime`, `vLatMax` → `dodgeVLatMax` and `accelLat` → `dodgeAccel`. Emit `Dodge` (view: dodge
   animation, whoosh).
-- Works on the ground, in the air and while sliding. A second dodge during the boost stacks from the new target.
+- Works on the ground, in the air and while sliding. A second dodge during the boost restarts from her position at
+  that tick `[ASSUMED 2026-10-09]`.
 | Name | Value | Unit |
 |---|---|---|
 | `dodgeDistance` | 2.2 | m |
@@ -109,7 +110,7 @@ Jump sets `vy = jumpVelocity`. Gravity is asymmetric with an apex hang:
 | Resulting airtime (flat ground) | 0.60 ±0.02 | s | Jump length = airtime × speed: 6.0 m at 10 m/s, 9.6 m at 16 m/s |
 | `coyoteTime` | 0.10 | s | Jump still allowed this long after walking off an edge |
 | `inputBufferTime` | 0.15 | s | A jump/slide that can't execute yet is held this long |
-| `stepUpHeight` | 0.35 | m | Floor rises up to this are walked up without leaving the ground |
+| `stepUpHeight` | 0.35 | m | Floor rises up to this are walked up without leaving the ground. A higher rise met on the ground is a wall: Minor hit `Wall` (−1 segment, stumble, i-frames; shield/i-frames apply), then she clambers up `[ASSUMED 2026-10-09]`. Chunks (spec 102) author such rises as obstacles, never as bare floor steps |
 | `stepDownSnap` | 0.35 | m | Floor drops up to this keep Pista grounded; larger drops make her airborne (coyote starts) |
 | `fallKillDepth` | 1.20 | m | Below the lip of the floor she left over a gap → major fall |
 | `ledgeAssistReach` | 0.30 | m | Far lip within this distance ahead … |
@@ -117,7 +118,9 @@ Jump sets `vy = jumpVelocity`. Gravity is asymmetric with an apex hang:
 | `hardLandingFall` | 2.5 | m | Fall height for the hard-landing event (camera/haptic) |
 | `softLandingFall` | 1.0 | m | Minimum fall height for the landing haptic |
 
-Airtime and arc are identical at every forward speed (predictable arc). No double jump without the Double Jump
+Ground and gap checks use `s` before the forward advance (step order §2.1), so leaving a lip and landing are
+detected one tick late: coyote time is effectively 7 ticks from the lip edge (AC-101-11 measures from the airborne
+tick). Airtime and arc are identical at every forward speed (predictable arc). No double jump without the Double Jump
 ability (later spec). There is no variable jump height (swipes have no hold).
 
 ### 2.5 Slide and fast-fall
@@ -187,10 +190,12 @@ Units are iOS points (pt). Samples: `(touchId, phase, positionPt, timestampS)`.
 |---|---|---|---|
 | `dragSensitivity` | 0.040 | m/pt | 175 pt of thumb travel = full 7 m path. Settings multiplier 0.5–2.0 |
 | `touchDeadZone` | 4 | pt | No lateral output until the touch moves this far; then the full distance is applied (no lost travel) |
-| `verticalIntentAngle` | 30 | ° from vertical | A sample whose direction is within this of vertical contributes 0 lateral delta |
 | `swipeDistance` | 24 | pt | Vertical swipe threshold … |
-| `swipeWindow` | 0.12 | s | … reached within this window (≥ 200 pt/s) |
-| `swipeAngleTolerance` | 35 | ° from vertical | `|Δy| ≥ 1.43·|Δx|` over the window |
+| `swipeWindow` | 0.12 | s | … reached within this window (≥ 200 pt/s). The latest sample before the window counts as the position at the window start (iOS sends no samples while a finger rests), so a swipe after a resting thumb counts in full (review B1) |
+| `swipeAngleTolerance` | 35 | ° from vertical | **The one swipe/steer angle** `[ASSUMED 2026-10-09]`: swipes need `|Δy| ≥ 1.43·|Δx|`, and touch motion within it is "vertical" and does not steer (was 30° for steering, review S2) |
+| `steerResumeAngle` | 55 | ° from vertical | Hysteresis: after vertical motion, steering resumes only when the motion is beyond this from vertical; the resuming segment's travel is applied in full `[ASSUMED 2026-10-09]` |
+| `directionSegment` | 6 | pt | Direction is judged per this much travel, not per sample, so jitter and 120/240 Hz touch rates don't flip it |
+| `speedSampleTime` | 0.033 | s | Finger speed is measured over at least this long (swipe take-back, below) |
 | `swipeRearmTime` | 0.18 | s | Same-direction re-fire on the same touch needs a fresh 24 pt after this; opposite direction re-fires immediately |
 | `flickMaxDuration` | 0.22 | s | Quick flick: touch lifetime ≤ this … |
 | `flickMinDistance` | 30 | pt | … and `|Δx|` ≥ this … |
@@ -201,8 +206,12 @@ Units are iOS points (pt). Samples: `(touchId, phase, positionPt, timestampS)`.
 
 Behaviour:
 1. Vertical swipes fire **when the threshold is crossed** (not on release): latency is the time to move 24 pt.
-2. Steering and swiping share one touch: a player can drag, swipe up mid-drag, and keep dragging. The
-   vertical-intent filter stops the swipe from also steering.
+2. Steering and swiping share one touch: a player can drag, swipe up mid-drag, and keep dragging. A gesture is a
+   swipe or steering, never both `[ASSUMED 2026-10-09]`: vertical motion doesn't steer (one 35° angle with the 55°
+   hysteresis above), and when a swipe fires, any steering its own samples already produced is taken back (every
+   sample after the swipe's reference point, plus the fast (≥ 200 pt/s) samples just before it inside the window: the
+   sideways hook real thumb swipes often start with). A slower drag before the swipe keeps its steering. Turning from
+   a swipe back into a drag can cost up to one direction segment (6 pt) of that drag.
 3. Two touches (landscape two-thumb): touch A (first down) owns steering and can swipe/flick; touch B can swipe and
    flick but never steers. If A lifts while B is down, B becomes the steering owner from its current position
    (no target jump).
@@ -212,7 +221,9 @@ Behaviour:
 6. Dispatch: Update reads touches before the simulation steps that frame. Discrete commands go to the queue and are
    delivered one per tick in recognition order. Lateral delta accumulated since the last tick is delivered on the
    next tick; if one frame runs several ticks, the delta is split evenly across them (remainder on the last).
-7. A cancelled touch (orientation change, system interruption) emits no flick and no further deltas.
+7. A cancelled touch (orientation change, system interruption) emits no flick and no further deltas. Any orientation
+   or screen-size change cancels active touches, including a 180° landscape flip (same size, mirrored coordinates);
+   pause, backgrounding and focus loss cancel them too.
 
 ### 3.4 Keyboard and mouse (editor and Mac builds)
 | Input | Action |
@@ -220,7 +231,7 @@ Behaviour:
 | A / D or ← / → (held) | Lateral target moves at `keyboardLateralSpeed` = 10 m/s |
 | W / ↑ / Space | Jump |
 | S / ↓ | Slide |
-| Q / E | Dodge left / right |
+| Q / E | Dodge left / right (keyboard commands share the gesture queue, so mixed sources keep recognition order) |
 | Mouse left-drag | Emulates one touch; pixels → pt by `editorPixelsPerPoint` (default 2.0) |
 | Esc | Pause · R restart · F1 debug overlay (hitboxes, buffer state, `xT`, dropped inputs) · O toggle camera orientation profile |
 
@@ -243,7 +254,9 @@ Rules:
   Example: a 1.2 m rock has a 1.0 m hitbox and a 0.6 m crash core: only a near-centre hit kills.
 - **Walkable top:** if at the first overlapping tick the feet are ≥ (effective top − 0.15 m) and `vy ≤ 0`, the
   obstacle becomes floor for its extent.
-- Each obstacle resolves **once** per run: after its first contact it is ignored.
+- Each obstacle resolves **once** per run: after its first contact it is ignored. This includes a contact during
+  i-frames, so a long thorn patch or blocker first touched while ghosting stays harmless afterwards (spec 102
+  authoring note).
 - Path edges never damage.
 - During invulnerability, Low/High/Blocker/Thorns contacts are ignored (Pista ghosts through, view blinks at 8 Hz);
   gaps still apply (ledge assist still helps).
@@ -276,30 +289,33 @@ frame-rate independent.
 
 | Parameter | Landscape | Portrait | Notes |
 |---|---|---|---|
-| Offset back (along path tangent) | 5.5 m | 6.2 m | |
-| Height above Pista's ground level | 2.4 m | 3.0 m | |
-| Pitch (down) | 9° | 12° | Horizon upper third (landscape) / ~35% from top (portrait) |
+| Offset back (along path tangent) | 6.5 m | 7.1 m | `[ASSUMED 2026-10-09]` (was 5.5 / 6.2) |
+| Height above Pista's ground level | 3.4 m | 4.3 m | `[ASSUMED 2026-10-09]` (was 2.4 / 3.0): high enough to see a Low 10 m behind a High's branch 1.5 s ahead |
+| Pitch (down) | 13° | 11° | `[ASSUMED 2026-10-09]` (was 9° / 12°). Horizon ~70–72% from the bottom (landscape) / ~65% (portrait) |
 | Vertical FOV (at `v0`) | 55° | 65° | |
 | FOV gain at `vMax` | +6° | +5° | Linear in `(v − v0)/(vMax − v0)`, half-life 0.5 s |
 | Lateral follow | 0.70 · x | 0.80 · x | Camera keeps the path partly centred, so edges stay readable; half-life 0.10 s |
 | Path yaw follow half-life | 0.25 s | 0.25 s | Smooths spline curvature |
-| Ground-level follow half-life | 0.30 s | 0.30 s | Floor height changes (ramps, ledges) |
+| Ground-level follow half-life | 0.30 s | 0.30 s | Floor height changes (ramps, ledges). Landing on higher ground moves that step onto the air spring, so the camera rises without sagging first |
 | Air follow | 35% of jump height, half-life 0.20 s | 30% | Jumps visible, horizon stable |
 | Slide dip | −0.25 m, half-life 0.12 s | −0.20 m | |
 | Bank (roll) | ≤ 2.0°, ∝ `vLat / vLatMax`, half-life 0.12 s | ≤ 1.5° | |
-| Pista on screen | 14–18% of height, feet at ~28% from bottom | ~12% of height, feet at ~22% from bottom | Art direction §9 |
+| Pista on screen | **19–22%** of height (21.6% at v0, 19.1% at vMax), feet at 25–28% from bottom | **14–16%** of height (15.8% / 14.4%), feet at 21–24% from bottom | `[ASSUMED 2026-10-09]` coordinator framing (was 14–18% / ~12%). Pista = 1.65 m; EditMode test asserts it at v0 and vMax, 19.5:9 and 16:9 |
 | Path visible ahead | ≥ 35 m | ≥ 45 m | |
 
 **Shake** (only these events; none while running): hard landing 0.04 m / 0.18 s; minor hit 0.07 m / 0.25 s;
 crash 0.12 m / 0.35 s; 18 Hz smooth noise; hard caps 0.12 m position, 1.0° rotation; new shake replaces a weaker one.
 **Reduced Motion** (setting, defaults on when iOS Reduce Motion is on): shake 0, FOV gain halved, bank 0, slide dip halved.
-**Orientation change:** the rig blends to the other profile over 0.4 s; the simulation is untouched; active touches are cancelled.
+**Orientation change:** the rig blends to the other profile over 0.4 s; the simulation is untouched; active touches are
+cancelled on any orientation or screen-size change (including a 180° flip).
 **Camera corridor rule:** chunks and the feel course keep a clear box from Pista to the camera (+0.5 m margin); no
 camera collision logic in Phase 1.
 
 ## 6. Feel test course (gray-box, hand-authored, ~61 s)
 Course path: straight, flat, default width 7.0 m (`H` = 3.5), starts at `s` = 0, finish arch at 640 m.
-Gray-box colours: path light grey, Low = tan, High = brown, Blocker = dark grey, Thorns = crimson `#9E2238` with spikes,
+Gray-box colours: path light grey, Low = tan, High = brown (a 0.25 m branch at the bottom of its box, on posts, with
+a see-through curtain of hanging vines above it `[ASSUMED 2026-10-09]`: a solid box hid the Low right behind it),
+Blocker = dark grey, Thorns = crimson `#9E2238` with spikes,
 coins = gold, safe branch tint green, risky tint orange. The course is data (a ScriptableObject `FeelCourse`), not
 scene geometry, so tests load it.
 
@@ -327,7 +343,7 @@ scene geometry, so tests load it.
 | M3 | Lateral onset / settle | ≥ 5 cm in 2 ticks; 2 m step within 0.10 m in ≤ 0.33 s; overshoot ≤ 0.02 m | EditMode |
 | M4 | Gesture classification | ≥ 98% correct; drag→false jump ≤ 1% | 200 recorded gestures from 5 testers, both orientations |
 | M5 | No unfair deaths | Perfect bot clears the course at any constant speed 10–16 m/s with 0 hits; every hit names its obstacle and cause | EditMode + sim |
-| M6 | Visibility | Every obstacle on screen ≥ 1.5 s before contact at `vMax` | PlayMode camera test |
+| M6 | Visibility | Every obstacle on screen and unoccluded ≥ 1.5 s before contact at `vMax` | PlayMode camera test |
 | M7 | Frame pacing | 60 fps, no frame > 25 ms on the minimum device | performance-engineer |
 | M8 | Learnability | 5 testers × 3 runs: median hits on run 3 ≤ 2; "controls do what I mean" ≥ 4/5; no "didn't register" report the replay can't explain | Playtest |
 | M9 | Owner gate | "Is just running fun?" yes on the phone, in the chosen orientation | Owner |
@@ -360,7 +376,7 @@ Movement
 - **AC-101-05** Dragging the target 3 m past the edge then reversing 1 cm moves `xT` inward on the next tick (no debt).
 - **AC-101-06** Pista never leaves `[−xLim, +xLim]`; pushing outward at the edge emits `EdgeBrush` and never `Hit`.
 - **AC-101-07** When `H` narrows below `|x|`, `x` moves inward at ≤ 6 m/s with no damage.
-- **AC-101-08** Dodge from a touch origin with 1.0 m of same-direction drag ends with `xT` = origin ± 2.2 m; with 2.8 m of drag it ends at origin ± 2.8 m (dodge never pulls back).
+- **AC-101-08** `[ASSUMED 2026-10-09]` A dodge sets `xT` = `x` ± 2.2 m from Pista's current position, clamped to the path, whatever steering target was pending (1.0 m or 2.8 m of same-direction drag, or 2.0 m of opposite drag); after a drag one way, a flick the other way never moves her more than 2.2 m from where she was.
 - **AC-101-09** Dodge works grounded, airborne and sliding and never changes `y`, `vy` or slide state.
 - **AC-101-10** Jump on flat ground: apex 1.41 ±0.02 m, airtime 0.60 ±0.02 s, identical at 10 and 16 m/s.
 - **AC-101-11** Jump within 6 ticks after walking off an edge executes (coyote); at 7 ticks it is buffered/dropped.
@@ -373,7 +389,7 @@ Movement
 - **AC-101-18** Fast-fall then jump before landing → jump executes on the landing tick.
 - **AC-101-19** Slide timer expiring under a High obstacle extends the slide until clear (ceiling guard).
 - **AC-101-20** Jump under a High obstacle is held and fires on the first clear tick within 21 ticks; otherwise dropped with `InputDropped(Ceiling)`.
-- **AC-101-21** Floor rise ≤ 0.35 m is walked up grounded; drop > 0.35 m makes the runner airborne and starts coyote.
+- **AC-101-21** Floor rise ≤ 0.35 m is walked up grounded; a higher rise is one Minor `Wall` hit (none during i-frames; shield absorbs it) and she clambers up; drop > 0.35 m makes the runner airborne and starts coyote.
 - **AC-101-22** Landing short of a gap's far lip by ≤ 0.30 m with feet ≤ 0.25 m below the lip snaps onto the lip; beyond that the runner falls and dies at 1.20 m below the lip (cause `Fall`).
 Collisions and health
 - **AC-101-23** Each obstacle class (§4.1) produces exactly its listed result; Low/High/Thorns cost 1 segment.
@@ -386,8 +402,8 @@ Collisions and health
 - **AC-101-30** 350 m without damage restores 1 segment, never above 3.
 - **AC-101-31** Shield absorbs a Minor or a Crash (no health loss, no stumble, 60 ticks i-frames) and does not absorb a Fall; not consumed during existing i-frames.
 Input
-- **AC-101-32** Recognizer: 24 pt up within 120 ms at ≤ 35° from vertical → `Jump` on the crossing sample; 23 pt → nothing; 40° → no swipe.
-- **AC-101-33** A diagonal swipe up (25° from vertical) produces `Jump` and < 0.05 m of lateral target change.
+- **AC-101-32** Recognizer: 24 pt up within 120 ms at ≤ 35° from vertical → `Jump` on the crossing sample; 23 pt → nothing; 40° → no swipe. Also after the thumb rested 0.5 s (30 pt in 67 ms → `Jump` on the crossing sample), at 60, 120 and 240 Hz, and with ±1 pt sample jitter.
+- **AC-101-33** A diagonal swipe up (25° and 33° from vertical, also curved swipes that start with a sideways hook) produces `Jump` and < 0.05 m of lateral target change, at 60/120/240 Hz and with jitter.
 - **AC-101-34** Flick 40 pt in 150 ms horizontally → one Dodge on release; same motion over 300 ms at < 1,200 pt/s release speed → steering only, no Dodge.
 - **AC-101-35** Drag, swipe up mid-drag, continue dragging → one Jump and continuous steering; no Dodge.
 - **AC-101-36** Two swipes in the same frame → two commands on consecutive ticks, in order.
@@ -399,7 +415,7 @@ Camera
 - **AC-101-41** Rig converges to each profile's offsets/pitch/FOV within 1 cm / 0.1° at constant speed; FOV equals base + gain at `vMax`.
 - **AC-101-42** Smoothing gives the same result (within 1 cm) at 30, 60 and 120 Hz frame rates.
 - **AC-101-43** Shake never exceeds 0.12 m / 1.0°; with Reduced Motion, shake and bank are exactly 0.
-- **AC-101-44** (PlayMode) On the feel course at `vMax`, every obstacle is inside the view frustum ≥ 1.5 s before contact, in both profiles.
+- **AC-101-44** (PlayMode, real camera) On the feel course at `vMax`, 1.5 s before contact at least half of every obstacle's front face (5×3 sample points) is inside the view frustum and not occluded (raycast), in both profiles, at 19.5:9 and 16:9, on both fork branches (obstacles of the branch not taken are skipped).
 Course
 - **AC-101-45** The Perfect bot finishes `FeelCourse` with 0 hits at constant 10, 13 and 16 m/s.
 - **AC-101-46** Debug overlay shows hitboxes, `xT`, buffered command and the last 5 dropped inputs (PlayMode smoke test).
@@ -416,10 +432,15 @@ Course
 | Drag past the path edge | Clamped, edge brush, no damage, no debt |
 | Hit during i-frames | Ignored (gaps still apply) |
 | Missed gap | Ledge assist if close, else fall → Dead (revive offer) |
-| Pause / app backgrounded | Simulation frozen; resume after a 1.0 s "ready" beat; touches held at resume are ignored until lifted |
+| Pause / app backgrounded / focus lost | Simulation frozen; resume after a 1.0 s "ready" beat; touches held at resume are ignored until lifted. Focus loss (Control Center, Notification Center, call banner, Siri) also pauses; an interruption during the countdown cancels it, so the player resumes again and gets the full beat `[ASSUMED 2026-10-09]` |
 | Frame hitch | ≤ 5 ticks per frame (ARCHITECTURE §5.2); input deltas split across them |
+| One long upward swipe (≥ 0.25 s) | Re-fires `Jump` after the 0.18 s re-arm; in the air it is buffered and can become a jump on landing. Per spec; watch for it in the playtest (M8) |
 
 ## 10. Assumptions `[ASSUMED]`
 Hybrid Steer + Flick; 0.040 m/pt; steering never kills; 60 Hz simulation; release-flick dodge on by default;
 landscape two-thumb rule (B swipes only); walkable-top logs; i-frames ghost through obstacles; per-orientation camera
 numbers in §5 extend ART_DIRECTION §9.
+Phase 1 review fixes (2026-10-09, coordinator decisions, for owner/game-designer review): dodge from the current
+position (§2.3, AC-101-08); one 35° swipe/steer angle with 55° hysteresis and swipe take-back (§3.3); camera framing
+19–22% / 14–16% with the §5 numbers; rises above `stepUpHeight` are `Wall` hits (§2.4); focus loss pauses and
+restarts the countdown (§9); touches cancelled on any orientation/size change; see-through High gray-box (§6).

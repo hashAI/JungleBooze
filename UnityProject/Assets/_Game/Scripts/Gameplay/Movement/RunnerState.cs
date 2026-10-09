@@ -66,8 +66,6 @@ namespace JungleBooze.Gameplay.Movement
 
         public long ReviveTick;
 
-        public float DodgeOriginX;
-
         public InputCommand Buffered;
 
         public long BufferedTick;

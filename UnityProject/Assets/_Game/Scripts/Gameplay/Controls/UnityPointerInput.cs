@@ -151,7 +151,8 @@ namespace JungleBooze.Gameplay.Controls
                 _dispatcher.AddLateral(steer * _config.KeyboardLateralSpeed * (double)frameSeconds);
             }
 
-            CommandQueue queue = _dispatcher.ExtraCommands;
+            // Keyboard commands share the gesture queue so mixed sources are delivered in recognition order.
+            CommandQueue queue = _gestures.Commands;
             if (keyboard.wKey.wasPressedThisFrame || keyboard.upArrowKey.wasPressedThisFrame || keyboard.spaceKey.wasPressedThisFrame)
             {
                 queue.TryEnqueue(InputCommand.Jump);
@@ -162,15 +163,14 @@ namespace JungleBooze.Gameplay.Controls
                 queue.TryEnqueue(InputCommand.Slide);
             }
 
-            // Keyboard dodges start from the current target (spec 101 §2.3): send TouchBegan with them.
             if (keyboard.qKey.wasPressedThisFrame)
             {
-                queue.TryEnqueue(InputCommand.TouchBegan | InputCommand.DodgeLeft);
+                queue.TryEnqueue(InputCommand.DodgeLeft);
             }
 
             if (keyboard.eKey.wasPressedThisFrame)
             {
-                queue.TryEnqueue(InputCommand.TouchBegan | InputCommand.DodgeRight);
+                queue.TryEnqueue(InputCommand.DodgeRight);
             }
         }
 

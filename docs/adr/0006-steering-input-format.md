@@ -1,8 +1,9 @@
 # ADR 0006: Steering input format (replay format 2)
 
 - Status: Accepted (amends ADR 0002 §3 and ARCHITECTURE §5.3)
-- Date: 2026-10-09
-- Deciders: gameplay-engineer, per spec 101 §3.2 (tech-architect to confirm at review)
+- Date: 2026-10-09 (proposed); accepted 2026-10-09 after the Phase 1 review fixes
+- Deciders: gameplay-engineer, per spec 101 §3.2; confirmed by gameplay-engineer with the tech-architect sign-off
+  delegated by the coordinator (2026-10-09), after review `docs/reviews/2026-10-09-phase1-feel.md` (S6)
 - Hard to undo: **yes** (replays, bots and every input source produce this struct)
 
 ## Context
@@ -19,8 +20,10 @@ steering, and replays must stay bit-exact.
    replay providers all produce it; the simulation cannot tell them apart.
 2. **`InputCommand` (byte flags), renumbered:** `Jump = 1`, `Slide = 2`, `DodgeLeft = 4`, `DodgeRight = 8`,
    `TouchBegan = 16`. At most one of Jump/Slide/Dodge* per tick (`InputCommands.Discrete` picks the lowest bit if a
-   malformed frame carries several). `TouchBegan` marks the dodge origin (spec 101 §2.3); keyboard dodges send it
-   with the dodge so they start from the current target. Lane commands, `CompanionAssist` and `PauseResumed` are
+   malformed frame carries several). `TouchBegan` is recorded for analysis (gesture starts in replays); since
+   2026-10-09 [ASSUMED] the simulation ignores it, because a dodge now moves 2.2 m from Pista's current position
+   (spec 101 §2.3, review S1) instead of from a touch origin. The flag keeps its value; the binary layout and the
+   format version are unchanged (a replay is only valid for the build and config hash that recorded it). Lane commands, `CompanionAssist` and `PauseResumed` are
    removed: the companion is not in Phase 1, and pause is outside the simulation (the run is frozen; the
    recognizer ignores touches held at resume). From now on values are append-only again.
 3. **Steering is quantized to whole millimetres per tick** after sensitivity. Input sources carry the sub-millimetre

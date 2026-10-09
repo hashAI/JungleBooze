@@ -17,7 +17,6 @@ namespace JungleBooze.Gameplay.Movement
     {
         private const int QueryCapacity = 32;
         private const int SafeRingSize = 64;
-        private const float SafeSampleSpacing = 1f;
         private const long Never = long.MinValue / 4;
 
         private readonly MovementConfig _config;
@@ -165,7 +164,6 @@ namespace JungleBooze.Gameplay.Movement
             _state.S = options.StartS;
             _state.X = options.StartX;
             _state.XTarget = options.StartX;
-            _state.DodgeOriginX = options.StartX;
             _state.Grounded = true;
             _state.Health = _config.Health.MaxHealth;
             _state.SlideEndTick = Never;
@@ -255,14 +253,8 @@ namespace JungleBooze.Gameplay.Movement
                 EndSlide();
             }
 
-            // (1) Input.
-            InputCommand commands = frame.Commands;
-            if ((commands & InputCommand.TouchBegan) != 0)
-            {
-                _state.DodgeOriginX = _state.XTarget;
-            }
-
-            InputCommand discrete = InputCommands.Discrete(commands);
+            // (1) Input. TouchBegan is recorded for analysis only; the dodge no longer uses a gesture origin.
+            InputCommand discrete = InputCommands.Discrete(frame.Commands);
 
             // (2) Discrete command resolution.
             ResolveCeilingHold(t);
@@ -326,30 +318,31 @@ namespace JungleBooze.Gameplay.Movement
                 hazardS = Math.Min(hazardS, LastGroundedS());
             }
 
+            // The most recent safe point far enough back whose (clamped) spot still has floor.
             float limit = hazardS - health.ReviveBackDistance;
             float s = Math.Max(0f, limit);
             float x = 0f;
             float y = 0f;
             bool found = false;
-            for (int i = 0; i < _safeCount; i++)
+            for (int i = 0; i < _safeCount && !found; i++)
             {
                 int index = (_safeHead - 1 - i + SafeRingSize) % SafeRingSize;
                 if (_safeS[index] <= limit)
                 {
-                    s = _safeS[index];
-                    x = _safeX[index];
-                    y = _safeY[index];
-                    found = true;
-                    break;
+                    float cx = ClampToPath(_safeS[index], _safeX[index]);
+                    if (_path.TryGetFloor(_safeS[index], cx, out float floor))
+                    {
+                        s = _safeS[index];
+                        x = cx;
+                        y = floor;
+                        found = true;
+                    }
                 }
             }
 
-            _path.GetLateralBounds(s, x, out float bMin, out float bMax);
-            float xMin = bMin + _config.Lateral.EdgeMargin;
-            float xMax = bMax - _config.Lateral.EdgeMargin;
-            x = Clamp(x, xMin, Math.Max(xMin, xMax));
-            if (!found || !_path.TryGetFloor(s, x, out y))
+            if (!found)
             {
+                x = ClampToPath(s, 0f);
                 _path.TryGetFloor(s, x, out y);
             }
 
@@ -366,7 +359,6 @@ namespace JungleBooze.Gameplay.Movement
             _state.S = s;
             _state.X = x;
             _state.XTarget = x;
-            _state.DodgeOriginX = x;
             _state.VLat = 0f;
             _state.Y = y;
             _state.Vy = 0f;
@@ -577,10 +569,9 @@ namespace JungleBooze.Gameplay.Movement
 
             if (dodgeDir != 0)
             {
-                float origin = _state.DodgeOriginX;
-                float made = dodgeDir * (_state.XTarget - origin);
-                float shift = Math.Max(lat.DodgeDistance, made);
-                _state.XTarget = Clamp(origin + (dodgeDir * shift), xMin, xMax);
+                // [ASSUMED 2026-10-09] The dodge moves dodgeDistance from where Pista is now and replaces any steering
+                // target still pending (in either direction), so a flick after a drag never throws her further.
+                _state.XTarget = Clamp(_state.X + (dodgeDir * lat.DodgeDistance), xMin, xMax);
                 _state.DodgeBoostUntilTick = t + _dodgeBoostTicks - 1;
                 Emit(RunEventType.Dodge, -1, (byte)(dodgeDir > 0 ? 1 : 0), 0f);
             }
@@ -696,9 +687,18 @@ namespace JungleBooze.Gameplay.Movement
             {
                 if (TryGetSupport(_state.S, _state.X, _state.Y, true, out float floor))
                 {
-                    if (floor - _state.Y >= -js.StepDownSnap)
+                    float rise = floor - _state.Y;
+                    if (rise > js.StepUpHeight)
                     {
-                        // Walk up (any rise is stepped onto: steering never kills [ASSUMED]) or snap down.
+                        // A rise above stepUpHeight is a wall, not a step: minor hit, then she clambers up (the
+                        // simulation has no blocking floor). Chunks author such rises as obstacles (spec 102).
+                        _state.Y = floor;
+                        _state.GroundY = floor;
+                        ApplyMinorHit(t, -1, HitKind.Wall);
+                    }
+                    else if (rise >= -js.StepDownSnap)
+                    {
+                        // Walk up a step ≤ stepUpHeight, or snap down a drop ≤ stepDownSnap.
                         _state.Y = floor;
                         _state.GroundY = floor;
                     }
@@ -999,9 +999,20 @@ namespace JungleBooze.Gameplay.Movement
                 ApplySideClip(t, minorBox);
             }
 
+            ApplyMinorHit(t, minorId, minorKind);
+        }
+
+        /// <summary>A minor hit (spec 101 §4.2): shield, else −1 segment (FTUE floor), stumble and i-frames.</summary>
+        private void ApplyMinorHit(long t, int id, HitKind kind)
+        {
+            if (t <= _state.InvulnerableUntilTick)
+            {
+                return;
+            }
+
             if (_state.Shield)
             {
-                ConsumeShield(t, minorId, minorKind);
+                ConsumeShield(t, id, kind);
                 return;
             }
 
@@ -1013,16 +1024,16 @@ namespace JungleBooze.Gameplay.Movement
 
             _state.Health = health;
             _state.Hits++;
-            _state.LastHitObstacle = minorId;
-            _state.LastHitKind = minorKind;
+            _state.LastHitObstacle = id;
+            _state.LastHitKind = kind;
             _state.StumbleTick = t;
             _state.InvulnerableUntilTick = t + _invulnerableTicks;
             _state.RegenProgress = 0f;
             _state.Speed *= _config.Speed.StumbleSpeedFactor;
-            Emit(RunEventType.Hit, minorId, (byte)minorKind, 0f);
+            Emit(RunEventType.Hit, id, (byte)kind, 0f);
             if (health <= 0)
             {
-                Die(t, DeathCause.Health, minorId);
+                Die(t, DeathCause.Health, id);
             }
         }
 
@@ -1206,7 +1217,7 @@ namespace JungleBooze.Gameplay.Movement
             if (!force && _safeCount > 0)
             {
                 int last = (_safeHead - 1 + SafeRingSize) % SafeRingSize;
-                if (_state.S - _safeS[last] < SafeSampleSpacing)
+                if (_state.S - _safeS[last] < _config.Health.SafePointSpacing)
                 {
                     return;
                 }
@@ -1238,6 +1249,14 @@ namespace JungleBooze.Gameplay.Movement
             {
                 Events.Add(new RunEvent(type, _state.Tick, id, reason, value));
             }
+        }
+
+        private float ClampToPath(float s, float x)
+        {
+            _path.GetLateralBounds(s, x, out float bMin, out float bMax);
+            float xMin = bMin + _config.Lateral.EdgeMargin;
+            float xMax = bMax - _config.Lateral.EdgeMargin;
+            return Clamp(x, xMin, Math.Max(xMin, xMax));
         }
 
         private static float MoveTowards(float current, float target, float maxDelta)

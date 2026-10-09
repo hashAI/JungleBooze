@@ -5,13 +5,11 @@ namespace JungleBooze.Gameplay.Views
 {
     /// <summary>
     /// Places the avatar from the simulation's previous/current states interpolated by the fixed-step alpha
-    /// (ADR 0002 rule 5), forwards events, and blinks at 8 Hz during i-frames. Straight path: world = (x, y, s).
+    /// (ADR 0002 rule 5), forwards events, and blinks during i-frames (<see cref="HealthConfig.InvulnerableBlinkHz"/>). Straight path: world = (x, y, s).
     /// No allocation per frame.
     /// </summary>
     public sealed class RunnerView
     {
-        private const float BlinkHz = 8f;
-
         private readonly RunnerSimulation _sim;
         private RunnerAvatar _avatar;
         private float _blinkClock;
@@ -109,7 +107,7 @@ namespace JungleBooze.Gameplay.Views
             if (visual.Invulnerable)
             {
                 _blinkClock += frameSeconds;
-                _avatar.SetVisible(Mathf.Repeat(_blinkClock * BlinkHz, 1f) < 0.5f);
+                _avatar.SetVisible(Mathf.Repeat(_blinkClock * _sim.Config.Health.InvulnerableBlinkHz, 1f) < 0.5f);
             }
             else if (_blinkClock != 0f)
             {

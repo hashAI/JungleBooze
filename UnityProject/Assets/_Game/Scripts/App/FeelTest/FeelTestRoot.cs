@@ -42,6 +42,10 @@ namespace JungleBooze.App.FeelTest
         private const ulong DefaultSeed = 20261009UL;
 
         private static readonly string[] Countdown = { string.Empty, "1", "2", "3" };
+        private static readonly string[] PhaseNames = DebugFormat.Names(typeof(RunPhase));
+        private static readonly string[] CommandNames = DebugFormat.Names(typeof(InputCommand));
+        private static readonly string[] DropNames = DebugFormat.Names(typeof(DropReason));
+        private static readonly string[] HitNames = DebugFormat.Names(typeof(HitKind));
         private const string PausedText = "PAUSED";
         private const string ReadyText = "READY";
 
@@ -95,6 +99,7 @@ namespace JungleBooze.App.FeelTest
         private bool _debugVisible;
         private int _orientationMode; // 0 auto, 1 landscape, 2 portrait
         private bool _landscapeActive = true;
+        private readonly ScreenShapeWatcher _screenShape = new ScreenShapeWatcher();
         private bool _resultsShown;
         private int _edgeBrushTicks;
         private float _debugRefresh;
@@ -125,6 +130,21 @@ namespace JungleBooze.App.FeelTest
         public EdgeBrushView EdgeBrush => _edgeBrush;
 
         public Camera Camera => _camera;
+
+        public CoursePath RunCourse => _path;
+
+        public CourseView CourseView => _courseView;
+
+        public bool Paused => _paused;
+
+        /// <summary>Seconds left in the resume "ready" beat (0 = not counting down).</summary>
+        public float ResumeCountdown => _resumeCountdown;
+
+        /// <summary>Frames recorded so far in this run's replay.</summary>
+        public int RecordedFrames => _recording.Count;
+
+        /// <summary>Gesture recognizer fed by the touch adapter (tests inject samples here).</summary>
+        public GestureRecognizer Gestures => _gestureRecognizer;
 
         /// <summary>Editor scene builder: the rigged Pista prefab (null keeps the gray-box capsule).</summary>
         public void SetAvatarPrefab(RunnerAvatar prefab)
@@ -166,7 +186,7 @@ namespace JungleBooze.App.FeelTest
             _pointer = new UnityPointerInput(_gestureRecognizer, _dispatcher, _gestures.Values);
             _bot = new PerfectBot(_session.Simulation, _botPrefersRiskyBranch);
             _botDriving = _startWithBot;
-            _recording = new InputRecording(DefaultSeed, _configHash, Application.version, 4096);
+            _recording = new InputRecording(DefaultSeed, _configHash, Application.version, ReplayCapacity(_config, _path));
 
             Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             var world = new GameObject("FeelCourse");
@@ -222,7 +242,13 @@ namespace JungleBooze.App.FeelTest
         /// <summary>Instant restart: new run at Ready.</summary>
         public void Restart()
         {
-            _session.Restart(new RunOptions { FirstRun = _firstRun });
+            Restart(new RunOptions { FirstRun = _firstRun });
+        }
+
+        /// <summary>Restart with explicit options (tests and tools: forced speed, start ramp).</summary>
+        public void Restart(RunOptions options)
+        {
+            _session.Restart(options);
             _time.Reset();
             _dispatcher.Clear();
             _gestureRecognizer.Reset();
@@ -310,6 +336,37 @@ namespace JungleBooze.App.FeelTest
             _botDriving = driving;
         }
 
+        public void SetBotPrefersRiskyBranch(bool risky)
+        {
+            _botPrefersRiskyBranch = risky;
+            if (_bot != null)
+            {
+                _bot.PreferRiskyBranch = risky;
+            }
+        }
+
+        /// <summary>
+        /// App interruption (backgrounded, Control Center, call banner, Siri): freeze the run and cancel touches.
+        /// Any countdown in progress is dropped, so the player must resume again and gets the full ready beat.
+        /// </summary>
+        public void HandleInterruption()
+        {
+            if (!_built)
+            {
+                return;
+            }
+
+            _gestureRecognizer.CancelAll(Time.realtimeSinceStartupAsDouble);
+            _dispatcher.Clear();
+            if (_session.Phase == RunPhase.Results)
+            {
+                return;
+            }
+
+            _paused = true;
+            _resumeCountdown = 0f;
+        }
+
         /// <summary>Steps the run by whole ticks with the active input (tests and tools; bypasses real time).</summary>
         public void StepTicks(int ticks)
         {
@@ -334,24 +391,35 @@ namespace JungleBooze.App.FeelTest
 
         private void OnApplicationPause(bool pauseStatus)
         {
-            if (pauseStatus && _built && !_paused && _session.Phase != RunPhase.Results)
+            if (pauseStatus)
             {
-                TogglePause();
+                HandleInterruption();
+            }
+        }
+
+        private void OnApplicationFocus(bool hasFocus)
+        {
+            if (!hasFocus)
+            {
+                HandleInterruption();
             }
         }
 
         private void Update()
         {
-            if (!_built)
+            if (_built)
             {
-                return;
+                Tick(Time.unscaledDeltaTime, Time.realtimeSinceStartupAsDouble);
             }
+        }
 
-            float frame = Time.unscaledDeltaTime;
+        /// <summary>One rendered frame (Update's body; PlayMode tests call it directly to measure allocations).</summary>
+        public void Tick(float frame, double now)
+        {
             HandleKeys();
-            UpdateOrientation();
+            UpdateOrientation(now);
             _pointer.Enabled = !_botDriving && !_paused;
-            _pointer.PollFrame(frame, Time.realtimeSinceStartupAsDouble);
+            _pointer.PollFrame(frame, now);
 
             if (_paused)
             {
@@ -385,7 +453,8 @@ namespace JungleBooze.App.FeelTest
         {
             InputFrame player = _dispatcher.ReadInput(_session.SessionTick);
             InputFrame frame = _botDriving ? _bot.ReadInput(_session.SessionTick) : player;
-            if (_session.Phase == RunPhase.Running)
+            RunPhase phase = _session.Phase;
+            if (phase == RunPhase.Running || phase == RunPhase.Finishing)
             {
                 _recording.Add(_session.SessionTick, frame);
             }
@@ -440,6 +509,7 @@ namespace JungleBooze.App.FeelTest
                         break;
                     case RunEventType.Revived:
                         _courseView.SyncRemoved(_session.Simulation);
+                        _rig.Snap(CameraTarget(_session.Simulation.State));
                         break;
                 }
             }
@@ -450,6 +520,7 @@ namespace JungleBooze.App.FeelTest
         private void Present(float alpha, float frameSeconds)
         {
             _runnerView.Sync(alpha, frameSeconds);
+            _courseView.Tick(_paused ? 0f : frameSeconds);
             if (!Application.isPlaying)
             {
                 _edgeBrush.ManualTick(frameSeconds);
@@ -562,8 +633,19 @@ namespace JungleBooze.App.FeelTest
             }
         }
 
-        private void UpdateOrientation()
+        private void UpdateOrientation(double now)
         {
+            // Any orientation or screen-size change (including a 180° landscape flip, which mirrors touch
+            // coordinates) cancels active touches (spec 101 §5).
+            if (_screenShape.Update(Screen.width, Screen.height, (int)Screen.orientation))
+            {
+                _gestureRecognizer.CancelAll(now);
+                if (_hud != null)
+                {
+                    _hud.SetOrientation(Screen.width >= Screen.height);
+                }
+            }
+
             bool landscape = _orientationMode == 1 || (_orientationMode == 0 && Screen.width >= Screen.height);
             if (landscape == _landscapeActive)
             {
@@ -572,11 +654,13 @@ namespace JungleBooze.App.FeelTest
 
             _landscapeActive = landscape;
             _rig.SetProfile(landscape ? _landscape.Values : _portrait.Values, false);
-            _gestureRecognizer.CancelAll(Time.realtimeSinceStartupAsDouble);
-            if (_hud != null)
-            {
-                _hud.SetOrientation(Screen.width >= Screen.height);
-            }
+        }
+
+        /// <summary>Replay frames for a slow full run (v0 the whole way, +25%), so the list never grows mid-run.</summary>
+        private static int ReplayCapacity(MovementConfig config, CoursePath path)
+        {
+            float seconds = (path.FinishS / Math.Max(1f, config.Speed.V0)) + config.Flow.FinishCoastTime + config.Speed.StartRampTime;
+            return Math.Max(1024, (int)(seconds * StepsPerSecond * 1.25f));
         }
 
         private void ShowResults()
@@ -601,7 +685,7 @@ namespace JungleBooze.App.FeelTest
 
             for (int i = 0; i < _hitLogCount && i < 4; i++)
             {
-                body.Append("  hit: ").Append((HitKind)_hitLogKinds[i]).Append(" · ").Append(_path.GetObstacleLabel(_hitLogIds[i])).Append('\n');
+                body.Append("  hit: ").Append(DebugFormat.Name(HitNames, _hitLogKinds[i])).Append(" · ").Append(_path.GetObstacleLabel(_hitLogIds[i])).Append('\n');
             }
 
             _hud.ShowResults(title, body.ToString());
@@ -641,16 +725,28 @@ namespace JungleBooze.App.FeelTest
 
         private string BuildDebugText(in RunnerState s, float frameSeconds)
         {
+            // Debug overlay only: no boxing or temporary strings; the final ToString (every 0.1 s) is the only allocation.
             StringBuilder b = _debugText;
             b.Length = 0;
-            b.Append("tick ").Append(s.Tick).Append("  ").Append(_session.Phase).Append("  ").Append(_path.SectionAt(s.S)).Append('\n');
-            b.Append("s ").Append(s.S.ToString("0.0", CultureInfo.InvariantCulture))
-                .Append("  x ").Append(s.X.ToString("0.00", CultureInfo.InvariantCulture))
-                .Append("  xT ").Append(s.XTarget.ToString("0.00", CultureInfo.InvariantCulture))
-                .Append("  y ").Append(s.Y.ToString("0.00", CultureInfo.InvariantCulture)).Append('\n');
-            b.Append("v ").Append(s.Speed.ToString("0.00", CultureInfo.InvariantCulture))
-                .Append("  vLat ").Append(s.VLat.ToString("0.0", CultureInfo.InvariantCulture))
-                .Append("  vy ").Append(s.Vy.ToString("0.0", CultureInfo.InvariantCulture)).Append('\n');
+            b.Append("tick ");
+            DebugFormat.Int(b, s.Tick);
+            b.Append("  ").Append(DebugFormat.Name(PhaseNames, (int)_session.Phase)).Append("  ").Append(_path.SectionAt(s.S)).Append('\n');
+            b.Append("s ");
+            DebugFormat.Fixed(b, s.S, 1);
+            b.Append("  x ");
+            DebugFormat.Fixed(b, s.X, 2);
+            b.Append("  xT ");
+            DebugFormat.Fixed(b, s.XTarget, 2);
+            b.Append("  y ");
+            DebugFormat.Fixed(b, s.Y, 2);
+            b.Append('\n');
+            b.Append("v ");
+            DebugFormat.Fixed(b, s.Speed, 2);
+            b.Append("  vLat ");
+            DebugFormat.Fixed(b, s.VLat, 1);
+            b.Append("  vy ");
+            DebugFormat.Fixed(b, s.Vy, 1);
+            b.Append('\n');
             b.Append(s.Grounded ? "grounded" : s.Jumped ? "jump" : "air");
             if (s.Sliding)
             {
@@ -668,20 +764,38 @@ namespace JungleBooze.App.FeelTest
             }
 
             b.Append('\n');
-            b.Append("buffered ").Append(s.Buffered == InputCommand.None ? "-" : s.Buffered + " (" + s.BufferedKind + ", " + (s.Tick - s.BufferedTick) + " ticks)").Append('\n');
+            b.Append("buffered ");
+            if (s.Buffered == InputCommand.None)
+            {
+                b.Append('-');
+            }
+            else
+            {
+                b.Append(DebugFormat.Name(CommandNames, (int)s.Buffered)).Append(" (").Append(DebugFormat.Name(DropNames, (int)s.BufferedKind)).Append(", ");
+                DebugFormat.Int(b, s.Tick - s.BufferedTick);
+                b.Append(" ticks)");
+            }
+
+            b.Append('\n');
             b.Append("dropped (last 5):");
             int shown = Math.Min(_droppedCount, _droppedTicks.Length);
             for (int i = 0; i < shown; i++)
             {
                 int index = (_droppedCount - 1 - i) % _droppedTicks.Length;
-                b.Append(' ').Append((DropReason)_droppedReasons[index]).Append('@').Append(_droppedTicks[index]);
+                b.Append(' ').Append(DebugFormat.Name(DropNames, _droppedReasons[index])).Append('@');
+                DebugFormat.Int(b, _droppedTicks[index]);
             }
 
+            b.Append("  queue overflow ");
+            DebugFormat.Int(b, _gestureRecognizer.Commands.Dropped + _dispatcher.ExtraCommands.Dropped);
             b.Append('\n');
             b.Append("camera ").Append(_rig.Profile.Name).Append(_orientationMode == 0 ? " (auto)" : " (forced)")
                 .Append(_reducedMotion ? "  reduced motion" : string.Empty).Append(_botDriving ? "  BOT" : string.Empty).Append('\n');
-            b.Append("fps ").Append((1f / Mathf.Max(0.0001f, frameSeconds)).ToString("0", CultureInfo.InvariantCulture))
-                .Append("  dropped sim time ").Append(_time.DroppedSeconds.ToString("0.00", CultureInfo.InvariantCulture)).Append(" s");
+            b.Append("fps ");
+            DebugFormat.Int(b, (long)(1f / Mathf.Max(0.0001f, frameSeconds)));
+            b.Append("  dropped sim time ");
+            DebugFormat.Fixed(b, _time.DroppedSeconds, 2);
+            b.Append(" s");
             return b.ToString();
         }
 

@@ -37,7 +37,7 @@ namespace JungleBooze.Gameplay.Movement
 
         public float SlideLateralFactor = 1f;
 
-        /// <summary>Minimum total shift of a dodge from the gesture origin, m.</summary>
+        /// <summary>A dodge sets the lateral target this far from Pista's current x, m.</summary>
         public float DodgeDistance = 2.2f;
 
         public float DodgeVLatMax = 14f;

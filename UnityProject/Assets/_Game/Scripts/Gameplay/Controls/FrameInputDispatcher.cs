@@ -28,7 +28,10 @@ namespace JungleBooze.Gameplay.Controls
             _extra = new CommandQueue(Math.Max(1, extraQueueSize));
         }
 
-        /// <summary>Keyboard and other non-touch commands (keyboard dodges carry TouchBegan themselves).</summary>
+        /// <summary>
+        /// Commands from other sources that should queue behind gestures (tools). The keyboard adapter writes into the
+        /// gesture queue instead, so touch and keys keep their recognition order.
+        /// </summary>
         public CommandQueue ExtraCommands => _extra;
 
         /// <summary>Carry below one millimetre waiting for the next frame.</summary>

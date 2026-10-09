@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: JungleBooze.Gameplay::JungleBooze.Gameplay.Config.CameraProfileAsset
   _values:
     Name: Landscape
-    OffsetBack: 5.5
-    Height: 2.4
-    PitchDeg: 9
+    OffsetBack: 6.5
+    Height: 3.4
+    PitchDeg: 13
     FovBaseDeg: 55
     FovGainDeg: 6
     FovHalfLife: 0.5

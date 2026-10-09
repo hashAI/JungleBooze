@@ -142,41 +142,73 @@ namespace JungleBooze.Tests.EditMode.Movement
             Assert.AreEqual(0, rig.CountEvents(RunEventType.Hit));
         }
 
-        [TestCase(1.0f, 2.2f)]
-        [TestCase(2.8f, 2.8f)]
-        public void AC08_DodgeNeverPullsBackDragMotion(float drag, float expected)
+        // [ASSUMED 2026-10-09] A dodge moves 2.2 m from Pista's current x and replaces the pending steering target.
+        [TestCase(1.0f, 1)]
+        [TestCase(2.8f, 1)]
+        [TestCase(2.0f, -1)]
+        public void AC08_DodgeMovesFromCurrentPositionAndCancelsPendingTarget(float drag, int dodgeDir)
         {
-            SimRig rig = SimRig.Flat(half: 4.0f);
-            rig.Step(new InputFrame(InputCommand.TouchBegan, 0));
-            int mm = (int)System.Math.Round(drag * 1000f);
-            for (int i = 0; i < 10; i++)
+            foreach (int mirror in new[] { 1, -1 })
             {
-                rig.Step(new InputFrame(InputCommand.None, (short)(mm / 10)));
+                SimRig rig = SimRig.Flat(half: 6.0f);
+                rig.Step(new InputFrame(InputCommand.TouchBegan, 0));
+                int mm = (int)System.Math.Round(drag * 1000f) * mirror;
+                for (int i = 0; i < 10; i++)
+                {
+                    rig.Step(new InputFrame(InputCommand.None, (short)(mm / 10)));
+                }
+
+                float x = rig.State.X;
+                Assert.Greater(System.Math.Abs(rig.State.XTarget - x), 0.05f, "a steering target is still pending");
+                int dir = dodgeDir * mirror;
+                rig.Step(dir > 0 ? InputCommand.DodgeRight : InputCommand.DodgeLeft);
+                Assert.AreEqual(x + (dir * 2.2f), rig.State.XTarget, 1e-4f, "2.2 m from the current position");
             }
-
-            rig.Step(InputCommand.DodgeRight);
-            Assert.AreEqual(expected, rig.State.XTarget, 1e-4f);
-
-            // Mirror.
-            SimRig left = SimRig.Flat(half: 4.0f);
-            left.Step(new InputFrame(InputCommand.TouchBegan, 0));
-            for (int i = 0; i < 10; i++)
-            {
-                left.Step(new InputFrame(InputCommand.None, (short)(-mm / 10)));
-            }
-
-            left.Step(InputCommand.DodgeLeft);
-            Assert.AreEqual(-expected, left.State.XTarget, 1e-4f);
         }
 
         [Test]
-        public void AC08_KeyboardDodgeStartsFromCurrentTarget()
+        public void AC08_FlickAfterOppositeDragNeverThrowsFurtherThanTheDodge()
+        {
+            // Review S1: drag right 2.0 m around a rock, then a left release-flick.
+            SimRig rig = SimRig.Flat(half: 4.0f);
+            rig.Step(new InputFrame(InputCommand.TouchBegan, 0));
+            for (int i = 0; i < 10; i++)
+            {
+                rig.Step(new InputFrame(InputCommand.None, 200));
+            }
+
+            float x = rig.State.X;
+            rig.Step(InputCommand.DodgeLeft);
+            Assert.AreEqual(x - 2.2f, rig.State.XTarget, 1e-4f);
+            float min = rig.State.X;
+            for (int i = 0; i < 60; i++)
+            {
+                rig.Steps(1);
+                min = System.Math.Min(min, rig.State.X);
+            }
+
+            Assert.GreaterOrEqual(min, x - 2.2f - 0.02f, "never more than the dodge distance from where she was");
+        }
+
+        [Test]
+        public void AC08_KeyboardDodgeStartsFromCurrentPosition()
         {
             SimRig rig = SimRig.Flat(half: 4.0f);
             rig.Step(new InputFrame(InputCommand.None, 1000));
             rig.Steps(30);
-            rig.Step(InputCommand.TouchBegan | InputCommand.DodgeLeft);
-            Assert.AreEqual(1f - 2.2f, rig.State.XTarget, 1e-4f);
+            float x = rig.State.X;
+            rig.Step(InputCommand.DodgeLeft);
+            Assert.AreEqual(x - 2.2f, rig.State.XTarget, 1e-4f);
+        }
+
+        [Test]
+        public void AC08_DodgeIsClampedToThePath()
+        {
+            SimRig rig = SimRig.Flat(half: 3.5f);
+            rig.Step(new InputFrame(InputCommand.None, 2500));
+            rig.Steps(60);
+            rig.Step(InputCommand.DodgeRight);
+            Assert.AreEqual(3.2f, rig.State.XTarget, 1e-5f);
         }
 
         [TestCase(0)]

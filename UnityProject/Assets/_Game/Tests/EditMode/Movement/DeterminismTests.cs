@@ -23,7 +23,6 @@ namespace JungleBooze.Tests.EditMode.Movement
             h = Mix(h, BitConverter.SingleToInt32Bits(s.Vy));
             h = Mix(h, BitConverter.SingleToInt32Bits(s.Speed));
             h = Mix(h, BitConverter.SingleToInt32Bits(s.Distance));
-            h = Mix(h, BitConverter.SingleToInt32Bits(s.DodgeOriginX));
             h = Mix(h, BitConverter.SingleToInt32Bits(s.RegenProgress));
             h = Mix(h, (s.Grounded ? 1 : 0) | (s.Sliding ? 2 : 0) | (s.FastFalling ? 4 : 0) | (s.Jumped ? 8 : 0) | (s.Dead ? 16 : 0) | (s.Finished ? 32 : 0));
             h = Mix(h, s.Health);

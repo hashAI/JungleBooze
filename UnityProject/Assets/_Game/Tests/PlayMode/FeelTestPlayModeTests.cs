@@ -5,6 +5,7 @@ using JungleBooze.Gameplay.Bots;
 using JungleBooze.Gameplay.Controls;
 using JungleBooze.Gameplay.Course;
 using JungleBooze.Gameplay.Movement;
+using JungleBooze.Gameplay.Run;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -99,6 +100,127 @@ namespace JungleBooze.Tests.PlayMode
                 }
             }, Is.Not.AllocatingGCMemory());
             Assert.Greater(sim.State.S, 100f);
+        }
+
+        private static IEnumerator LoadRoot(System.Action<FeelTestRoot> found)
+        {
+            SceneManager.LoadScene("FeelTest");
+            yield return null;
+            yield return null;
+            FeelTestRoot root = Object.FindFirstObjectByType<FeelTestRoot>();
+            Assert.IsNotNull(root, "FeelTest scene with FeelTestRoot");
+            found(root);
+        }
+
+        /// <summary>
+        /// ARCHITECTURE §10.1 / AC-101-40 for the whole rendered frame: <see cref="FeelTestRoot.Tick"/> (input adapter,
+        /// gesture recognizer with synthetic touches, dispatcher, simulation, bot, event drain, feedback, runner view
+        /// and avatar, camera rig, coin spin, HUD) allocates nothing over 600 frames after warm-up.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator AC40_WholeFeelTestFrameDoesNotAllocate()
+        {
+            FeelTestRoot root = null;
+            yield return LoadRoot(r => root = r);
+            root.SetDebugVisible(false);
+            root.SetBotDriving(true); // the bot keeps the run alive; touches still go through recognizer and dispatcher
+            root.Restart();
+            double now = 1000.0;
+            int touch = 100;
+
+            void Frame(int i)
+            {
+                int phase = i % 30;
+                float x = 300f + (phase * 3f);
+                float y = phase > 20 ? 300f + ((phase - 20) * 9f) : 300f;
+                if (phase == 0)
+                {
+                    touch++;
+                    root.Gestures.Process(new TouchSample(touch, TouchPhaseKind.Began, x, y, now));
+                }
+                else if (phase == 29)
+                {
+                    root.Gestures.Process(new TouchSample(touch, TouchPhaseKind.Ended, x, y, now));
+                }
+                else
+                {
+                    root.Gestures.Process(new TouchSample(touch, TouchPhaseKind.Moved, x, y, now));
+                }
+
+                float dt = (i % 7) == 0 ? 1f / 30f : 1f / 60f;
+                now += dt;
+                root.Tick(dt, now);
+            }
+
+            for (int i = 0; i < 600; i++)
+            {
+                Frame(i);
+            }
+
+            Assert.AreEqual(RunPhase.Running, root.Session.Phase, "warm-up reached the run");
+            Assert.That(() =>
+            {
+                for (int i = 600; i < 1200; i++)
+                {
+                    Frame(i);
+                }
+            }, Is.Not.AllocatingGCMemory());
+            Assert.AreEqual(RunPhase.Running, root.Session.Phase);
+            Assert.Greater(root.Simulation.State.S, 100f);
+            Assert.Greater(root.RecordedFrames, 0);
+        }
+
+        /// <summary>Spec 101 §9 (review S3): focus loss pauses; an interruption during the countdown restarts it.</summary>
+        [UnityTest]
+        public IEnumerator FocusLossPausesAndTheResumeCountdownRestartsAfterReturning()
+        {
+            FeelTestRoot root = null;
+            yield return LoadRoot(r => root = r);
+            root.SetBotDriving(true);
+            root.Restart();
+            root.StepTicks(120);
+            double now = 2000.0;
+
+            root.SendMessage("OnApplicationFocus", false);
+            Assert.IsTrue(root.Paused, "focus loss (Control Center, banner, Siri) pauses");
+            float s = root.Simulation.State.S;
+            root.Tick(0.5f, now += 0.5);
+            Assert.AreEqual(s, root.Simulation.State.S, "frozen");
+
+            root.TogglePause();
+            Assert.Greater(root.ResumeCountdown, 0f, "resume starts the ready beat");
+            root.Tick(0.4f, now += 0.4);
+            Assert.IsTrue(root.Paused);
+
+            root.SendMessage("OnApplicationPause", true);
+            Assert.IsTrue(root.Paused);
+            Assert.AreEqual(0f, root.ResumeCountdown, "backgrounding drops the countdown");
+            root.Tick(2f, now += 2.0);
+            Assert.IsTrue(root.Paused, "still paused after returning: the player must resume again");
+            Assert.AreEqual(s, root.Simulation.State.S);
+
+            root.TogglePause();
+            for (int i = 0; i < 4; i++)
+            {
+                root.Tick(0.3f, now += 0.3);
+            }
+
+            Assert.IsFalse(root.Paused, "a full ready beat later the run resumes");
+        }
+
+        [UnityTest]
+        public IEnumerator InterruptionCancelsActiveTouches()
+        {
+            FeelTestRoot root = null;
+            yield return LoadRoot(r => root = r);
+            root.SetBotDriving(false);
+            root.Restart();
+            root.Gestures.Process(new TouchSample(7, TouchPhaseKind.Began, 100f, 100f, 1.0));
+            Assert.AreEqual(1, root.Gestures.ActiveTouchCount);
+            root.HandleInterruption();
+            Assert.AreEqual(0, root.Gestures.ActiveTouchCount);
+            root.Gestures.Process(new TouchSample(7, TouchPhaseKind.Moved, 200f, 100f, 1.1));
+            Assert.AreEqual(0.0, root.Gestures.ConsumeLateralM(), 1e-9);
         }
 
         [UnityTest]

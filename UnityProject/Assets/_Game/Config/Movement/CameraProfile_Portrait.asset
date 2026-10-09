@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: JungleBooze.Gameplay::JungleBooze.Gameplay.Config.CameraProfileAsset
   _values:
     Name: Portrait
-    OffsetBack: 6.2
-    Height: 3
-    PitchDeg: 12
+    OffsetBack: 7.1
+    Height: 4.3
+    PitchDeg: 11
     FovBaseDeg: 65
     FovGainDeg: 5
     FovHalfLife: 0.5
