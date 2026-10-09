@@ -259,7 +259,7 @@ namespace JungleBooze.Editor.HeroBasin
                     {
                         painted = new Material(shader) { name = source.name + "_Painterly" };
                         painted.SetTexture("_BaseMap", source.GetTexture("_BaseMap"));
-                        painted.SetColor("_BaseColor", source.GetColor("_BaseColor"));
+                        painted.SetColor("_BaseColor", source.GetColor("_BaseColor") * p.PistaAlbedoTint);
                         Copy(source, painted, "_BumpMap");
                         Copy(source, painted, "_MetallicGlossMap");
                         Copy(source, painted, "_OcclusionMap");
@@ -268,6 +268,10 @@ namespace JungleBooze.Editor.HeroBasin
                         painted.SetFloat("_Wrap", p.PistaWrap);
                         painted.SetColor("_SkinTint", p.PistaSkin);
                         painted.SetFloat("_RimIntensity", p.PistaRim);
+                        painted.SetColor("_RimColor", p.PistaRimColor);
+                        painted.SetColor("_SunFill", p.PistaSunFill);
+                        painted.SetVector("_FillDirection", p.PistaFillDirection);
+                        painted.SetColor("_Bounce", p.PistaBounce);
                         painted.SetFloat("_Saturation", p.PistaSaturation);
                         painted.SetColor("_ShadowTint", new Color(p.ShadowTint.r, p.ShadowTint.g, p.ShadowTint.b, p.ShadowTint.a * 0.85f));
                         painted.SetColor("_AOTint", p.AOTint);

@@ -76,7 +76,18 @@ namespace JungleBooze.App.HeroBasin
         public float PistaNormalStrength = 0.45f;
         public float PistaWrap = 0.5f;
         public Color PistaSkin = new Color(0.91f, 0.627f, 0.478f, 0.5f);
-        public float PistaRim = 0.6f;
-        public float PistaSaturation = 1.1f;
+        public float PistaRim = 1.4f;
+        public float PistaSaturation = 1.0f;
+        [Tooltip("Warm rim toward the sun (F4_f: golden edge on hair, shoulder and arm).")]
+        public Color PistaRimColor = new Color(1f, 0.78f, 0.5f, 1f);
+        [Tooltip("Warm fill from the visible sun's side: rgb, a = amount.")]
+        public Color PistaSunFill = new Color(1f, 0.72f, 0.42f, 1.15f);
+        [Tooltip("Direction toward the warm fill (world). F4_f lights her back and left side from behind the camera's "
+            + "left, not from the visible sun ahead; zero = the visible sun.")]
+        public Vector3 PistaFillDirection = new Vector3(-0.55f, 0.6f, -0.6f);
+        [Tooltip("Albedo multiplier (F4_f: warm brown hair and pack, olive trousers, lighter than her textures).")]
+        public Color PistaAlbedoTint = new Color(1.6f, 1.45f, 1.2f, 1f);
+        [Tooltip("Warm bounce from the sunlit ground on down-facing surfaces: rgb, a = amount.")]
+        public Color PistaBounce = new Color(0.85f, 0.62f, 0.35f, 0.6f);
     }
 }

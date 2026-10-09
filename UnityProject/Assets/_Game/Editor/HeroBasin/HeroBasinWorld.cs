@@ -563,6 +563,9 @@ namespace JungleBooze.Editor.HeroBasin
 
         // ---------------------------------------------------------------- Arch and falls
 
+        /// <summary>World placements of the hero arch piece (the main span, then the braid if any).</summary>
+        public List<Matrix4x4> ArchPlacements { get; } = new List<Matrix4x4>();
+
         private void Arch(List<System.Action> rock)
         {
             LookTestMeshAccumulator stone = B.Get(Seg, "L2", "Arch", _ctx.Rootstone, false, LookTestBatchSet.Group.Ground);
@@ -572,6 +575,15 @@ namespace JungleBooze.Editor.HeroBasin
             {
                 Matrix4x4 placement = EnvironmentKit.Span(piece, _h.ArchFootA, _h.ArchFootB, _h.ArchTopY, _h.ArchDepthScale);
                 rock.Add(() => _ctx.AppendPiece(piece, placement, stone, Seg, "L2", "Arch", false, LookTestBatchSet.Group.Ground, _ctx.OpenWet));
+                ArchPlacements.Add(placement);
+                if (_h.ArchBraidTopY > 0f)
+                {
+                    // Braid: the same piece turned 180 degrees (feet swapped) inside the first, thickening legs and crown.
+                    Matrix4x4 braid = EnvironmentKit.Span(piece, _h.ArchBraidFootB, _h.ArchBraidFootA, _h.ArchBraidTopY, _h.ArchBraidDepthScale);
+                    rock.Add(() => _ctx.AppendPiece(piece, braid, stone, Seg, "L2", "Arch", false, LookTestBatchSet.Group.Ground, _ctx.OpenWet));
+                    ArchPlacements.Add(braid);
+                }
+
                 if (piece.Anchors.TryGetValue("WaterfallMouth", out Vector3 mouth))
                 {
                     _mouth = placement.MultiplyPoint3x4(mouth);
@@ -845,8 +857,10 @@ namespace JungleBooze.Editor.HeroBasin
             // (x, base y, z, height, footprint radius, yaw)
             var spots = new[]
             {
-                new Vector4(0.2f, -3.1f, 0.4f, 3.1f), new Vector4(3.4f, -15f, 5.5f, 13f), new Vector4(-3.6f, -6f, 3.4f, 5.2f),
-                new Vector4(7.5f, -21f, 10f, 17f), new Vector4(-1.5f, -17f, 10.5f, 13.5f), new Vector4(5.2f, -2.4f, -1.2f, 2.6f),
+                // Right of Pista the two big outcrops stand only a few metres out of the water (rock islands): F4_f shows
+                // the pools past the ledge's right edge, not a bank.
+                new Vector4(0.2f, -3.1f, 0.4f, 3.1f), new Vector4(3.4f, -15f, 5.5f, 7.5f), new Vector4(-3.6f, -6f, 3.4f, 5.2f),
+                new Vector4(7.5f, -21f, 10f, 10.5f), new Vector4(-1.5f, -17f, 10.5f, 13.5f), new Vector4(5.2f, -2.4f, -1.2f, 2.6f),
             };
             float[] footprints = { 2.4f, 5f, 3f, 7f, 6f, 1.8f };
             List<EnvironmentKit.Piece> ledges = _ctx.Kit.Of(EnvironmentRole.Ledge);

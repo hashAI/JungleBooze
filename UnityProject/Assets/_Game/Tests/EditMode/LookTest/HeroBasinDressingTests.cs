@@ -129,5 +129,41 @@ namespace JungleBooze.Tests.EditMode
             Assert.That(d.Islands, Is.InRange(14, 18));
             Assert.That(d.GodRayEnds.Length, Is.InRange(3, 4));
         }
+
+        [Test]
+        public void LandscapePassHasHeroFramingAndAClearCentreBand()
+        {
+            HeroDressingPass p = HeroDressingPass.LandscapeDefault();
+            Assert.That(System.Array.Exists(p.Frames, f => f.Piece == "FrameLeft_P" && f.Uv.x < 0.25f), "broadleaf cluster lower left");
+            Assert.That(System.Array.Exists(p.Frames, f => f.Piece == "Bellflower_P" && f.Uv.x > 0.75f), "bell-flower clump lower right");
+            Assert.That(p.ClearBandU.x, Is.LessThan(p.ClearBandU.y));
+            Assert.That(p.ClearBandU.x, Is.InRange(0.2f, 0.4f), "centre band starts right of the left framing");
+            foreach (HeroFramePlant f in p.Frames)
+            {
+                Assert.That(f.DepthM, Is.EqualTo(0f), "landscape framing stands on ground: " + f.Piece);
+            }
+        }
+
+        [Test]
+        public void PortraitPassStaysOnTheNearGroundAndCarriesNoBellClump()
+        {
+            HeroDressingPass p = HeroDressingPass.PortraitDefault();
+            Assert.That(p.MaxDistanceM, Is.LessThan(30f));
+            Assert.That(System.Array.Exists(p.Frames, f => f.Piece == "Bellflower_P"), Is.False);
+            foreach (HeroFramePlant f in p.Frames)
+            {
+                Assert.That(f.DepthM, Is.LessThan(6f), "lens-near plants stay behind the landscape camera's view: " + f.Piece);
+                Assert.That(f.Uv.x, Is.InRange(0f, 1f));
+                Assert.That(f.Uv.y, Is.InRange(0f, 1f));
+            }
+        }
+
+        [Test]
+        public void SpillwaysAreRealDrops()
+        {
+            var d = new HeroDressing();
+            Assert.That(d.Spillways, Is.InRange(4, 8));
+            Assert.That(d.SpillwayDropShare, Is.GreaterThan(0.2f), "a visible step, not a foam band");
+        }
     }
 }

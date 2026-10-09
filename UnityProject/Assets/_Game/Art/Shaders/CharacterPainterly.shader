@@ -7,6 +7,7 @@
 // - Skin: a soft mask from the albedo's hue (warm, mid-saturated, light) adds a warm subsurface tint (#E8A07A) in
 //   the terminator band. A heuristic, not a painted mask: it may touch light-tan leather a little.
 // - Rim: always on (0.6), stronger on the edges facing the sun, so she reads against the arch and water.
+// - Warm sun-side fill and ground bounce (both off by default; the hero basin sets them): she reads warmly lit.
 // Replaces the realistic Rim Overlay slot (one draw instead of two). Shadow caster and depth passes included.
 Shader "JungleBooze/Character Painterly"
 {
@@ -35,6 +36,9 @@ Shader "JungleBooze/Character Painterly"
         _RimIntensity("Rim Intensity", Range(0, 3)) = 0.6
         _RimPower("Rim Power", Range(0.5, 8)) = 3
         _RimSunFacing("Rim Sun-Facing Bias", Range(0, 1)) = 0.6
+        _SunFill("Warm Sun-Side Fill (rgb, a = amount)", Color) = (1, 0.72, 0.42, 0)
+        _FillDirection("Fill Direction (world, toward the light; zero = the visible sun)", Vector) = (0, 0, 0, 0)
+        _Bounce("Warm Ground Bounce (rgb, a = amount)", Color) = (0.85, 0.62, 0.35, 0)
     }
 
     SubShader
@@ -65,6 +69,9 @@ Shader "JungleBooze/Character Painterly"
             half _RimIntensity;
             half _RimPower;
             half _RimSunFacing;
+            half4 _SunFill;
+            float4 _FillDirection;
+            half4 _Bounce;
         CBUFFER_END
 
         TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
@@ -160,6 +167,12 @@ Shader "JungleBooze/Character Painterly"
                 half3 ambient = SampleSH(normalWS);
                 half3 color = JBPaintShade(albedo, lit, mainLight.color, ambient, occlusion, normalWS, viewWS, mainLight.direction, smoothness, paint);
 
+                // Warm fill from the visible sun's side (F4_f: the low sun wraps her shoulder, arm and hip) and a warm
+                // bounce from the sunlit ground on the faces turned down; both under the painted occlusion.
+                float3 fillDir = dot(_FillDirection.xyz, _FillDirection.xyz) > 1e-4 ? normalize(_FillDirection.xyz) : _JBSunDirection.xyz;
+                half sunWrap = saturate(dot(normalWS, (half3)fillDir) * 0.5h + 0.5h);
+                half below = saturate(-normalWS.y * 0.5h + 0.5h);
+                color += albedo * occlusion * (_SunFill.rgb * (_SunFill.a * sunWrap * sunWrap) + _Bounce.rgb * (_Bounce.a * below));
                 // Rim: always on, stronger on the edges facing the sun.
                 half fresnel = pow(1.0h - saturate(dot(normalWS, viewWS)), _RimPower);
                 half3 toSun = normalize(_JBSunDirection.xyz + half3(0.0h, 0.3h, 0.0h));

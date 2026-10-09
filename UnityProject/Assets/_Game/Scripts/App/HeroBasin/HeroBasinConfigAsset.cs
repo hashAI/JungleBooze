@@ -149,6 +149,12 @@ namespace JungleBooze.App.HeroBasin
         [Tooltip("Depth (local Z) of the hero arch relative to the mean of its span and height scales (below 1 = slimmer, "
             + "keeps a wide arch from reading as a dome).")]
         [SerializeField] private float _archDepthScale = 1f;
+        [Tooltip("Second hero-arch instance braided into the first (turned 180 degrees): feet A/B and top height. Thickens "
+            + "the legs and crown (keyframe F4_f: massive braided legs around a tall sky window). Top 0 = none.")]
+        [SerializeField] private Vector3 _archBraidFootA = Vector3.zero;
+        [SerializeField] private Vector3 _archBraidFootB = Vector3.zero;
+        [SerializeField] private float _archBraidTopY;
+        [SerializeField] private float _archBraidDepthScale = 0.4f;
         [Tooltip("Vine curtains cleared from the arch opening: x = half width of the cleared band (fraction of the arch "
             + "width), y = curtains reaching below this height (fraction of the arch height) inside the band are dropped.")]
         [SerializeField] private Vector2 _archVineClearing = new Vector2(0.2f, 0.62f);
@@ -342,6 +348,10 @@ namespace JungleBooze.App.HeroBasin
         public Vector3 ArchFootB => _archFootB;
         public float ArchTopY => _archTopY;
         public float ArchDepthScale => _archDepthScale;
+        public Vector3 ArchBraidFootA => _archBraidFootA;
+        public Vector3 ArchBraidFootB => _archBraidFootB;
+        public float ArchBraidTopY => _archBraidTopY;
+        public float ArchBraidDepthScale => _archBraidDepthScale;
         public Vector2 ArchVineClearing => _archVineClearing;
         public HeroFall[] Falls => _falls;
         public float BasinFloorY => _basinFloorY;

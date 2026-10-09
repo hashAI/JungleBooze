@@ -78,3 +78,17 @@ variants in the same folders as the realistic kit.
   stand-ins. On for painterly only. The realistic hero basin and the look test still rely on the old fallback, and
   turning it on there visibly changes their reviewed output (kit crowns on bare trunks). Enable it there only after a
   look review.
+
+## Addendum (2026-10-09): painterly v3 (arch silhouette, water reveal, framing, portrait pass)
+- **Braided arch:** a second `RS_HeroArch_P` instance turned 180 degrees inside the first (`_archBraid*` in the
+  config, top 0 = off) thickens legs and crown so the span can come down and in (crown inside the frame with sky above
+  it, F4_f). The dressing samples both placements. Cost: one more 14k-tri piece in the existing arch batch, no draw.
+- **Two dressing passes:** the landscape pass, then a foreground-only pass through the portrait camera
+  (`HeroDressing.Portrait`, `HeroDressingPass`). The portrait pass places plants only within `MaxDistanceM` and puts
+  low rock farther out, so it doesn't add plants to the midground the landscape frame shares. Its lens-near framing
+  plants stand on the ray (`HeroFramePlant.DepthM`), behind the landscape camera's view.
+- **Water reveal:** the landscape centre band (`ClearBandU`) gets low mossy rock, not ferns. Spillways are real steps
+  (sill rock, upper pool, short fall into foam) instead of foam bands. Rim, shelf and island growth are fewer and
+  dome-shaped.
+- **Pista light (material only):** Character Painterly gains a warm fill from a configurable direction and a warm
+  ground bounce (both default 0 in the shader; set from `HeroPainterlyLook`), plus an albedo tint. No extra light or draw.

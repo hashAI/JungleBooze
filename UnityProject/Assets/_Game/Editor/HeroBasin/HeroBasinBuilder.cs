@@ -195,6 +195,10 @@ namespace JungleBooze.Editor.HeroBasin
                 // Set dressing (HERO_BASIN_DRESSING.md): placed by rays through the landscape frame, merged into the
                 // same batches before they are emitted.
                 new HeroBasinDressing(ctx, h, world, camera, report).Build();
+                // Portrait (P1) sees nearer ground below and beside Pista: its own foreground pass, then back to F4.
+                PoseCamera(camera, h, true, 1170f / 2532f);
+                new HeroBasinDressing(ctx, h, world, camera, report, true).Build();
+                PoseCamera(camera, h, false, 2532f / 1170f);
             }
 
             var root = new GameObject("HeroBasin").transform;

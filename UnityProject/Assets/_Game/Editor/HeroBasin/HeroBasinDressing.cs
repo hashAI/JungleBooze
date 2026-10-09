@@ -25,6 +25,8 @@ namespace JungleBooze.Editor.HeroBasin
         private readonly LookTestBuildContext _ctx;
         private readonly HeroBasinConfigAsset _h;
         private readonly HeroDressing _d;
+        private readonly HeroDressingPass _pass;
+        private readonly bool _portrait;
         private readonly HeroBasinWorld _world;
         private readonly Camera _camera;
         private readonly List<string> _report;
@@ -49,6 +51,15 @@ namespace JungleBooze.Editor.HeroBasin
         }
 
         public HeroBasinDressing(LookTestBuildContext ctx, HeroBasinConfigAsset h, HeroBasinWorld world, Camera camera, List<string> report)
+            : this(ctx, h, world, camera, report, false)
+        {
+        }
+
+        /// <param name="portrait">
+        /// True: the second, foreground-only pass through the portrait camera (framing plants, undergrowth, ground
+        /// sweep of <see cref="HeroDressing.Portrait"/>); the camera must already be posed for P1.
+        /// </param>
+        public HeroBasinDressing(LookTestBuildContext ctx, HeroBasinConfigAsset h, HeroBasinWorld world, Camera camera, List<string> report, bool portrait)
         {
             _ctx = ctx;
             _h = h;
@@ -56,7 +67,9 @@ namespace JungleBooze.Editor.HeroBasin
             _world = world;
             _camera = camera;
             _report = report;
-            _rng = new Pcg32Random((ulong)(uint)_d.Seed, 99UL);
+            _portrait = portrait;
+            _pass = (portrait ? _d.Portrait : _d.Landscape) ?? (portrait ? HeroDressingPass.PortraitDefault() : HeroDressingPass.LandscapeDefault());
+            _rng = new Pcg32Random((ulong)(uint)_d.Seed, portrait ? 98UL : 99UL);
         }
 
         private LookTestBatchSet B => _ctx.Batches;
@@ -67,18 +80,31 @@ namespace JungleBooze.Editor.HeroBasin
             MakeColliders();
             try
             {
-                ArchOvergrowth();
-                ArchCurtains();
-                Islands();
-                Rims();
-                Shelves();
-                Ground();
-                CascadeBrinks();
+                if (!_portrait)
+                {
+                    ArchOvergrowth();
+                    ArchCurtains();
+                    Islands();
+                    Rims();
+                    Shelves();
+                    Cobbles();
+                    CascadeBrinks();
+                }
+
                 Framing();
-                Canopy(_d.CanopyLeft, _d.CanopyLeftRegion, "canopy left");
-                Canopy(_d.CanopyRight, _d.CanopyRightRegion, "canopy right");
+                Undergrowth();
+                if (!_portrait)
+                {
+                    CornerLeaves();
+                    Canopy(_d.CanopyLeft, _d.CanopyLeftRegion, "canopy left");
+                    Canopy(_d.CanopyRight, _d.CanopyRightRegion, "canopy right");
+                }
+
                 LawnSweep();
-                GodRays();
+                if (!_portrait)
+                {
+                    GodRays();
+                }
             }
             finally
             {
@@ -93,7 +119,7 @@ namespace JungleBooze.Editor.HeroBasin
                 }
             }
 
-            var text = new System.Text.StringBuilder("Dressing (seed " + _d.Seed + "):");
+            var text = new System.Text.StringBuilder((_portrait ? "Dressing, portrait pass (seed " : "Dressing (seed ") + _d.Seed + "):");
             foreach (KeyValuePair<string, int> pair in _counts)
             {
                 text.Append(' ').Append(pair.Key).Append(' ').Append(pair.Value).Append(',');
@@ -294,10 +320,10 @@ namespace JungleBooze.Editor.HeroBasin
         }
 
         /// <summary>Shrub cap or fern on a rock top: painted crown cards far away, fern / palm-fern clumps near.</summary>
-        private void Shrub(Vector3 foot, float widthM, string what)
+        private void Shrub(Vector3 foot, float widthM, string what, bool dome = false)
         {
             float distance = Vector3.Distance(foot, _eye);
-            List<EnvironmentKit.Piece> pool = distance > 25f ? Kit(EnvironmentRole.CanopyCrown, null) : Kit(EnvironmentRole.PlantClump, _rng.Chance(0.5f) ? "PalmFern" : "Fern_P");
+            List<EnvironmentKit.Piece> pool = dome || distance > 25f ? Kit(EnvironmentRole.CanopyCrown, null) : Kit(EnvironmentRole.PlantClump, _rng.Chance(0.5f) ? "PalmFern" : "Fern_P");
             if (pool.Count == 0)
             {
                 pool = Kit(EnvironmentRole.CanopyCrown, null);
@@ -339,29 +365,34 @@ namespace JungleBooze.Editor.HeroBasin
                 return spots;
             }
 
-            Matrix4x4 placement = EnvironmentKit.Span(piece, _h.ArchFootA, _h.ArchFootB, _h.ArchTopY, _h.ArchDepthScale);
-            foreach (EnvironmentKit.Part part in piece.Parts)
+            List<Matrix4x4> placements = _world.ArchPlacements.Count > 0
+                ? _world.ArchPlacements
+                : new List<Matrix4x4> { EnvironmentKit.Span(piece, _h.ArchFootA, _h.ArchFootB, _h.ArchTopY, _h.ArchDepthScale) };
+            foreach (Matrix4x4 placement in placements)
             {
-                Matrix4x4 m = placement * part.Matrix;
-                Matrix4x4 nm = m.inverse.transpose;
-                Vector3[] vertices = part.Mesh.vertices;
-                Vector3[] normals = part.Mesh.normals;
-                for (int i = 0; i < vertices.Length && i < normals.Length; i += step)
+                foreach (EnvironmentKit.Part part in piece.Parts)
                 {
-                    Vector3 n = nm.MultiplyVector(normals[i]).normalized;
-                    if (!normalTest(n))
+                    Matrix4x4 m = placement * part.Matrix;
+                    Matrix4x4 nm = m.inverse.transpose;
+                    Vector3[] vertices = part.Mesh.vertices;
+                    Vector3[] normals = part.Mesh.normals;
+                    for (int i = 0; i < vertices.Length && i < normals.Length; i += step)
                     {
-                        continue;
-                    }
+                        Vector3 n = nm.MultiplyVector(normals[i]).normalized;
+                        if (!normalTest(n))
+                        {
+                            continue;
+                        }
 
-                    Vector3 w = m.MultiplyPoint3x4(vertices[i]);
-                    Vector2 s = ToScreen(w, out bool front);
-                    if (!front || s.x < -0.02f || s.x > 1.02f || s.y < -0.02f || s.y > 1f || !Visible(w + n * 0.5f, Kind.Arch))
-                    {
-                        continue;
-                    }
+                        Vector3 w = m.MultiplyPoint3x4(vertices[i]);
+                        Vector2 s = ToScreen(w, out bool front);
+                        if (!front || s.x < -0.02f || s.x > 1.02f || s.y < -0.02f || s.y > 1f || !Visible(w + n * 0.5f, Kind.Arch))
+                        {
+                            continue;
+                        }
 
-                    spots.Add(new Spot { World = w, Normal = n, Screen = s });
+                        spots.Add(new Spot { World = w, Normal = n, Screen = s });
+                    }
                 }
             }
 
@@ -671,7 +702,8 @@ namespace JungleBooze.Editor.HeroBasin
                 if (_rng.Chance(_d.IslandShrubShare))
                 {
                     float top = water + width * flatten * 0.17f;
-                    Shrub(new Vector3(hit.point.x, top, hit.point.z), width * _rng.NextFloat(0.55f, 0.8f), "island shrubs");
+                    // Moss / shrub domes, not ferns: the islands read as rock with growth on top (F4_f).
+                    Shrub(new Vector3(hit.point.x, top, hit.point.z), width * _rng.NextFloat(0.45f, 0.7f), "island shrubs", true);
                 }
 
                 _islands.Add(new Vector4(hit.point.x, water, hit.point.z, width));
@@ -681,7 +713,11 @@ namespace JungleBooze.Editor.HeroBasin
             Spillways(foam);
         }
 
-        /// <summary>Foam rapids between neighbouring islands (shaped white water running toward the camera).</summary>
+        /// <summary>
+        /// Spillways between neighbouring islands: a mossy rock sill rising a real step above the water, a short
+        /// fall pouring over its front lip toward the camera into a foam pool, and a little upper pool on the sill
+        /// (F4_f: water stepping down between the rock islands, not flat foam bands).
+        /// </summary>
         private void Spillways(LookTestMeshAccumulator foam)
         {
             int made = 0;
@@ -697,16 +733,45 @@ namespace JungleBooze.Editor.HeroBasin
                         continue;
                     }
 
-                    Vector3 mid = new Vector3((a.x + b.x) * 0.5f, a.y + 0.05f, (a.z + b.z) * 0.5f);
+                    Vector3 mid = new Vector3((a.x + b.x) * 0.5f, a.y, (a.z + b.z) * 0.5f);
                     Vector3 toEye = _eye - mid;
                     toEye.y = 0f;
-                    float width = Mathf.Max(0.6f, gap - (a.w + b.w) * 0.35f);
-                    foam.Append(FoamStreak(width, width * 2.2f), Matrix4x4.TRS(mid, Quaternion.LookRotation(toEye.normalized, Vector3.up), Vector3.one), null);
+                    toEye.Normalize();
+                    Vector3 side = Vector3.Cross(Vector3.up, toEye);
+                    float width = Mathf.Clamp(gap - (a.w + b.w) * 0.3f, 1.2f, 0.5f * (a.w + b.w));
+                    float drop = Mathf.Max(0.8f, width * _d.SpillwayDropShare);
+                    Drop(mid, side, toEye, width, drop, foam);
                     made++;
                 }
             }
 
-            Count("spillways (foam rapids)", made);
+            Count("spillway drops", made);
+        }
+
+        private void Drop(Vector3 waterAt, Vector3 side, Vector3 toEye, float width, float drop, LookTestMeshAccumulator pools)
+        {
+            float water = waterAt.y;
+            float sill = width * _d.SpillwaySillShare;
+            // The sill: a wide flat rock behind the lip, its top a step above the water, and a cheek rock either side.
+            Vector3 back = waterAt - toEye * sill * 0.55f;
+            // Boulder half height = width * flatten / 2: the dome's crest sits at the step height.
+            const float flatten = 0.35f;
+            Boulder(new Vector3(back.x, water + drop - 0.5f * width * 1.5f * flatten, back.z), width * 1.5f, flatten, 2);
+            for (int s = -1; s <= 1; s += 2)
+            {
+                Vector3 cheek = waterAt + side * s * width * _rng.NextFloat(0.55f, 0.7f) - toEye * sill * 0.2f;
+                float w = sill * _rng.NextFloat(0.8f, 1.1f);
+                Boulder(new Vector3(cheek.x, water + drop * 0.6f - 0.2f * w, cheek.z), w, _rng.NextFloat(0.7f, 0.9f), 1);
+                if (_rng.Chance(0.5f))
+                {
+                    Shrub(new Vector3(cheek.x, water + drop * 0.6f + 0.25f * w, cheek.z), w * 0.8f, "spillway shrubs", true);
+                }
+            }
+
+            // Upper pool on the sill, then the fall over the lip toward the camera.
+            pools.Append(LookTestMeshFactory.Pool(width * 0.5f, 0.6f, "SpillPool"), Matrix4x4.Translate(new Vector3(back.x, water + drop + 0.05f, back.z) + toEye * sill * 0.2f), null);
+            Vector3 lip = waterAt + Vector3.up * (drop + 0.04f) - toEye * sill * 0.05f;
+            LookTestLandmarks.Fall(_ctx, _rng, Seg, "Falls", lip, water, width * 0.8f, _eye, Mathf.Clamp(drop * 0.35f, 0.3f, 2.5f), LookTestLandmarks.FallFoot.Pool, 2);
         }
 
         /// <summary>A flat foam ring on the water: R (foam) 1 at the inner radius fading to 0 outside, A fading out.</summary>
@@ -838,7 +903,7 @@ namespace JungleBooze.Editor.HeroBasin
                         toEye.Normalize();
                         // Straddle the crest and lean over the drop face toward the camera: no straight rim line left.
                         Vector3 c = p + toEye * size * 0.25f + Vector3.up * (-0.15f * size + _rng.NextFloat(-0.15f, 0.1f));
-                        Boulder(c, size, _rng.NextFloat(0.6f, 0.85f), Vector3.Distance(c, _eye) < 35f ? 2 : 1);
+                        Boulder(c, size, _rng.NextFloat(0.6f, 0.85f), Vector3.Distance(c, _eye) < 18f ? 2 : 1);
                         boulders++;
                         if (_rng.Chance(_d.RimPlantsPerBoulder))
                         {
@@ -890,11 +955,11 @@ namespace JungleBooze.Editor.HeroBasin
                     }
 
                     float size = shelf.w * _rng.NextFloat(0.16f, 0.3f);
-                    Boulder(rim + Vector3.up * (-0.1f * size), size, _rng.NextFloat(0.55f, 0.8f), 2);
+                    Boulder(rim + Vector3.up * (-0.1f * size), size, _rng.NextFloat(0.55f, 0.8f), 1);
                     boulders++;
-                    if (_rng.Chance(0.6f))
+                    if (_rng.Chance(_d.ShelfShrubShare))
                     {
-                        Shrub(rim + Vector3.up * size * 0.25f, size * _rng.NextFloat(1.0f, 1.6f), "shelf shrubs");
+                        Shrub(rim + Vector3.up * size * 0.25f, size * _rng.NextFloat(1.0f, 1.6f), "shelf shrubs", true);
                     }
                 }
             }
@@ -918,60 +983,106 @@ namespace JungleBooze.Editor.HeroBasin
 
         // ---------------------------------------------------------------- 4. Ledge cobbles and undergrowth
 
-        private void Ground()
+        /// <summary>Cobbled ledge under Pista: flat stones set into the ledge top (path stone, moss only in the cracks).</summary>
+        private void Cobbles()
         {
             Vector3 pista = _h.PistaPosition;
             int cobbles = 0;
             for (int i = 0; i < _d.Cobbles * 4 && cobbles < _d.Cobbles; i++)
             {
                 float a = _rng.NextFloat(0f, 6.283f);
-                float r = Mathf.Sqrt(_rng.NextFloat(0.02f, 1f)) * 2.6f;
+                float r = Mathf.Sqrt(_rng.NextFloat(0.0f, 1f)) * _d.CobbleRadiusM;
                 var p = new Vector3(pista.x + Mathf.Cos(a) * r, pista.y + 4f, pista.z + Mathf.Sin(a) * r);
-                if (!Physics.Raycast(p, Vector3.down, out RaycastHit hit, 10f) || hit.normal.y < 0.75f || hit.point.y < pista.y - 1.2f)
+                if (!Physics.Raycast(p, Vector3.down, out RaycastHit hit, 10f) || hit.normal.y < 0.7f || hit.point.y < pista.y - 1.2f)
                 {
                     continue;
                 }
 
-                float size = _rng.NextFloat(0.25f, 0.6f);
-                Mesh stone = LookTestMeshFactory.Boulder(_rng, 1f, 1);
-                float s = size / 2.4f;
-                Quaternion tilt = Quaternion.FromToRotation(Vector3.up, hit.normal) * Quaternion.Euler(0f, _rng.NextFloat(0f, 360f), 0f);
-                Rocks.Append(stone, Matrix4x4.TRS(hit.point + hit.normal * 0.01f, tilt, new Vector3(s, s * 0.22f, s)), LookTestBuildContext.Open);
+                Cobble(hit.point, hit.normal, _rng.NextFloat(_d.CobbleSizeM.x, _d.CobbleSizeM.y));
                 cobbles++;
             }
 
             Count("cobbles", cobbles);
+        }
 
-            // Undergrowth: dense clumps wherever the bottom of the frame hits ground or mossy mounds, except a clear
-            // patch of rock around Pista's feet and her silhouette on screen.
+        private void Cobble(Vector3 point, Vector3 normal, float size)
+        {
+            LookTestMeshAccumulator stones = B.Get(Seg, "L0", Label + " cobbles", _ctx.Rootstone, false, LookTestBatchSet.Group.Rocks);
+            Mesh stone = LookTestMeshFactory.Boulder(_rng, 1f, 1);
+            float s = size / 2.4f;
+            Quaternion tilt = Quaternion.FromToRotation(Vector3.up, normal) * Quaternion.Euler(0f, _rng.NextFloat(0f, 360f), 0f);
+            var scale = new Vector3(s * _rng.NextFloat(0.8f, 1.2f), s * _rng.NextFloat(0.18f, 0.3f), s);
+            stones.Append(stone, Matrix4x4.TRS(point + normal * 0.02f, tilt, scale), LookTestBuildContext.Open);
+        }
+
+        /// <summary>Plant clumps for the ground passes: low ferns, palm ferns and painted shrub clumps, mixed.</summary>
+        private EnvironmentKit.Piece GroundPlant(float widthM, float distance)
+        {
             List<EnvironmentKit.Piece> low = Kit(EnvironmentRole.PlantClump, "Fern_P");
+            low.RemoveAll(p => p.Name.IndexOf("PalmFern", System.StringComparison.OrdinalIgnoreCase) >= 0);
             List<EnvironmentKit.Piece> tall = Kit(EnvironmentRole.PlantClump, "PalmFern");
-            if (low.Count + tall.Count == 0)
+            List<EnvironmentKit.Piece> shrub = Kit(EnvironmentRole.PlantClump, "Canopy_P");
+            if (distance > 25f)
             {
-                return;
+                // Far ground: painted shrub domes (24 tris each) read the same as fern clumps at that size.
+                List<EnvironmentKit.Piece> domes = Kit(EnvironmentRole.CanopyCrown, null);
+                if (domes.Count > 0)
+                {
+                    return domes[_rng.NextInt(0, domes.Count)];
+                }
             }
 
+            float roll = _rng.NextFloat(0f, 1f);
+            List<EnvironmentKit.Piece> pool = distance > 9f && widthM > 1.6f
+                ? (roll < 0.5f ? tall : roll < 0.8f ? shrub : low)
+                : (roll < 0.45f ? low : roll < 0.75f ? tall : shrub);
+            if (pool.Count == 0)
+            {
+                pool = low.Count > 0 ? low : tall.Count > 0 ? tall : shrub;
+            }
+
+            return pool.Count > 0 ? pool[_rng.NextInt(0, pool.Count)] : null;
+        }
+
+        private bool InClearBand(Vector2 uv)
+        {
+            return uv.x > _pass.ClearBandU.x && uv.x < _pass.ClearBandU.y;
+        }
+
+        private bool NearPista(Vector2 uv, Vector2 pistaScreen, float halfWidthU)
+        {
+            return Mathf.Abs(uv.x - pistaScreen.x) < halfWidthU && uv.y > pistaScreen.y - 0.4f;
+        }
+
+        /// <summary>
+        /// Undergrowth at the sides of the frame only (the centre band keeps the water in view past the ledge, F4_f):
+        /// mixed species, sizes and turns so no two neighbours repeat.
+        /// </summary>
+        private void Undergrowth()
+        {
+            Vector3 pista = _h.PistaPosition;
             Vector2 pistaScreen = ToScreen(pista + Vector3.up * 0.9f, out _);
             var placed = new List<Vector2>();
-            foreach (Vector2 uv in Stratified(_rng, _d.UndergrowthRegion, _d.UndergrowthClumps * 6, Aspect))
+            foreach (Vector2 uv in Stratified(_rng, _pass.UndergrowthRegion, _pass.UndergrowthClumps * 8, Aspect))
             {
-                if (placed.Count >= _d.UndergrowthClumps)
+                if (placed.Count >= _pass.UndergrowthClumps)
                 {
                     break;
                 }
 
-                if (Mathf.Abs(uv.x - pistaScreen.x) < 0.06f && uv.y > pistaScreen.y - 0.4f)
+                if (InClearBand(uv) || NearPista(uv, pistaScreen, 0.06f))
                 {
                     continue;
                 }
 
-                if (!Cast(uv, out RaycastHit hit, out Kind kind) || (kind != Kind.Ground && kind != Kind.Rock && kind != Kind.Mound) || hit.normal.y < 0.35f)
+                if (!Cast(uv, out RaycastHit hit, out Kind kind) || (kind != Kind.Ground && kind != Kind.Rock && kind != Kind.Mound) || hit.normal.y < 0.35f
+                    || hit.distance > _pass.MaxDistanceM)
                 {
                     continue;
                 }
 
                 Vector2 flat = new Vector2(hit.point.x - pista.x, hit.point.z - pista.z);
-                if (flat.magnitude < _d.PistaClearRadiusM || hit.distance < 1.0f)
+                if (flat.magnitude < _d.PistaClearRadiusM || hit.distance < 0.8f)
                 {
                     continue;
                 }
@@ -979,7 +1090,7 @@ namespace JungleBooze.Editor.HeroBasin
                 bool tooClose = false;
                 foreach (Vector2 q in placed)
                 {
-                    tooClose |= ScreenDistanceU(q, uv, Aspect) < 0.035f;
+                    tooClose |= ScreenDistanceU(q, uv, Aspect) < 0.04f;
                 }
 
                 if (tooClose)
@@ -987,10 +1098,14 @@ namespace JungleBooze.Editor.HeroBasin
                     continue;
                 }
 
-                float width = Mathf.Clamp(_rng.NextFloat(_d.UndergrowthSizeU.x, _d.UndergrowthSizeU.y) * MetresPerU(hit.point), 0.5f, 6f);
-                // Near the lens only low ferns: tall clumps there hid the basin (F4_f keeps the water in view past the ledge).
-                List<EnvironmentKit.Piece> pool = tall.Count > 0 && ((width > 1.6f && hit.distance > 9f) || low.Count == 0) ? tall : low;
-                PlaceKit(pool[_rng.NextInt(0, pool.Count)], hit.point - Vector3.up * 0.08f, width, 180f, "L1", LookTestBatchSet.Group.Plants);
+                float width = Mathf.Clamp(_rng.NextFloat(_pass.UndergrowthSizeU.x, _pass.UndergrowthSizeU.y) * MetresPerU(hit.point), 0.5f, 6f);
+                EnvironmentKit.Piece piece = GroundPlant(width, hit.distance);
+                if (piece == null)
+                {
+                    return;
+                }
+
+                PlaceKit(piece, hit.point - Vector3.up * 0.08f, width, 180f, "L1", LookTestBatchSet.Group.Plants);
                 placed.Add(uv);
             }
 
@@ -1003,47 +1118,55 @@ namespace JungleBooze.Editor.HeroBasin
 
         /// <summary>
         /// Last pass (0% lawn, map s2): a fine screen grid over the lower frame; wherever a ray still lands on bare
-        /// terrain or a smooth outcrop mound with no plant near it on screen, a fern clump goes there.
+        /// terrain or a smooth outcrop mound with nothing near it on screen, the side bands get a plant clump and the
+        /// centre band a low mossy rock cluster (keeps the view to the water open).
         /// </summary>
         private void LawnSweep()
         {
-            List<EnvironmentKit.Piece> low = Kit(EnvironmentRole.PlantClump, "Fern_P");
-            List<EnvironmentKit.Piece> tall = Kit(EnvironmentRole.PlantClump, "PalmFern");
-            if (low.Count + tall.Count == 0 || _d.LawnSweepClumps <= 0)
+            if (_pass.SweepItems <= 0)
             {
                 return;
             }
 
             Vector3 pista = _h.PistaPosition;
             Vector2 pistaScreen = ToScreen(pista + Vector3.up * 0.9f, out _);
-            int made = 0;
+            int plants = 0;
+            int rocks = 0;
             foreach (Vector2 q in _undergrowth)
             {
-                _sweep.Add(new Vector3(q.x, q.y, 0.025f));
+                _sweep.Add(new Vector3(q.x, q.y, 0.012f));
             }
 
             // Nearest ground first (bottom of the frame): the lawn that matters is the mound in front of the lens.
-            List<Vector2> samples = Stratified(_rng, new Vector4(0f, 0.5f, 1f, 1f), 1200, Aspect);
+            List<Vector2> samples = Stratified(_rng, new Vector4(0f, _pass.SweepTopV, 1f, 1f), 2600, Aspect);
             samples.Sort((a, b) => b.y.CompareTo(a.y));
             foreach (Vector2 uv in samples)
             {
-                if (made >= _d.LawnSweepClumps)
+                if (plants + rocks >= _pass.SweepItems)
                 {
                     break;
                 }
 
-                if (Mathf.Abs(uv.x - pistaScreen.x) < 0.05f && uv.y > pistaScreen.y - 0.4f)
+                if (NearPista(uv, pistaScreen, 0.05f))
                 {
                     continue;
                 }
 
-                if (!Cast(uv, out RaycastHit hit, out Kind kind) || (kind != Kind.Ground && kind != Kind.Mound) || hit.distance < 0.9f)
+                // Beyond the pass's plant distance (ground the landscape frame shares) only low rock goes down.
+                if (!Cast(uv, out RaycastHit hit, out Kind kind) || (kind != Kind.Ground && kind != Kind.Mound) || hit.distance < 0.9f || hit.distance > 3f * _pass.MaxDistanceM)
                 {
                     continue;
                 }
 
                 if (new Vector2(hit.point.x - pista.x, hit.point.z - pista.z).magnitude < _d.PistaClearRadiusM)
                 {
+                    // Under and around her feet: a flat path stone, never a plant.
+                    if (kind == Kind.Ground && !_portrait)
+                    {
+                        Cobble(hit.point, hit.normal, _rng.NextFloat(_d.CobbleSizeM.x, _d.CobbleSizeM.y));
+                        _sweep.Add(new Vector3(uv.x, uv.y, 0.01f));
+                    }
+
                     continue;
                 }
 
@@ -1058,16 +1181,41 @@ namespace JungleBooze.Editor.HeroBasin
                     continue;
                 }
 
-                bool near = hit.distance < 6f;
-                float width = Mathf.Clamp(_rng.NextFloat(0.05f, 0.1f) * MetresPerU(hit.point), near ? 1.3f : 0.5f, 12f);
-                List<EnvironmentKit.Piece> pool = (hit.distance > 20f || low.Count == 0) && tall.Count > 0 ? tall : low;
-                PlaceKit(pool[_rng.NextInt(0, pool.Count)], hit.point - Vector3.up * 0.08f, width, 180f, "L1", LookTestBatchSet.Group.Plants);
-                // A clump hides ground within about a third of its screen width of its foot.
-                _sweep.Add(new Vector3(uv.x, uv.y, Mathf.Max(0.012f, 0.3f * width / MetresPerU(hit.point))));
-                made++;
+                float mpu = MetresPerU(hit.point);
+                if (InClearBand(uv) || hit.distance > _pass.MaxDistanceM)
+                {
+                    // Low mossy rock: a flat stone with one or two smaller ones, hugging the mound.
+                    float width = Mathf.Clamp(_rng.NextFloat(0.04f, 0.07f) * mpu, 0.6f, 9f);
+                    Quaternion tilt = Quaternion.FromToRotation(Vector3.up, hit.normal);
+                    Boulder(hit.point - hit.normal * width * 0.08f, width, _rng.NextFloat(0.35f, 0.55f), hit.distance < 12f ? 2 : 1);
+                    for (int k = 0; k < (hit.distance > 20f ? 0 : 2); k++)
+                    {
+                        Vector3 offset = tilt * new Vector3(_rng.NextFloat(-0.6f, 0.6f), 0f, _rng.NextFloat(-0.6f, 0.6f)) * width;
+                        Boulder(hit.point + offset, width * _rng.NextFloat(0.35f, 0.55f), _rng.NextFloat(0.4f, 0.7f), 1);
+                    }
+
+                    _sweep.Add(new Vector3(uv.x, uv.y, Mathf.Max(0.012f, 0.42f * width / mpu)));
+                    rocks++;
+                }
+                else
+                {
+                    bool near = hit.distance < 6f;
+                    float width = Mathf.Clamp(_rng.NextFloat(_pass.SweepSizeU.x, _pass.SweepSizeU.y) * mpu, near ? 1.3f : 0.5f, 12f);
+                    EnvironmentKit.Piece piece = GroundPlant(width, hit.distance);
+                    if (piece == null)
+                    {
+                        continue;
+                    }
+
+                    PlaceKit(piece, hit.point - Vector3.up * 0.08f, width, 180f, "L1", LookTestBatchSet.Group.Plants);
+                    // A clump hides ground within about a fifth of its screen width of its foot.
+                    _sweep.Add(new Vector3(uv.x, uv.y, Mathf.Max(0.01f, 0.2f * width / mpu)));
+                    plants++;
+                }
             }
 
-            Count("lawn sweep", made);
+            Count("sweep plants", plants);
+            Count("sweep rock clusters", rocks);
         }
 
         /// <summary>Rocks along the brink of each wide cascade: the lip breaks up between the strands (no straight edge).</summary>
@@ -1097,29 +1245,59 @@ namespace JungleBooze.Editor.HeroBasin
 
         // ---------------------------------------------------------------- 5. Framing plants
 
+        /// <summary>Hero framing plants of the pass (a few large clumps, each species, size and turn set per plant).</summary>
         private void Framing()
         {
-            PlaceAtScreen(Kit(EnvironmentRole.PlantClump, "FrameLeft_P"), _d.FrameLeftUv, _d.FrameLeftSizeU, "frame left");
-            PlaceAtScreen(Kit(EnvironmentRole.PlantClump, "FrameRight_P"), _d.FrameRightUv, _d.FrameRightSizeU, "frame right");
-            PlaceAtScreen(Kit(EnvironmentRole.PlantClump, "Bellflower_P"), _d.BellcapUv, _d.BellcapSizeU, "bellcap plant");
-            CornerLeaves();
-        }
-
-        private void PlaceAtScreen(List<EnvironmentKit.Piece> pieces, Vector2 uv, float sizeU, string what)
-        {
-            if (sizeU <= 0f)
+            HeroFramePlant[] frames = _pass.Frames ?? new HeroFramePlant[0];
+            foreach (HeroFramePlant f in frames)
             {
-                return;
-            }
+                if (f.SizeU <= 0f || string.IsNullOrEmpty(f.Piece))
+                {
+                    continue;
+                }
 
-            if (pieces.Count == 0 || !Cast(uv, out RaycastHit hit, out Kind kind) || (kind != Kind.Ground && kind != Kind.Rock))
-            {
-                _report.Add("Dressing: " + what + " not placed (no kit piece or no ground at " + uv + ").");
-                return;
-            }
+                List<EnvironmentKit.Piece> pieces = Kit(EnvironmentRole.PlantClump, f.Piece);
+                Vector3 at;
+                bool floating = f.DepthM > 0f;
+                if (floating)
+                {
+                    Ray ray = ScreenRay(f.Uv);
+                    at = ray.origin + ray.direction * f.DepthM;
+                }
+                else if (Cast(f.Uv, out RaycastHit hit, out Kind kind) && kind != Kind.None && kind != Kind.Arch && hit.distance <= _pass.MaxDistanceM)
+                {
+                    at = hit.point;
+                }
+                else
+                {
+                    at = Vector3.zero;
+                    pieces.Clear();
+                }
 
-            PlaceKit(pieces[0], hit.point - Vector3.up * 0.1f, sizeU * MetresPerU(hit.point), 15f, "L1", LookTestBatchSet.Group.Plants);
-            Count(what);
+                if (pieces.Count == 0)
+                {
+                    _report.Add("Dressing: framing " + f.Piece + " not placed (no kit piece or no ground at " + f.Uv + ").");
+                    continue;
+                }
+
+                EnvironmentKit.Piece piece = pieces[_rng.NextInt(0, pieces.Count)];
+                Bounds b = piece.Bounds;
+                float width = f.SizeU * MetresPerU(at);
+                float height = width * b.size.y / Mathf.Max(0.01f, Mathf.Max(b.size.x, b.size.z));
+                Vector3 toEye = _eye - at;
+                float yaw = Mathf.Atan2(toEye.x, toEye.z) * Mathf.Rad2Deg + f.YawDeg + _rng.NextFloat(-10f, 10f);
+                // On the ray: the clump's lower half hangs below the frame edge.
+                Vector3 foot = floating ? at - Vector3.up * height * 0.55f : at - Vector3.up * 0.1f;
+                _ctx.AppendPiece(piece, EnvironmentKit.Stand(piece, foot, yaw, height, 0f), null, Seg, "L1", Label, false,
+                    LookTestBatchSet.Group.Plants, HeroBasinPlants.Open);
+                Vector2 uv = ToScreen(at, out _);
+                // Lens-near clumps on the ray stand in front of the ground, not on it: they don't count as cover.
+                if (!floating)
+                {
+                    _sweep.Add(new Vector3(uv.x, uv.y, f.SizeU * 0.15f));
+                }
+                Count("framing " + f.Piece);
+            }
         }
 
         /// <summary>Backlit leaves hanging into the top-left corner, leaving gaps over the sun.</summary>

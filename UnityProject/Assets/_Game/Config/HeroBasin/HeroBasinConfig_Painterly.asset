@@ -16,7 +16,7 @@ MonoBehaviour:
   _landscapeEuler: {x: 1, y: 0, z: 0}
   _landscapeFovDeg: 52
   _portraitPosition: {x: 0.7, y: 2.2, z: -5.2}
-  _portraitEuler: {x: -3, y: 4, z: 0}
+  _portraitEuler: {x: 5, y: -3, z: 0}
   _portraitFovDeg: 70
   _farClipM: 4200
   _pistaPosition: {x: 0, y: 0, z: 0}
@@ -77,10 +77,10 @@ MonoBehaviour:
   - {x: 26, y: 76, z: -3.4, w: 12}
   - {x: 12, y: 58, z: -4.4, w: 9}
   - {x: 36, y: 52, z: -4.8, w: 8}
-  _archFootA: {x: -166, y: -25, z: 208}
-  _archFootB: {x: 182, y: -25, z: 208}
-  _archTopY: 102
-  _archDepthScale: 0.45
+  _archFootA: {x: -138, y: -25, z: 215}
+  _archFootB: {x: 168, y: -25, z: 215}
+  _archTopY: 90
+  _archDepthScale: 0.4
   _archVineClearing: {x: 0.14, y: 0.55}
   _archTint: {r: 1, g: 1, b: 1, a: 1}
   _archCrowns: 60
@@ -88,7 +88,7 @@ MonoBehaviour:
   _leafTranslucency: 0.4
   _forestMinDistanceM: 26
   _forestLeftDistanceScale: 4
-  _forestUnderArchScale: 0.6
+  _forestUnderArchScale: 0.35
   _falls:
   - Top: {x: 60, y: 112, z: 330}
     FootY: -3.7
@@ -102,8 +102,8 @@ MonoBehaviour:
     IntoPool: 1
   _kitPillars:
   - {x: -122, y: 335, z: 120, w: 30}
-  - {x: 185, y: 310, z: 105, w: 200}
-  - {x: 128, y: 300, z: 150, w: 160}
+  - {x: 300, y: 330, z: 130, w: 200}
+  - {x: -210, y: 380, z: 140, w: 160}
   - {x: -95, y: 420, z: 150, w: 110}
   _ledgePiece: {x: 0.1, y: -1.72, z: 0.4, w: 15}
   _ledgeStandOffset: {x: 2.4, y: 0, z: 1.2}
@@ -220,3 +220,7 @@ MonoBehaviour:
   _frameRight: {x: 6.2, y: 0.4, z: -30, w: 0.75}
   _style: 1
   _gradeLutPath: Assets/_Game/Art/HeroBasin/Grade/HeroBasin_F4f_Lut.png
+  _archBraidFootA: {x: -116, y: -25, z: 205}
+  _archBraidFootB: {x: 150, y: -25, z: 210}
+  _archBraidTopY: 80
+  _archBraidDepthScale: 0.45

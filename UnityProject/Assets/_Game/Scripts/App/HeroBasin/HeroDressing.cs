@@ -38,37 +38,36 @@ namespace JungleBooze.App.HeroBasin
         [Tooltip("Island width as a fraction of the frame width: large, medium, small.")]
         public Vector3 IslandSizeU = new Vector3(0.11f, 0.07f, 0.045f);
         [Tooltip("Share of islands with a shrub cap.")]
-        public float IslandShrubShare = 0.75f;
-        public int Spillways = 7;
+        public float IslandShrubShare = 0.5f;
+        public int Spillways = 6;
+        [Tooltip("Spillway drop height as a share of its width (a real step between islands, not a foam band).")]
+        public float SpillwayDropShare = 0.45f;
+        [Tooltip("Island width range in metres for the sill rocks either side of a spillway (share of the spillway width).")]
+        public float SpillwaySillShare = 0.7f;
 
         [Header("3. Pool rims (travertine lips and the cascade shelf)")]
         [Tooltip("Boulders per metre of lip (scaled pieces), and fern/shrub clumps per boulder.")]
         public float RimBouldersPerM = 0.6f;
-        public float RimPlantsPerBoulder = 0.35f;
+        public float RimPlantsPerBoulder = 0.12f;
         public Vector2 RimBoulderSizeM = new Vector2(1.8f, 3.6f);
         [Tooltip("Boulders around the rim of the shelf the wide cascade pours from (hides the disc edge).")]
         public int ShelfBoulders = 60;
+        [Tooltip("Share of shelf boulders with a shrub cap (keeps the pools visible past the cascade shelf).")]
+        public float ShelfShrubShare = 0.3f;
 
         [Header("4. Foreground ground (0% lawn)")]
-        public int Cobbles = 26;
+        public int Cobbles = 70;
+        [Tooltip("Radius around Pista's feet the cobbled ledge covers (m) and the cobble size range (m).")]
+        public float CobbleRadiusM = 3.4f;
+        public Vector2 CobbleSizeM = new Vector2(0.25f, 0.7f);
         [Tooltip("Radius around Pista's feet kept clear of undergrowth (m).")]
         public float PistaClearRadiusM = 1.1f;
         [Tooltip("Undergrowth coverage passes: screen regions filled with fern / broadleaf clumps where the ray hits ground.")]
-        public Vector4 UndergrowthRegion = new Vector4(0f, 0.6f, 1f, 1f);
-        public int UndergrowthClumps = 64;
-        public Vector2 UndergrowthSizeU = new Vector2(0.08f, 0.17f);
-        [Tooltip("Final sweep: fern clumps wherever bare terrain or a smooth mound still shows (max count).")]
-        public int LawnSweepClumps = 90;
+        public HeroDressingPass Landscape = HeroDressingPass.LandscapeDefault();
+        [Tooltip("Second foreground pass through the portrait camera (P1): its own framing plants and ground cover.")]
+        public HeroDressingPass Portrait = HeroDressingPass.PortraitDefault();
 
         [Header("5. Framing plants")]
-        public Vector2 FrameLeftUv = new Vector2(0.05f, 0.92f);
-        public float FrameLeftSizeU = 0.42f;
-        public Vector2 FrameRightUv = new Vector2(0.94f, 0.95f);
-        [Tooltip("0 = keep only the config's FrameRight clump (its bells already fill the orange budget).")]
-        public float FrameRightSizeU = 0f;
-        public Vector2 BellcapUv = new Vector2(0.2f, 0.88f);
-        [Tooltip("0 = none: the left framing clump already carries bell stems (orange budget 1-2%).")]
-        public float BellcapSizeU = 0f;
         [Tooltip("Backlit leaf clusters hanging from the top-left corner (map: 6-10), keeping the sun 40-60% visible.")]
         public int CornerLeaves = 9;
 
