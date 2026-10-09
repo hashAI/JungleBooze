@@ -5,7 +5,7 @@
 **Status:** v1, ready for implementation | **Last updated:** 2026-10-09
 **Sources:** `design/aurelia/BLUEPRINT.md` Parts III.2, V, VI, XVII, XXXVI, XLVI, LIV; `design/aurelia/GDD.md` §5–7, §11;
 `design/aurelia/ART_DIRECTION.md` §9; `docs/ARCHITECTURE.md` §4–5 (deterministic core).
-**Not in scope:** swimming (spec 103), vines (spec 104), chunks/routes generation (spec 102), power-up effects other
+**Not in scope:** swimming, vines and canopy beams (spec 103), chunks/routes generation (spec 102), power-up effects other
 than Shield's hit rule (later spec). Nothing here uses lanes; the archived lane spec 001 must not be reused.
 
 ---

@@ -5,6 +5,7 @@ Newest first.
 
 | Date | Gate | Decision | Options considered | Decided by |
 |---|---|---|---|---|
+| 2026-10-09 | — | **Deep Breath is ability #1** (150 coins / 0 crystals): the first upgrade opens the Sunken Arch the player already saw in the first run (spec 103 §9.4). Ability order becomes Deep Breath → Vine Grip → Trail Sense → Root Vault → Creature Tracking → Shoulder Charge → Double Jump (GDD §13) [ASSUMED] | A: Deep Breath first / B: Trail Sense first (old GDD) / C: Vine Grip first | Coordinator (delegated) |
 | 2026-10-09 | — | **Don't ask the owner; use your own recommendations** for all decisions (including taste/identity), logged as [ASSUMED] for later review. Money still needs approval | — | Owner |
 | 2026-10-09 | — | All 2D images come from OpenAI only (Meshy for 3D meshes only). Agents choose sizes wisely per use | — | Owner |
 | 2026-10-09 | — | **OpenAI images approved** for art (gpt-image-2, medium quality, at the resolution each use needs): keyframes/concepts, backdrop layers, leaf/foliage textures. Working cap $75 (the strategy's estimate, ~$43 expected) [ASSUMED]; ask the owner before going past it. Log each call in `art_source/environment/openai/calls.jsonl`. First test (F4 basin) beat the Meshy images | Meshy images / OpenAI | Owner |

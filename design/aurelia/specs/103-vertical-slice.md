@@ -54,11 +54,12 @@ gauntlet; a player who dies in the gauntlet goes death → results → upgrade �
 | — | Death → results → upgrade → RUN AGAIN | §9 | — | ≤ 5:00 | — |
 
 Clock assumes no hits (speed curve spec 101 §2.2; swim speed §4.2). The compression of Blueprint 4.2's 10-minute
-first-run timeline into 4 minutes is deliberate for the gate `[ASSUMED]`; GDD §16 gets updated after the owner's
-Phase 2 verdict.
+first-run timeline into 4 minutes is deliberate for the gate `[ASSUMED]`; GDD §16 follows this table and is revisited
+after the owner's Phase 2 verdict.
 
 **Chunk set impact:** one new chunk (`F_Start_RootGate_01`, the start of every run) brings the MVP set to 15 (Blueprint
-LIII: 10–15). The slice uses 12 of the 15; `F_Branch_Ravine_01` and `D_Discovery_Grotto_01` are Phase 3.
+LIII: 10–15). The script uses 12 of the 15; `F_Recovery_Riverbank_01` is not scripted but joins the Phase 2 pool
+(§10.2) as the second Recovery chunk; `F_Branch_Ravine_01` and `D_Discovery_Grotto_01` are Phase 3.
 
 ## 3. Chunk layouts
 
@@ -81,7 +82,7 @@ Phase range Learning–Rhythm (the opening chunk of every run). Composition = ke
 trail, rootstone arch and falls through the canopy gap).
 | `s` | Content |
 |---|---|
-| 0–30 | Pista emerges under the stiltwood root arch (camera corridor kept clear). Path widens to 8.0 m by 25 |
+| 0–30 | Pista emerges under the stiltwood root arch (camera corridor kept clear). Path widens from 7.0 m at 6 (seam zone end) to 8.0 m by 25 |
 | 20–58 | Coins Line(20–58, 0, 4.0): 10 coins |
 | 60–130 | Coins Weave(60–130, 2.5, 35): 28 coins. Whirlseeds spin down through a sun shaft at 70–90 (ambient) |
 | 140 | **Blk 1.4 @0** (mossy boulder) **[ST:steer]**; coins Line(134–146, −2.0, 3.0): 5 coins |
@@ -520,8 +521,8 @@ VFX with a fading rim in the last 3 s; HUD icon with a timer ring. One per 600�
 ### 9.4 First upgrade: Deep Breath `[ASSUMED]`
 - **Opens:** underwater passages (`DeepDiveZone`). The player has already *seen* the Sunken Arch in C6 (glint,
   crystals in the dark, too deep for a normal dive). "Now I can reach that."
-- **Cost:** 150 coins, 0 crystals. **This reorders GDD §13:** Deep Breath becomes ability #1 (150/0) and Trail Sense
-  moves to #3 (1,200/4) `[ASSUMED]`; GDD to be updated after the Phase 2 verdict.
+- **Cost:** 150 coins, 0 crystals. Deep Breath is ability #1 (150/0) and Trail Sense moves to #3 (1,200/4); decided
+  2026-10-09 (option A, `DECISIONS.md`), GDD §13 updated `[ASSUMED]`.
 - **Flow:** objective card → ability card (name, one line "Dive deep at shimmering water to reach sunken passages",
   3 s looping preview, cost) → **[LEARN]** (one tap) → 1.2 s unlock moment (sting, Success haptic) → back to results
   with RUN AGAIN highlighted. Death → running again with the ability: ≤ 20 s for a player who goes straight through.
@@ -547,7 +548,8 @@ VFX with a fading rim in the last 3 s; HUD icon with a timer ring. One per 600�
 ### 10.2 Endless continuation (after C13, and every later run)
 - After C13 the next pick is **forced Recovery**, then spec 102 §6.3 runs normally (phase by distance, DDA `S`,
   abilities, cooldowns).
-- **Phase 2 pool:** the 12 slice chunks minus script-only variants (`Learn`, `Slice` variants are script-only; `B` and
+- **Phase 2 pool:** the 12 slice chunks plus `F_Recovery_Riverbank_01` (needed so the forced Recovery after C13 has a
+  choice that passes R1, since the Meadow was C11), minus script-only variants (`Learn`, `Slice` variants are script-only; `B` and
   default variants are pooled). Small pool, so R1 stays "not within the last 6" and freshness does the rest.
 - **Run 2+ opening:** `F_Start_RootGate_01` variant `Short` (no establishing shot, control from tick 0 of the start
   ramp), then the director.

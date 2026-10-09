@@ -4,7 +4,8 @@
 (streaming, ADR for stream ids), balance-simulator (validator bots, difficulty curves), level authors
 **Status:** v0.9 outline; numbers are binding starting values, prose detail grows in Phase 2 | **Last updated:** 2026-10-09
 **Sources:** `design/aurelia/BLUEPRINT.md` Parts VII, VIII, X, XLI–XLIII, LIII; `design/aurelia/GDD.md` §8–10, §12–15;
-spec 101 (movement numbers this spec depends on). Consistent with spec 101: path space `(s, x, y)`, 60 Hz ticks,
+spec 101 (movement numbers this spec depends on); spec 103 (vertical slice: swim, vine, canopy, Expedition 1 script,
+the slice chunk layouts). Consistent with spec 101: path space `(s, x, y)`, 60 Hz ticks,
 jump airtime 0.60 s, `vLatMax` 11 m/s, speed 10 → 16 m/s, hitbox and obstacle classes of spec 101 §2.6, §4.1.
 
 ---
@@ -25,7 +26,7 @@ ScriptableObject (`ChunkDefinition`) plus a scenery prefab (Addressable). Simula
 | `Biome` | enum | MVP: `VerdantForest` |
 | `EnvironmentSet` | enum | `Forest`, `River`, `Waterfall`, `Canopy` (repetition and audio) |
 | `Category` | enum | `Straight`, `Branch`, `Challenge`, `Discovery`, `Transition`, `Event`, `Recovery` (Part 8.2) |
-| `Length` | m | 60–200, multiple of 10 |
+| `Length` | m | 60–320, multiple of 10 (closed water/canopy set pieces need up to 320 m); a variant may override it (e.g. `F_Start_RootGate_01` `Short` = 60 m) |
 | `EntryType` / `ExitType` | enum | `Ground` (MVP); `Water`, `Canopy` reserved for later open seams |
 | `Rating` | 1–10 | Authored; validator checks it against measured metrics (§4.3) |
 | `Dimensions` | 0–3 each | `Reaction`, `Navigation`, `Traversal`, `Risk`, `Complexity` (Part 10.2); speed comes from distance |
@@ -40,6 +41,8 @@ ScriptableObject (`ChunkDefinition`) plus a scenery prefab (Addressable). Simula
 | `RewardProfile` | enum | `Low`, `Standard`, `Rich` (multiplies coin density, crystal chance) |
 | `EntryActionMargin` / `ExitActionMargin` | s at `vMax` | Time from the entry seam to the first required action and from the last required action to the exit seam (computed by the validator) |
 | `SetPiece` | bool | Allowed to break environment-repetition rule R3 |
+| `ScriptOnly` (per variant) | bool | Variant only used by the Expedition 1 script, never by the director (spec 103 §10) |
+| Traversal data | lists | `WaterVolumes`, `Currents`, `DeepDiveZones`, `Vines`, `Beams`, `CreatureSpawns`, `DiscoveryTriggers`, `SecretPassages` (spec 103 §10.3) |
 
 ### 2.1 Seams (any chunk can follow any chunk with a matching type)
 - `Ground` seam: path width 7.0 m, centreline at `x` = 0, floor `y` = 0, flat and straight in path space for a
@@ -84,8 +87,9 @@ steps ≤ 0.35 m are walkable per spec 101), gaps, and route branches (§3). Nar
 
 ### 4.1 Offline validator (editor, CI)
 Every chunk × every variant combination × each route is checked by the **Perfect bot** (spec 101 §6.2) at the
-lowest and highest speed of its `PhaseRange` with only the route's required abilities. Any hit = invalid; the asset
-fails import and CI. The runtime only picks validated combinations (stored as a bitmask per chunk).
+lowest and highest speed of its `PhaseRange` with only the route's required abilities. Script-only variants are
+checked instead at the speed the script meets them ±0.5 m/s and at 0.80× (stumble) (spec 103 §10.1). Any hit =
+invalid; the asset fails import and CI. The runtime only picks validated combinations (stored as a bitmask per chunk).
 
 ### 4.2 Rules (numbers per phase in §5)
 | # | Rule |
@@ -93,7 +97,7 @@ fails import and CI. The runtime only picks validated combinations (stored as a 
 | V1 | Perfect bot passes each route with 0 hits at both speed extremes |
 | V2 | Time between consecutive required actions ≥ the phase's `minActionGap` at the extreme speed |
 | V3 | Required lateral shift `Δx` between constraints: `Δx ≤ 8.0 m/s × (Δt − 0.10 s)` (73% of `vLatMax`, human margin) |
-| V4 | Gap length 1.0 m ≤ L ≤ 0.75 × 0.60 s × v (4.5 m at 10 m/s); ≥ 0.35 s of clear floor before the gap |
+| V4 | Gap length 1.0 m ≤ L ≤ 0.75 × 0.60 s × v (4.5 m at 10 m/s); ≥ 0.35 s of clear floor before the gap. Vine gaps are exempt (V13 governs them) |
 | V5 | Jump then slide (or slide then jump) constraints ≥ 0.75 s apart (airtime 0.60 + 0.15) unless fast-fall is the taught intent (Challenge chunks only, rating ≥ 6) |
 | V6 | Each route keeps a free corridor ≥ 1.2 m wide at every `s` (≥ 1.6 m in Learning), except full-width jump/slide obstacles |
 | V7 | Every obstacle is unoccluded and inside the camera frustum ≥ 1.5 s before contact (≥ 2.0 s in Learning), both camera profiles |
@@ -102,6 +106,17 @@ fails import and CI. The runtime only picks validated combinations (stored as a 
 | V10 | Secret entrances contain no gaps or Crash-capable blockers |
 | V11 | Cross-seam: previous `ExitActionMargin` + next `EntryActionMargin` ≥ phase `minActionGap` (director check at pick time) |
 | V12 | Locked branches are physically closed and harmless |
+| V13 | **Vines** (spec 103 §5.4): takeoff funnel ≤ 2.4 m wide centred on the vine; landing platform starts ≥ `sA` + 5.0 m; 1.0 m clear corridor around the swing arc and every release trajectory; every Good and Perfect release (every tick of the window plus auto-release) lands on the platform with 0 hits at the chunk's speed extremes; no Good arc collects the perfect column; every Perfect arc collects ≥ 1 column item |
+| V14 | **Canopy beams** (spec 103 §6): for each beam gap, required lateral shift ≤ 8.0 m/s × (Δt − 0.10 s) measured from the previous required action; free corridor on beams ≥ 1.6 m; beam gaps 3.0–3.5 m and within V4; next-beam offset ≤ `maxBeamOffset` 1.0 m |
+
+**Swim rules** (spec 103 §4.7; apply inside water volumes):
+| # | Rule |
+|---|---|
+| W1 | Action gaps ≥ phase `minActionGap`, measured at `vSwim` including forward current |
+| W2 | No Crash-capable blocker and no Gap in a water volume |
+| W3 | Every full-width water obstacle names its required answer (dive or leap); the Perfect bot passes with that answer only |
+| W4 | No obstacle within 10 m after water entry or within 10 m before water exit |
+| W5 | Current: `|cx|` ≤ 2.0 m/s, forward current ≤ 3.0 m/s, and a 1.6 m free corridor reachable at `0.73·(swimVLatMax − |cx|)` (human margin as V3) |
 
 ### 4.3 Measured difficulty
 The validator records per route: action count, min action gap, peak actions/s (1 s window), max required `Δx/Δt`,
@@ -110,7 +125,7 @@ gap count, narrowest width. It derives a measured rating and warns if it differs
 ## 5. Difficulty phases (Part 10.1)
 | Phase | Distance | Chunk rating band | `minActionGap` | Max actions/s (1 s window) | Visibility | Forks | Recovery every |
 |---|---|---|---|---|---|---|---|
-| Learning | 0–500 m | 1–2 | 1.20 s | 0.8 | 2.0 s | 0 (FTUE) / ≤ 1 | 3 chunks |
+| Learning | 0–500 m | 1–2 | 1.20 s | 0.8 | 2.0 s | ≤ 1, risky optional (Expedition 1: scripted C3) | 3 chunks |
 | Rhythm | 500–1,500 m | 2–4 | 0.80 s | 1.2 | 1.5 s | every 4–5 chunks | 4 |
 | Decision | 1,500–3,000 m | 3–5 | 0.65 s | 1.5 | 1.5 s | every 2–3 | 5 |
 | Challenge | 3,000–5,000 m | 4–7 | 0.55 s | 1.8 | 1.5 s | every 2–3 | 5 |
@@ -134,7 +149,10 @@ DiscoveryAssignments, CueIntensity, EventFlag (post-MVP) }`.
 1. **Filter:** entry matches previous exit; `PhaseRange` contains the phase; rating within band shifted by DDA;
    `RequiredAbilities` ⊆ owned; repetition rules R1–R5 pass; V11 passes.
 2. **Forced picks:** Recovery if due (§5) or mercy triggered (2 hits within 15 s); Branch if the fork cooldown expired;
-   FTUE script overrides everything in the first run.
+   the Expedition 1 script (spec 103 §10.1) overrides steps 1–3 up to its last scripted chunk, but never the
+   validator; then a forced Recovery and normal selection. Every run opens with `F_Start_RootGate_01` (run 2+:
+   variant `Short`). **Showcase rule:** in the first run after an ability unlock, one chunk needing it is forced within
+   the first 5 picks after the start chunk (earliest pick passing V11), once per ability (spec 103 §10.2).
 3. **Weight:** `w = baseWeight × freshness × dimensionFit × skillBias`, where freshness = 0.5 if used in the last 12
    chunks else 1.0; dimensionFit favours the dimension not used last; skillBias raises Challenge/risky-rich chunks for
    `S > 0.5` (×1.3) and Recovery/Straight for `S < −0.5` (×1.3).
@@ -175,9 +193,10 @@ distance (Part XXVII: no manipulated "almost").
 | R4 | Same variant signature not within the last 3 chunks of that id's family |
 | R5 | Recovery cadence per §5 / §6.4 |
 
-## 9. MVP chunk set (14; Verdant Forest)
+## 9. MVP chunk set (15; Verdant Forest)
 | # | Id | Category | Rating | Env | Routes | Required ability for a branch |
 |---|---|---|---|---|---|---|
+| 0 | F_Start_RootGate_01 | Straight (run start) | 1 | Forest | 1 | — (opens every run; variant `Short` from run 2; spec 103 §3.1) |
 | 1 | F_Straight_Glade_01 | Straight | 1–3 | Forest | 1 | — |
 | 2 | F_Straight_Roots_01 | Straight | 2–5 | Forest | 1 | — |
 | 3 | F_Recovery_Meadow_01 | Recovery | 1 | Forest | 1 | — |
@@ -189,14 +208,16 @@ distance (Part XXVII: no manipulated "almost").
 | 9 | R_Transition_Ford_01 | Transition | 2–4 | River | 1 | — |
 | 10 | R_Swim_Pool_01 | Straight (swim) | 3–6 | River | Safe/Secret | Secret: Deep Breath |
 | 11 | R_Branch_Waterfall_01 | Branch | 4–8 | Waterfall | Safe/Risky/Secret | Secret behind the falls: observation only |
-| 12 | C_Canopy_VineSpan_01 | Branch (set piece) | 4–7 | Canopy | Safe/Risky | Risky: Vine Grip |
+| 12 | C_Canopy_VineSpan_01 | Branch (set piece) | 4–7 | Canopy | Safe/Risky | Main line vines: none; Risky upper vine line: Vine Grip |
 | 13 | D_Discovery_Grotto_01 | Discovery | 2–5 | Forest | Safe/Secret | Secret chamber: Shoulder Charge |
 | 14 | D_Discovery_Overlook_01 | Discovery | 1–3 | Waterfall | 1 | — (vista + creature sighting) |
-Chunks 10–12 depend on specs 103 (swim) and 104 (vine). Double Jump's upper canopy secret is a second variant of #12.
+Layouts for #0–3, 5, 7–12 and 14 (as used in Expedition 1) are in spec 103 §3. Chunks 10–12 use spec 103's swim,
+vine and canopy rules. #4 is not in the script but joins the Phase 2 director pool (the second Recovery chunk the
+§6.3 step 5 content rule requires); its layout is still to be authored. #6 and #13 are Phase 3. Double Jump's upper canopy secret is a second variant of #12.
 
 ## 10. Acceptance criteria (outline; extended in Phase 2)
 - **AC-102-01** Validator rejects a chunk where the Perfect bot takes any hit on any validated combo/route at either speed extreme.
-- **AC-102-02** Validator flags V2–V12 violations with the rule id and `s` position.
+- **AC-102-02** Validator flags V2–V14 and W1–W5 violations with the rule id and `s` position.
 - **AC-102-03** Same seed + same abilities + same `S` + same inputs → identical chunk sequence, variants and pickups.
 - **AC-102-04** Adding a random call in pickup placement does not change the chunk sequence (separate streams).
 - **AC-102-05** Over 10,000 generated chunks per phase, R1–R5 are never violated.
@@ -217,4 +238,5 @@ Chunks 10–12 depend on specs 103 (swim) and 104 (vine). Double Jump's upper ca
 
 ## 12. Assumptions `[ASSUMED]`
 Closed water/canopy sections in MVP; 6 m seam zones; DDA start `S` = −0.3; human-margin lateral rate 8 m/s; fork
-nudge 0.6 m; new `Discovery` random stream; 14-chunk MVP list and its ability gates.
+nudge 0.6 m; new `Discovery` random stream; 15-chunk MVP list (incl. `F_Start_RootGate_01`) and its ability gates;
+chunk length up to 320 m; Showcase rule.

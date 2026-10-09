@@ -8,6 +8,7 @@ Superseded: everything in `archive/pre-aurelia/` (lane-based game). **No lanes, 
 Detailed specs:
 - `design/aurelia/specs/101-movement-and-camera.md`: Phase 1 Feel (movement, input, collisions, health, camera)
 - `design/aurelia/specs/102-chunks-routes-world-director.md`: Phase 2+ (chunks, routes, generator, World Director, difficulty)
+- `design/aurelia/specs/103-vertical-slice.md`: Phase 2 gate (Expedition 1, swim, vine, canopy, sailback, Veil Grotto, Shield, Deep Breath)
 
 Units: metres (m), seconds (s), points (pt = iOS logical points). Simulation runs at 60 fixed ticks/s.
 
@@ -71,8 +72,9 @@ first steers. Editor: keyboard and mouse (spec 101 §3.7).
 | Jump | apex 1.40 m, airtime 0.60 s | Fixed, predictable arc; coyote 100 ms; buffer 150 ms |
 | Slide | 0.65 s, hitbox 0.70 m tall | Jump cancels slide; swipe-down extends it |
 | Fast-fall | ≥ 14 m/s down, then auto-slide | Swipe down in air |
-| Swim (Phase 2) | spec 103 (to write) | Surface swim + dive; water must feel different |
-| Vine swing (Phase 2) | spec 104 (to write) | Auto-grab, player times the release; perfect release bonus |
+| Swim (Phase 2) | 0.70 × run speed + current; dive 0.85 s to −1.1 m; leap apex 1.20 m (spec 103 §4) | Swipe up = leap, down = dive; no drowning; water must feel different |
+| Vine swing (Phase 2) | 1.00 s swing; Perfect window 10 ticks (~167 ms), ×1.35 launch (spec 103 §5) | Auto-grab, swipe up releases; early swipe held, auto-release if none; perfect release bonus |
+| Canopy beams (Phase 2) | 2.0–2.4 m wide, gaps 3.0–3.5 m, 0.25 m landing assist (spec 103 §6) | Soft beam edges; only gaps kill |
 | Double jump | Ability (post-unlock only) | Never required on safe routes |
 
 Steering never kills: path edges are soft walls. Deaths come only from gaps/falls and frontal crashes.
@@ -99,17 +101,18 @@ phone at the end of Phase 1 (decision 2026-10-08). Until then the build follows 
   a light haptic, a short gold trail VFX, counted for mastery.
 
 ## 9. Chunks and World Director (spec 102)
-The world is a stream of hand-authored chunks (60–200 m) joined at standard seams. The World Director picks the next
+The world is a stream of hand-authored chunks (60–320 m) joined at standard seams. The World Director picks the next
 chunk from distance, difficulty phase, skill estimate, abilities, recent history and cooldowns, using the seeded
 `TrackGeneration` random stream. Every combination it can output was proven passable offline; nothing impossible is
 ever generated (Part VIII). No chunk repeats within 6 chunks. Recovery chunks are mandatory (every 3–6 chunks by
-phase and skill). MVP set: 14 chunks (spec 102 §9).
+phase and skill). MVP set: 15 chunks incl. the run-start chunk `F_Start_RootGate_01` (spec 102 §9). The first run
+is the scripted Expedition 1 (spec 103 §10); the director takes over after its last scripted chunk.
 
 ## 10. Difficulty
 **Phases by distance (Part X):**
 | Phase | Distance | Chunk rating band | Min gap between required actions | Forks |
 |---|---|---|---|---|
-| Learning | 0–500 m | 1–2 | 1.20 s | none (FTUE) / 1 optional |
+| Learning | 0–500 m | 1–2 | 1.20 s | ≤ 1, optional (Expedition 1: the scripted first fork) |
 | Rhythm | 500–1,500 m | 2–4 | 0.80 s | every 4–5 chunks |
 | Decision | 1,500–3,000 m | 3–5 | 0.65 s | every 2–3 chunks |
 | Challenge | 3,000–5,000 m | 4–7 | 0.55 s | every 2–3 chunks |
@@ -133,7 +136,9 @@ death or a near-record (Part XXVII).
 - **Regeneration:** +1 segment after 350 m without damage (max 3) `[ASSUMED]`.
 - **Revive "Continue?":** costs crystals (1, then 2, then 4; max 3 per run), restores 3 segments, places Pista on
   the last safe ground with the next 30 m cleared, 2.0 s invulnerability. 4 s offer, skip always visible, never
-  mandatory. Rewarded-ad revive only after retention is proven (Part XXXI) and never in MVP.
+  mandatory. Not offered in Expedition 1 (the first death goes straight to results and the first upgrade, spec 103
+  §9.2) `[ASSUMED]`. Rewarded-ad revive only after retention is proven (Part XXXI) and never in MVP.
+- **Water:** no drowning; water obstacles cause a Minor "Bump", never Crash or Fall (spec 103 §4.6).
 - Failure presentation: stumbles, splashes, slips out of frame, quick fades. No injury, no ragdoll, no pain faces.
 
 ## 12. Rewards and economy (starting values; balance-simulator tunes)
@@ -143,20 +148,24 @@ death or a near-record (Part XXVII).
 | **Crystals** (working name `[ASSUMED]`; lore name later) | ~1 per 1,000 m on safe flow, risky branches 15–25% chance, secrets 1–3, first-time discoveries 2 | Abilities, revive |
 | First-time discovery | Journal entry + 50 coins + 2 crystals + ability progress | Part XVIII |
 
-First run must afford the first ability (FTUE end): first ability costs 150 coins; a new player earns ~200–300 in
-the scripted first run. Target: a new ability every 1–3 runs for the first 10 runs (sim target, spec 102 §8).
+First run must afford the first ability (FTUE end): Deep Breath costs 150 coins; a new player earns ~200–450 in
+the scripted first run (spec 103 §13: Novice median 200–320, Average 300–450). Vine Perfect release +10 coins,
+Perfect Span +25 (spec 103 §5.4). Target: a new ability every 1–3 runs for the first 10 runs (sim target, spec 102 §8).
 
 ## 13. Progression: 7 abilities (Part XVI; "new possibility", never stats)
 | # | Ability | Opens | Cost (coins / crystals) |
 |---|---|---|---|
-| 1 | Trail Sense | Secret cues pulse when within 60 m; first secret routes become findable | 150 / 0 |
-| 2 | Vine Grip | Vine grabs in the canopy section → canopy risky route | 600 / 2 |
-| 3 | Deep Breath | Dive under river obstacles → underwater secret passages | 1,200 / 4 |
+| 1 | Deep Breath | Deep dive at shimmering water (`DeepDiveZone`) → underwater secret passages (Sunken Arch, seen in run 1) | 150 / 0 |
+| 2 | Vine Grip | Reach the high vine line in the canopy (basic vines need no ability) → canopy risky route | 600 / 2 |
+| 3 | Trail Sense | Secret cues pulse when within 60 m; ability-gated secrets (e.g. behind the stilt roots) become findable | 1,200 / 4 |
 | 4 | Root Vault | Vault onto raised roots (≤ 1.6 m) → high risky ledges | 2,000 / 6 |
 | 5 | Creature Tracking | Tracks/sounds of nearby creatures; rare-creature encounters become possible | 3,000 / 8 |
 | 6 | Shoulder Charge | Burst through brittle root walls while sliding → hidden chambers | 4,500 / 12 |
 | 7 | Double Jump | Second jump in the air → upper canopy secret | 7,000 / 20 |
 
+Order decided 2026-10-09 (Deep Breath first, option A; `design/DECISIONS.md`) `[ASSUMED]`. Normal surface dives and
+basic vine swings are core movement, not abilities. In the first run after an unlock, the director shows the new
+ability within 5 chunks (Showcase rule, spec 103 §10.2).
 Coin-only basic upgrades: Magnet, Shield, Explorer Vision duration (5 levels each). Generator only offers chunks
 whose required abilities the player owns; locked routes stay visible as "I want to get there" teasers.
 
@@ -164,15 +173,15 @@ whose required abilities the player owns; locked routes stay visible as "I want 
 | Power-up | Effect | Base duration |
 |---|---|---|
 | Magnet | Pulls coins within 4.0 m lateral / 8 m ahead | 10 s (upgrades to 18 s) |
-| Shield | Absorbs the next minor hit or frontal crash (not falls) | Until used, max 30 s |
+| Shield | Absorbs the next minor hit, water Bump or frontal crash (not falls) | Until used, max 30 s |
 | Explorer Vision | Secret cues glow strongly, secret entrances get a cyan glint trail, discovery slots ping | 12 s (upgrades to 20 s) |
 Spawn ~ every 600–900 m, more often on risky branches. Exciting, never required (Part XIX). Surge, Air Boost and
 Water Dash are post-MVP.
 
 ## 15. Discoveries and journal (MVP size)
 14 entries plus a "?" teaser. Categories: **Creatures 3/3** (e.g. sailback; two more from art-director),
-**Plants 5/5** (bellcap, veilmoss, duskbell, ribbon reed, whirlseed), **Locations 4/4** (e.g. Falls Basin, Stiltwood
-Gate, a hidden grotto, the canopy span), **Mysteries 2/?**. Working labels only; lore names are the owner's call.
+**Plants 5/5** (bellcap, veilmoss, duskbell, ribbon reed, whirlseed), **Locations 4/4** (Falls Basin, Veil Grotto,
+Sunken Arch, Stiltwood Gate; spec 103 §7.3 ids D-01…D-04 cover the first three plus the sailback), **Mysteries 2/?**. Working labels only; lore names are the owner's call.
 - Discovery happens while running: a 2.0 s toast "NEW DISCOVERY · Unknown Species · Added to Journal", a short
   musical reveal, a light haptic. No stop, no slow-mo.
 - Rarity: common/uncommon/rare in MVP; rare creature only with Creature Tracking.
@@ -181,30 +190,35 @@ Gate, a hidden grotto, the canopy span), **Mysteries 2/?**. Working labels only;
 
 ## 16. FTUE: the first run teaches through play
 No text walls, no registration, no menu before the first run. App open → 3–5 s establishing shot (Part 4.1: lush
-forest, moving water, distant rootstone landmark) → Pista starts running. The first run is a fixed seed, hand-ordered
-chunk sequence:
-| Time | Teaches | How |
+forest, moving water, distant rootstone landmark; 4 s, any touch skips) → Pista starts running. The first run is
+**Expedition 1**: a fixed seed, hand-ordered chunk script (spec 103 §2, §10). It compresses Blueprint 4.2's
+10-minute timeline into ~4 minutes for the Phase 2 gate `[ASSUMED]`; revisit after the owner's Phase 2 verdict.
+| Clock (no hits) | Teaches / beat | How (spec 103 chunk) |
 |---|---|---|
-| 0–30 s | Steering | Coin trails weaving across the wide path |
-| 30–60 s | Jump | Roots; first one has slow-time help |
-| 60–90 s | Slide, dodge | Low branches, a staggered rock pair |
-| 90–120 s | First route choice | Wide safe vs gold-cued risky |
-| 2–3 min | River | Ford, then riverside path |
-| 3–4 min | Swim | Gentle swim section (Phase 2+) |
-| 4–5 min | Traversal | First vine (Phase 2+) |
-| end | Death or finish → first upgrade | Results points straight at Trail Sense |
+| 0:00–0:20 | Steering | Coin trails weaving across the wide path, one mossy boulder (C1 `F_Start_RootGate_01`) |
+| 0:20–0:41 | Jump, slide, dodge | Roots, hanging branches, staggered blockers (C2) |
+| 0:41–1:01 | First route choice | Wide safe vs gold-cued risky; locked secret teaser (C3) |
+| 1:01–1:19 | Rhythm, first gap | (C4) |
+| 1:19–2:13 | River, swim | Ford, then swim with current, dive, leap; Sunken Arch glimpsed but locked (C5–C6) |
+| 2:13–2:51 | Wonder, traversal, creature | Waterfall vista; vine swing, canopy beams, sailbacks (C7–C8) |
+| 2:51–3:25 | Secret, breather | Veil Grotto behind the falls (observation only), meadow with the Shield (C9–C11) |
+| 3:34–4:07 | Difficult section | Fallen giants, thorn run (C12–C13), then the World Director |
+| end | Death → first upgrade | Results point straight at **Deep Breath** (150 coins) → RUN AGAIN |
+From run 2, every run opens with the 60 m `Short` start variant (no establishing shot).
 
-**Slow-time help:** the first instance of each move (jump, slide, dodge, steer around a blocker) slows the world to
-35% speed 0.6 s before contact if the player hasn't acted, shows a wordless animated hand glyph, and resumes on the
-correct gesture. Max once per move, first run only. In the first 60 s, hits never end the run (health floors at 1).
-Creature and secret beats (Part 4.2, 5–10 min) are spread over runs 2–3 via guaranteed early placement.
+**Slow-time help:** the first instance of each move (steer around a blocker, jump, slide, dodge, first gap, dive, leap)
+slows the world to 35% speed 0.6 s before contact if the player hasn't acted, shows a wordless animated hand glyph,
+and resumes on the correct gesture. The first vine release is different: 50% speed across the release window with a
+glyph, never waiting (auto-release still happens). Max once per move, first run only; risky branches never get help.
+In the first 60 s, hits never end the run (health floors at 1) and there are no gaps. The first creature, location
+and secret all come in run 1; the guarantees of spec 102 §7 still cover runs 1–3.
 
 ## 17. Results screen and next objective
 "EXPEDITION COMPLETE": distance, coins, crystals, discoveries, new creature, NEW RECORD/best, then exactly **one**
 highlighted next objective chosen by priority (first match wins):
-1. Ability affordable now → "Trail Sense ready: 150/150" (button goes to the unlock).
+1. Ability affordable now → "Deep Breath ready: 150/150" (button goes to the unlock).
 2. Within 10% of the best distance → "4,870 / 5,000 m".
-3. Next ability ≥ 60% funded → "Vine Grip 80%".
+3. Next ability ≥ 60% funded (≥ 50% after run 1 `[ASSUMED]`) → "Vine Grip 80%".
 4. An unseen journal entry known to exist in reached territory → "1 unknown creature near the falls".
 5. Secrets found in this biome → "Secrets 2/5".
 Buttons: [RUN AGAIN] (primary, bottom centre, thumb reach), Upgrade, Journal. Results appear ≤ 1.0 s after the death
@@ -254,7 +268,7 @@ the privacy labels. Every event carries `build`, `session_id` (random per launch
 | route_selected / route_completed | chunk_id, route (safe/risky/secret), clean, decision_time_ms |
 | secret_found / creature_found / artifact_found | entry_id, first_time, chunk_id |
 | ability_unlocked / upgrade_purchased | id, cost, run_index |
-| traversal_result | type (jump/slide/dodge/vine), success, obstacle_id |
+| traversal_result | type (jump/slide/dodge/swim_dive/swim_leap/vine_good/vine_perfect/beam_gap), success, obstacle_id |
 | power_up | id, picked/expired/used |
 | revive_offered / revive_used | cost, index |
 | daily_completed, rewarded_ad_watched, cosmetic_purchased | reserved, post-MVP |
@@ -266,7 +280,8 @@ first-session completion (reached first upgrade).
 - `[ASSUMED]` Steering never kills (soft path edges); only falls and frontal crashes are major.
 - `[ASSUMED]` +1 health per 350 m undamaged; revive costs 1/2/4 crystals, max 3.
 - `[ASSUMED]` MVP power-ups: Magnet, Shield, Explorer Vision.
-- `[ASSUMED]` The 7 abilities, names and costs in §13 (working names).
+- `[ASSUMED]` The 7 abilities, names and costs in §13 (working names); Deep Breath first (2026-10-09).
+- `[ASSUMED]` Expedition 1 compresses the first-run timeline to ~4 min; no revive in Expedition 1.
 - `[ASSUMED]` Rare resource working name "Crystals".
 - `[ASSUMED]` Age rating target 9+.
 - `[ASSUMED]` FTUE slow-time help and health floor in the first 60 s.
