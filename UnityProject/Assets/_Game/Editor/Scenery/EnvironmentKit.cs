@@ -110,8 +110,19 @@ namespace JungleBooze.Editor.Scenery
             return new EnvironmentKit();
         }
 
-        /// <summary>Scans the environment folder (missing folders are fine).</summary>
+        /// <summary>Scans the environment folder (missing folders are fine). Painted "_P" variants are skipped.</summary>
         public static EnvironmentKit Scan()
+        {
+            return Scan(false);
+        }
+
+        /// <summary>
+        /// Scans the environment folder for one style (ADR 0009). <paramref name="painted"/> false: painted "_P"
+        /// variants (models and texture sets) are ignored, so they never change the realistic scenes. True: a painted
+        /// model replaces its base twin (FP_Fern_P_Clump replaces FP_Fern_Clump), painted-only models are added, and a
+        /// painted texture set replaces the base set of the same name for every piece (FP_Canopy_P -> FP_Canopy).
+        /// </summary>
+        public static EnvironmentKit Scan(bool painted)
         {
             var kit = new EnvironmentKit();
             string root = EnvironmentAssetRules.Root.TrimEnd('/');
@@ -166,10 +177,36 @@ namespace JungleBooze.Editor.Scenery
 
             kit._backdrops.Sort((a, b) => a.Order.CompareTo(b.Order));
 
+            var keys = new List<string>(sets.Keys);
+            foreach (string key in keys)
+            {
+                bool variant = EnvironmentAssetRules.IsPaintedVariant(key);
+                if (variant && painted)
+                {
+                    sets[EnvironmentAssetRules.WithoutPaintedToken(key)] = sets[key];
+                }
+            }
+
             string[] modelGuids = AssetDatabase.FindAssets("t:Model", new[] { root });
+            var paintedTwins = new HashSet<string>();
+            for (int i = 0; i < modelGuids.Length; i++)
+            {
+                string modelPath = AssetDatabase.GUIDToAssetPath(modelGuids[i]);
+                if (EnvironmentAssetRules.IsPaintedVariant(modelPath))
+                {
+                    paintedTwins.Add(EnvironmentAssetRules.WithoutPaintedToken(System.IO.Path.ChangeExtension(modelPath, null)).ToLowerInvariant());
+                }
+            }
+
             for (int i = 0; i < modelGuids.Length; i++)
             {
                 string path = AssetDatabase.GUIDToAssetPath(modelGuids[i]);
+                bool paintedModel = EnvironmentAssetRules.IsPaintedVariant(path);
+                if (painted ? !paintedModel && paintedTwins.Contains(System.IO.Path.ChangeExtension(path, null).ToLowerInvariant()) : paintedModel)
+                {
+                    continue;
+                }
+
                 EnvironmentRole role = EnvironmentAssetRules.RoleOf(path);
                 var model = AssetDatabase.LoadAssetAtPath<GameObject>(path);
                 if (role == EnvironmentRole.Unknown || model == null)

@@ -19,10 +19,13 @@ namespace JungleBooze.Editor.HeroBasin
     ///   JungleBooze.Editor.HeroBasin.HeroBasinBatch.BuildAndCapture
     /// Capture writes F4_landscape.png (2532x1170), P1_portrait.png (1170x2532), F4_compare.jpg (keyframe |
     /// landscape | portrait at one height) and stats.txt (draws and triangles per budget layer, as the look test).
+    /// -jbHeroStyle painterly builds / captures the painterly trial (ADR 0009: its own config, scene and materials,
+    /// compared against keyframe F4_f); default realistic.
     /// </summary>
     public static class HeroBasinBatch
     {
         public const string KeyframePath = "design/aurelia/keyframes/F4_e_openai_medium.jpg";
+        public const string PainterlyKeyframePath = "design/aurelia/keyframes/F4_f_painterly_openai.jpg";
         private const string LogPrefix = "[JungleBooze] ";
         private const string DefaultOut = "/tmp/junglebooze-hero";
 
@@ -30,23 +33,35 @@ namespace JungleBooze.Editor.HeroBasin
         {
             Run(() =>
             {
-                HeroBasinBuilder.Build();
+                HeroBasinBuilder.Build(StyleArg());
                 return 0;
             });
         }
 
         public static void Capture()
         {
-            Run(() => CaptureShots(Arg("-jbHeroOut") ?? DefaultOut));
+            Run(() => CaptureShots(Arg("-jbHeroOut") ?? DefaultOut, StyleArg()));
         }
 
         public static void BuildAndCapture()
         {
             Run(() =>
             {
-                HeroBasinBuilder.Build();
-                return CaptureShots(Arg("-jbHeroOut") ?? DefaultOut);
+                HeroBasinBuilder.Build(StyleArg());
+                return CaptureShots(Arg("-jbHeroOut") ?? DefaultOut, StyleArg());
             });
+        }
+
+        [MenuItem("JungleBooze/Hero Basin/Build Painterly Scene")]
+        private static void BuildPainterlyFromMenu()
+        {
+            HeroBasinBuilder.Build(HeroBasinStyle.Painterly);
+        }
+
+        private static HeroBasinStyle StyleArg()
+        {
+            string style = Arg("-jbHeroStyle");
+            return string.Equals(style, "painterly", StringComparison.OrdinalIgnoreCase) ? HeroBasinStyle.Painterly : HeroBasinStyle.Realistic;
         }
 
         [MenuItem("JungleBooze/Hero Basin/Build Scene")]
@@ -57,15 +72,21 @@ namespace JungleBooze.Editor.HeroBasin
 
         public static int CaptureShots(string outDir)
         {
+            return CaptureShots(outDir, HeroBasinStyle.Realistic);
+        }
+
+        public static int CaptureShots(string outDir, HeroBasinStyle style)
+        {
+            var paths = new HeroBasinBuilder.StylePaths(style);
             if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null)
             {
                 Debug.LogError(LogPrefix + "No GPU device: run Unity without -nographics to capture.");
                 return 2;
             }
 
-            EditorSceneManager.OpenScene(HeroBasinBuilder.ScenePath, OpenSceneMode.Single);
-            HeroBasinConfigAsset h = HeroBasinBuilder.EnsureConfig();
-            var look = AssetDatabase.LoadAssetAtPath<LookTestConfigAsset>(HeroBasinBuilder.LookPath);
+            EditorSceneManager.OpenScene(paths.Scene, OpenSceneMode.Single);
+            HeroBasinConfigAsset h = HeroBasinBuilder.EnsureConfig(style);
+            var look = AssetDatabase.LoadAssetAtPath<LookTestConfigAsset>(paths.Look);
             Camera camera = Object.FindFirstObjectByType<Camera>();
             LookTestAtmosphere atmosphere = Object.FindFirstObjectByType<LookTestAtmosphere>();
             if (atmosphere != null)
@@ -96,7 +117,7 @@ namespace JungleBooze.Editor.HeroBasin
             stats.AppendLine().AppendLine("P1 portrait").Append(LookTestFrameBudget.Measure(camera, look));
             camera.ResetAspect();
 
-            string keyframeFile = Path.GetFullPath(Path.Combine(Application.dataPath, "../..", KeyframePath));
+            string keyframeFile = Path.GetFullPath(Path.Combine(Application.dataPath, "../..", style == HeroBasinStyle.Painterly ? PainterlyKeyframePath : KeyframePath));
             Texture2D keyframe = null;
             if (File.Exists(keyframeFile))
             {

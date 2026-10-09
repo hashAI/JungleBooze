@@ -107,5 +107,27 @@ namespace JungleBooze.Tests.EditMode
         {
             Assert.AreEqual(set, EnvironmentAssetRules.MaterialSetName(material));
         }
+
+        [TestCase("RS_HeroArch_P.fbx", true)]
+        [TestCase("FP_Fern_P_Clump.fbx", true)]
+        [TestCase("RS_HeroArch_P_A_ARM.png", true)]
+        [TestCase("fp_canopy_p", true)]
+        [TestCase("RS_HeroArch.fbx", false)]
+        [TestCase("RS_PillarA.fbx", false)]
+        [TestCase("RS_PoolTerrace_A.fbx", false)]
+        [TestCase("FP_Fern_Clump.fbx", false)]
+        public void PaintedVariantsCarryAPToken(string name, bool painted)
+        {
+            Assert.AreEqual(painted, EnvironmentAssetRules.IsPaintedVariant(name));
+        }
+
+        [TestCase("FP_Fern_P_Clump", "FP_Fern_Clump")]
+        [TestCase("RS_HeroArch_P", "RS_HeroArch")]
+        [TestCase("rs_heroarch_p_a", "rs_heroarch_a")]
+        [TestCase("FP_Canopy", "FP_Canopy")]
+        public void PaintedTokenIsRemovedForTheBaseName(string name, string baseName)
+        {
+            Assert.AreEqual(baseName, EnvironmentAssetRules.WithoutPaintedToken(name));
+        }
     }
 }

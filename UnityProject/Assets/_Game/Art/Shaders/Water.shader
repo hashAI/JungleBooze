@@ -5,6 +5,9 @@
 // the builder: shallow water is turquoise and clear, deep water darker and more opaque; replaces a depth texture),
 // A = soft edge. Foam is lacy: the water FX texture (G) thresholds it into lines that drift with the flow.
 // Waterfalls use their own shader (Waterfall.shader).
+// _PAINTERLY (ADR 0009): three-stop turquoise depth gradient (shallow -> mid -> deep), a flat painted sky tint at
+// grazing angles instead of the probe, cream foam as crisp shapes (hard threshold, one-pixel soft edge) and simple
+// sun sparkles. Off by default.
 Shader "JungleBooze/Water"
 {
     Properties
@@ -27,6 +30,16 @@ Shader "JungleBooze/Water"
         _FoamTiling("Foam Tiling (per m)", Float) = 0.45
         _ShallowOpacity("Opacity (shallow)", Range(0, 1)) = 0.45
         _ReflectionTint("Reflection Tint", Color) = (0.80, 0.95, 0.98, 1)
+        [Header(Painterly style (ADR 0009))]
+        [Toggle(_PAINTERLY)] _Painterly("Painterly", Float) = 0
+        _PaintMidColor("Mid Depth Color", Color) = (0.153, 0.525, 0.467, 1)
+        _PaintSkyColor("Painted Sky Reflection", Color) = (0.745, 0.89, 0.91, 1)
+        _PaintDepthGain("Depth Gradient Gain", Range(0.2, 4)) = 1.3
+        _PaintFoamScale("Foam Shape Scale", Range(0.1, 2)) = 0.5
+        _PaintFoamEdge("Foam Edge Softness (px)", Range(0.5, 4)) = 1.2
+        _PaintSparkle("Sparkle", Range(0, 8)) = 2
+        _PaintSparkleSize("Sparkle Threshold", Range(0.9, 0.9999)) = 0.993
+        _PaintLight("Body Light (sun share)", Range(0, 1)) = 0.45
         [Enum(UnityEngine.Rendering.CullMode)] _Cull("Cull", Float) = 0
     }
 
@@ -48,10 +61,12 @@ Shader "JungleBooze/Water"
             #pragma fragment Frag
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile_instancing
+            #pragma shader_feature_local_fragment _PAINTERLY
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "JBAtmosphere.hlsl"
+            #include "JBPainterly.hlsl"
 
             CBUFFER_START(UnityPerMaterial)
                 float _NormalTiling;
@@ -71,6 +86,15 @@ Shader "JungleBooze/Water"
                 half _ShallowOpacity;
                 half4 _ReflectionTint;
                 half _Cull;
+                half _Painterly;
+                half4 _PaintMidColor;
+                half4 _PaintSkyColor;
+                half _PaintDepthGain;
+                half _PaintFoamScale;
+                half _PaintFoamEdge;
+                half _PaintSparkle;
+                half _PaintSparkleSize;
+                half _PaintLight;
             CBUFFER_END
 
             TEXTURE2D(_NormalMap); SAMPLER(sampler_NormalMap);
@@ -144,6 +168,34 @@ Shader "JungleBooze/Water"
                 // Body: shallow (turquoise, clear) to deep by the baked depth (G), a little deeper at grazing angles.
                 half depth = saturate(input.color.g);
                 half3 ambient = SampleSH(normalWS);
+            #if defined(_PAINTERLY)
+                // Painted water: shallow -> mid -> deep turquoise bands by depth, lit flatly (the paint carries the
+                // colour), a flat sky tint at grazing angles, crisp cream foam shapes and sun sparkles.
+                half d = saturate(depth * _PaintDepthGain + (1.0h - facing) * 0.15h);
+                half3 bodyP = d < 0.5h ? lerp(_ShallowColor.rgb, _PaintMidColor.rgb, smoothstep(0.0h, 0.5h, d))
+                                       : lerp(_PaintMidColor.rgb, _DeepColor.rgb, smoothstep(0.5h, 1.0h, d));
+                half3 lightP = lerp(ambient * 2.0h, mainLight.color, _PaintLight) * lerp(0.65h, 1.0h, shadow);
+                half3 colorP = bodyP * lightP;
+                colorP = lerp(colorP, _PaintSkyColor.rgb * JBLuma(lightP), saturate(fresnel * _ReflectionStrength));
+
+                half3 halfDirP = SafeNormalize(mainLight.direction + viewWS);
+                half glint = smoothstep(_PaintSparkleSize, 1.0h, dot(normalWS, halfDirP));
+                colorP += mainLight.color * (glint * _PaintSparkle * shadow);
+
+                float2 foamUvP = input.uvMeters * _FoamTiling * _PaintFoamScale + t * _FlowA.xy * 0.12;
+                half laceP = SAMPLE_TEXTURE2D(_FxTex, sampler_FxTex, foamUvP).g;
+                half lace2P = SAMPLE_TEXTURE2D(_FxTex, sampler_FxTex, foamUvP * 2.1 + float2(0.31, 0.17) - t * 0.015).g;
+                half fieldP = saturate(input.color.r * _FoamStrength);
+                // Foam where the field is strong, its shape cut by the lace: a hard edge, about one pixel soft.
+                half shapeP = fieldP * 1.6h + (laceP * 0.6h + lace2P * 0.4h) * 0.7h - 1.2h;
+                half aa = max(fwidth(shapeP), 1e-3h) * _PaintFoamEdge;
+                half foamP = smoothstep(-aa, aa, shapeP) * step(0.02h, fieldP);
+                half3 foamLitP = _FoamColor.rgb * lerp(ambient * 1.6h + mainLight.color * 0.35h, mainLight.color * 0.85h + ambient, shadow);
+                colorP = lerp(colorP, foamLitP, foamP);
+                half alphaP = saturate(lerp(lerp(_ShallowOpacity, _Opacity, d), 1.0h, fresnel * 0.5h) + foamP) * input.color.a;
+                colorP = JBApplyFog(colorP, input.positionWS);
+                return half4(colorP, alphaP);
+            #endif
                 half bodyMix = saturate(depth * 0.85h + (1.0h - facing) * 0.25h);
                 half3 body = lerp(_ShallowColor.rgb, _DeepColor.rgb, bodyMix) * (ambient + mainLight.color * nDotL * shadow * 0.35h);
 

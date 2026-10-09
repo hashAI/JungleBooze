@@ -16,6 +16,10 @@
 //   when _WetFromVertexG = 1: darker and glossier); ground bounce for downward faces (_BounceColor, lifts the
 //   undersides of roots and arches that the sky ambient leaves black); a rim sheen (_RimStrength: Fresnel edge lit
 //   by the ambient and, toward the sun, by the dappled sun: the "subsurface-ish" glow on bark edges).
+// - _PAINTERLY (ADR 0009, painterly style trial): wrapped/ramped diffuse with teal-shifted shadows, a warm terminator
+//   band, painted (tinted) occlusion and one soft specular lobe instead of URP PBR; albedo softened (mip bias) and
+//   flattened toward its broad colour, broad normals only; foliage gets a core-to-tip gradient from vertex color R.
+//   Off by default: the realistic materials never compile or run this path.
 // SRP Batcher compatible (all material values in UnityPerMaterial), GPU instancing on.
 Shader "JungleBooze/Nature Lit"
 {
@@ -75,6 +79,27 @@ Shader "JungleBooze/Nature Lit"
         _BounceColor("Ground Bounce (rgb, a = strength)", Color) = (0.45, 0.42, 0.30, 0)
         _RimStrength("Rim Sheen", Range(0, 2)) = 0
 
+        [Header(Painterly style (ADR 0009))]
+        [Toggle(_PAINTERLY)] _Painterly("Painterly", Float) = 0
+        _PaintBlur("Albedo Softening (mip bias)", Range(0, 4)) = 1
+        _PaintFlatten("Hue Flattening", Range(0, 1)) = 0.4
+        _PaintFlattenMip("Broad Colour Mip", Range(2, 9)) = 6
+        _PaintSaturation("Saturation", Range(0, 2)) = 1.15
+        _PaintNormal("Normal Strength (broad forms)", Range(0, 1)) = 0.5
+        _PaintWrap("Diffuse Wrap", Range(0, 1)) = 0.4
+        _PaintRampSoftness("Ramp Softness", Range(0.02, 0.5)) = 0.22
+        _PaintRamp("Ramp Amount", Range(0, 1)) = 0.5
+        _PaintShadowTint("Shadow Tint (rgb, a = shift)", Color) = (0.243, 0.361, 0.4, 0.35)
+        _PaintTerminator("Terminator Band (rgb, a = amount)", Color) = (0.878, 0.541, 0.227, 0.25)
+        _PaintAOTint("Painted AO Colour", Color) = (0.302, 0.227, 0.133, 1)
+        _PaintSpecular("Soft Specular", Range(0, 1)) = 0.15
+        _PaintSpecPower("Specular Power", Range(2, 64)) = 12
+        _PaintRim("Rim Toward Sun (rgb, a = strength)", Color) = (1, 0.84, 0.54, 0.35)
+        _PaintCore("Foliage Core Tint (rgb, a = amount)", Color) = (0.45, 0.6, 0.4, 0)
+        _PaintTip("Foliage Tip Tint (rgb, a = amount)", Color) = (1.25, 1.15, 0.6, 0)
+        _PaintBackLight("Foliage Backlight Colour (rgb, a = strength)", Color) = (0.79, 0.82, 0.25, 0)
+        _PaintTint("Painted Albedo Tint", Color) = (1, 1, 1, 1)
+
         [Enum(UnityEngine.Rendering.CullMode)] _Cull("Cull", Float) = 2
         [HideInInspector] _AlphaToMask("Alpha To Mask", Float) = 0
     }
@@ -125,6 +150,25 @@ Shader "JungleBooze/Nature Lit"
             half _WetSmoothness;
             half4 _BounceColor;
             half _RimStrength;
+            half _Painterly;
+            half _PaintBlur;
+            half _PaintFlatten;
+            half _PaintFlattenMip;
+            half _PaintSaturation;
+            half _PaintNormal;
+            half _PaintWrap;
+            half _PaintRampSoftness;
+            half _PaintRamp;
+            half4 _PaintShadowTint;
+            half4 _PaintTerminator;
+            half4 _PaintAOTint;
+            half _PaintSpecular;
+            half _PaintSpecPower;
+            half4 _PaintRim;
+            half4 _PaintCore;
+            half4 _PaintTip;
+            half4 _PaintBackLight;
+            half4 _PaintTint;
         CBUFFER_END
 
         TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
@@ -183,11 +227,13 @@ Shader "JungleBooze/Nature Lit"
             #pragma shader_feature_local _ALPHATEST_ON
             #pragma shader_feature_local_vertex _WIND_ON
             #pragma shader_feature_local_fragment _DETAIL_ON
+            #pragma shader_feature_local_fragment _PAINTERLY
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
             #pragma multi_compile_instancing
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "JBPainterly.hlsl"
 
             struct Attributes
             {
@@ -246,8 +292,17 @@ Shader "JungleBooze/Nature Lit"
                 alpha = saturate((alpha - _Cutoff) / max(fwidth(alpha), 0.0001h) + 0.5h);
             #endif
 
+            #if defined(_PAINTERLY)
+                // Painted surfaces: softened albedo (no photo micro-detail), hue flattened toward the broad colour,
+                // broad normals only (the normal map is read blurred and weaker).
+                half3 albedo = SAMPLE_TEXTURE2D_BIAS(_BaseMap, sampler_BaseMap, uv1, _PaintBlur).rgb;
+                half3 broadColor = SAMPLE_TEXTURE2D_LOD(_BaseMap, sampler_BaseMap, uv1, _PaintFlattenMip).rgb;
+                albedo = JBSaturation(JBFlatten(albedo, broadColor, _PaintFlatten), _PaintSaturation) * _PaintTint.rgb;
+                half3 normalTS = UnpackNormalScale(SAMPLE_TEXTURE2D_BIAS(_BumpMap, sampler_BumpMap, uv1, _PaintBlur + 1.0h), _BumpScale * _PaintNormal);
+            #else
                 half3 albedo = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, uv1).rgb;
                 half3 normalTS = UnpackNormalScale(SAMPLE_TEXTURE2D(_BumpMap, sampler_BumpMap, uv1), _BumpScale);
+            #endif
                 half3 arm = SAMPLE_TEXTURE2D(_ArmMap, sampler_ArmMap, uv1).rgb;
 
             #if defined(_LAYERS_ON)
@@ -276,7 +331,7 @@ Shader "JungleBooze/Nature Lit"
                 arm = arm * weights.x + arm2 * weights.y + arm3 * weights.z;
             #endif
 
-            #if defined(_DETAIL_ON)
+            #if defined(_DETAIL_ON) && !defined(_PAINTERLY)
                 half3 detail = UnpackNormalScale(SAMPLE_TEXTURE2D(_DetailNormalMap, sampler_DetailNormalMap, input.uv.zw), _DetailNormalScale);
                 normalTS = normalize(half3(normalTS.xy + detail.xy, normalTS.z * detail.z));
             #endif
@@ -333,8 +388,33 @@ Shader "JungleBooze/Nature Lit"
                 half3 bounce = _BounceColor.rgb * (_BounceColor.a * facingDown);
                 half3 bakedGI = (inputData.bakedGI + bounce) * JBCanopyAmbient(cover);
                 half giOcclusion = surface.occlusion * lerp(1.0h, 0.55h, cover);
+            #if defined(_PAINTERLY)
+                // Foliage gradient: dark core at the base / hanging point to warm sunlit tips (vertex color R = wind
+                // weight, 0 at the base, 1 at the tips). Amounts are 0 on stone.
+                half tip = saturate(input.color.r);
+                surface.albedo *= lerp(half3(1.0h, 1.0h, 1.0h), _PaintCore.rgb, _PaintCore.a * (1.0h - tip));
+                surface.albedo *= lerp(half3(1.0h, 1.0h, 1.0h), _PaintTip.rgb, _PaintTip.a * tip);
+                JBPaintParams paint;
+                paint.shadowTint = _PaintShadowTint.rgb;
+                paint.shadowShift = _PaintShadowTint.a;
+                paint.terminator = _PaintTerminator.rgb;
+                paint.terminatorAmount = _PaintTerminator.a;
+                paint.aoTint = _PaintAOTint.rgb;
+                paint.specular = _PaintSpecular;
+                paint.specPower = _PaintSpecPower;
+                half paintLit = JBPaintDiffuse(dot(normalWS, mainLight.direction), _PaintWrap, _PaintRampSoftness, _PaintRamp)
+                    * mainLight.shadowAttenuation * mainLight.distanceAttenuation;
+                half4 color = half4(JBPaintShade(surface.albedo, paintLit, mainLight.color, bakedGI, giOcclusion, normalWS,
+                    inputData.viewDirectionWS, mainLight.direction, max(smoothness, 0.25h), paint), alpha);
+                // Rim toward the sun side: a painted warm edge on silhouettes facing the light.
+                half paintEdge = 1.0h - saturate(dot(normalWS, inputData.viewDirectionWS));
+                paintEdge *= paintEdge * paintEdge;
+                half sunSide = saturate(dot(normalWS, mainLight.direction) * 0.5h + 0.5h);
+                color.rgb += _PaintRim.rgb * mainLight.color * (paintEdge * sunSide * _PaintRim.a * canopyLit);
+            #else
                 half4 color = half4(GlobalIllumination(brdfData, bakedGI, giOcclusion, inputData.positionWS, inputData.normalWS, inputData.viewDirectionWS), alpha);
                 color.rgb += LightingPhysicallyBased(brdfData, mainLight, inputData.normalWS, inputData.viewDirectionWS);
+            #endif
 
                 // Rim sheen: a Fresnel edge lit by the ambient, and by the (dappled) sun when looking toward it.
                 half edge = 1.0h - saturate(dot(normalWS, inputData.viewDirectionWS));
@@ -348,6 +428,13 @@ Shader "JungleBooze/Nature Lit"
                 half backLight = saturate(dot(-normalWS, mainLight.direction));
                 backLight = backLight * backLight;
                 color.rgb += surface.albedo * mainLight.color * backLight * mainLight.shadowAttenuation * mainLight.distanceAttenuation * _Translucency;
+            #if defined(_PAINTERLY)
+                // The golden glow of backlit leaves (ART_DIRECTION_PAINTERLY s5): view toward the sun, power 4.
+                half glow = saturate(dot(-inputData.viewDirectionWS, mainLight.direction));
+                glow *= glow;
+                glow *= glow;
+                color.rgb += _PaintBackLight.rgb * mainLight.color * (glow * _PaintBackLight.a * (0.4h + 0.6h * tip) * mainLight.shadowAttenuation * canopyLit);
+            #endif
             #endif
 
                 color.rgb = JBApplyFog(color.rgb, inputData.positionWS);

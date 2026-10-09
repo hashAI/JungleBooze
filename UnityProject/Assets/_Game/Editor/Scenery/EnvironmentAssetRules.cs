@@ -65,6 +65,28 @@ namespace JungleBooze.Editor.Scenery
         public const string BackdropsFolder = Root + "Backdrops";
         public const string PlantsFolder = Root + "Plants";
 
+        /// <summary>
+        /// Painted (painterly style, ADR 0009) variant of a piece or texture set: a "_P" token after the base name
+        /// ("RS_HeroArch_P", "FP_Fern_P_Clump", "FP_Canopy_P_BaseColor", "RS_HeroArch_P_A_ARM"). Case-insensitive.
+        /// </summary>
+        public static bool IsPaintedVariant(string name)
+        {
+            string n = Path.GetFileNameWithoutExtension(name).ToLowerInvariant();
+            return n.EndsWith("_p", StringComparison.Ordinal) || n.Contains("_p_");
+        }
+
+        /// <summary>The base name of a painted variant ("fp_fern_p_clump" -> "fp_fern_clump"); other names unchanged.</summary>
+        public static string WithoutPaintedToken(string name)
+        {
+            int index = name.IndexOf("_p_", StringComparison.OrdinalIgnoreCase);
+            if (index >= 0)
+            {
+                return name.Substring(0, index) + name.Substring(index + 2);
+            }
+
+            return name.EndsWith("_p", StringComparison.OrdinalIgnoreCase) ? name.Substring(0, name.Length - 2) : name;
+        }
+
         public static bool IsEnvironmentAsset(string assetPath)
         {
             return !string.IsNullOrEmpty(assetPath) && assetPath.Replace('\\', '/').StartsWith(Root, StringComparison.Ordinal);

@@ -8,6 +8,7 @@ using JungleBooze.Editor.Scenery;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.Playables;
 using UnityEngine.Rendering;
 
 namespace JungleBooze.Editor.HeroBasin
@@ -36,14 +37,50 @@ namespace JungleBooze.Editor.HeroBasin
 
         private const string LogPrefix = "[JungleBooze hero basin] ";
 
+        /// <summary>
+        /// Where one style's files live (ADR 0009). Realistic keeps the iteration 3 paths; Painterly gets its own
+        /// config, scene, look/volume/lighting assets, materials and meshes, so building one never touches the other.
+        /// </summary>
+        public readonly struct StylePaths
+        {
+            public StylePaths(HeroBasinStyle style)
+            {
+                bool p = style == HeroBasinStyle.Painterly;
+                string suffix = p ? "_Painterly" : string.Empty;
+                Style = style;
+                Config = ConfigFolder + "/HeroBasinConfig" + suffix + ".asset";
+                Scene = "Assets/_Game/Scenes/HeroBasin" + suffix + ".unity";
+                Look = ConfigFolder + "/HeroBasinLook" + suffix + ".asset";
+                Volume = ConfigFolder + "/HeroBasinVolume" + suffix + ".asset";
+                Lighting = ConfigFolder + "/HeroBasinLighting" + suffix + ".lighting";
+                Materials = p ? ArtFolder + "/Painterly/Materials" : MaterialFolder;
+                Meshes = p ? ArtFolder + "/Painterly/Meshes" : MeshFolder;
+            }
+
+            public HeroBasinStyle Style { get; }
+            public string Config { get; }
+            public string Scene { get; }
+            public string Look { get; }
+            public string Volume { get; }
+            public string Lighting { get; }
+            public string Materials { get; }
+            public string Meshes { get; }
+        }
+
         public static List<string> Build()
         {
+            return Build(HeroBasinStyle.Realistic);
+        }
+
+        public static List<string> Build(HeroBasinStyle style)
+        {
+            var paths = new StylePaths(style);
             var report = new List<string>();
-            HeroBasinConfigAsset h = EnsureConfig();
-            LookTestConfigAsset look = BuildLook(h);
+            HeroBasinConfigAsset h = EnsureConfig(style);
+            LookTestConfigAsset look = BuildLook(h, paths.Look);
 
             var assets = new LookTestAssets();
-            var materials = new LookTestMaterials(look, assets, MaterialFolder);
+            var materials = new LookTestMaterials(look, assets, paths.Materials);
             var layout = new LookTestStretchLayout(look);
             var batches = new LookTestBatchSet();
             var ctx = new LookTestBuildContext(look, layout, batches);
@@ -96,7 +133,7 @@ namespace JungleBooze.Editor.HeroBasin
             ctx.LightShaft.SetVector("_FarFade", new Vector4(260f, 420f, 0f, 0f));
             EditorUtility.SetDirty(ctx.LightShaft);
             Material sky = materials.Sky(hdri);
-            ctx.Kit = EnvironmentKit.Scan();
+            ctx.Kit = EnvironmentKit.Scan(style == HeroBasinStyle.Painterly);
             for (int i = 0; i < ctx.Kit.Pieces.Count; i++)
             {
                 ctx.Kit.Pieces[i].Material = materials.ForEnvironmentPiece(ctx.Kit.Pieces[i]);
@@ -126,9 +163,9 @@ namespace JungleBooze.Editor.HeroBasin
             }
 
             report.Add(ctx.Kit.Summary());
-            var plants = new PlantMaterials(materials, report, h.PlantTint);
+            var plants = new PlantMaterials(materials, report, h.PlantTint, style == HeroBasinStyle.Painterly);
 
-            ClearMeshes();
+            ClearMeshes(paths.Meshes);
             LookTestMeshAccumulator.ClearCache();
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             Light sun = LookTestSceneBuilder.CreateSun(look);
@@ -137,8 +174,8 @@ namespace JungleBooze.Editor.HeroBasin
             Camera camera = LookTestSceneBuilder.CreateCamera(look);
             camera.farClipPlane = h.FarClipM;
             PoseCamera(camera, h, false, 2532f / 1170f);
-            LookTestSceneBuilder.CreateVolume(look, VolumePath);
-            AddGradeLut(h);
+            LookTestSceneBuilder.CreateVolume(look, paths.Volume);
+            AddGradeLut(h, paths.Volume);
             var atmosphereObject = new GameObject("Atmosphere");
             LookTestAtmosphere atmosphere = atmosphereObject.AddComponent<LookTestAtmosphere>();
             // No light passed: the atmosphere's sun (fog in-scatter, shafts, sky glow) follows the visible sun of the
@@ -152,7 +189,7 @@ namespace JungleBooze.Editor.HeroBasin
 
             var root = new GameObject("HeroBasin").transform;
             var groups = new Dictionary<int, Transform>();
-            string summary = batches.Emit(SaveMesh, (segment, group) =>
+            string summary = batches.Emit(mesh => SaveMesh(mesh, paths.Meshes), (segment, group) =>
             {
                 int key = segment * 16 + (int)group;
                 if (!groups.TryGetValue(key, out Transform t))
@@ -170,20 +207,28 @@ namespace JungleBooze.Editor.HeroBasin
             if (pista != null)
             {
                 pista.transform.SetParent(root, true);
-                RimLight(h, pista.transform);
+                if (style == HeroBasinStyle.Realistic)
+                {
+                    RimLight(h, pista.transform, paths.Materials);
+                }
             }
 
-            LookTestAssets.EnsureFolder(System.IO.Path.GetDirectoryName(ScenePath).Replace('\\', '/'));
-            EditorSceneManager.SaveScene(scene, ScenePath);
+            if (style == HeroBasinStyle.Painterly)
+            {
+                report.Add(HeroBasinPainterly.Apply(h, root, pista, paths.Materials));
+            }
+
+            LookTestAssets.EnsureFolder(System.IO.Path.GetDirectoryName(paths.Scene).Replace('\\', '/'));
+            EditorSceneManager.SaveScene(scene, paths.Scene);
             sky.SetFloat("_HorizonFog", 0f);
-            LookTestSceneBuilder.BakeEnvironment(look, hdri != null, report, LightingPath);
+            LookTestSceneBuilder.BakeEnvironment(look, hdri != null, report, paths.Lighting);
             sky.SetFloat("_HorizonFog", 1f);
             EditorUtility.SetDirty(sky);
             atmosphere.Apply();
             EditorSceneManager.MarkSceneDirty(scene);
-            EditorSceneManager.SaveScene(scene, ScenePath);
+            EditorSceneManager.SaveScene(scene, paths.Scene);
             AssetDatabase.SaveAssets();
-            Debug.Log(LogPrefix + "Built " + ScenePath + System.Environment.NewLine + string.Join(System.Environment.NewLine, report));
+            Debug.Log(LogPrefix + "Built " + paths.Scene + System.Environment.NewLine + string.Join(System.Environment.NewLine, report));
             return report;
         }
 
@@ -201,15 +246,36 @@ namespace JungleBooze.Editor.HeroBasin
 
         public static HeroBasinConfigAsset EnsureConfig()
         {
-            var config = AssetDatabase.LoadAssetAtPath<HeroBasinConfigAsset>(ConfigPath);
+            return EnsureConfig(HeroBasinStyle.Realistic);
+        }
+
+        /// <summary>
+        /// The style's config. A missing painterly config starts as a copy of the realistic one (same layout and
+        /// framing) with its style set to Painterly.
+        /// </summary>
+        public static HeroBasinConfigAsset EnsureConfig(HeroBasinStyle style)
+        {
+            string path = new StylePaths(style).Config;
+            var config = AssetDatabase.LoadAssetAtPath<HeroBasinConfigAsset>(path);
             if (config != null)
             {
                 return config;
             }
 
             LookTestAssets.EnsureFolder(ConfigFolder);
+            if (style != HeroBasinStyle.Realistic && AssetDatabase.CopyAsset(EnsureConfig(HeroBasinStyle.Realistic) != null ? ConfigPath : string.Empty, path))
+            {
+                config = AssetDatabase.LoadAssetAtPath<HeroBasinConfigAsset>(path);
+                var so = new SerializedObject(config);
+                so.FindProperty("_style").enumValueIndex = (int)style;
+                so.ApplyModifiedPropertiesWithoutUndo();
+                EditorUtility.SetDirty(config);
+                AssetDatabase.SaveAssets();
+                return config;
+            }
+
             config = ScriptableObject.CreateInstance<HeroBasinConfigAsset>();
-            AssetDatabase.CreateAsset(config, ConfigPath);
+            AssetDatabase.CreateAsset(config, path);
             AssetDatabase.SaveAssets();
             return config;
         }
@@ -227,7 +293,7 @@ namespace JungleBooze.Editor.HeroBasin
         /// The look config the shared shaders and materials read (sun, fog, grade, water), generated from the hero
         /// config so the hero scene has one source of numbers and never changes the look test's own config.
         /// </summary>
-        private static LookTestConfigAsset BuildLook(HeroBasinConfigAsset h)
+        private static LookTestConfigAsset BuildLook(HeroBasinConfigAsset h, string lookPath)
         {
             var look = ScriptableObject.CreateInstance<LookTestConfigAsset>();
             var so = new SerializedObject(look);
@@ -274,7 +340,7 @@ namespace JungleBooze.Editor.HeroBasin
             C("_waterDeepColor", h.WaterDeepColor);
             so.ApplyModifiedPropertiesWithoutUndo();
             LookTestAssets.EnsureFolder(ConfigFolder);
-            return LookTestAssets.SaveOrReplace(look, LookPath);
+            return LookTestAssets.SaveOrReplace(look, lookPath);
         }
 
         // ---------------------------------------------------------------- Backdrop layers
@@ -366,7 +432,7 @@ namespace JungleBooze.Editor.HeroBasin
         // ---------------------------------------------------------------- Grade LUT and rim light
 
         /// <summary>Adds the keyframe-matched grading LUT (URP Color Lookup) to the hero volume profile.</summary>
-        private static void AddGradeLut(HeroBasinConfigAsset h)
+        private static void AddGradeLut(HeroBasinConfigAsset h, string volumePath)
         {
             if (string.IsNullOrEmpty(h.GradeLutPath) || h.GradeLutContribution <= 0f)
             {
@@ -395,7 +461,7 @@ namespace JungleBooze.Editor.HeroBasin
 
             var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(h.GradeLutPath);
 
-            var profile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(VolumePath);
+            var profile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(volumePath);
             if (profile == null)
             {
                 return;
@@ -416,7 +482,7 @@ namespace JungleBooze.Editor.HeroBasin
         /// past the last submesh draws it again, additively). The project's URP asset has additional lights off, so a
         /// rim point light would not render. Hero scene only; one extra draw per renderer.
         /// </summary>
-        private static void RimLight(HeroBasinConfigAsset h, Transform pista)
+        private static void RimLight(HeroBasinConfigAsset h, Transform pista, string materialFolder)
         {
             if (h.RimLightIntensity <= 0f)
             {
@@ -435,8 +501,8 @@ namespace JungleBooze.Editor.HeroBasin
             rim.SetFloat("_RimIntensity", h.RimLightIntensity);
             rim.SetFloat("_RimPower", h.RimPower);
             rim.SetFloat("_SunFacing", h.RimSunFacing);
-            LookTestAssets.EnsureFolder(MaterialFolder);
-            rim = LookTestAssets.SaveOrReplace(rim, MaterialFolder + "/PistaRim.mat");
+            LookTestAssets.EnsureFolder(materialFolder);
+            rim = LookTestAssets.SaveOrReplace(rim, materialFolder + "/PistaRim.mat");
             foreach (Renderer renderer in pista.GetComponentsInChildren<Renderer>(true))
             {
                 var list = new List<Material>(renderer.sharedMaterials) { rim };
@@ -484,20 +550,37 @@ namespace JungleBooze.Editor.HeroBasin
                 return false;
             }
 
-            idle.SampleAnimation(pista, Mathf.Repeat(time, Mathf.Max(0.01f, idle.length)));
+            float t = Mathf.Repeat(time, Mathf.Max(0.01f, idle.length));
+            Animator animator = pista.GetComponentInChildren<Animator>();
+            if (idle.humanMotion && animator != null && animator.avatar != null)
+            {
+                // Humanoid clips need the avatar's retargeting: evaluate once through a playable graph (edit mode); the
+                // bones keep the pose after the graph is destroyed.
+                var graph = PlayableGraph.Create("HeroBasinPose");
+                graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
+                var output = UnityEngine.Animations.AnimationPlayableOutput.Create(graph, "Pose", animator);
+                var playable = UnityEngine.Animations.AnimationClipPlayable.Create(graph, idle);
+                playable.SetTime(t);
+                output.SetSourcePlayable(playable);
+                graph.Evaluate(0f);
+                graph.Destroy();
+                return true;
+            }
+
+            idle.SampleAnimation(pista, t);
             return true;
         }
 
         // ---------------------------------------------------------------- Helpers
 
-        private static void ClearMeshes()
+        private static void ClearMeshes(string meshFolder)
         {
-            if (!AssetDatabase.IsValidFolder(MeshFolder))
+            if (!AssetDatabase.IsValidFolder(meshFolder))
             {
                 return;
             }
 
-            string[] guids = AssetDatabase.FindAssets("t:Mesh", new[] { MeshFolder });
+            string[] guids = AssetDatabase.FindAssets("t:Mesh", new[] { meshFolder });
             var paths = new List<string>();
             for (int i = 0; i < guids.Length; i++)
             {
@@ -507,21 +590,24 @@ namespace JungleBooze.Editor.HeroBasin
             AssetDatabase.DeleteAssets(paths.ToArray(), new List<string>());
         }
 
-        private static Mesh SaveMesh(Mesh mesh)
+        private static Mesh SaveMesh(Mesh mesh, string meshFolder)
         {
-            LookTestAssets.EnsureFolder(MeshFolder);
-            return LookTestAssets.SaveOrReplace(mesh, MeshFolder + "/" + mesh.name + ".asset");
+            LookTestAssets.EnsureFolder(meshFolder);
+            return LookTestAssets.SaveOrReplace(mesh, meshFolder + "/" + mesh.name + ".asset");
         }
 
         /// <summary>The plant atlas materials (null when an atlas has not landed).</summary>
         internal sealed class PlantMaterials
         {
-            public PlantMaterials(LookTestMaterials materials, List<string> report, Color tint)
+            public PlantMaterials(LookTestMaterials materials, List<string> report, Color tint, bool painted = false)
             {
+                _painted = painted;
                 Broadleaf = Atlas(materials, "FP_Broadleaf", 0.55f, new Color(0.92f, 1f, 0.88f, 1f) * tint, report);
                 Fronds = Atlas(materials, "FP_Fronds", 0.65f, new Color(0.88f, 1f, 0.84f, 1f) * tint, report);
                 Bellcap = Atlas(materials, "FP_Bellcap", 0.5f, Color.white * tint, report);
             }
+
+            private readonly bool _painted;
 
             public Material Broadleaf { get; }
 
@@ -529,8 +615,14 @@ namespace JungleBooze.Editor.HeroBasin
 
             public Material Bellcap { get; }
 
-            private static Material Atlas(LookTestMaterials materials, string name, float translucency, Color tint, List<string> report)
+            private Material Atlas(LookTestMaterials materials, string name, float translucency, Color tint, List<string> report)
             {
+                // Painterly style (ADR 0009): the hand-painted atlas (FP_Fronds_P) replaces the photo one when it exists.
+                if (_painted && AssetDatabase.LoadAssetAtPath<Texture2D>(PlantsFolder + "/" + name + "_P_BaseColor.png") != null)
+                {
+                    name += "_P";
+                }
+
                 var baseColor = AssetDatabase.LoadAssetAtPath<Texture2D>(PlantsFolder + "/" + name + "_BaseColor.png");
                 var normal = AssetDatabase.LoadAssetAtPath<Texture2D>(PlantsFolder + "/" + name + "_Normal.png");
                 if (baseColor == null)

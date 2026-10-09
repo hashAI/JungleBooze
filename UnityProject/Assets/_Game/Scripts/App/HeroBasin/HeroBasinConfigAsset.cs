@@ -11,6 +11,11 @@ namespace JungleBooze.App.HeroBasin
     [CreateAssetMenu(fileName = "HeroBasinConfig", menuName = "JungleBooze/Config/Hero Basin Config")]
     public sealed class HeroBasinConfigAsset : ScriptableObject
     {
+        [Tooltip("Rendering style (ADR 0009): Realistic = iteration 3 (F4_e); Painterly = the painterly trial (F4_f), "
+            + "built into its own scene, materials and meshes. The painterly values are in the Painterly block below.")]
+        [SerializeField] private HeroBasinStyle _style = HeroBasinStyle.Realistic;
+        [SerializeField] private HeroPainterlyLook _painterly = new HeroPainterlyLook();
+
         [Header("Cameras (position, euler: pitch + = down, yaw + = right; vertical FOV)")]
         [SerializeField] private Vector3 _landscapePosition = new Vector3(1.3f, 1.9f, -4.7f);
         [SerializeField] private Vector3 _landscapeEuler = new Vector3(-2f, -1f, 0f);
@@ -223,6 +228,8 @@ namespace JungleBooze.App.HeroBasin
             new HeroBackdropLayer("BD_F4e_JungleWall", 480f, 48f, 60f, -11f, true, 0.1f, 1f),
         };
 
+        public HeroBasinStyle Style => _style;
+        public HeroPainterlyLook Painterly => _painterly;
         public Vector3 LandscapePosition => _landscapePosition;
         public Vector3 LandscapeEuler => _landscapeEuler;
         public float LandscapeFovDeg => _landscapeFovDeg;
