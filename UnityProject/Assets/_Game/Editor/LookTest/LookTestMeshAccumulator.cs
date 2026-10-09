@@ -88,9 +88,16 @@ namespace JungleBooze.Editor.LookTest
 
         /// <summary>
         /// Appends one camera-facing card for the Atmos Card shader: four vertices sharing <paramref name="center"/>
-        /// and <paramref name="axis"/>; corners in UV0, (width, length, seed) in UV1.
+        /// and <paramref name="axis"/>; corners in UV0, (width, length, seed, kind) in UV1. Kind: 0 = mist or shaft,
+        /// 1 = waterfall spray (Atmos Card shader, mist mode).
         /// </summary>
         public void AppendCard(Vector3 center, Vector3 axis, float width, float length, float seed)
+        {
+            AppendCard(center, axis, width, length, seed, 0f);
+        }
+
+        /// <summary>Camera-facing card of a given kind (see the overload above).</summary>
+        public void AppendCard(Vector3 center, Vector3 axis, float width, float length, float seed, float kind)
         {
             int start = _vertices.Count;
             var corners = new[] { new Vector2(-0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(-0.5f, 1f), new Vector2(0.5f, 1f) };
@@ -100,7 +107,7 @@ namespace JungleBooze.Editor.LookTest
                 _normals.Add(axis.normalized);
                 _tangents.Add(new Vector4(1f, 0f, 0f, 1f));
                 _uv0.Add(corners[k]);
-                _uv1.Add(new Vector4(width, length, seed, 0f));
+                _uv1.Add(new Vector4(width, length, seed, kind));
                 _colors.Add(Color.white);
             }
 

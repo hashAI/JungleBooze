@@ -1,8 +1,10 @@
-// AURELIA look test (ADR 0004): river and waterfall water for mobile.
+// AURELIA look test (ADR 0004, ADR 0008): river, ford and pool water for mobile.
 // No refraction, no opaque or depth texture, no planar reflection. One alpha-blended pass:
 // two scrolling normal maps -> Fresnel blend between a tinted body color and the sky reflection (reflection probe /
-// baked skybox), sun specular with shadows, foam from vertex color R (banks, plunge pool) broken up by the normals,
-// soft edges from vertex color A. The waterfall uses the same shader with a fast scroll along the sheet.
+// baked skybox), sun specular with shadows. Vertex color: R = foam (shoreline, impact), G = depth 0..1 (baked by
+// the builder: shallow water is turquoise and clear, deep water darker and more opaque; replaces a depth texture),
+// A = soft edge. Foam is lacy: the water FX texture (G) thresholds it into lines that drift with the flow.
+// Waterfalls use their own shader (Waterfall.shader).
 Shader "JungleBooze/Water"
 {
     Properties
@@ -21,6 +23,10 @@ Shader "JungleBooze/Water"
         _SpecularStrength("Sun Specular", Range(0, 4)) = 1.5
         _FoamColor("Foam Color", Color) = (0.92, 0.95, 0.93, 1)
         _FoamStrength("Foam Strength", Range(0, 2)) = 1
+        [NoScaleOffset] _FxTex("Water FX (G lacy foam)", 2D) = "gray" {}
+        _FoamTiling("Foam Tiling (per m)", Float) = 0.45
+        _ShallowOpacity("Opacity (shallow)", Range(0, 1)) = 0.45
+        _ReflectionTint("Reflection Tint", Color) = (0.80, 0.95, 0.98, 1)
         [Enum(UnityEngine.Rendering.CullMode)] _Cull("Cull", Float) = 0
     }
 
@@ -61,10 +67,14 @@ Shader "JungleBooze/Water"
                 half _SpecularStrength;
                 half4 _FoamColor;
                 half _FoamStrength;
+                float _FoamTiling;
+                half _ShallowOpacity;
+                half4 _ReflectionTint;
                 half _Cull;
             CBUFFER_END
 
             TEXTURE2D(_NormalMap); SAMPLER(sampler_NormalMap);
+            TEXTURE2D(_FxTex); SAMPLER(sampler_FxTex);
 
             struct Attributes
             {
@@ -84,6 +94,7 @@ Shader "JungleBooze/Water"
                 half3 normalWS : TEXCOORD2;
                 half4 tangentWS : TEXCOORD3;
                 half4 color : TEXCOORD4;
+                float2 uvMeters : TEXCOORD5;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
                 UNITY_VERTEX_OUTPUT_STEREO
             };
@@ -102,6 +113,7 @@ Shader "JungleBooze/Water"
                 output.normalWS = normals.normalWS;
                 output.tangentWS = half4(normals.tangentWS, input.tangentOS.w * GetOddNegativeScale());
                 output.uv = input.uv * _NormalTiling;
+                output.uvMeters = input.uv;
                 output.color = input.color;
                 return output;
             }
@@ -129,26 +141,32 @@ Shader "JungleBooze/Water"
                 half shadow = mainLight.shadowAttenuation;
                 half nDotL = saturate(dot(normalWS, mainLight.direction));
 
-                // Body: deep to shallow with view angle, lit by sky ambient and a little sun.
+                // Body: shallow (turquoise, clear) to deep by the baked depth (G), a little deeper at grazing angles.
+                half depth = saturate(input.color.g);
                 half3 ambient = SampleSH(normalWS);
-                half3 body = lerp(_DeepColor.rgb, _ShallowColor.rgb, facing) * (ambient + mainLight.color * nDotL * shadow * 0.35h);
+                half bodyMix = saturate(depth * 0.85h + (1.0h - facing) * 0.25h);
+                half3 body = lerp(_ShallowColor.rgb, _DeepColor.rgb, bodyMix) * (ambient + mainLight.color * nDotL * shadow * 0.35h);
 
                 half perceptualRoughness = 1.0h - _Smoothness;
-                half3 reflection = GlossyEnvironmentReflection(reflect(-viewWS, normalWS), perceptualRoughness, 1.0h) * _ReflectionStrength;
+                half3 reflection = GlossyEnvironmentReflection(reflect(-viewWS, normalWS), perceptualRoughness, 1.0h) * _ReflectionTint.rgb;
 
                 half3 halfDir = SafeNormalize(mainLight.direction + viewWS);
                 half specPower = exp2(10.0h * _Smoothness + 1.0h);
                 half3 specular = mainLight.color * pow(saturate(dot(normalWS, halfDir)), specPower) * _SpecularStrength * shadow;
 
-                half3 color = lerp(body, reflection, fresnel) + specular;
+                half3 color = lerp(body, reflection, saturate(fresnel * _ReflectionStrength)) + specular;
 
-                // Foam: vertex color R, broken up by the two normal samples so it streams with the flow.
+                // Foam: vertex color R thresholded by lacy foam lines that drift with the flow.
+                float2 foamUv = input.uvMeters * _FoamTiling + t * _FlowA.xy * 0.35 / max(_NormalTiling, 1e-3) * _FoamTiling;
+                half lace = SAMPLE_TEXTURE2D(_FxTex, sampler_FxTex, foamUv).g;
+                half lace2 = SAMPLE_TEXTURE2D(_FxTex, sampler_FxTex, foamUv * 1.9 + float2(0.31, 0.17) - t * 0.02).g;
                 half breakup = saturate((sampleA.r + sampleB.g) - 0.6h);
-                half foam = saturate(input.color.r * _FoamStrength * (0.55h + breakup * 1.6h));
+                half foamField = saturate(input.color.r * _FoamStrength);
+                half foam = saturate(smoothstep(1.0h - foamField, 1.0h - foamField * 0.5h + 0.05h, max(lace, lace2 * 0.8h) + breakup * 0.3h) * foamField * 1.4h + foamField * foamField * 0.5h);
                 half3 foamLit = _FoamColor.rgb * (ambient + mainLight.color * (0.4h + 0.6h * shadow));
                 color = lerp(color, foamLit, foam);
 
-                half alpha = saturate(lerp(_Opacity, 1.0h, fresnel) + foam) * input.color.a;
+                half alpha = saturate(lerp(lerp(_ShallowOpacity, _Opacity, depth), 1.0h, fresnel) + foam) * input.color.a;
                 color = JBApplyFog(color, input.positionWS);
                 return half4(color, alpha);
             }

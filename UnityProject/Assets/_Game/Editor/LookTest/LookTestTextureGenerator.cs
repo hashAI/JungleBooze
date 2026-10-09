@@ -7,7 +7,7 @@ namespace JungleBooze.Editor.LookTest
 {
     /// <summary>
     /// Generates the small textures the look test needs and no CC0 library offers in a mobile-ready form:
-    /// a seamless water normal map (sum of sine waves with whole-number frequencies, so it tiles exactly), a soft
+    /// a seamless water normal map, a water effects texture (falling streaks, lacy foam, breakup) (sum of sine waves with whole-number frequencies, so it tiles exactly), a soft
     /// round mist particle, and the canopy dapple pattern (tiling blobs, rank-equalized so a threshold t lights
     /// exactly 1 - t of the area; JBAtmosphere.hlsl). Written as PNG files under <see cref="Folder"/> and imported with fixed settings.
     /// Deterministic (seeded); editor only.
@@ -18,12 +18,14 @@ namespace JungleBooze.Editor.LookTest
         public const string WaterNormalPath = Folder + "/WaterNormal.png";
         public const string MistPath = Folder + "/MistSoft.png";
         public const string DapplePath = Folder + "/CanopyDapple.png";
+        public const string WaterFxPath = Folder + "/WaterFx.png";
 
         private const int WaterSize = 512;
         private const int MistSize = 128;
         private const int Waves = 14;
         private const int DappleSize = 256;
         private const int DappleBlobs = 90;
+        private const int WaterFxSize = 256;
 
         public static Texture2D EnsureWaterNormal(int seed)
         {
@@ -206,6 +208,105 @@ namespace JungleBooze.Editor.LookTest
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// Tileable water effects texture (linear RGBA, <see cref="WaterFxSize"/>²) for the waterfall and water shaders:
+        /// R = falling-water streaks (fine across u, long along v), G = lacy foam (ridged noise: thin bright lines),
+        /// B = soft breakup (low frequency), A = 1.
+        /// </summary>
+        public static Texture2D EnsureWaterFx(int seed)
+        {
+            if (!File.Exists(WaterFxPath))
+            {
+                Color[] values = WaterFxValues(seed, WaterFxSize);
+                var texture = new Texture2D(WaterFxSize, WaterFxSize, TextureFormat.RGBA32, false, true);
+                var pixels = new Color32[values.Length];
+                for (int i = 0; i < values.Length; i++)
+                {
+                    pixels[i] = values[i];
+                }
+
+                texture.SetPixels32(pixels);
+                texture.Apply();
+                Write(texture, WaterFxPath);
+            }
+
+            var importer = (TextureImporter)AssetImporter.GetAtPath(WaterFxPath);
+            if (importer != null && importer.sRGBTexture)
+            {
+                importer.textureType = TextureImporterType.Default;
+                importer.sRGBTexture = false;
+                importer.alphaSource = TextureImporterAlphaSource.None;
+                importer.wrapMode = TextureWrapMode.Repeat;
+                importer.mipmapEnabled = true;
+                SetIos(importer, TextureImporterFormat.ASTC_6x6);
+                importer.SaveAndReimport();
+            }
+
+            return AssetDatabase.LoadAssetAtPath<Texture2D>(WaterFxPath);
+        }
+
+        /// <summary>Water FX values (row-major, size², each channel in 0..1); tiles exactly. Pure; unit-tested.</summary>
+        public static Color[] WaterFxValues(int seed, int size)
+        {
+            uint h = (uint)seed * 2654435761u + 0x5EEDu;
+            var result = new Color[size * size];
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float u = (float)x / size;
+                    float v = (float)y / size;
+                    float streak = 0.5f * PeriodicNoise(u, v, 32, 2, h) + 0.3f * PeriodicNoise(u, v, 64, 4, h + 11u) + 0.2f * PeriodicNoise(u, v, 16, 1, h + 23u);
+                    streak = LookTestMath.Smooth(0.3f, 0.72f, streak);
+                    float foam = 0f;
+                    float amplitude = 0.55f;
+                    int period = 6;
+                    for (int o = 0; o < 3; o++)
+                    {
+                        float n = PeriodicNoise(u, v, period, period, h + 101u + (uint)o * 7u);
+                        float ridge = 1f - Mathf.Abs(2f * n - 1f);
+                        foam += amplitude * ridge * ridge * ridge;
+                        amplitude *= 0.55f;
+                        period *= 2;
+                    }
+
+                    foam = LookTestMath.Smooth(0.25f, 0.62f, foam);
+                    float breakup = 0.65f * PeriodicNoise(u, v, 4, 4, h + 211u) + 0.35f * PeriodicNoise(u, v, 8, 8, h + 223u);
+                    result[y * size + x] = new Color(streak, foam, breakup, 1f);
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>Value noise in 0..1 on a lattice of periodX × periodY cells over the unit square (wraps).</summary>
+        public static float PeriodicNoise(float u, float v, int periodX, int periodY, uint seed)
+        {
+            float fx = u * periodX;
+            float fy = v * periodY;
+            int x0 = Mathf.FloorToInt(fx);
+            int y0 = Mathf.FloorToInt(fy);
+            float tx = fx - x0;
+            float ty = fy - y0;
+            tx = tx * tx * (3f - 2f * tx);
+            ty = ty * ty * (3f - 2f * ty);
+            float a = Lattice(x0, y0, periodX, periodY, seed);
+            float b = Lattice(x0 + 1, y0, periodX, periodY, seed);
+            float c = Lattice(x0, y0 + 1, periodX, periodY, seed);
+            float d = Lattice(x0 + 1, y0 + 1, periodX, periodY, seed);
+            return Mathf.Lerp(Mathf.Lerp(a, b, tx), Mathf.Lerp(c, d, tx), ty);
+        }
+
+        private static float Lattice(int x, int y, int periodX, int periodY, uint seed)
+        {
+            uint ix = (uint)(((x % periodX) + periodX) % periodX);
+            uint iy = (uint)(((y % periodY) + periodY) % periodY);
+            uint k = ix * 374761393u + iy * 668265263u + seed * 2246822519u;
+            k = (k ^ (k >> 13)) * 1274126177u;
+            k ^= k >> 16;
+            return (k & 0xFFFFFFu) / 16777215f;
         }
 
         private static void Write(Texture2D texture, string assetPath)

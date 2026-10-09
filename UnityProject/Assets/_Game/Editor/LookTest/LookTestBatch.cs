@@ -219,6 +219,14 @@ namespace JungleBooze.Editor.LookTest
 
         private static void RenderToPng(Camera camera, Vector2Int size, string path)
         {
+            Texture2D image = Render(camera, size);
+            File.WriteAllBytes(path, image.EncodeToPNG());
+            Object.DestroyImmediate(image);
+        }
+
+        /// <summary>Renders <paramref name="camera"/> at <paramref name="size"/> with MSAA 4x into a new RGB24 texture (caller destroys it).</summary>
+        internal static Texture2D Render(Camera camera, Vector2Int size)
+        {
             var descriptor = new RenderTextureDescriptor(size.x, size.y, RenderTextureFormat.ARGB32, 24)
             {
                 msaaSamples = 4,
@@ -239,14 +247,13 @@ namespace JungleBooze.Editor.LookTest
             var image = new Texture2D(size.x, size.y, TextureFormat.RGB24, false);
             image.ReadPixels(new Rect(0, 0, size.x, size.y), 0, 0);
             image.Apply();
-            File.WriteAllBytes(path, image.EncodeToPNG());
 
             RenderTexture.active = previous;
             camera.targetTexture = null;
             RenderTexture.ReleaseTemporary(resolved);
             target.Release();
             Object.DestroyImmediate(target);
-            Object.DestroyImmediate(image);
+            return image;
         }
 
         private static string Arg(string[] args, string name)

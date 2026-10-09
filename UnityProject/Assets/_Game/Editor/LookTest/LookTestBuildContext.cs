@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using JungleBooze.App.LookTest;
+using JungleBooze.Editor.Scenery;
 using UnityEngine;
 
 namespace JungleBooze.Editor.LookTest
@@ -37,6 +38,67 @@ namespace JungleBooze.Editor.LookTest
         public Material LightShaft;
         public readonly List<ModelVariant> Ferns = new List<ModelVariant>();
         public readonly List<ModelVariant> Plants = new List<ModelVariant>();
+
+        /// <summary>Environment assets that have landed (ADR 0008); empty = procedural stand-ins everywhere.</summary>
+        public EnvironmentKit Kit = EnvironmentKit.Empty();
+
+        /// <summary>One material per backdrop layer of <see cref="Kit"/>, same order.</summary>
+        public readonly List<Material> BackdropMaterials = new List<Material>();
+
+        /// <summary>Waterfalls placed so far (for wet rock): set by the landmark builder before painting rock.</summary>
+        public readonly List<FallSpan> Falls = new List<FallSpan>();
+
+        /// <summary>A waterfall as a line from its lip to its foot with a width (m).</summary>
+        public struct FallSpan
+        {
+            public Vector3 Top;
+            public Vector3 Foot;
+            public float Width;
+        }
+
+        /// <summary>
+        /// Appends an environment piece with <paramref name="placement"/> (see <see cref="EnvironmentKit.Stand"/> and
+        /// <see cref="EnvironmentKit.Span"/>). Pieces without their own material go into <paramref name="standIn"/>
+        /// (same batch as the procedural piece they replace); pieces with one go into a batch of their own material.
+        /// </summary>
+        public void AppendPiece(EnvironmentKit.Piece piece, Matrix4x4 placement, LookTestMeshAccumulator standIn, int segment, string layer, string label, bool castShadows, LookTestBatchSet.Group group, LookTestMeshAccumulator.Painter painter)
+        {
+            LookTestMeshAccumulator target = piece.Material != null ? Batches.Get(segment, layer, label, piece.Material, castShadows, group) : standIn;
+            for (int i = 0; i < piece.Parts.Count; i++)
+            {
+                target.Append(piece.Parts[i].Mesh, placement * piece.Parts[i].Matrix, painter);
+            }
+        }
+
+        /// <summary>Wetness 0..1 at a world point: near a fall's sheet and around its foot (vertex color G on rock).</summary>
+        public float Wetness(Vector3 p)
+        {
+            return Wetness(p, Falls);
+        }
+
+        /// <summary>Wetness near the given falls. Pure; unit-tested.</summary>
+        public static float Wetness(Vector3 p, IList<FallSpan> falls)
+        {
+            float wet = 0f;
+            for (int i = 0; i < falls.Count; i++)
+            {
+                FallSpan f = falls[i];
+                Vector3 axis = f.Foot - f.Top;
+                float t = Mathf.Clamp01(Vector3.Dot(p - f.Top, axis) / Mathf.Max(1e-4f, axis.sqrMagnitude));
+                float sheet = Vector3.Distance(p, f.Top + axis * t);
+                float near = 1f - LookTestMath.Smooth(f.Width * 0.5f, f.Width * 0.5f + 7f, sheet);
+                float splash = 1f - LookTestMath.Smooth(f.Width, f.Width + 14f, Vector3.Distance(p, f.Foot));
+                wet = Mathf.Max(wet, Mathf.Max(near, splash * 0.85f));
+            }
+
+            return wet;
+        }
+
+        /// <summary>Painter for open rock (no canopy) that is wet near the falls (vertex color G).</summary>
+        public Color OpenWet(Vector3 world, Vector3 local, Color source)
+        {
+            return new Color(0f, Wetness(world), 0f, source.a);
+        }
 
         public float SegmentLength => Config.SegmentLengthM;
 

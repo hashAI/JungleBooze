@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using JungleBooze.App.LookTest;
+using JungleBooze.Editor.Scenery;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -57,6 +58,7 @@ namespace JungleBooze.Editor.LookTest
                 Texture2D waterNormal = LookTestTextureGenerator.EnsureWaterNormal(config.Seed);
                 Texture2D mistTexture = LookTestTextureGenerator.EnsureMist();
                 Texture2D dapple = LookTestTextureGenerator.EnsureDapple(config.Seed);
+                materials.WaterFx = LookTestTextureGenerator.EnsureWaterFx(config.Seed);
                 Cubemap hdri = assets.FindHdri(config.SkyHdriId);
 
                 ctx.Ground = materials.Ground();
@@ -66,13 +68,27 @@ namespace JungleBooze.Editor.LookTest
                 ctx.Leaves = materials.Leaves();
                 ctx.FarCanopy = materials.FarCanopy();
                 ctx.River = materials.River(waterNormal);
-                ctx.Waterfall = materials.Waterfall(waterNormal);
+                ctx.Waterfall = materials.Waterfall();
                 ctx.Pool = materials.Pool(waterNormal);
                 ctx.MistCard = materials.MistCard(mistTexture);
                 ctx.LightShaft = materials.LightShaft();
                 Material skyMaterial = materials.Sky(hdri);
                 ctx.Ferns.AddRange(CollectVariants(assets, materials, new[] { config.FernModelId }));
                 ctx.Plants.AddRange(CollectVariants(assets, materials, config.PlantModelIds));
+
+                // Environment assets that have landed (ADR 0008): mapped to Nature Lit, placed at the hooks.
+                ctx.Kit = EnvironmentKit.Scan();
+                for (int i = 0; i < ctx.Kit.Pieces.Count; i++)
+                {
+                    ctx.Kit.Pieces[i].Material = materials.ForEnvironmentPiece(ctx.Kit.Pieces[i]);
+                }
+
+                for (int i = 0; i < ctx.Kit.Backdrops.Count; i++)
+                {
+                    ctx.BackdropMaterials.Add(materials.Backdrop(ctx.Kit.Backdrops[i]));
+                }
+
+                report.Add(ctx.Kit.Summary());
 
                 EditorUtility.DisplayProgressBar("Look test", "Scene", 0.25f);
                 ClearGeneratedMeshes();
@@ -197,7 +213,7 @@ namespace JungleBooze.Editor.LookTest
 
         // ---------------------------------------------------------------- Light, sky, camera, post
 
-        private static Light CreateSun(LookTestConfigAsset c)
+        internal static Light CreateSun(LookTestConfigAsset c)
         {
             var go = new GameObject("Sun");
             go.transform.rotation = Quaternion.LookRotation(c.SunLightDirection, Vector3.up);
@@ -210,7 +226,7 @@ namespace JungleBooze.Editor.LookTest
             return light;
         }
 
-        private static void ApplyEnvironment(LookTestConfigAsset c, Material sky, Light sun)
+        internal static void ApplyEnvironment(LookTestConfigAsset c, Material sky, Light sun)
         {
             RenderSettings.skybox = sky;
             RenderSettings.sun = sun;
@@ -233,6 +249,12 @@ namespace JungleBooze.Editor.LookTest
 
         private static void BakeEnvironment(LookTestConfigAsset c, bool haveHdri, List<string> report)
         {
+            BakeEnvironment(c, haveHdri, report, LightingSettingsPath);
+        }
+
+        /// <summary>Bakes ambient light and reflections from the sky (no lightmaps), lighting settings saved at <paramref name="settingsPath"/>.</summary>
+        internal static void BakeEnvironment(LookTestConfigAsset c, bool haveHdri, List<string> report, string settingsPath)
+        {
             if (!haveHdri || !c.BakeEnvironmentLighting)
             {
                 report.Add("Ambient light: flat gradient (no HDRI or bake turned off in the config).");
@@ -240,7 +262,7 @@ namespace JungleBooze.Editor.LookTest
             }
 
             var settings = new LightingSettings { name = "LookTestLighting", bakedGI = false, realtimeGI = false };
-            settings = LookTestAssets.SaveOrReplace(settings, LightingSettingsPath);
+            settings = LookTestAssets.SaveOrReplace(settings, settingsPath);
             Lightmapping.lightingSettings = settings;
             RenderSettings.ambientMode = AmbientMode.Skybox;
 
@@ -255,7 +277,7 @@ namespace JungleBooze.Editor.LookTest
             }
         }
 
-        private static Camera CreateCamera(LookTestConfigAsset c)
+        internal static Camera CreateCamera(LookTestConfigAsset c)
         {
             var go = new GameObject("LookTestCamera");
             go.tag = "MainCamera";
@@ -283,8 +305,14 @@ namespace JungleBooze.Editor.LookTest
         /// </summary>
         private static void CreateVolume(LookTestConfigAsset c)
         {
-            LookTestAssets.EnsureFolder(ConfigFolder);
-            VolumeProfile profile = LookTestAssets.SaveOrReplace(ScriptableObject.CreateInstance<VolumeProfile>(), VolumeProfilePath);
+            CreateVolume(c, VolumeProfilePath);
+        }
+
+        /// <summary>The graded post-processing volume, profile saved at <paramref name="profilePath"/>.</summary>
+        internal static void CreateVolume(LookTestConfigAsset c, string profilePath)
+        {
+            LookTestAssets.EnsureFolder(Path.GetDirectoryName(profilePath).Replace('\\', '/'));
+            VolumeProfile profile = LookTestAssets.SaveOrReplace(ScriptableObject.CreateInstance<VolumeProfile>(), profilePath);
 
             Tonemapping tonemapping = AddComponent<Tonemapping>(profile);
             tonemapping.mode.Override(c.AcesTonemapping ? TonemappingMode.ACES : TonemappingMode.Neutral);

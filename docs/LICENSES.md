@@ -26,6 +26,28 @@ the owner with commercial rights per Meshy's terms. No attribution required.
 | Pista rig (24 humanoid bones; we added 3 ponytail bones) | Meshy Auto-Rigging API, task `01a11d3f-f3a4-7369-9470-67c27273c6dc` | 2026-10-09 | Owned by owner (Meshy paid plan) |
 | Pista animation clips in `UnityProject/Assets/_Game/Art/Characters/Pista/Pista.fbx` (Meshy animation library ids 0, 9, 10, 16, 190, 246, 416, 466, 467, 477, 485, 495, 503, 508, 517, 539; ids 184, 509, 538 bought and not used) | Meshy Animation API, tasks `01a11d40-f7da-738c-9942-c9c7c92af726`, `01a11d40-f7d0-72fb-b861-1f2a3b180a5c` | 2026-10-09 | Owned by owner (Meshy paid plan). **Re-check Meshy's terms for library animations before launch** (they are Meshy-provided motions applied to our rig, not generated from our input) |
 | Look test v2 keyframes (`design/aurelia/keyframes/*.jpg`, raw in `art_source/environment/meshy/keyframes_raw/`), reference only, not shipped | Meshy text-to-image / image-to-image (`nano-banana`, `nano-banana-pro`, third-party Google models inside Meshy); inputs: our prompts, our own vision-board crops; task ids in `art_source/environment/meshy/calls.jsonl` | 2026-10-09 | Owned by owner (Meshy paid plan). **Re-check Meshy's terms for third-party image models before any of these are used in store art** |
+| Environment concepts `rs_arch_c1/c2`, `stilt_A/B/C_c1/c2` (`art_source/environment/meshy/concepts/`), reference only | Meshy image-to-image / text-to-image `nano-banana`, inputs: our prompts (`art_source/environment/meshy/prompts/`) and crops of our own keyframes | 2026-10-09 | Owned by owner (Meshy paid plan). Same third-party image model caveat as the keyframes |
+| Meshy hero-arch A/B mesh `rs_arch_meshy.glb` (not used: the procedural arch won the A/B) and stiltwood meshes `stilt_A/B/C.glb` (mesh only, not yet processed) in `art_source/environment/meshy/models/` | Meshy image-to-3D `latest` (7.1) mesh only, geometry 2k, from the concepts above; task ids in `calls.jsonl` | 2026-10-09 | Owned by owner (Meshy paid plan) |
+
+## OpenAI-generated images (owner-approved, 2026-10-09)
+
+Model `gpt-image-2`, quality medium, via the OpenAI Images API (`tools/assetgen/openai_images.py`). Per OpenAI's terms the
+outputs belong to the owner. Every call (tokens, estimated cost, prompt file, purpose) is logged in
+`art_source/environment/openai/calls.jsonl`; prompts are in `art_source/environment/openai/prompts/`.
+
+| Asset | Source | Date | License |
+|---|---|---|---|
+| F4 keyframe `design/aurelia/keyframes/F4_e_openai_medium.jpg` (reference) | OpenAI image generation | 2026-10-09 | Owned by owner (OpenAI terms) |
+| Backdrop layers `UnityProject/Assets/_Game/Art/Environment/Backdrops/BD_F4e_*.png` | OpenAI image edits with the F4_e keyframe as reference; cut-out layers generated on a magenta key and unmixed in-house (`tools/art/chroma_unmix.py`) | 2026-10-09 | Owned by owner (OpenAI terms) |
+| Plant atlases `UnityProject/Assets/_Game/Art/Environment/Plants/Textures/FP_*_BaseColor.png` (normals derived in-house) | OpenAI image generation on a magenta key, unmixed in-house | 2026-10-09 | Owned by owner (OpenAI terms) |
+
+## In-house procedural environment assets (no third-party content except CC0)
+
+| Asset | Source | Date | License |
+|---|---|---|---|
+| Rootstone kit + basin ledges `UnityProject/Assets/_Game/Art/Environment/Rootstone/` (meshes, baked textures) | Procedural Blender scripts `tools/blender/environment/` (rootstone_high, ledges_high, rootstone_bake); albedo grain sampled from CC0 Poly Haven `rock_face_03` | 2026-10-09 | Owned by owner (our work; CC0 input) |
+| Plant card meshes `UnityProject/Assets/_Game/Art/Environment/Plants/*.fbx` | `tools/blender/environment/plants_build.py` on the OpenAI atlases above | 2026-10-09 | Owned by owner |
+| Mist band `UnityProject/Assets/_Game/Art/Environment/Backdrops/BD_MistBand.png` | `tools/art/mist_band.py` (procedural noise) | 2026-10-09 | Owned by owner |
 
 ## Build and CI tools (not shipped in the app)
 

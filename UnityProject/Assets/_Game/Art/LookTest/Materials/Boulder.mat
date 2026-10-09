@@ -66,6 +66,7 @@ Material:
     m_Ints: []
     m_Floats:
     - _AlphaClip: 0
+    - _AlphaFromBaseA: 0
     - _AlphaToMask: 0
     - _BlendDepth: 0.2
     - _BumpScale: 1
@@ -75,10 +76,15 @@ Material:
     - _HeightBlend: 0.5
     - _Layers: 0
     - _MetallicScale: 0
+    - _MossAmount: 0
     - _OcclusionStrength: 1
+    - _RimStrength: 0.5
     - _RoughnessScale: 1
     - _Translucency: 0
     - _VertexAO: 1
+    - _WetDarken: 0.45
+    - _WetFromVertexG: 1
+    - _WetSmoothness: 0.78
     - _Wind: 0
     - _WindHeightScale: 0.15
     - _WindSpeed: 1
@@ -86,8 +92,10 @@ Material:
     - _WindVertexColor: 1
     m_Colors:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
+    - _BounceColor: {r: 0.55, g: 0.5, b: 0.34, a: 0.9}
     - _Layer2Color: {r: 1, g: 1, b: 1, a: 1}
     - _Layer3Color: {r: 1, g: 1, b: 1, a: 1}
+    - _MossColor: {r: 0.33, g: 0.44, b: 0.16, a: 1}
     - _WindDirection: {r: 1, g: 0, b: 0.35, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

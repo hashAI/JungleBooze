@@ -9,6 +9,13 @@
 //   comes from vertex color R (_WindVertexColor = 1) instead of the height above the pivot, and vertex color B
 //   carries the canopy cover baked by the builder (_CanopyCover = 1): dappled sun and darker, greener ambient
 //   under the roof (JBAtmosphere.hlsl). Fog is the project's height fog with sun in-scatter, not Unity fog.
+// - _DETAIL_ON: tiling detail normal on UV1 (environment kit pieces: UV1 = world box projection, 1 unit = 4 m;
+//   ADR 0008), blended over the unique normal so large pieces stay crisp up close.
+// - Look test v2 surface response (ADR 0008), all per material, no extra textures or passes:
+//   moss on upward faces (_MossAmount, broken up by the albedo's luminance); wet rock near falls (vertex color G
+//   when _WetFromVertexG = 1: darker and glossier); ground bounce for downward faces (_BounceColor, lifts the
+//   undersides of roots and arches that the sky ambient leaves black); a rim sheen (_RimStrength: Fresnel edge lit
+//   by the ambient and, toward the sun, by the dappled sun: the "subsurface-ish" glow on bark edges).
 // SRP Batcher compatible (all material values in UnityPerMaterial), GPU instancing on.
 Shader "JungleBooze/Nature Lit"
 {
@@ -40,6 +47,7 @@ Shader "JungleBooze/Nature Lit"
         [Header(Alpha)]
         [Toggle(_ALPHATEST_ON)] _AlphaClip("Alpha Clip", Float) = 0
         _AlphaMap("Alpha Mask (R)", 2D) = "white" {}
+        _AlphaFromBaseA("Alpha from Albedo A (atlases)", Range(0, 1)) = 0
         _Cutoff("Alpha Cutoff", Range(0, 1)) = 0.5
         _Translucency("Leaf Translucency", Range(0, 1)) = 0
 
@@ -51,6 +59,21 @@ Shader "JungleBooze/Nature Lit"
         _WindDirection("Wind Direction (xz)", Vector) = (1, 0, 0.35, 0)
         _WindVertexColor("Wind Weight from Vertex Color R", Range(0, 1)) = 0
         _CanopyCover("Canopy Cover from Vertex Color B", Range(0, 1)) = 0
+
+        [Header(Detail normal on UV1)]
+        [Toggle(_DETAIL_ON)] _Detail("Detail Normal (UV1)", Float) = 0
+        [Normal][NoScaleOffset] _DetailNormalMap("Detail Normal", 2D) = "bump" {}
+        _DetailNormalScale("Detail Normal Strength", Range(0, 2)) = 0.3
+        _DetailTiling("Detail Repeats per UV1 Unit", Float) = 1
+
+        [Header(Surface response)]
+        _MossColor("Moss Color", Color) = (0.30, 0.40, 0.15, 1)
+        _MossAmount("Moss on Upward Faces", Range(0, 1)) = 0
+        _WetFromVertexG("Wetness from Vertex Color G", Range(0, 1)) = 0
+        _WetDarken("Wet Darkening", Range(0, 1)) = 0.45
+        _WetSmoothness("Wet Smoothness", Range(0, 1)) = 0.8
+        _BounceColor("Ground Bounce (rgb, a = strength)", Color) = (0.45, 0.42, 0.30, 0)
+        _RimStrength("Rim Sheen", Range(0, 2)) = 0
 
         [Enum(UnityEngine.Rendering.CullMode)] _Cull("Cull", Float) = 2
         [HideInInspector] _AlphaToMask("Alpha To Mask", Float) = 0
@@ -91,12 +114,24 @@ Shader "JungleBooze/Nature Lit"
             half _AlphaToMask;
             half _WindVertexColor;
             half _CanopyCover;
+            half _AlphaFromBaseA;
+            half _Detail;
+            half _DetailNormalScale;
+            float _DetailTiling;
+            half4 _MossColor;
+            half _MossAmount;
+            half _WetFromVertexG;
+            half _WetDarken;
+            half _WetSmoothness;
+            half4 _BounceColor;
+            half _RimStrength;
         CBUFFER_END
 
         TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
         TEXTURE2D(_BumpMap); SAMPLER(sampler_BumpMap);
         TEXTURE2D(_ArmMap); SAMPLER(sampler_ArmMap);
         TEXTURE2D(_AlphaMap); SAMPLER(sampler_AlphaMap);
+        TEXTURE2D(_DetailNormalMap); SAMPLER(sampler_DetailNormalMap);
         TEXTURE2D(_Layer2Map);
         TEXTURE2D(_Layer2BumpMap);
         TEXTURE2D(_Layer2ArmMap);
@@ -126,7 +161,10 @@ Shader "JungleBooze/Nature Lit"
 
         half SampleAlpha(float2 uv)
         {
-            return SAMPLE_TEXTURE2D(_AlphaMap, sampler_AlphaMap, uv).r * _BaseColor.a;
+            half mask = _AlphaFromBaseA > 0.5h
+                ? SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, uv).a
+                : SAMPLE_TEXTURE2D(_AlphaMap, sampler_AlphaMap, uv).r;
+            return mask * _BaseColor.a;
         }
         ENDHLSL
 
@@ -144,6 +182,7 @@ Shader "JungleBooze/Nature Lit"
             #pragma shader_feature_local _LAYERS_ON
             #pragma shader_feature_local _ALPHATEST_ON
             #pragma shader_feature_local_vertex _WIND_ON
+            #pragma shader_feature_local_fragment _DETAIL_ON
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
             #pragma multi_compile_instancing
@@ -156,6 +195,7 @@ Shader "JungleBooze/Nature Lit"
                 float3 normalOS : NORMAL;
                 float4 tangentOS : TANGENT;
                 float2 uv : TEXCOORD0;
+                float2 uv1 : TEXCOORD1;
                 half4 color : COLOR;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
@@ -163,7 +203,7 @@ Shader "JungleBooze/Nature Lit"
             struct Varyings
             {
                 float4 positionCS : SV_POSITION;
-                float2 uv : TEXCOORD0;
+                float4 uv : TEXCOORD0;
                 float3 positionWS : TEXCOORD1;
                 half3 normalWS : TEXCOORD2;
                 half4 tangentWS : TEXCOORD3;
@@ -184,7 +224,7 @@ Shader "JungleBooze/Nature Lit"
 
                 output.positionCS = TransformWorldToHClip(positionWS);
                 output.positionWS = positionWS;
-                output.uv = input.uv;
+                output.uv = float4(input.uv, input.uv1 * _DetailTiling);
                 output.normalWS = normals.normalWS;
                 real sign = input.tangentOS.w * GetOddNegativeScale();
                 output.tangentWS = half4(normals.tangentWS, sign);
@@ -197,7 +237,7 @@ Shader "JungleBooze/Nature Lit"
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
-                float2 uv1 = TRANSFORM_TEX(input.uv, _BaseMap);
+                float2 uv1 = TRANSFORM_TEX(input.uv.xy, _BaseMap);
                 half alpha = 1.0h;
             #if defined(_ALPHATEST_ON)
                 alpha = SampleAlpha(uv1);
@@ -211,8 +251,8 @@ Shader "JungleBooze/Nature Lit"
                 half3 arm = SAMPLE_TEXTURE2D(_ArmMap, sampler_ArmMap, uv1).rgb;
 
             #if defined(_LAYERS_ON)
-                float2 uv2 = TRANSFORM_TEX(input.uv, _Layer2Map);
-                float2 uv3 = TRANSFORM_TEX(input.uv, _Layer3Map);
+                float2 uv2 = TRANSFORM_TEX(input.uv.xy, _Layer2Map);
+                float2 uv3 = TRANSFORM_TEX(input.uv.xy, _Layer3Map);
                 half3 albedo2 = SAMPLE_TEXTURE2D(_Layer2Map, sampler_BaseMap, uv2).rgb;
                 half3 normal2 = UnpackNormalScale(SAMPLE_TEXTURE2D(_Layer2BumpMap, sampler_BumpMap, uv2), _BumpScale);
                 half3 arm2 = SAMPLE_TEXTURE2D(_Layer2ArmMap, sampler_ArmMap, uv2).rgb;
@@ -236,6 +276,11 @@ Shader "JungleBooze/Nature Lit"
                 arm = arm * weights.x + arm2 * weights.y + arm3 * weights.z;
             #endif
 
+            #if defined(_DETAIL_ON)
+                half3 detail = UnpackNormalScale(SAMPLE_TEXTURE2D(_DetailNormalMap, sampler_DetailNormalMap, input.uv.zw), _DetailNormalScale);
+                normalTS = normalize(half3(normalTS.xy + detail.xy, normalTS.z * detail.z));
+            #endif
+
                 half faceSign = IS_FRONT_VFACE(face, 1.0h, -1.0h);
                 half3 normalVS = input.normalWS * faceSign;
                 half3 bitangent = input.tangentWS.w * cross(input.normalWS, input.tangentWS.xyz);
@@ -243,12 +288,24 @@ Shader "JungleBooze/Nature Lit"
                 half3 normalWS = NormalizeNormalPerPixel(TransformTangentToWorld(normalTS, tangentToWorld));
 
                 half vertexAO = lerp(1.0h, input.color.a, _VertexAO);
+                half3 surfaceAlbedo = albedo * _BaseColor.rgb;
+                half smoothness = saturate(1.0h - arm.g * _RoughnessScale);
+            #if !defined(_LAYERS_ON)
+                // Moss on upward faces, wet rock near falls (vertex G). The layered ground uses G for its third layer.
+                half luminance = dot(albedo, half3(0.3h, 0.59h, 0.11h));
+                half moss = saturate((normalWS.y - (1.0h - _MossAmount)) * 4.0h + (luminance - 0.35h) * 1.5h) * step(0.001h, _MossAmount);
+                surfaceAlbedo = lerp(surfaceAlbedo, _MossColor.rgb * (0.65h + 0.7h * luminance), moss);
+                smoothness = lerp(smoothness, 0.12h, moss);
+                half wet = saturate(input.color.g) * _WetFromVertexG;
+                surfaceAlbedo *= 1.0h - _WetDarken * wet;
+                smoothness = lerp(smoothness, _WetSmoothness, wet);
+            #endif
 
                 SurfaceData surface = (SurfaceData)0;
-                surface.albedo = albedo * _BaseColor.rgb;
+                surface.albedo = surfaceAlbedo;
                 surface.metallic = arm.b * _MetallicScale;
                 surface.specular = half3(0.0h, 0.0h, 0.0h);
-                surface.smoothness = saturate(1.0h - arm.g * _RoughnessScale);
+                surface.smoothness = smoothness;
                 surface.normalTS = normalTS;
                 surface.occlusion = lerp(1.0h, arm.r, _OcclusionStrength) * vertexAO;
                 surface.alpha = alpha;
@@ -269,11 +326,22 @@ Shader "JungleBooze/Nature Lit"
                 half brdfAlpha = surface.alpha;
                 InitializeBRDFData(surface.albedo, surface.metallic, surface.specular, surface.smoothness, brdfAlpha, brdfData);
                 Light mainLight = GetMainLight(inputData.shadowCoord, inputData.positionWS, inputData.shadowMask);
-                mainLight.shadowAttenuation *= JBCanopyLight(inputData.positionWS, cover);
-                half3 bakedGI = inputData.bakedGI * JBCanopyAmbient(cover);
+                half canopyLit = JBCanopyLight(inputData.positionWS, cover);
+                mainLight.shadowAttenuation *= canopyLit;
+                // Ground bounce: downward faces get the warm light bounced off the forest floor.
+                half facingDown = saturate(0.5h - 0.5h * normalWS.y);
+                half3 bounce = _BounceColor.rgb * (_BounceColor.a * facingDown);
+                half3 bakedGI = (inputData.bakedGI + bounce) * JBCanopyAmbient(cover);
                 half giOcclusion = surface.occlusion * lerp(1.0h, 0.55h, cover);
                 half4 color = half4(GlobalIllumination(brdfData, bakedGI, giOcclusion, inputData.positionWS, inputData.normalWS, inputData.viewDirectionWS), alpha);
                 color.rgb += LightingPhysicallyBased(brdfData, mainLight, inputData.normalWS, inputData.viewDirectionWS);
+
+                // Rim sheen: a Fresnel edge lit by the ambient, and by the (dappled) sun when looking toward it.
+                half edge = 1.0h - saturate(dot(normalWS, inputData.viewDirectionWS));
+                edge = edge * edge * edge;
+                half towardSun = saturate(dot(-inputData.viewDirectionWS, mainLight.direction));
+                half3 rimLight = bakedGI * 0.9h + mainLight.color * (towardSun * towardSun * canopyLit * 0.6h);
+                color.rgb += rimLight * lerp(surface.albedo, half3(0.5h, 0.5h, 0.45h), 0.35h) * (edge * _RimStrength * (0.5h + 0.5h * surface.occlusion));
 
             #if defined(_ALPHATEST_ON)
                 // Thin leaves: light from behind shines through (cheap wrap term, shadowed and dappled).

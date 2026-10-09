@@ -1,4 +1,5 @@
 using JungleBooze.App.LookTest;
+using JungleBooze.Editor.Scenery;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -20,6 +21,8 @@ namespace JungleBooze.Editor.LookTest
         public const string SkyShaderPath = ShaderFolder + "/SkyHdri.shader";
         public const string MistShaderPath = ShaderFolder + "/Mist.shader";
         public const string AtmosCardShaderPath = ShaderFolder + "/AtmosCard.shader";
+        public const string WaterfallShaderPath = ShaderFolder + "/Waterfall.shader";
+        public const string BackdropShaderPath = ShaderFolder + "/BackdropCard.shader";
 
         private const int AlphaTestQueue = 2450;
 
@@ -30,9 +33,20 @@ namespace JungleBooze.Editor.LookTest
         private readonly Shader _sky;
         private readonly Shader _mist;
         private readonly Shader _atmosCard;
+        private readonly Shader _waterfall;
+        private readonly Shader _backdrop;
+
+        private readonly string _folder;
 
         public LookTestMaterials(LookTestConfigAsset config, LookTestAssets assets)
+            : this(config, assets, Folder)
         {
+        }
+
+        /// <summary>Materials saved under <paramref name="folder"/> (another scene keeps its own copies).</summary>
+        public LookTestMaterials(LookTestConfigAsset config, LookTestAssets assets, string folder)
+        {
+            _folder = folder;
             _config = config;
             _assets = assets;
             _nature = LoadShader(NatureShaderPath);
@@ -40,7 +54,12 @@ namespace JungleBooze.Editor.LookTest
             _sky = LoadShader(SkyShaderPath);
             _mist = LoadShader(MistShaderPath);
             _atmosCard = LoadShader(AtmosCardShaderPath);
+            _waterfall = LoadShader(WaterfallShaderPath);
+            _backdrop = LoadShader(BackdropShaderPath);
         }
+
+        /// <summary>Water effects texture (falling streaks, lacy foam), set before River, Pool and Waterfall.</summary>
+        public Texture2D WaterFx { get; set; }
 
         public Material Ground()
         {
@@ -70,6 +89,7 @@ namespace JungleBooze.Editor.LookTest
             Material m = Nature("Rootstone", set, 1f / _config.RockTileM, new Color(0.45f, 0.43f, 0.38f, 1f));
             m.SetColor("_BaseColor", set.Albedo != null ? _config.RootstoneTint : new Color(0.45f, 0.43f, 0.38f, 1f));
             m.SetFloat("_VertexAO", 1f);
+            SurfaceResponse(m, _config.RootstoneMoss, _config.RootstoneRim, true);
             return Save(m);
         }
 
@@ -117,6 +137,7 @@ namespace JungleBooze.Editor.LookTest
             LookTestAssets.TextureSet set = _assets.FindTextures(LookTestAssets.TexturesFolder, _config.BoulderTextureId, string.Empty);
             Material m = Nature("Boulder", set, 0.5f, new Color(0.40f, 0.42f, 0.33f, 1f));
             m.SetFloat("_VertexAO", 1f);
+            SurfaceResponse(m, 0f, _config.RootstoneRim, true);
             return Save(m);
         }
 
@@ -124,7 +145,13 @@ namespace JungleBooze.Editor.LookTest
         {
             LookTestAssets.TextureSet set = _assets.FindTextures(LookTestAssets.TexturesFolder, _config.BarkTextureId, string.Empty);
             Material m = Nature("Bark", set, 1f / _config.BarkTileM, new Color(0.33f, 0.27f, 0.21f, 1f));
+            if (set.Albedo != null)
+            {
+                m.SetColor("_BaseColor", _config.BarkTint);
+            }
+
             m.SetFloat("_VertexAO", 1f);
+            SurfaceResponse(m, _config.BarkMoss, _config.BarkRim, false);
             return Save(m);
         }
 
@@ -165,22 +192,22 @@ namespace JungleBooze.Editor.LookTest
             Material m = Water("River", normal);
             m.SetVector("_FlowA", new Vector4(0.02f, _config.RiverFlowSpeed, 0f, 0f));
             m.SetVector("_FlowB", new Vector4(-0.03f, _config.RiverFlowSpeed * 0.63f, 0f, 0f));
-            m.SetFloat("_FoamStrength", 0.6f);
-            m.SetFloat("_ReflectionStrength", 0.45f);
+            m.SetFloat("_FoamStrength", 1f);
+            m.SetFloat("_ReflectionStrength", 0.7f);
             m.SetFloat("_FresnelPower", 5f);
-            m.SetFloat("_Opacity", 0.62f);
+            m.SetFloat("_Opacity", 0.86f);
             m.SetFloat("_SpecularStrength", 1.0f);
             return Save(m);
         }
 
-        public Material Waterfall(Texture2D normal)
+        /// <summary>Layered waterfall sheets (Waterfall shader): streaks, foam cells, ragged edges.</summary>
+        public Material Waterfall()
         {
-            Material m = Water("Waterfall", normal);
-            m.SetVector("_FlowA", new Vector4(0f, _config.WaterfallFlowSpeed, 0f, 0f));
-            m.SetVector("_FlowB", new Vector4(0.02f, _config.WaterfallFlowSpeed * 1.37f, 0f, 0f));
-            m.SetFloat("_NormalStrength", 1f);
-            m.SetFloat("_Opacity", 0.8f);
-            m.SetFloat("_FoamStrength", 1.2f);
+            Material m = Fresh("Waterfall", _waterfall);
+            m.SetTexture("_FxTex", WaterFx);
+            m.SetFloat("_FlowSpeed", _config.WaterfallFlowSpeed);
+            m.SetColor("_WaterColor", _config.WaterfallColor);
+            m.SetFloat("_Opacity", _config.WaterfallOpacity);
             m.renderQueue = (int)RenderQueue.Transparent + 1;
             return Save(m);
         }
@@ -200,7 +227,8 @@ namespace JungleBooze.Editor.LookTest
             Material m = Water("Pool", normal);
             m.SetVector("_FlowA", new Vector4(0.03f, 0.06f, 0f, 0f));
             m.SetVector("_FlowB", new Vector4(-0.04f, 0.03f, 0f, 0f));
-            m.SetFloat("_FoamStrength", 1.4f);
+            m.SetFloat("_FoamStrength", 1.2f);
+            m.SetFloat("_Opacity", 0.9f);
             return Save(m);
         }
 
@@ -227,6 +255,10 @@ namespace JungleBooze.Editor.LookTest
             m.SetColor("_ShallowColor", _config.WaterShallowColor);
             m.SetColor("_DeepColor", _config.WaterDeepColor);
             m.SetFloat("_Opacity", _config.WaterOpacity);
+            m.SetFloat("_ShallowOpacity", _config.WaterShallowOpacity);
+            m.SetColor("_ReflectionTint", _config.WaterReflectionTint);
+            m.SetTexture("_FxTex", WaterFx);
+            m.SetFloat("_FoamTiling", _config.WaterFoamTilingPerM);
             m.SetFloat("_Cull", (float)CullMode.Off);
             m.renderQueue = (int)RenderQueue.Transparent;
             return m;
@@ -262,6 +294,136 @@ namespace JungleBooze.Editor.LookTest
             m.SetFloat("_CanopyCover", 1f);
             m.SetFloat("_WindVertexColor", 1f);
             return m;
+        }
+
+        /// <summary>
+        /// Nature Lit material for an environment piece with its own textures (ADR 0008), set up by role like the
+        /// stand-in it replaces; null if the piece has no textures (it then shares the stand-in material and batch).
+        /// </summary>
+        public Material ForEnvironmentPiece(EnvironmentKit.Piece piece)
+        {
+            if (piece == null || !piece.Textures.HasAny)
+            {
+                return null;
+            }
+
+            var set = new LookTestAssets.TextureSet
+            {
+                Albedo = piece.Textures.Albedo,
+                Normal = piece.Textures.Normal,
+                Arm = piece.Textures.Arm,
+                Alpha = piece.Textures.Alpha,
+            };
+            Material m = Nature("Env_" + piece.Name, set, 1f, new Color(0.45f, 0.43f, 0.38f, 1f));
+            m.SetFloat("_VertexAO", 1f);
+            switch (piece.Role)
+            {
+                case EnvironmentRole.Stiltwood:
+                    SurfaceResponse(m, _config.BarkMoss, _config.BarkRim, false);
+                    break;
+                case EnvironmentRole.LeafCards:
+                case EnvironmentRole.PlantClump:
+                    if (set.Alpha != null)
+                    {
+                        Foliage(m, set, 0.6f, 0.04f);
+                    }
+                    else
+                    {
+                        // Atlas with the cutout in the albedo's alpha (Plants/ README): clip about 0.5, two-sided.
+                        Foliage(m, set, 0.6f, 0.04f);
+                        m.SetFloat("_AlphaFromBaseA", 1f);
+                        m.SetFloat("_AlphaClip", 1f);
+                        m.SetFloat("_AlphaToMask", 1f);
+                        m.SetFloat("_Cutoff", 0.5f);
+                        m.EnableKeyword("_ALPHATEST_ON");
+                        m.SetOverrideTag("RenderType", "TransparentCutout");
+                        m.renderQueue = AlphaTestQueue;
+                    }
+
+                    break;
+                default:
+                    SurfaceResponse(m, _config.RootstoneMoss, _config.RootstoneRim, true);
+                    DetailNormal(m);
+                    break;
+            }
+
+            return Save(m);
+        }
+
+        /// <summary>Matte-painted backdrop layer (Backdrop Card shader); farther layers draw first.</summary>
+        public Material Backdrop(EnvironmentKit.BackdropLayer layer)
+        {
+            Material m = Fresh("Backdrop_" + layer.Name, _backdrop);
+            m.SetTexture("_MainTex", layer.Texture);
+            m.renderQueue = (int)RenderQueue.Transparent - 50 + Mathf.Clamp(layer.Order, 0, 40);
+            return Save(m);
+        }
+
+        /// <summary>
+        /// Leaf-card atlas material (alpha in the albedo's A channel; ADR 0008 plant atlases): alpha clip with
+        /// alpha-to-coverage, two-sided, translucent, wind from vertex color R.
+        /// </summary>
+        public Material CardAtlas(string name, Texture2D baseColor, Texture2D normal, float translucency, Color tint)
+        {
+            var set = new LookTestAssets.TextureSet { Albedo = baseColor, Normal = normal };
+            Material m = Nature(name, set, 1f, new Color(0.25f, 0.40f, 0.18f, 1f));
+            m.SetColor("_BaseColor", tint);
+            m.SetFloat("_AlphaFromBaseA", 1f);
+            m.SetFloat("_AlphaClip", 1f);
+            m.SetFloat("_AlphaToMask", 1f);
+            m.SetFloat("_Cutoff", 0.4f);
+            m.EnableKeyword("_ALPHATEST_ON");
+            m.SetOverrideTag("RenderType", "TransparentCutout");
+            m.renderQueue = AlphaTestQueue;
+            m.SetFloat("_Cull", (float)CullMode.Off);
+            m.SetFloat("_Translucency", translucency);
+            m.SetFloat("_Wind", 1f);
+            m.SetFloat("_WindStrength", _config.WindStrengthM);
+            m.EnableKeyword("_WIND_ON");
+            m.SetFloat("_VertexAO", 1f);
+            return Save(m);
+        }
+
+        /// <summary>
+        /// Tiling rock detail normal on UV1 (kit pieces: UV1 = world box projection, 1 unit = 4 m; README asks for
+        /// the CC0 rock_face_03 normal at about 0.3), so big uniquely-baked pieces stay crisp up close.
+        /// </summary>
+        private void DetailNormal(Material m)
+        {
+            LookTestAssets.TextureSet rock = _assets.FindTextures(LookTestAssets.TexturesFolder, _config.RockTextureId, string.Empty);
+            if (rock.Normal == null)
+            {
+                return;
+            }
+
+            m.SetTexture("_DetailNormalMap", rock.Normal);
+            m.SetFloat("_DetailNormalScale", 0.3f);
+            m.SetFloat("_DetailTiling", 1f);
+            m.SetFloat("_Detail", 1f);
+            m.EnableKeyword("_DETAIL_ON");
+        }
+
+        /// <summary>Backdrop card for a painted layer, drawn in the given queue (farther layers first).</summary>
+        public Material BackdropLayer(string name, Texture2D texture, int renderQueue, float fogShare, float edgeFade)
+        {
+            Material m = Fresh("Backdrop_" + name, _backdrop);
+            m.SetTexture("_MainTex", texture);
+            m.SetFloat("_FogAmount", fogShare);
+            m.SetFloat("_EdgeFade", edgeFade);
+            m.renderQueue = renderQueue;
+            return Save(m);
+        }
+
+        /// <summary>Moss on upward faces, ground bounce, rim sheen and (optionally) wetness from vertex G (Nature Lit).</summary>
+        private void SurfaceResponse(Material m, float moss, float rim, bool wet)
+        {
+            m.SetColor("_MossColor", _config.MossColor);
+            m.SetFloat("_MossAmount", moss);
+            m.SetColor("_BounceColor", _config.GroundBounce);
+            m.SetFloat("_RimStrength", rim);
+            m.SetFloat("_WetFromVertexG", wet ? 1f : 0f);
+            m.SetFloat("_WetDarken", _config.WetDarken);
+            m.SetFloat("_WetSmoothness", _config.WetSmoothness);
         }
 
         private void Foliage(Material m, LookTestAssets.TextureSet set, float translucency, float windHeightScale)
@@ -315,9 +477,10 @@ namespace JungleBooze.Editor.LookTest
             return new Material(shader) { name = name };
         }
 
-        private static Material Save(Material material)
+        private Material Save(Material material)
         {
-            return LookTestAssets.SaveOrReplace(material, Folder + "/" + material.name + ".mat");
+            LookTestAssets.EnsureFolder(_folder);
+            return LookTestAssets.SaveOrReplace(material, _folder + "/" + material.name + ".mat");
         }
 
         private static Shader LoadShader(string path)

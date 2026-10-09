@@ -23,6 +23,10 @@ Material:
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
+    - _FxTex:
+        m_Texture: {fileID: 2800000, guid: 21761ef5692154da08163e1a58023448, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _NormalMap:
         m_Texture: {fileID: 2800000, guid: 672b4111114324b628cba1db3b4841db, type: 3}
         m_Scale: {x: 1, y: 1}
@@ -30,12 +34,14 @@ Material:
     m_Ints: []
     m_Floats:
     - _Cull: 0
-    - _FoamStrength: 1.4
+    - _FoamStrength: 1.2
+    - _FoamTiling: 0.4
     - _FresnelPower: 4
     - _NormalStrength: 0.6
     - _NormalTiling: 0.35
-    - _Opacity: 0.78
+    - _Opacity: 0.9
     - _ReflectionStrength: 1
+    - _ShallowOpacity: 0.42
     - _Smoothness: 0.92
     - _SpecularStrength: 1.5
     m_Colors:
@@ -43,6 +49,7 @@ Material:
     - _FlowA: {r: 0.03, g: 0.06, b: 0, a: 0}
     - _FlowB: {r: -0.04, g: 0.03, b: 0, a: 0}
     - _FoamColor: {r: 0.92, g: 0.95, b: 0.93, a: 1}
+    - _ReflectionTint: {r: 0.78, g: 0.93, b: 0.96, a: 1}
     - _ShallowColor: {r: 0.2, g: 0.78, b: 0.72, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

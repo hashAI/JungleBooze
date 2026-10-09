@@ -54,6 +54,16 @@ need a fixed path into the merged segments of ADR 0007.
      project fog). Every piece is appended to the segment's merge batches: merged per segment, one draw per material.
    - With no assets, every hook falls back to its procedural stand-in, so the art can land piece by piece.
 
+8. **Hero scene** (`Scenes/HeroBasin.unity`, `JungleBooze.Editor.HeroBasin.HeroBasinBatch.BuildAndCapture`): the F4_e
+   keyframe built once at full quality with the same machinery. Every number is in `HeroBasinConfigAsset`; the look
+   values the shared shaders read are copied into a generated `HeroBasinLook.asset`, and materials go to
+   `Art/HeroBasin/Materials`, so building it never changes the look test. Painted layers are sphere strips around
+   the camera (UV linear in azimuth and elevation, sized from the painting's *source* pixel size: NPOT scaling off).
+   Plant atlases carry the cutout in albedo A (Nature Lit `_AlphaFromBaseA`). Capture writes the landscape and
+   portrait renders and a side-by-side comparison with the keyframe.
+9. **Far placements keep stand-ins** until LOD2 or impostors are wired. Kit LOD0 in the 20 far-range slots took the
+   loop from about 315k to about 400k triangles.
+
 ## Measured (editor, Apple M4, 8 shots)
 Main view 62–94 draws (budget 250), 217k–286k triangles (350k), shadow pass 10–14 draws, ≤ 52k triangles. Waterfalls
 add about 1k triangles per hero fall (four sheets); the W layer line (12k) is exceeded in basin views. The total

@@ -79,7 +79,8 @@ namespace JungleBooze.Editor.LookTest
 
         /// <summary>
         /// River water over [s0, s1] (world space, loop 0), up to where it falls off the plateau edge; null if the
-        /// river is not in the range. Columns run along d (the river is defined along d). R = foam, A = soft edge.
+        /// river is not in the range. Columns run along d (the river is defined along d). R = foam (shoreline where the
+        /// water is shallow, rapids before the fall), G = depth 0..1 (Water.shader body color), A = soft edge.
         /// </summary>
         public static Mesh RiverStrip(LookTestStretchLayout layout, float s0, float s1, string name)
         {
@@ -121,18 +122,57 @@ namespace JungleBooze.Editor.LookTest
                     positions[i, j] = layout.Path.World(s, d, y);
                     frames[i, j] = new Frame { Normal = Vector3.up, Tangent = layout.Path.Right(s), Bitangent = layout.Path.Forward(s) };
                     uvs[i, j] = new Vector2(t * reach, along);
-                    float ford = 1f - LookTestMath.Smooth(c.RunnableHalfWidthM, c.RunnableHalfWidthM + 3f, Mathf.Abs(d));
-                    float foam = Mathf.Clamp01(0.7f * LookTestMath.Smooth(0.6f, 0.95f, Mathf.Abs(t)) + 0.12f * ford);
-                    float edge = 1f - LookTestMath.Smooth(0.82f, 1f, Mathf.Abs(t));
-                    colors[i, j] = new Color(foam, 0f, 0f, edge);
+                    colors[i, j] = RiverColor(layout, s, d, y, t, fall);
                 }
             }
 
             return Grid(name, positions, frames, uvs, colors);
         }
 
-        /// <summary>Flat round pool surface of <paramref name="radius"/> at the origin, foam (R) near the rim, soft edge (A).</summary>
+        /// <summary>
+        /// Vertex color of the river surface at (s, d), water height <paramref name="y"/>, across-fraction
+        /// <paramref name="t"/> (−1..1): R = foam, G = depth 0..1, A = soft edge. Pure; unit-tested.
+        /// </summary>
+        public static Color RiverColor(LookTestStretchLayout layout, float s, float d, float y, float t, float fallS)
+        {
+            LookTestConfigAsset c = layout.Config;
+            float depth = y - layout.GroundY(s, d);
+            float shore = 1f - LookTestMath.Smooth(0.02f, 0.2f, depth);
+            float rapids = fallS > 0f ? 0.55f * LookTestMath.Smooth(fallS - 9f, fallS - 0.5f, s) : 0f;
+            float ford = 1f - LookTestMath.Smooth(c.RunnableHalfWidthM, c.RunnableHalfWidthM + 3f, Mathf.Abs(d));
+            float foam = Mathf.Clamp01(Mathf.Max(shore * 0.9f, rapids) + 0.08f * ford);
+            float deep = Mathf.Clamp01(depth / Mathf.Max(0.1f, c.RiverDepthM));
+            float edge = 1f - LookTestMath.Smooth(0.82f, 1f, Mathf.Abs(t));
+            return new Color(foam, deep, 0f, edge);
+        }
+
+        /// <summary>
+        /// Flat round pool surface of <paramref name="radius"/> at the origin: foam (R) near the rim, depth (G) from
+        /// shallow at the rim to deep inside, soft edge (A).
+        /// </summary>
         public static Mesh Pool(float radius, float foamWidth, string name)
+        {
+            return Disc(radius, name, fromRim => new Color(
+                1f - LookTestMath.Smooth(0f, foamWidth, fromRim),
+                LookTestMath.Smooth(0f, foamWidth * 1.6f, fromRim),
+                0f,
+                LookTestMath.Smooth(0f, 0.8f, fromRim)));
+        }
+
+        /// <summary>
+        /// Impact foam where a fall hits a pool: a disc of white water (R = 1 at the centre) fading out to the rim,
+        /// drawn with the pool material on top of the pool surface (same merged mesh, no extra draw).
+        /// </summary>
+        public static Mesh ImpactFoam(float radius)
+        {
+            return Disc(radius, "ImpactFoam", fromRim =>
+            {
+                float inner = fromRim / Mathf.Max(0.01f, radius);
+                return new Color(LookTestMath.Smooth(0.05f, 0.75f, inner), 1f, 0f, LookTestMath.Smooth(0f, 0.45f, inner));
+            });
+        }
+
+        private static Mesh Disc(float radius, string name, System.Func<float, Color> colorFromRim)
         {
             const int rings = 6;
             const int sides = 32;
@@ -150,8 +190,7 @@ namespace JungleBooze.Editor.LookTest
                     positions[k, j] = p;
                     frames[k, j] = new Frame { Normal = Vector3.up, Tangent = Vector3.right, Bitangent = Vector3.forward };
                     uvs[k, j] = new Vector2(p.x, p.z);
-                    float fromRim = radius - r;
-                    colors[k, j] = new Color(1f - LookTestMath.Smooth(0f, foamWidth, fromRim) * 0.85f, 0f, 0f, LookTestMath.Smooth(0f, 0.8f, fromRim));
+                    colors[k, j] = colorFromRim(radius - r);
                 }
             }
 
@@ -416,15 +455,60 @@ namespace JungleBooze.Editor.LookTest
             xs.Add(value);
         }
 
-        /// <summary>Waterfall sheet in local space: origin at the plunge point, falling along -y, facing -x.</summary>
+        /// <summary>One sheet of a layered waterfall (ADR 0008). Distances in multiples of the fall width unless noted.</summary>
+        public struct FallLayer
+        {
+            /// <summary>Sheet width as a fraction of the fall width.</summary>
+            public float Width;
+            /// <summary>Lateral offset (fraction of the fall width, + = local +z).</summary>
+            public float Lateral;
+            /// <summary>Offset toward the viewer, m.</summary>
+            public float Forward;
+            /// <summary>Outward bulge at mid-height, m.</summary>
+            public float Bulge;
+            /// <summary>Extra widening toward the foot (fraction of the sheet width).</summary>
+            public float Spread;
+            /// <summary>Layer speed 0..1 (Waterfall.shader: 0.6-1.4x), vertex color G.</summary>
+            public float Speed;
+            /// <summary>Pattern offset 0..1, vertex color B.</summary>
+            public float Seed;
+            /// <summary>Peak edge coverage 0..1, vertex color A.</summary>
+            public float Coverage;
+            /// <summary>Where the sheet's edge softening starts (|across| in −0.5..0.5; lower = more ragged).</summary>
+            public float EdgeStart;
+            /// <summary>Foam at the lip (top), 0..1.</summary>
+            public float LipFoam;
+        }
+
+        /// <summary>The layers of a hero fall: a dense core, a ragged front veil and two side spray streaks.</summary>
+        public static readonly FallLayer[] FallLayers =
+        {
+            new FallLayer { Width = 0.82f, Lateral = 0f, Forward = 0f, Bulge = 0.9f, Spread = 0.15f, Speed = 0.25f, Seed = 0.13f, Coverage = 1f, EdgeStart = 0.3f, LipFoam = 0.8f },
+            new FallLayer { Width = 1.0f, Lateral = 0f, Forward = 0.45f, Bulge = 1.3f, Spread = 0.25f, Speed = 0.75f, Seed = 0.61f, Coverage = 0.75f, EdgeStart = 0.16f, LipFoam = 0.5f },
+            new FallLayer { Width = 0.24f, Lateral = -0.5f, Forward = 0.7f, Bulge = 1.6f, Spread = 0.9f, Speed = 1f, Seed = 0.37f, Coverage = 0.55f, EdgeStart = 0.02f, LipFoam = 0f },
+            new FallLayer { Width = 0.24f, Lateral = 0.5f, Forward = 0.7f, Bulge = 1.6f, Spread = 0.9f, Speed = 0.9f, Seed = 0.83f, Coverage = 0.55f, EdgeStart = 0.02f, LipFoam = 0f },
+        };
+
+        /// <summary>Single-sheet waterfall (the core layer).</summary>
         public static Mesh Waterfall(float width, float topHeight, float topSetback)
         {
+            return Waterfall(width, topHeight, topSetback, FallLayers[0]);
+        }
+
+        /// <summary>
+        /// Waterfall sheet in local space: origin at the plunge point, rising along +y to the lip at
+        /// <paramref name="topHeight"/> (set back by <paramref name="topSetback"/> along +x), facing −x (the viewer).
+        /// UV0 in meters (x across, y height). Vertex color: R foam (lip and plunge), G layer speed, B seed, A coverage.
+        /// </summary>
+        public static Mesh Waterfall(float width, float topHeight, float topSetback, FallLayer layer)
+        {
             const int across = 9;
-            const int down = 16;
+            int down = Mathf.Clamp(Mathf.RoundToInt(topHeight / 3f), 8, 16);
             var positions = new Vector3[down + 1, across];
             var frames = new Frame[down + 1, across];
             var uvs = new Vector2[down + 1, across];
             var colors = new Color[down + 1, across];
+            float sheetWidth = width * layer.Width;
             for (int i = 0; i <= down; i++)
             {
                 float t = (float)i / down;
@@ -432,13 +516,16 @@ namespace JungleBooze.Editor.LookTest
                 {
                     float s = (float)j / (across - 1) - 0.5f;
                     float y = topHeight * t;
-                    float x = topSetback * Mathf.Pow(t, 1.6f) - 0.9f * Mathf.Sin(Mathf.PI * t) * (1f - 0.4f * Mathf.Abs(s) * 2f);
-                    float z = s * width * (0.85f + 0.15f * t);
+                    // Short spills bulge and spread less than tall falls (the layer offsets are meant for 10 m+ sheets).
+                    float scale = Mathf.Clamp01(topHeight / 10f);
+                    float x = topSetback * Mathf.Pow(t, 1.6f) - layer.Bulge * scale * Mathf.Sin(Mathf.PI * t) * (1f - 0.4f * Mathf.Abs(s) * 2f) - layer.Forward * scale;
+                    float z = layer.Lateral * width + s * sheetWidth * (1f + layer.Spread * (1f - t));
                     positions[i, j] = new Vector3(x, y, z);
                     uvs[i, j] = new Vector2(z, y);
-                    float foam = Mathf.Clamp01(0.35f + 0.65f * (1f - LookTestMath.Smooth(0f, 0.3f, t)) + 0.3f * LookTestMath.Smooth(0.9f, 1f, t));
-                    float edge = 1f - LookTestMath.Smooth(0.32f, 0.5f, Mathf.Abs(s));
-                    colors[i, j] = new Color(foam, 0f, 0f, edge * (1f - 0.5f * LookTestMath.Smooth(0.95f, 1f, t)));
+                    float foam = Mathf.Clamp01(0.12f + 0.9f * (1f - LookTestMath.Smooth(0f, 0.22f, t)) + layer.LipFoam * LookTestMath.Smooth(0.86f, 1f, t));
+                    float edge = 1f - LookTestMath.Smooth(layer.EdgeStart, 0.5f, Mathf.Abs(s));
+                    float ends = (1f - 0.6f * LookTestMath.Smooth(0.96f, 1f, t)) * (1f - 0.5f * (1f - LookTestMath.Smooth(0f, 0.06f, t)));
+                    colors[i, j] = new Color(foam, layer.Speed, layer.Seed, edge * ends * layer.Coverage);
                 }
             }
 
@@ -454,6 +541,35 @@ namespace JungleBooze.Editor.LookTest
             }
 
             return Grid("Waterfall", positions, frames, uvs, colors);
+        }
+
+        /// <summary>
+        /// Backdrop layer card: a vertical cylinder strip of radius <paramref name="distance"/> around the origin,
+        /// centred on +z, covering ±<paramref name="halfAngle"/> (radians), from <paramref name="baseY"/> up by
+        /// <paramref name="height"/>, facing the origin. UV0 0..1 over the strip.
+        /// </summary>
+        public static Mesh BackdropStrip(float distance, float halfAngle, float baseY, float height, int columns)
+        {
+            columns = Mathf.Max(2, columns);
+            var positions = new Vector3[columns + 1, 2];
+            var frames = new Frame[columns + 1, 2];
+            var uvs = new Vector2[columns + 1, 2];
+            var colors = new Color[columns + 1, 2];
+            for (int i = 0; i <= columns; i++)
+            {
+                float u = (float)i / columns;
+                float a = Mathf.Lerp(-halfAngle, halfAngle, u);
+                var radial = new Vector3(Mathf.Sin(a), 0f, Mathf.Cos(a));
+                for (int j = 0; j < 2; j++)
+                {
+                    positions[i, j] = radial * distance + Vector3.up * (baseY + height * j);
+                    frames[i, j] = new Frame { Normal = -radial, Tangent = new Vector3(radial.z, 0f, -radial.x), Bitangent = Vector3.up };
+                    uvs[i, j] = new Vector2(u, j);
+                    colors[i, j] = Color.white;
+                }
+            }
+
+            return Grid("Backdrop", positions, frames, uvs, colors);
         }
 
         /// <summary>Tapered, slightly bent trunk with buttress roots. Pivot at the base. u in meters around, v = height.</summary>

@@ -1,0 +1,433 @@
+using System.Collections.Generic;
+using JungleBooze.App.HeroBasin;
+using JungleBooze.App.LookTest;
+using JungleBooze.Core;
+using JungleBooze.Editor.Characters;
+using JungleBooze.Editor.LookTest;
+using JungleBooze.Editor.Scenery;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.Rendering;
+
+namespace JungleBooze.Editor.HeroBasin
+{
+    /// <summary>
+    /// Builds <see cref="ScenePath"/>: the waterfall basin of keyframe F4_e as one hero scene at full quality
+    /// (ADR 0008). It reuses the look-test machinery: merge batches (one draw per material), Nature Lit, Water,
+    /// layered Waterfall, Atmos Card mist and shafts, the project atmosphere and grade, and the environment kit
+    /// (RS_HeroArch, RS_Outcrop, painted backdrop layers, plant atlases). Pista (real model, idle pose) stands on the
+    /// ledge at the origin looking along +z. All numbers come from <see cref="HeroBasinConfigAsset"/>; the look
+    /// values the shared shaders read are copied into a generated look config (<see cref="LookPath"/>).
+    /// Generated meshes and the scene are rebuilt on every run (git-ignored).
+    /// </summary>
+    public static class HeroBasinBuilder
+    {
+        public const string ScenePath = "Assets/_Game/Scenes/HeroBasin.unity";
+        public const string ConfigFolder = "Assets/_Game/Config/HeroBasin";
+        public const string ConfigPath = ConfigFolder + "/HeroBasinConfig.asset";
+        public const string LookPath = ConfigFolder + "/HeroBasinLook.asset";
+        public const string VolumePath = ConfigFolder + "/HeroBasinVolume.asset";
+        public const string LightingPath = ConfigFolder + "/HeroBasinLighting.lighting";
+        public const string ArtFolder = "Assets/_Game/Art/HeroBasin";
+        public const string MeshFolder = ArtFolder + "/Meshes";
+        public const string MaterialFolder = ArtFolder + "/Materials";
+        public const string PlantsFolder = EnvironmentAssetRules.Root + "Plants/Textures";
+
+        private const string LogPrefix = "[JungleBooze hero basin] ";
+
+        public static List<string> Build()
+        {
+            var report = new List<string>();
+            HeroBasinConfigAsset h = EnsureConfig();
+            LookTestConfigAsset look = BuildLook(h);
+
+            var assets = new LookTestAssets();
+            var materials = new LookTestMaterials(look, assets, MaterialFolder);
+            var layout = new LookTestStretchLayout(look);
+            var batches = new LookTestBatchSet();
+            var ctx = new LookTestBuildContext(look, layout, batches);
+            Texture2D waterNormal = LookTestTextureGenerator.EnsureWaterNormal(look.Seed);
+            Texture2D mistTexture = LookTestTextureGenerator.EnsureMist();
+            Texture2D dapple = LookTestTextureGenerator.EnsureDapple(look.Seed);
+            materials.WaterFx = LookTestTextureGenerator.EnsureWaterFx(look.Seed);
+            Cubemap hdri = assets.FindHdri(look.SkyHdriId);
+
+            ctx.Ground = materials.Ground();
+            ctx.Rootstone = materials.Rootstone();
+            ctx.Boulder = materials.Boulder();
+            ctx.Bark = materials.Bark();
+            ctx.Leaves = materials.Leaves();
+            ctx.FarCanopy = materials.FarCanopy();
+            ctx.River = materials.River(waterNormal);
+            ctx.Waterfall = materials.Waterfall();
+            ctx.Pool = materials.Pool(waterNormal);
+            ctx.Pool.SetFloat("_ReflectionStrength", h.WaterReflection);
+            ctx.Pool.SetFloat("_Opacity", h.WaterOpacity);
+            ctx.Pool.SetFloat("_ShallowOpacity", h.WaterShallowOpacity);
+            ctx.Pool.SetFloat("_SpecularStrength", 0.3f);
+            ctx.Pool.SetFloat("_NormalStrength", 0.3f);
+            ctx.Waterfall.SetFloat("_Translucency", 0.45f);
+            ctx.Boulder.SetFloat("_MossAmount", 0.6f);
+            ctx.Boulder.SetFloat("_WetSmoothness", 0.5f);
+            ctx.Rootstone.SetFloat("_WetSmoothness", 0.5f);
+            EditorUtility.SetDirty(ctx.Rootstone);
+            ctx.Boulder.SetColor("_MossColor", new Color(0.26f, 0.38f, 0.13f, 1f));
+            ctx.Boulder.SetColor("_BaseColor", new Color(0.78f, 0.84f, 0.72f, 1f));
+            EditorUtility.SetDirty(ctx.Boulder);
+            ctx.Waterfall.SetFloat("_AmbientBoost", 1.0f);
+            EditorUtility.SetDirty(ctx.Waterfall);
+            ctx.Leaves.SetColor("_BaseColor", h.LeafTint);
+            ctx.Leaves.SetFloat("_Translucency", h.LeafTranslucency);
+            EditorUtility.SetDirty(ctx.Leaves);
+            EditorUtility.SetDirty(ctx.Pool);
+            ctx.MistCard = materials.MistCard(mistTexture);
+            ctx.LightShaft = materials.LightShaft();
+            ctx.LightShaft.SetVector("_NearFade", new Vector4(10f, 30f, 0f, 0f));
+            ctx.LightShaft.SetVector("_FarFade", new Vector4(260f, 420f, 0f, 0f));
+            EditorUtility.SetDirty(ctx.LightShaft);
+            Material sky = materials.Sky(hdri);
+            ctx.Kit = EnvironmentKit.Scan();
+            for (int i = 0; i < ctx.Kit.Pieces.Count; i++)
+            {
+                ctx.Kit.Pieces[i].Material = materials.ForEnvironmentPiece(ctx.Kit.Pieces[i]);
+                if (ctx.Kit.Pieces[i].Material != null && ctx.Kit.Pieces[i].Role == EnvironmentRole.HeroArch)
+                {
+                    ctx.Kit.Pieces[i].Material.SetColor("_BaseColor", h.ArchTint);
+                    ctx.Kit.Pieces[i].Material.SetFloat("_MossAmount", 0.55f);
+                    EditorUtility.SetDirty(ctx.Kit.Pieces[i].Material);
+                }
+            }
+
+            report.Add(ctx.Kit.Summary());
+            var plants = new PlantMaterials(materials, report);
+
+            ClearMeshes();
+            LookTestMeshAccumulator.ClearCache();
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            Light sun = LookTestSceneBuilder.CreateSun(look);
+            LookTestSceneBuilder.ApplyEnvironment(look, sky, sun);
+            Camera camera = LookTestSceneBuilder.CreateCamera(look);
+            camera.farClipPlane = h.FarClipM;
+            PoseCamera(camera, h, false, 2532f / 1170f);
+            LookTestSceneBuilder.CreateVolume(look, VolumePath);
+            var atmosphereObject = new GameObject("Atmosphere");
+            LookTestAtmosphere atmosphere = atmosphereObject.AddComponent<LookTestAtmosphere>();
+            atmosphere.Configure(look, dapple, sun);
+
+            var rng = new Pcg32Random((ulong)(uint)look.Seed, 4242UL);
+            var world = new HeroBasinWorld(ctx, h, plants, rng, camera.transform.position);
+            world.Build();
+            Backdrops(ctx, h, materials, camera.transform.position, report);
+
+            var root = new GameObject("HeroBasin").transform;
+            var groups = new Dictionary<int, Transform>();
+            string summary = batches.Emit(SaveMesh, (segment, group) =>
+            {
+                int key = segment * 16 + (int)group;
+                if (!groups.TryGetValue(key, out Transform t))
+                {
+                    t = new GameObject((segment < 0 ? "Backdrop " : "World ") + group).transform;
+                    t.SetParent(root, false);
+                    groups.Add(key, t);
+                }
+
+                return t;
+            });
+            report.Add(summary);
+
+            GameObject pista = PlacePista(h, report);
+            if (pista != null)
+            {
+                pista.transform.SetParent(root, true);
+            }
+
+            LookTestAssets.EnsureFolder(System.IO.Path.GetDirectoryName(ScenePath).Replace('\\', '/'));
+            EditorSceneManager.SaveScene(scene, ScenePath);
+            sky.SetFloat("_HorizonFog", 0f);
+            LookTestSceneBuilder.BakeEnvironment(look, hdri != null, report, LightingPath);
+            sky.SetFloat("_HorizonFog", 1f);
+            EditorUtility.SetDirty(sky);
+            atmosphere.Apply();
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene, ScenePath);
+            AssetDatabase.SaveAssets();
+            Debug.Log(LogPrefix + "Built " + ScenePath + System.Environment.NewLine + string.Join(System.Environment.NewLine, report));
+            return report;
+        }
+
+        public static HeroBasinConfigAsset EnsureConfig()
+        {
+            var config = AssetDatabase.LoadAssetAtPath<HeroBasinConfigAsset>(ConfigPath);
+            if (config != null)
+            {
+                return config;
+            }
+
+            LookTestAssets.EnsureFolder(ConfigFolder);
+            config = ScriptableObject.CreateInstance<HeroBasinConfigAsset>();
+            AssetDatabase.CreateAsset(config, ConfigPath);
+            AssetDatabase.SaveAssets();
+            return config;
+        }
+
+        /// <summary>Places the camera for the landscape (F4) or portrait (P1) frame.</summary>
+        public static void PoseCamera(Camera camera, HeroBasinConfigAsset h, bool portrait, float aspect)
+        {
+            camera.transform.SetPositionAndRotation(portrait ? h.PortraitPosition : h.LandscapePosition, Quaternion.Euler(portrait ? h.PortraitEuler : h.LandscapeEuler));
+            camera.fieldOfView = portrait ? h.PortraitFovDeg : h.LandscapeFovDeg;
+            camera.aspect = aspect;
+            camera.farClipPlane = h.FarClipM;
+        }
+
+        /// <summary>
+        /// The look config the shared shaders and materials read (sun, fog, grade, water), generated from the hero
+        /// config so the hero scene has one source of numbers and never changes the look test's own config.
+        /// </summary>
+        private static LookTestConfigAsset BuildLook(HeroBasinConfigAsset h)
+        {
+            var look = ScriptableObject.CreateInstance<LookTestConfigAsset>();
+            var so = new SerializedObject(look);
+            void F(string name, float value) => so.FindProperty(name).floatValue = value;
+            void C(string name, Color value) => so.FindProperty(name).colorValue = value;
+            F("_sunElevationDeg", h.SunElevationDeg);
+            F("_sunAzimuthDeg", h.SunAzimuthDeg);
+            C("_sunColor", h.SunColor);
+            F("_sunIntensity", h.SunIntensity);
+            F("_skyExposure", h.SkyExposure);
+            F("_ambientIntensity", h.AmbientIntensity);
+            F("_cameraFarClipM", h.FarClipM);
+            C("_fogColor", h.FogColor);
+            C("_fogSunColor", h.FogSunColor);
+            F("_fogDensity", h.FogDensity);
+            F("_fogHeightFalloff", h.FogHeightFalloff);
+            F("_fogBaseHeightM", h.FogBaseHeightM);
+            F("_fogStartM", h.FogStartM);
+            F("_fogMaxOpacity", h.FogMaxOpacity);
+            F("_fogSunPower", h.FogSunPower);
+            C("_mistColor", h.MistColor);
+            F("_mistOpacity", h.MistOpacity);
+            C("_shaftColor", h.ShaftColor);
+            F("_shaftIntensity", h.ShaftIntensity);
+            F("_postExposure", h.PostExposure);
+            F("_contrast", h.Contrast);
+            F("_saturation", h.Saturation);
+            F("_whiteBalanceTemperature", h.WhiteBalanceTemperature);
+            F("_whiteBalanceTint", h.WhiteBalanceTint);
+            C("_splitShadows", h.SplitShadows);
+            C("_splitHighlights", h.SplitHighlights);
+            F("_bloomThreshold", h.BloomThreshold);
+            F("_bloomIntensity", h.BloomIntensity);
+            F("_vignetteIntensity", h.VignetteIntensity);
+            C("_waterShallowColor", h.WaterShallowColor);
+            C("_waterDeepColor", h.WaterDeepColor);
+            so.ApplyModifiedPropertiesWithoutUndo();
+            LookTestAssets.EnsureFolder(ConfigFolder);
+            return LookTestAssets.SaveOrReplace(look, LookPath);
+        }
+
+        // ---------------------------------------------------------------- Backdrop layers
+
+        private static void Backdrops(LookTestBuildContext ctx, HeroBasinConfigAsset h, LookTestMaterials materials, Vector3 eye, List<string> report)
+        {
+            HeroBackdropLayer[] layers = h.Backdrops;
+            if (layers == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < layers.Length; i++)
+            {
+                HeroBackdropLayer layer = layers[i];
+                var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(EnvironmentAssetRules.BackdropsFolder + "/" + layer.Texture + ".png");
+                if (texture == null)
+                {
+                    report.Add("Backdrop layer missing: " + layer.Texture);
+                    continue;
+                }
+
+                EnsureClamp(texture);
+                Material m = materials.BackdropLayer(i.ToString("00") + "_" + layer.Texture, texture, (int)RenderQueue.Transparent - 150 + i, layer.FogShare, 0.08f);
+                m.SetFloat("_Exposure", layer.Exposure);
+                EditorUtility.SetDirty(m);
+                SourceSize(texture, out int sourceWidth, out int sourceHeight);
+                float heightDeg = layer.WidthDeg * sourceHeight / Mathf.Max(1f, sourceWidth);
+                Mesh card = SphereStrip(layer.DistanceM, layer.AzimuthDeg, layer.WidthDeg, layer.BaseElevationDeg, layer.BaseElevationDeg + heightDeg, layer.Mirror);
+                ctx.Batches.Get(LookTestBatchSet.Backdrop, "L5", "Layer " + i.ToString("00"), m, false, LookTestBatchSet.Group.Ground)
+                    .Append(card, Matrix4x4.Translate(eye), null);
+            }
+        }
+
+        /// <summary>A strip of a sphere around the origin (UV linear in azimuth and elevation), facing the origin.</summary>
+        public static Mesh SphereStrip(float radius, float azimuthDeg, float widthDeg, float bottomDeg, float topDeg, bool mirror)
+        {
+            const int columns = 24;
+            const int rows = 8;
+            var positions = new Vector3[columns + 1, rows + 1];
+            var frames = new LookTestMeshFactory.Frame[columns + 1, rows + 1];
+            var uvs = new Vector2[columns + 1, rows + 1];
+            var colors = new Color[columns + 1, rows + 1];
+            for (int i = 0; i <= columns; i++)
+            {
+                float u = (float)i / columns;
+                float az = (azimuthDeg + (u - 0.5f) * widthDeg) * Mathf.Deg2Rad;
+                for (int j = 0; j <= rows; j++)
+                {
+                    float v = (float)j / rows;
+                    float el = Mathf.Lerp(bottomDeg, topDeg, v) * Mathf.Deg2Rad;
+                    var dir = new Vector3(Mathf.Sin(az) * Mathf.Cos(el), Mathf.Sin(el), Mathf.Cos(az) * Mathf.Cos(el));
+                    positions[i, j] = dir * radius;
+                    frames[i, j] = new LookTestMeshFactory.Frame { Normal = -dir, Tangent = new Vector3(Mathf.Cos(az), 0f, -Mathf.Sin(az)), Bitangent = Vector3.up };
+                    uvs[i, j] = new Vector2(mirror ? 1f - u : u, v);
+                    colors[i, j] = Color.white;
+                }
+            }
+
+            return LookTestMeshFactory.Grid("BackdropLayer", positions, frames, uvs, colors);
+        }
+
+        private static void EnsureClamp(Texture2D texture)
+        {
+            string path = AssetDatabase.GetAssetPath(texture);
+            var importer = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (importer != null && (importer.wrapMode != TextureWrapMode.Clamp || !importer.alphaIsTransparency || importer.npotScale != TextureImporterNPOTScale.None))
+            {
+                importer.wrapMode = TextureWrapMode.Clamp;
+                importer.alphaIsTransparency = true;
+                importer.npotScale = TextureImporterNPOTScale.None;
+                importer.SaveAndReimport();
+            }
+        }
+
+        /// <summary>The painting's own pixel size (the imported texture may have been rescaled).</summary>
+        private static void SourceSize(Texture2D texture, out int width, out int height)
+        {
+            width = texture.width;
+            height = texture.height;
+            var importer = AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(texture)) as TextureImporter;
+            importer?.GetSourceTextureWidthAndHeight(out width, out height);
+        }
+
+        // ---------------------------------------------------------------- Pista
+
+        private static GameObject PlacePista(HeroBasinConfigAsset h, List<string> report)
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PistaPaths.Prefab);
+            if (prefab == null)
+            {
+                report.Add("Pista prefab missing (" + PistaPaths.Prefab + "): no character in the shot.");
+                return null;
+            }
+
+            var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            go.name = "Pista";
+            go.transform.SetPositionAndRotation(h.PistaPosition, Quaternion.Euler(0f, h.PistaYawDeg, 0f));
+            PoseIdle(go, h.PistaIdleTimeS);
+            return go;
+        }
+
+        /// <summary>Samples Pista's idle clip at <paramref name="time"/> (edit mode still pose).</summary>
+        public static bool PoseIdle(GameObject pista, float time)
+        {
+            AnimationClip idle = null;
+            foreach (Object asset in AssetDatabase.LoadAllAssetsAtPath(PistaPaths.Model))
+            {
+                if (asset is AnimationClip clip && !clip.name.StartsWith("__preview", System.StringComparison.Ordinal))
+                {
+                    string n = clip.name;
+                    if (n == "Idle" || n.EndsWith("|Idle", System.StringComparison.Ordinal))
+                    {
+                        idle = clip;
+                        break;
+                    }
+                }
+            }
+
+            if (idle == null)
+            {
+                return false;
+            }
+
+            idle.SampleAnimation(pista, Mathf.Repeat(time, Mathf.Max(0.01f, idle.length)));
+            return true;
+        }
+
+        // ---------------------------------------------------------------- Helpers
+
+        private static void ClearMeshes()
+        {
+            if (!AssetDatabase.IsValidFolder(MeshFolder))
+            {
+                return;
+            }
+
+            string[] guids = AssetDatabase.FindAssets("t:Mesh", new[] { MeshFolder });
+            var paths = new List<string>();
+            for (int i = 0; i < guids.Length; i++)
+            {
+                paths.Add(AssetDatabase.GUIDToAssetPath(guids[i]));
+            }
+
+            AssetDatabase.DeleteAssets(paths.ToArray(), new List<string>());
+        }
+
+        private static Mesh SaveMesh(Mesh mesh)
+        {
+            LookTestAssets.EnsureFolder(MeshFolder);
+            return LookTestAssets.SaveOrReplace(mesh, MeshFolder + "/" + mesh.name + ".asset");
+        }
+
+        /// <summary>The plant atlas materials (null when an atlas has not landed).</summary>
+        internal sealed class PlantMaterials
+        {
+            public PlantMaterials(LookTestMaterials materials, List<string> report)
+            {
+                Broadleaf = Atlas(materials, "FP_Broadleaf", 0.55f, new Color(0.92f, 1f, 0.88f, 1f), report);
+                Fronds = Atlas(materials, "FP_Fronds", 0.65f, new Color(0.88f, 1f, 0.84f, 1f), report);
+                Bellcap = Atlas(materials, "FP_Bellcap", 0.5f, Color.white, report);
+            }
+
+            public Material Broadleaf { get; }
+
+            public Material Fronds { get; }
+
+            public Material Bellcap { get; }
+
+            private static Material Atlas(LookTestMaterials materials, string name, float translucency, Color tint, List<string> report)
+            {
+                var baseColor = AssetDatabase.LoadAssetAtPath<Texture2D>(PlantsFolder + "/" + name + "_BaseColor.png");
+                var normal = AssetDatabase.LoadAssetAtPath<Texture2D>(PlantsFolder + "/" + name + "_Normal.png");
+                if (baseColor == null)
+                {
+                    report.Add("Plant atlas missing: " + name);
+                    return null;
+                }
+
+                EnsureCoverage(baseColor);
+                if (normal != null)
+                {
+                    var importer = AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(normal)) as TextureImporter;
+                    if (importer != null && importer.textureType != TextureImporterType.NormalMap)
+                    {
+                        importer.textureType = TextureImporterType.NormalMap;
+                        importer.SaveAndReimport();
+                    }
+                }
+
+                return materials.CardAtlas("Plant_" + name, baseColor, normal, translucency, tint);
+            }
+
+            private static void EnsureCoverage(Texture2D texture)
+            {
+                var importer = AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(texture)) as TextureImporter;
+                if (importer != null && !importer.mipMapsPreserveCoverage)
+                {
+                    importer.mipMapsPreserveCoverage = true;
+                    importer.alphaTestReferenceValue = 0.4f;
+                    importer.alphaIsTransparency = true;
+                    importer.SaveAndReimport();
+                }
+            }
+        }
+    }
+}

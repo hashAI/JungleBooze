@@ -122,7 +122,8 @@ namespace JungleBooze.App.LookTest
         [Tooltip("Water surface drop per m of lateral distance (the river runs down to the right, toward the valley).")]
         [SerializeField] private float _riverSlope = 0.03f;
         [SerializeField] private float _riverFlowSpeed = 0.45f;
-        [SerializeField] private float _waterfallFlowSpeed = 1.6f;
+        [Tooltip("Waterfall sheet fall speed, m/s (Waterfall.shader; layers vary it by 0.6-1.4x).")]
+        [SerializeField] private float _waterfallFlowSpeed = 9f;
 
         [Header("Scatter per 25 m segment (applies on Build Scene)")]
         [SerializeField] private int _wallClumpsPerSegment = 70;
@@ -146,6 +147,27 @@ namespace JungleBooze.App.LookTest
             new Vector3(20f, -10f, 1f), new Vector3(63f, 12f, 0.8f), new Vector3(116f, -15f, 1.1f), new Vector3(158f, -11f, 0.8f),
             new Vector3(100f, 16f, 0.7f),
         };
+        [Tooltip("Basin hero arch (F4/P1): feet as (forward, right) from the ledge at s = 190 for foot A (xy) and foot B (zw). " +
+                 "Far enough that portrait (top of frame about 20° above the camera) shows the whole arch.")]
+        [SerializeField] private Vector4 _basinArchFeet = new Vector4(92f, -40f, 106f, 40f);
+        [Tooltip("Basin hero arch: Bezier control height (world y) of the apex and tube radius at apex (x) and feet (y).")]
+        [SerializeField] private float _basinArchControlY = 98f;
+        [SerializeField] private Vector2 _basinArchRadiusM = new Vector2(5.5f, 10f);
+        [SerializeField] private float _heroFallWidthM = 13f;
+        [Tooltip("Tall rootstone pillars framing the basin vista (P1 top third): (forward, right, top world y, radius) from the ledge.")]
+        [SerializeField] private Vector4[] _basinPillars =
+        {
+            new Vector4(170f, 150f, 150f, 18f), new Vector4(240f, 70f, 120f, 15f), new Vector4(130f, 200f, 175f, 22f),
+            new Vector4(290f, 200f, 210f, 26f), new Vector4(230f, -40f, 185f, 20f), new Vector4(320f, 45f, 225f, 24f),
+            new Vector4(270f, -120f, 200f, 22f),
+        };
+        [Tooltip("Light shaft card width range, m.")]
+        [SerializeField] private Vector2 _shaftWidthM = new Vector2(3f, 5.5f);
+        [Tooltip("Backdrop layers (Art/Environment/Backdrops, farthest first): distance ahead of the runner, m.")]
+        [SerializeField] private float[] _backdropDistancesM = { 2300f, 1700f, 1200f, 800f, 600f, 450f };
+        [Tooltip("Backdrop layers: half the horizontal angle each card covers, degrees, and the world y of the card bottom.")]
+        [SerializeField] private float _backdropHalfAngleDeg = 72f;
+        [SerializeField] private float _backdropBaseY = -60f;
         [Tooltip("Light shafts: (s, d, length m). 2-4 per enclosed view, never across the near 10 m of the trail.")]
         [SerializeField] private Vector3[] _lightShafts =
         {
@@ -177,6 +199,20 @@ namespace JungleBooze.App.LookTest
         [SerializeField] private Vector3 _groundTileM = new Vector3(4.5f, 5f, 2.5f);
         [SerializeField] private float _rockTileM = 9f;
         [SerializeField] private float _barkTileM = 2f;
+        [Tooltip("Bark albedo tint (stiltwoods, roots): lighter and warmer than the scan, so roots never read as black beams.")]
+        [SerializeField] private Color _barkTint = new Color(1.25f, 1.15f, 1.0f, 1f);
+        [Tooltip("Moss on upward faces: bark, rootstone (0 = none, 1 = everything facing up).")]
+        [SerializeField] private float _barkMoss = 0.45f;
+        [SerializeField] private float _rootstoneMoss = 0.4f;
+        [SerializeField] private Color _mossColor = new Color(0.33f, 0.44f, 0.16f, 1f);
+        [Tooltip("Ground bounce on downward faces (rgb, a = strength): lifts root and arch undersides.")]
+        [SerializeField] private Color _groundBounce = new Color(0.55f, 0.50f, 0.34f, 0.9f);
+        [Tooltip("Rim sheen on bark and rootstone edges.")]
+        [SerializeField] private float _barkRim = 0.9f;
+        [SerializeField] private float _rootstoneRim = 0.5f;
+        [Tooltip("Wet rock near falls: albedo darkening (0..1) and smoothness.")]
+        [SerializeField] private float _wetDarken = 0.45f;
+        [SerializeField] private float _wetSmoothness = 0.78f;
 
         [Header("Light and sky (applies on Build Scene)")]
         [Tooltip("Sun elevation, degrees (ART_DIRECTION 4.1 / strategy 4.4: low, 25-35°).")]
@@ -222,7 +258,7 @@ namespace JungleBooze.App.LookTest
         [Tooltip("Tint of light under the canopy (filtered through leaves).")]
         [SerializeField] private Color _canopyTint = new Color(0.88f, 0.96f, 0.80f, 1f);
         [SerializeField] private Color _shaftColor = new Color(1f, 0.82f, 0.5f, 1f);
-        [SerializeField] private float _shaftIntensity = 0.55f;
+        [SerializeField] private float _shaftIntensity = 0.75f;
         [SerializeField] private Color _mistColor = new Color(0.86f, 0.92f, 0.94f, 1f);
         [SerializeField] private float _mistOpacity = 0.5f;
 
@@ -264,6 +300,12 @@ namespace JungleBooze.App.LookTest
         [SerializeField] private Color _waterDeepColor = new Color(0.05f, 0.42f, 0.46f, 1f);
         [SerializeField] private float _waterOpacity = 0.78f;
         [SerializeField] private float _waterNormalTilingPerM = 0.35f;
+        [Tooltip("Opacity of shallow water (the ford, pool rims): the bed shows through.")]
+        [SerializeField] private float _waterShallowOpacity = 0.42f;
+        [SerializeField] private Color _waterReflectionTint = new Color(0.78f, 0.93f, 0.96f, 1f);
+        [SerializeField] private float _waterFoamTilingPerM = 0.4f;
+        [SerializeField] private Color _waterfallColor = new Color(0.42f, 0.60f, 0.62f, 1f);
+        [SerializeField] private float _waterfallOpacity = 0.92f;
 
         [Header("Budget per view (ENVIRONMENT_STRATEGY 4.2, ADR 0004 Decision 7)")]
         [SerializeField] private int _mainDrawBudget = 250;
@@ -354,7 +396,16 @@ namespace JungleBooze.App.LookTest
         public float DetailRangeM => _detailRangeM;
 
         public Vector3[] Stiltwoods => _stiltwoods;
+        public Vector4 BasinArchFeet => _basinArchFeet;
+        public float BasinArchControlY => _basinArchControlY;
+        public Vector2 BasinArchRadiusM => _basinArchRadiusM;
+        public float HeroFallWidthM => _heroFallWidthM;
+        public Vector4[] BasinPillars => _basinPillars;
         public Vector3[] LightShafts => _lightShafts;
+        public Vector2 ShaftWidthM => _shaftWidthM;
+        public float[] BackdropDistancesM => _backdropDistancesM;
+        public float BackdropHalfAngleDeg => _backdropHalfAngleDeg;
+        public float BackdropBaseY => _backdropBaseY;
 
         public string SkyHdriId => _skyHdriId;
         public string ForestFloorTextureId => _forestFloorTextureId;
@@ -374,6 +425,15 @@ namespace JungleBooze.App.LookTest
         public Vector3 GroundTileM => _groundTileM;
         public float RockTileM => _rockTileM;
         public float BarkTileM => _barkTileM;
+        public Color BarkTint => _barkTint;
+        public float BarkMoss => _barkMoss;
+        public float RootstoneMoss => _rootstoneMoss;
+        public Color MossColor => _mossColor;
+        public Color GroundBounce => _groundBounce;
+        public float BarkRim => _barkRim;
+        public float RootstoneRim => _rootstoneRim;
+        public float WetDarken => _wetDarken;
+        public float WetSmoothness => _wetSmoothness;
 
         public float SunElevationDeg => _sunElevationDeg;
         public float SunAzimuthDeg => _sunAzimuthDeg;
@@ -435,6 +495,11 @@ namespace JungleBooze.App.LookTest
         public Color WaterDeepColor => _waterDeepColor;
         public float WaterOpacity => _waterOpacity;
         public float WaterNormalTilingPerM => _waterNormalTilingPerM;
+        public float WaterShallowOpacity => _waterShallowOpacity;
+        public Color WaterReflectionTint => _waterReflectionTint;
+        public float WaterFoamTilingPerM => _waterFoamTilingPerM;
+        public Color WaterfallColor => _waterfallColor;
+        public float WaterfallOpacity => _waterfallOpacity;
 
         public int MainDrawBudget => _mainDrawBudget;
         public int MainTriangleBudget => _mainTriangleBudget;

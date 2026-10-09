@@ -1,0 +1,108 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: FarCanopy
+  m_Shader: {fileID: 4800000, guid: 94b9305fceb14e1293433f4f941e84ce, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 1
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _AlphaMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _ArmMap:
+        m_Texture: {fileID: 2800000, guid: 368956b629bee44b3a869debdebd1277, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _BaseMap:
+        m_Texture: {fileID: 2800000, guid: 5d285e78df8c94229bdcaf00631adaf7, type: 3}
+        m_Scale: {x: 0.16666667, y: 0.16666667}
+        m_Offset: {x: 0, y: 0}
+    - _BumpMap:
+        m_Texture: {fileID: 2800000, guid: 0324879c6396d4c13879bd5a36dea33f, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DetailNormalMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Layer2ArmMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Layer2BumpMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Layer2Map:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Layer3ArmMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Layer3BumpMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Layer3Map:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _AlphaClip: 0
+    - _AlphaFromBaseA: 0
+    - _AlphaToMask: 0
+    - _BlendDepth: 0.2
+    - _BumpScale: 1
+    - _CanopyCover: 1
+    - _Cull: 2
+    - _Cutoff: 0.5
+    - _Detail: 0
+    - _DetailNormalScale: 0.3
+    - _DetailTiling: 1
+    - _HeightBlend: 0.5
+    - _Layers: 0
+    - _MetallicScale: 0
+    - _MossAmount: 0
+    - _OcclusionStrength: 1
+    - _RimStrength: 0
+    - _RoughnessScale: 1
+    - _Translucency: 0
+    - _VertexAO: 1
+    - _WetDarken: 0.45
+    - _WetFromVertexG: 0
+    - _WetSmoothness: 0.8
+    - _Wind: 0
+    - _WindHeightScale: 0.15
+    - _WindSpeed: 1
+    - _WindStrength: 0.1
+    - _WindVertexColor: 1
+    m_Colors:
+    - _BaseColor: {r: 0.36, g: 0.55, b: 0.3, a: 1}
+    - _BounceColor: {r: 0.45, g: 0.41999996, b: 0.29999998, a: 0}
+    - _Layer2Color: {r: 1, g: 1, b: 1, a: 1}
+    - _Layer3Color: {r: 1, g: 1, b: 1, a: 1}
+    - _MossColor: {r: 0.29999998, g: 0.39999998, b: 0.14999998, a: 1}
+    - _WindDirection: {r: 1, g: 0, b: 0.35, a: 0}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

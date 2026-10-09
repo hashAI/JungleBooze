@@ -140,7 +140,7 @@ MonoBehaviour:
   _fordDepthM: 0.15
   _riverSlope: 0.03
   _riverFlowSpeed: 0.45
-  _waterfallFlowSpeed: 1.6
+  _waterfallFlowSpeed: 9
   _wallClumpsPerSegment: 70
   _frameClumpsPerSegment: 4
   _canopyTreesPerSegment: 9
@@ -159,6 +159,28 @@ MonoBehaviour:
   - {x: 116, y: -15, z: 1.1}
   - {x: 158, y: -11, z: 0.8}
   - {x: 100, y: 16, z: 0.7}
+  _basinArchFeet: {x: 92, y: -40, z: 106, w: 40}
+  _basinArchControlY: 98
+  _basinArchRadiusM: {x: 5.5, y: 10}
+  _heroFallWidthM: 13
+  _basinPillars:
+  - {x: 170, y: 150, z: 150, w: 18}
+  - {x: 240, y: 70, z: 120, w: 15}
+  - {x: 130, y: 200, z: 175, w: 22}
+  - {x: 290, y: 200, z: 210, w: 26}
+  - {x: 230, y: -40, z: 185, w: 20}
+  - {x: 320, y: 45, z: 225, w: 24}
+  - {x: 270, y: -120, z: 200, w: 22}
+  _shaftWidthM: {x: 3, y: 5.5}
+  _backdropDistancesM:
+  - 2300
+  - 1700
+  - 1200
+  - 800
+  - 600
+  - 450
+  _backdropHalfAngleDeg: 72
+  _backdropBaseY: -60
   _lightShafts:
   - {x: 38, y: -3, z: 30}
   - {x: 44, y: 5, z: 26}
@@ -192,6 +214,15 @@ MonoBehaviour:
   _groundTileM: {x: 4.5, y: 5, z: 2.5}
   _rockTileM: 9
   _barkTileM: 2
+  _barkTint: {r: 1.25, g: 1.15, b: 1, a: 1}
+  _barkMoss: 0.45
+  _rootstoneMoss: 0.4
+  _mossColor: {r: 0.33, g: 0.44, b: 0.16, a: 1}
+  _groundBounce: {r: 0.55, g: 0.5, b: 0.34, a: 0.9}
+  _barkRim: 0.9
+  _rootstoneRim: 0.5
+  _wetDarken: 0.45
+  _wetSmoothness: 0.78
   _sunElevationDeg: 27
   _sunAzimuthDeg: -32
   _sunColor: {r: 1, g: 0.86, b: 0.66, a: 1}
@@ -218,7 +249,7 @@ MonoBehaviour:
   _canopyAmbient: 0.5
   _canopyTint: {r: 0.88, g: 0.96, b: 0.8, a: 1}
   _shaftColor: {r: 1, g: 0.82, b: 0.5, a: 1}
-  _shaftIntensity: 0.55
+  _shaftIntensity: 0.75
   _mistColor: {r: 0.86, g: 0.92, b: 0.94, a: 1}
   _mistOpacity: 0.5
   _hdr: 1
@@ -248,6 +279,11 @@ MonoBehaviour:
   _waterDeepColor: {r: 0.05, g: 0.42, b: 0.46, a: 1}
   _waterOpacity: 0.78
   _waterNormalTilingPerM: 0.35
+  _waterShallowOpacity: 0.42
+  _waterReflectionTint: {r: 0.78, g: 0.93, b: 0.96, a: 1}
+  _waterFoamTilingPerM: 0.4
+  _waterfallColor: {r: 0.42, g: 0.6, b: 0.62, a: 1}
+  _waterfallOpacity: 0.92
   _mainDrawBudget: 250
   _mainTriangleBudget: 350000
   _shadowDrawBudget: 100
