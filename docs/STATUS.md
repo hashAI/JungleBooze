@@ -19,7 +19,7 @@ animations (approved cap 150 credits). Then import rigged Pista into the LookTes
 `design/aurelia/LOOK_TEST_BRIEF.md`, screenshots to the owner, owner opens it on Mac + iPhone (P0-E).
 
 ## Snapshot / handoff (2026-10-09 ~14:30 IST)
-- **Look gate, waiting on the OWNER's style choice:** hero basin v3 ~64% of the realistic F4 keyframe (sent). Coordinator's rethink: realism stalls on organic density (~70% ceiling with AI + procedural). Options sent to owner: **B** realistic + buy a few pro nature packs (~$50–150, owner must approve; shortlist exact packs first), **D** painterly/stylized-realistic at no cost (OpenAI style test: `design/aurelia/keyframes/F4_f_painterly_openai.jpg`; Pista would need a light shading restyle), A keep going, C freelance artist. Coordinator recommends B. Don't start new environment work until the owner picks.
+- **Owner chose Option D (painterly / stylized-realistic) 2026-10-09.** Look gate target is now `design/aurelia/keyframes/F4_f_painterly_openai.jpg`. Earlier context: hero basin v3 ~64% of the realistic F4 keyframe (sent). Coordinator's rethink: realism stalls on organic density (~70% ceiling with AI + procedural). Options sent to owner: **B** realistic + buy a few pro nature packs (~$50–150, owner must approve; shortlist exact packs first), **D** painterly/stylized-realistic at no cost (OpenAI style test: `design/aurelia/keyframes/F4_f_painterly_openai.jpg`; Pista would need a light shading restyle), A keep going, C freelance artist. Coordinator recommends B. Don't start new environment work until the owner picks.
 - **Gameplay:** vertical slice parts A (9835543) and B (d58990d) committed; Expedition 1 fully playable in gray-box (bot 0 hits). Running: code-reviewer on the slice; asset-pipeline on Pista clips (Swim_Surface, Swim_Dive, Swim_Underwater, Swim_Leap, Vine_Release, Water_Wade, BalanceRun, Death fix, SlideEntry fix; cap 80 Meshy).
 - **Next:** fix review findings; wire new clips into PistaExpedition prefab; creature/vine visuals; then apply the chosen art style to the slice.
 - **Git LFS:** ~0.5 GB of GitHub's free 1 GB used; tell the owner before it runs out (~$5/mo per 50 GB).
@@ -135,6 +135,7 @@ Meshy: 3 (image edit test) + 30 (Pista 3D v1) = **33 credits used**; balance 2,4
 
 ## Log
 Newest first. One line per event.
+- 2026-10-09: Owner chose art style D: painterly / stylized-realistic. Launching art direction update, stylized shading, hand-painted re-texture of the hero kit.
 - 2026-10-09: Hero basin v3 ~64% sent; style options B/D presented with an OpenAI painterly test. Vertical slice part B committed. Launched slice code review.
 - 2026-10-09 13:31: Usage limit (reset 12:30) stopped all 3 agents (part B had EditMode 462/462; iteration 3 not yet implemented; swim clips mid-review). Resumed all three with their context.
 - 2026-10-09: Hero basin iteration 2 committed (~60%; HDR capture fix). Iteration 2 assets committed. Launched iteration 3.
