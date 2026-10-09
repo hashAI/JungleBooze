@@ -18,13 +18,37 @@ Baseline after the archive: all assemblies compile, EditMode 57/57 pass.
 animations (approved cap 150 credits). Then import rigged Pista into the LookTest scene, AI/CC0 environment props from
 `design/aurelia/LOOK_TEST_BRIEF.md`, screenshots to the owner, owner opens it on Mac + iPhone (P0-E).
 
-## Snapshot / handoff (2026-10-09 ~19:40 IST)
-- **Art style is FINAL: PAINTERLY (B), 2026-10-09** (do not revisit), with cheap tricks for the hard parts; must run at 60 fps on iPhone 12. Earlier context: Hero basin trials: realistic peaked ~64% (4eaf693), painterly v3 ~70% of `F4_f_painterly_openai.jpg` (latest commit; known gaps: arch reads as a flat bridge, white foam blobs on pools, stacked-slab pillars look like discs). Owner then asked for easier styles: concepts in `design/aurelia/keyframes/F4_style_{toon,lowpoly,clay}.jpg` (sheet sent). Coordinator recommends trying **C soft toon/cel-shaded** next (easiest to look great; Pista would need a stylized regen via Meshy ~30–60 credits). Wait for the owner's pick; then run one hero-scene trial in that style, or finish painterly if B is kept.
-- **Gameplay:** vertical slice complete in gray-box (A 9835543, B d58990d, review fixes d1f343b, vine camera fix latest; EditMode 510/510, PlayMode 20/20). Bot videos: /tmp/junglebooze-video/expedition_*.mp4 (regenerate with the Expedition video batch).
-- **UI issues for ui-engineer:** landscape results panel clips the top; coins line overflows; portrait distance overlaps the health bar; chunk debug labels visible in-world.
-- **Running:** asset-pipeline painterly stacked-slab pillars (feedback: look like pillows/discs; needs lush tops, moss, irregular slabs). Pause/redirect if the owner picks another style.
-- **Spend:** Meshy ~355 of 1,000 since 2026-10-09; OpenAI ~$3.5 of $75.
-- **Git:** LFS ~0.75 GB of free 1 GB; raw art in art_source/ is local-only. Pushes: run in background; `lfs.ssh.automultiplex=false` fixed hangs.
+## Handoff (2026-10-09 ~21:00 IST): OWNER GOAL = COMPLETE PHASES 0–3
+**Start of a new session:** read this note, `design/DECISIONS.md` (top rows), CLAUDE.md owner rules. Recreate the in-session
+resume watchdog (CronCreate, hourly at :17, prompt in the 2026-10-09 log; expires after 7 days) if it isn't listed by CronList.
+Keep the coordinator lean (short replies, delegate, hand off at ~40% context; the owner clears with /clear).
+
+**Decisions in force:** painterly style is FINAL (`design/aurelia/ART_DIRECTION_PAINTERLY.md`, target
+`design/aurelia/keyframes/F4_f_painterly_openai.jpg`); cheap tricks (painted cards/impostors/scrolling foam) for hard parts;
+**60 fps on iPhone 12 is a hard requirement**. Store name "Aurelia: Wildward". Budgets: Meshy 1,000 from 2026-10-09 (~355
+used), OpenAI images $75 (~$4 used); everything else needs the owner's OK. Git LFS free 1 GB (~0.75 used): raw art local-only.
+**Pending owner answers:** (1) audio: ElevenLabs Creator ~$22/month (recommended) vs free CC0; (2) owner's iPhone model + the
+5-minute device setup for the benchmark build (performance-engineer writes the steps).
+
+**Agents running at handoff time (if a new session starts before they report, check their outputs/files and relaunch):**
+tech-architect painterly v4 (arch via 3D + painted cards, painted scrolling foam, pillar impostors, overdraw cuts, quality tiers)
+→ /tmp/junglebooze-hero/F4_compare_painterly_v4.jpg; performance-engineer iPhone 12 readiness (device bench build + soak,
+offline GPU/overdraw analysis, docs/perf/2026-10-iphone12-readiness.md); ui-engineer real painterly UI (home, HUD, pause/settings,
+results, toasts, layout bug fixes; screenshots /tmp/junglebooze-ui/); asset-pipeline painterly forest kit
+(Art/Environment/{Forest,Obstacles,Creatures}, sailback; caps Meshy 200, OpenAI $10); game-designer spec 104 MVP content.
+
+**Plan to complete Phases 0–3 (in order; parallelize within a step; review + commit after each report):**
+- **Phase 0 Look:** v4 → owner approves the hero render; device benchmark on the owner's iPhone (60 fps, 10-min soak, thermals).
+- **Phase 1 Feel:** phone build of Expedition → owner plays; tune controls/camera from feedback; haptics verified on device.
+- **Phase 2 Vertical slice:** (a) world art pass: apply the painterly forest kit to all 15 slice chunks (tech-architect +
+  asset-pipeline), path/obstacle readability check at speed; (b) UI (running) + review; (c) audio after the owner's budget answer
+  (audio-director: ambience per biome, SFX, adaptive music, haptic pairing); (d) VFX (splash, foam, pickup, discovery, dust);
+  (e) sailback in-game with behavior; (f) code-review + qa-engineer test plan and play-test script; (g) phone build → owner check
+  "5 testers say let me try again" (Blueprint Part LV).
+- **Phase 3 MVP:** implement spec 104 (game-designer → gameplay-engineer): 12–15 chunks total, 2 more creatures (art-director
+  concepts → asset-pipeline), journal UI + 10–15 discoveries, 5–8 abilities, 3 power-ups, basic DDA, endless continuation;
+  balance-simulator economy/difficulty sims; full art for every chunk; audio for all; performance pass on device; QA regression;
+  App Store compliance re-check. Owner check: "wants to play daily".
 
 ## Current milestone
 **LOOK GATE (owner, 2026-10-09):** no further scenes/environment content until the owner approves the final render of the waterfall-basin hero scene. Gameplay systems continue in gray-box.
@@ -136,6 +160,7 @@ Meshy: 3 (image edit test) + 30 (Pista 3D v1) = **33 credits used**; balance 2,4
 
 ## Log
 Newest first. One line per event.
+- 2026-10-09 ~21:00: Owner: complete Phases 0–3 and keep context lean. Handoff note + Phase 0–3 plan written; hand off once the 5 running agents report.
 - 2026-10-09: Painterly FINAL. Owner: start building the remaining parts. Launched ui-engineer (real UI), asset-pipeline (painterly forest kit + sailback), game-designer (spec 104 MVP content); tech-architect (painterly v4) and performance-engineer (iPhone 12) running.
 - 2026-10-09: Owner chose painterly (B); tricks for arch/foam/pillars; hard requirement iPhone 12. Launching painterly v4 (tricks) + performance-engineer (iPhone 12 readiness).
 - 2026-10-09: Painterly v3 ~70% sent. Owner asked for easier styles; sent A–E concept sheet (toon, low-poly, clay new; ~$0.22). Vine camera fix committed. Waiting for owner's style pick.
