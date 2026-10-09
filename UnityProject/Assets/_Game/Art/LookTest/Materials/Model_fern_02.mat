@@ -72,6 +72,7 @@ Material:
     - _AlphaToMask: 1
     - _BlendDepth: 0.2
     - _BumpScale: 1
+    - _CanopyCover: 1
     - _Cull: 0
     - _Cutoff: 0.45
     - _HeightBlend: 0.5
@@ -85,6 +86,7 @@ Material:
     - _WindHeightScale: 0.6
     - _WindSpeed: 1
     - _WindStrength: 0.12
+    - _WindVertexColor: 1
     m_Colors:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
     - _Layer2Color: {r: 1, g: 1, b: 1, a: 1}

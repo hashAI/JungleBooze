@@ -8,7 +8,6 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering;
-using Unity.Profiling;
 using Object = UnityEngine.Object;
 
 namespace JungleBooze.Editor.LookTest
@@ -17,26 +16,19 @@ namespace JungleBooze.Editor.LookTest
     /// Batch-mode entry points for the look test (ADR 0004), run by <c>tools/ci/unity.sh method</c>:
     ///
     ///   JungleBooze.Editor.LookTest.LookTestBatch.BuildScene      builds Assets/_Game/Scenes/LookTest.unity
-    ///   JungleBooze.Editor.LookTest.LookTestBatch.CaptureShots    renders the game camera to PNG files
-    ///       [-jbShotsOut /tmp/junglebooze-shots] [-jbShotDistances 20,80,124,190] [-jbShotSizes 2532x1170,1170x2532]
+    ///   JungleBooze.Editor.LookTest.LookTestBatch.CaptureShots    renders the config's shot list to PNG files
+    ///       [-jbShotsOut /tmp/junglebooze-shots] [-jbShotFilter F1] [-jbShotScale 0.5]
     ///   JungleBooze.Editor.LookTest.LookTestBatch.UseLookTestBuildSettings   look test first scene, landscape
     ///
     /// CaptureShots needs a GPU: run Unity without -nographics. It places the stand-in runner and the camera exactly
     /// as <see cref="LookTestRoot"/> does at Play (<see cref="LookTestCameraRig"/>), renders each frame with MSAA 4x,
-    /// and writes <c>stats.txt</c> next to the images: Unity's render counters for the frame (batches, draw calls,
-    /// SetPass calls, triangles) plus a CPU-side count of visible renderers. The scene file is never saved.
+    /// and writes <c>stats.txt</c> next to the images: per budget layer, the draws and triangles of the renderers in
+    /// view and an estimate of the shadow pass (<see cref="LookTestFrameBudget"/>). The scene file is never saved.
     /// </summary>
     public static class LookTestBatch
     {
         private const string LogPrefix = "[JungleBooze] ";
         private const string DefaultOut = "/tmp/junglebooze-shots";
-        private static readonly float[] DefaultDistances = { 20f, 80f, 124f, 190f };
-
-        private static readonly string[] RenderCounters =
-        {
-            "Batches Count", "Draw Calls Count", "SetPass Calls Count", "Triangles Count", "Vertices Count", "Shadow Casters Count",
-        };
-
         public static void BuildScene()
         {
             int code = 0;
@@ -112,9 +104,10 @@ namespace JungleBooze.Editor.LookTest
             {
                 string[] args = Environment.GetCommandLineArgs();
                 string outDir = Arg(args, "-jbShotsOut") ?? DefaultOut;
-                float[] distances = ParseDistances(Arg(args, "-jbShotDistances")) ?? DefaultDistances;
-                List<Vector2Int> sizes = ParseSizes(Arg(args, "-jbShotSizes") ?? "2532x1170,1170x2532");
-                code = Capture(outDir, distances, sizes);
+                string only = Arg(args, "-jbShotFilter");
+                string scale = Arg(args, "-jbShotScale");
+                float sizeScale = string.IsNullOrEmpty(scale) ? 1f : float.Parse(scale, CultureInfo.InvariantCulture);
+                code = Capture(outDir, only, sizeScale);
             }
             catch (Exception exception)
             {
@@ -125,7 +118,7 @@ namespace JungleBooze.Editor.LookTest
             Exit(code);
         }
 
-        private static int Capture(string outDir, float[] distances, List<Vector2Int> sizes)
+        private static int Capture(string outDir, string filter, float sizeScale)
         {
             if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null)
             {
@@ -145,6 +138,7 @@ namespace JungleBooze.Editor.LookTest
             var config = (LookTestConfigAsset)so.FindProperty("_config").objectReferenceValue;
             var camera = (Camera)so.FindProperty("_camera").objectReferenceValue;
             var stretch = (Transform)so.FindProperty("_stretchRoot").objectReferenceValue;
+            var backdrop = (Transform)so.FindProperty("_backdrop").objectReferenceValue;
             SerializedProperty segmentsProperty = so.FindProperty("_segments");
             var segments = new Transform[segmentsProperty.arraySize];
             for (int i = 0; i < segments.Length; i++)
@@ -152,13 +146,28 @@ namespace JungleBooze.Editor.LookTest
                 segments[i] = (Transform)segmentsProperty.GetArrayElementAtIndex(i).objectReferenceValue;
             }
 
+            LookTestAtmosphere atmosphere = Object.FindFirstObjectByType<LookTestAtmosphere>();
+            if (atmosphere != null)
+            {
+                atmosphere.Apply();
+            }
+
+            LookTestPath path = config.CreatePath();
             LookTestWorldView world = stretch.GetComponent<LookTestWorldView>();
             if (world == null)
             {
                 world = stretch.gameObject.AddComponent<LookTestWorldView>();
             }
 
-            world.Init(segments, config.LoopLengthM, config.RecycleBehindM);
+            world.Init(segments, config.LoopLengthM, path.LoopOffset, config.RecycleBehindM, backdrop);
+            SerializedProperty detailProperty = so.FindProperty("_detailGroups");
+            var detail = new GameObject[detailProperty.arraySize];
+            for (int i = 0; i < detail.Length; i++)
+            {
+                detail[i] = (GameObject)detailProperty.GetArrayElementAtIndex(i).objectReferenceValue;
+            }
+
+            world.InitDetail(detail, config.DetailRangeM);
             Transform runner = LookTestRoot.CreateStandIn(root.transform);
 
             foreach (ParticleSystem particles in Object.FindObjectsByType<ParticleSystem>(FindObjectsSortMode.None))
@@ -168,30 +177,38 @@ namespace JungleBooze.Editor.LookTest
 
             Directory.CreateDirectory(outDir);
             var stats = new StringBuilder();
-            stats.AppendLine("Look test frame stats (editor, " + SystemInfo.graphicsDeviceName + ", " + SystemInfo.graphicsDeviceType + ")");
-            stats.AppendLine("Columns: shot | Unity counters: batches, draw calls, SetPass, triangles, vertices, shadow casters | CPU count: visible renderers, visible triangles");
+            stats.AppendLine("Look test v2 frame stats (editor, " + SystemInfo.graphicsDeviceName + ", " + SystemInfo.graphicsDeviceType + ")");
+            stats.AppendLine("Main view: renderers in the frustum (each merged renderer = 1 draw with the SRP Batcher). Shadow pass: casters within the shadow distance " +
+                             "(estimate). Budget: " + config.MainDrawBudget + " + " + config.ShadowDrawBudget + " draws, " +
+                             config.MainTriangleBudget.ToString("N0", CultureInfo.InvariantCulture) + " + " + config.ShadowTriangleBudget.ToString("N0", CultureInfo.InvariantCulture) + " tris.");
 
-            for (int s = 0; s < sizes.Count; s++)
+            LookTestShot[] shots = config.Shots;
+            for (int i = 0; i < shots.Length; i++)
             {
-                Vector2Int size = sizes[s];
-                string orientation = size.x >= size.y ? "landscape" : "portrait";
-                for (int d = 0; d < distances.Length; d++)
+                LookTestShot shot = shots[i];
+                if (!string.IsNullOrEmpty(filter) && shot.Name.IndexOf(filter, StringComparison.OrdinalIgnoreCase) < 0)
                 {
-                    float distance = distances[d];
-                    float runTime = distance / Mathf.Max(0.1f, config.RunSpeedMps);
-                    float x = LookTestCameraRig.RunnerX(runTime);
-                    world.Render(distance);
-                    runner.localPosition = LookTestCameraRig.RunnerPosition(runTime, distance);
-                    camera.transform.position = LookTestCameraRig.CameraTarget(config, x, distance);
-                    camera.aspect = (float)size.x / size.y;
-                    camera.transform.LookAt(LookTestCameraRig.LookAtPoint(config, x, distance, camera.aspect));
-                    camera.fieldOfView = LookTestCameraRig.VerticalFov(config, camera.aspect);
-
-                    string name = string.Format(CultureInfo.InvariantCulture, "{0}_{1:000}m", orientation, distance);
-                    string counters = RenderToPng(camera, size, Path.Combine(outDir, name + ".png"));
-                    string visible = CountVisible(camera);
-                    stats.AppendLine(name + " | " + counters + " | " + visible);
+                    continue;
                 }
+
+                var size = shot.Portrait ? new Vector2Int(1170, 2532) : new Vector2Int(2532, 1170);
+                size = new Vector2Int(Mathf.RoundToInt(size.x * sizeScale), Mathf.RoundToInt(size.y * sizeScale));
+                double s = shot.DistanceM;
+                float runTime = shot.DistanceM / Mathf.Max(0.1f, config.RunSpeedMps);
+                float x = LookTestCameraRig.RunnerX(runTime);
+                world.Render(s);
+                runner.localPosition = LookTestCameraRig.RunnerPosition(path, s, x);
+                runner.localRotation = Quaternion.Euler(0f, path.HeadingRad(s) * Mathf.Rad2Deg, 0f);
+                camera.aspect = (float)size.x / size.y;
+                LookTestCameraProfile profile = LookTestCameraRig.Profile(config, camera.aspect);
+                LookTestCameraRig.Pose(path, profile, s, x, out Vector3 position, out Quaternion rotation);
+                camera.transform.SetPositionAndRotation(position, rotation);
+                camera.fieldOfView = profile.VerticalFovDeg;
+
+                RenderToPng(camera, size, Path.Combine(outDir, shot.Name + ".png"));
+                stats.AppendLine();
+                stats.Append(shot.Name).Append(" (s = ").Append(shot.DistanceM.ToString("0", CultureInfo.InvariantCulture)).AppendLine(" m)");
+                stats.Append(LookTestFrameBudget.Measure(camera, config));
             }
 
             camera.ResetAspect();
@@ -200,7 +217,7 @@ namespace JungleBooze.Editor.LookTest
             return 0;
         }
 
-        private static string RenderToPng(Camera camera, Vector2Int size, string path)
+        private static void RenderToPng(Camera camera, Vector2Int size, string path)
         {
             var descriptor = new RenderTextureDescriptor(size.x, size.y, RenderTextureFormat.ARGB32, 24)
             {
@@ -212,25 +229,9 @@ namespace JungleBooze.Editor.LookTest
             RenderTexture previous = RenderTexture.active;
             camera.targetTexture = target;
 
-            // Twice: the first render warms up shader variants and the shadow map; the second is measured.
+            // Twice: the first render warms up shader variants and the shadow map.
             camera.Render();
-            var recorders = new ProfilerRecorder[RenderCounters.Length];
-            for (int i = 0; i < recorders.Length; i++)
-            {
-                recorders[i] = ProfilerRecorder.StartNew(ProfilerCategory.Render, RenderCounters[i]);
-            }
-
             camera.Render();
-            var counterText = new StringBuilder();
-            for (int i = 0; i < recorders.Length; i++)
-            {
-                long value = recorders[i].Valid ? recorders[i].CurrentValue : -1L;
-                long last = recorders[i].Valid ? recorders[i].LastValue : -1L;
-                counterText.Append(RenderCounters[i]).Append(' ').Append(Math.Max(value, last).ToString("N0", CultureInfo.InvariantCulture)).Append(", ");
-                recorders[i].Dispose();
-            }
-
-            string counters = counterText.ToString().TrimEnd(',', ' ');
 
             var resolved = RenderTexture.GetTemporary(size.x, size.y, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
             Graphics.Blit(target, resolved);
@@ -246,62 +247,6 @@ namespace JungleBooze.Editor.LookTest
             target.Release();
             Object.DestroyImmediate(target);
             Object.DestroyImmediate(image);
-            return counters;
-        }
-
-        /// <summary>Renderers inside the view frustum and not culled by their LODGroup, and their triangles.</summary>
-        private static string CountVisible(Camera camera)
-        {
-            Plane[] planes = GeometryUtility.CalculateFrustumPlanes(camera);
-            var culledByLod = new HashSet<Renderer>();
-            float halfTan = Mathf.Tan(camera.fieldOfView * 0.5f * Mathf.Deg2Rad);
-            foreach (LODGroup group in Object.FindObjectsByType<LODGroup>(FindObjectsSortMode.None))
-            {
-                LOD[] lods = group.GetLODs();
-                if (lods.Length == 0)
-                {
-                    continue;
-                }
-
-                Vector3 center = group.transform.TransformPoint(group.localReferencePoint);
-                Vector3 scale = group.transform.lossyScale;
-                float worldSize = group.size * Mathf.Max(Mathf.Abs(scale.x), Mathf.Max(Mathf.Abs(scale.y), Mathf.Abs(scale.z)));
-                float distance = Vector3.Distance(camera.transform.position, center);
-                float relative = worldSize / Mathf.Max(0.001f, 2f * distance * halfTan) * QualitySettings.lodBias;
-                if (relative < lods[lods.Length - 1].screenRelativeTransitionHeight)
-                {
-                    foreach (Renderer r in lods[lods.Length - 1].renderers)
-                    {
-                        culledByLod.Add(r);
-                    }
-                }
-            }
-
-            int count = 0;
-            long tris = 0;
-            foreach (MeshRenderer renderer in Object.FindObjectsByType<MeshRenderer>(FindObjectsSortMode.None))
-            {
-                if (!renderer.enabled || !renderer.gameObject.activeInHierarchy || culledByLod.Contains(renderer))
-                {
-                    continue;
-                }
-
-                if (!GeometryUtility.TestPlanesAABB(planes, renderer.bounds))
-                {
-                    continue;
-                }
-
-                MeshFilter filter = renderer.GetComponent<MeshFilter>();
-                if (filter == null || filter.sharedMesh == null)
-                {
-                    continue;
-                }
-
-                count++;
-                tris += LookTestMeshFactory.TriangleCount(filter.sharedMesh);
-            }
-
-            return string.Format(CultureInfo.InvariantCulture, "visible renderers {0}, visible tris {1:N0}", count, tris);
         }
 
         private static string Arg(string[] args, string name)
@@ -315,35 +260,6 @@ namespace JungleBooze.Editor.LookTest
             }
 
             return null;
-        }
-
-        private static float[] ParseDistances(string text)
-        {
-            if (string.IsNullOrEmpty(text))
-            {
-                return null;
-            }
-
-            string[] parts = text.Split(',');
-            var result = new float[parts.Length];
-            for (int i = 0; i < parts.Length; i++)
-            {
-                result[i] = float.Parse(parts[i].Trim(), CultureInfo.InvariantCulture);
-            }
-
-            return result;
-        }
-
-        private static List<Vector2Int> ParseSizes(string text)
-        {
-            var result = new List<Vector2Int>();
-            foreach (string part in text.Split(','))
-            {
-                string[] wh = part.Trim().Split('x');
-                result.Add(new Vector2Int(int.Parse(wh[0], CultureInfo.InvariantCulture), int.Parse(wh[1], CultureInfo.InvariantCulture)));
-            }
-
-            return result;
         }
 
         private static void Exit(int code)

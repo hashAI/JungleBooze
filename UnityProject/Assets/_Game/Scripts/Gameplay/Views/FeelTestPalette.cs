@@ -25,5 +25,8 @@ namespace JungleBooze.Gameplay.Views
         public Material DebugRunner;
         public Material DebugTarget;
         public Material Marker;
+
+        /// <summary>Edge-brush leaf particles (URP Particles/Simple Lit, vertex colour).</summary>
+        public Material Leaf;
     }
 }

@@ -26,10 +26,10 @@ Shader "JungleBooze/Mist"
             #pragma target 3.0
             #pragma vertex Vert
             #pragma fragment Frag
-            #pragma multi_compile_fog
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "JBAtmosphere.hlsl"
 
             CBUFFER_START(UnityPerMaterial)
                 float4 _BaseMap_ST;
@@ -51,16 +51,16 @@ Shader "JungleBooze/Mist"
                 float4 positionCS : SV_POSITION;
                 float2 uv : TEXCOORD0;
                 half4 color : TEXCOORD1;
-                half fogFactor : TEXCOORD2;
+                float3 positionWS : TEXCOORD2;
             };
 
             Varyings Vert(Attributes input)
             {
                 Varyings output;
-                output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
+                output.positionWS = TransformObjectToWorld(input.positionOS.xyz);
+                output.positionCS = TransformWorldToHClip(output.positionWS);
                 output.uv = TRANSFORM_TEX(input.uv, _BaseMap);
                 output.color = input.color * _BaseColor;
-                output.fogFactor = ComputeFogFactor(output.positionCS.z);
                 return output;
             }
 
@@ -68,7 +68,7 @@ Shader "JungleBooze/Mist"
             {
                 half4 tex = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, input.uv);
                 half3 light = SampleSH(half3(0.0h, 1.0h, 0.0h)) * _AmbientBoost;
-                half3 color = MixFog(tex.rgb * input.color.rgb * light, input.fogFactor);
+                half3 color = JBApplyFog(tex.rgb * input.color.rgb * light, input.positionWS);
                 return half4(color, tex.a * input.color.a);
             }
             ENDHLSL

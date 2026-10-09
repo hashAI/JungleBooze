@@ -280,3 +280,8 @@ pipeline), (3) GPU Resident Drawer only if (1) is not enough (it needs Forward+)
   - Update `docs/ARCHITECTURE.md` section 10 budgets after P0-E (done provisionally now).
   - Wind vertex-color convention goes into the asset-pipeline export checklist.
   - Evaluate Unity 6 import-time Mesh LOD on CC0 scans; FSR 1 upscaling A/B on device.
+
+## Update 2026-10-09: look test v2
+Graybox v2 (curved, climbing 225 m loop, per-segment merging, height fog with sun in-scatter, canopy light) is
+recorded in ADR 0007. Editor estimate per view: 59–95 draws and 206k–277k triangles (was 810–930 draws and
+0.71–0.81 M triangles); shadow pass 10–14 draws. Device numbers are still pending (P0-E).

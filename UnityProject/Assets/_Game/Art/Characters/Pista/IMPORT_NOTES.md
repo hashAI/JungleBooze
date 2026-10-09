@@ -62,3 +62,19 @@ Material: URP/Lit `M_Pista` (extract from the FBX or create): Base Map = BaseCol
 ground would put the cadence at 6–7.5 steps/s, which looks frantic. Recommended start: Run speed multiplier **1.3**
 (4.9 steps/s, ~6.5 m/s stride). The remaining mismatch is along the camera axis, so it is hard to see from the chase
 camera. Run_Alt at 1.3x matches ~8.8 m/s if the faster look is preferred. Tune it on device.
+
+## Unity import, verified 2026-10-09 (gameplay-engineer)
+Applied by `JungleBooze > Characters > Configure Pista Import` / `Build Pista Prefab` (`Assets/_Game/Editor/Characters/`):
+- **Humanoid** avatar is valid. The bone map is set explicitly (Meshy spine order) and the reference pose is a computed
+  T-pose (arms out, legs straight), the scripted equivalent of Enforce T-Pose. Optimize Game Objects stays **off**:
+  the procedural lean and the ponytail spring write bone transforms after the Animator.
+- Clips renamed (no `Armature|`). Loops keep their in-place sway; one-shots (Jump, Slide, Stumble, Land, Death) drop
+  horizontal body drift (Root XZ not baked, root motion off), Jump/Fall also drop vertical drift (the simulation's arc
+  owns height). Extra sub-clip `Land_Run` = Land frames 0–20 (used for hard landings).
+- `M_Pista` (URP/Lit) is remapped onto the FBX: Base, Normal, MetallicSmoothness (smoothness from metallic alpha),
+  Occlusion (G). Data maps imported with sRGB off; iOS ASTC 4x4 / 5x5 / 6x6 / 8x8, max 2048.
+- Runtime prefab: `Assets/_Game/Prefabs/Characters/Pista.prefab` (`AnimatedRunnerAvatar` + `Pista.controller`).
+  Tuning: `Assets/_Game/Config/Movement/RunnerAnimationConfig.asset`.
+- Run vs Run_Alt: Run is used at 10–16 m/s with a contact-phase time warp (planted foot measured at 0.2–0.5 m/s world
+  speed, 5.6–6.4 steps/s, `PistaSkateProbe`). Run_Alt is a wide-armed, deeply pitched sprint that doesn't match
+  ART_DIRECTION 7.5; it can be mixed in with `SprintBlendMax`.

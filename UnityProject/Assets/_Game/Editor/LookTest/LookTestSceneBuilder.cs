@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using JungleBooze.App.LookTest;
-using JungleBooze.Core;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -13,14 +12,14 @@ using UnityEngine.SceneManagement;
 namespace JungleBooze.Editor.LookTest
 {
     /// <summary>
-    /// JungleBooze > Look Test > Build Scene (ADR 0004): builds <see cref="ScenePath"/> from the CC0 assets and
-    /// <see cref="LookTestConfigAsset"/>:
-    /// URP-Realistic pipeline, HDRI sky (ambient and reflections baked from it, no lightmaps), sun with soft
-    /// shadows, exponential fog, a global post-processing volume (ACES, grading, bloom, vignette), and a looping
-    /// ~200 m stretch in segments: ground with blended path / forest floor / river pebbles, a river with scrolling
-    /// normals, a cliff with a waterfall and mist, procedural trees with leaf-card crowns, CC0 ferns, plants and
-    /// rocks, procedural boulders. Placement is seeded (same config = same scene). The LookTestRoot component
-    /// runs Pista (stand-in) through it at Play. Running it again replaces the scene and its generated assets.
+    /// JungleBooze > Look Test > Build Scene (ADR 0004; look test v2 per design/aurelia/ENVIRONMENT_STRATEGY.md,
+    /// build-order steps 2 and 3): builds <see cref="ScenePath"/> from <see cref="LookTestConfigAsset"/>:
+    /// URP-Realistic pipeline, low backlighting sun, HDRI sky (ambient and reflections baked from it, no lightmaps),
+    /// the atmosphere (height fog with sun in-scatter, canopy light; <see cref="LookTestAtmosphere"/>), the graded
+    /// post-processing volume, and the curved, climbing 225 m loop in 25 m segments. Every segment is merged into
+    /// one mesh per budget layer and material (<see cref="LookTestBatchSet"/>), so draw calls are known before any
+    /// art goes in. Placement is seeded (same config = same scene). Running it again replaces the scene and its
+    /// generated meshes (Assets/_Game/Art/LookTest/Meshes is cleared first).
     /// </summary>
     public static class LookTestSceneBuilder
     {
@@ -32,16 +31,6 @@ namespace JungleBooze.Editor.LookTest
         public const string MeshFolder = "Assets/_Game/Art/LookTest/Meshes";
 
         private const string LogPrefix = "[JungleBooze look test] ";
-        private const int TrunkVariants = 6;
-        private const int BoulderVariants = 6;
-        private const float TrunkReferenceHeightM = 24f;
-
-        // Random stream ids for scatter (editor only; fixed so a config always gives the same scene).
-        private const ulong TreeStream = 11UL;
-        private const ulong RockStream = 12UL;
-        private const ulong FernStream = 13UL;
-        private const ulong PlantStream = 14UL;
-        private const ulong VariantStream = 15UL;
 
         public static void Build()
         {
@@ -52,7 +41,7 @@ namespace JungleBooze.Editor.LookTest
 
             LookTestConfigAsset config = EnsureConfig();
             var report = new List<string>();
-            var tris = new SortedDictionary<string, long>();
+            string batchSummary = string.Empty;
 
             try
             {
@@ -62,31 +51,42 @@ namespace JungleBooze.Editor.LookTest
                 EditorUtility.DisplayProgressBar("Look test", "Materials", 0.15f);
                 var assets = new LookTestAssets();
                 var materials = new LookTestMaterials(config, assets);
-                var shape = new LookTestTerrainShape(config);
+                var layout = new LookTestStretchLayout(config);
+                var batches = new LookTestBatchSet();
+                var ctx = new LookTestBuildContext(config, layout, batches);
                 Texture2D waterNormal = LookTestTextureGenerator.EnsureWaterNormal(config.Seed);
                 Texture2D mistTexture = LookTestTextureGenerator.EnsureMist();
+                Texture2D dapple = LookTestTextureGenerator.EnsureDapple(config.Seed);
                 Cubemap hdri = assets.FindHdri(config.SkyHdriId);
 
-                Material groundMaterial = materials.Ground();
-                Material cliffMaterial = materials.Cliff();
-                Material boulderMaterial = materials.Boulder();
-                Material barkMaterial = materials.Bark();
-                Material leafMaterial = materials.Leaves();
-                Material riverMaterial = materials.River(waterNormal);
-                Material waterfallMaterial = materials.Waterfall(waterNormal);
-                Material mistMaterial = materials.Mist(mistTexture);
+                ctx.Ground = materials.Ground();
+                ctx.Rootstone = materials.Rootstone();
+                ctx.Boulder = materials.Boulder();
+                ctx.Bark = materials.Bark();
+                ctx.Leaves = materials.Leaves();
+                ctx.FarCanopy = materials.FarCanopy();
+                ctx.River = materials.River(waterNormal);
+                ctx.Waterfall = materials.Waterfall(waterNormal);
+                ctx.Pool = materials.Pool(waterNormal);
+                ctx.MistCard = materials.MistCard(mistTexture);
+                ctx.LightShaft = materials.LightShaft();
                 Material skyMaterial = materials.Sky(hdri);
+                ctx.Ferns.AddRange(CollectVariants(assets, materials, new[] { config.FernModelId }));
+                ctx.Plants.AddRange(CollectVariants(assets, materials, config.PlantModelIds));
 
-                EditorUtility.DisplayProgressBar("Look test", "Scene", 0.3f);
+                EditorUtility.DisplayProgressBar("Look test", "Scene", 0.25f);
+                ClearGeneratedMeshes();
+                LookTestMeshAccumulator.ClearCache();
                 Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
                 Light sun = CreateSun(config);
                 ApplyEnvironment(config, skyMaterial, sun);
                 Camera camera = CreateCamera(config);
                 CreateVolume(config);
+                var atmosphereObject = new GameObject("Atmosphere");
+                LookTestAtmosphere atmosphere = atmosphereObject.AddComponent<LookTestAtmosphere>();
+                atmosphere.Configure(config, dapple, sun);
 
-                // Stretch segments.
                 int count = config.SegmentCount;
-                float segLength = config.LoopLengthM / count;
                 var stretch = new GameObject("Stretch");
                 var segments = new Transform[count];
                 var groups = new SegmentGroups[count];
@@ -94,55 +94,51 @@ namespace JungleBooze.Editor.LookTest
                 {
                     var segment = new GameObject("Segment_" + i).transform;
                     segment.SetParent(stretch.transform, false);
-                    segment.localPosition = new Vector3(0f, 0f, i * segLength);
                     segments[i] = segment;
                     groups[i] = new SegmentGroups(segment);
                 }
 
-                EditorUtility.DisplayProgressBar("Look test", "Ground, river, cliff", 0.4f);
+                var backdropRoot = new GameObject("Backdrop").transform;
+                backdropRoot.SetParent(stretch.transform, false);
+                var backdropGroups = new SegmentGroups(backdropRoot);
+
                 for (int i = 0; i < count; i++)
                 {
-                    Mesh ground = SaveMesh(LookTestMeshFactory.Ground(shape, config, i));
-                    AddRenderer(groups[i].Ground, "Ground", ground, groundMaterial, ShadowCastingMode.Off);
-                    Add(tris, "Ground", LookTestMeshFactory.TriangleCount(ground));
-
-                    Mesh river = SaveMesh(LookTestMeshFactory.River(shape, config, i));
-                    AddRenderer(groups[i].Water, "River", river, riverMaterial, ShadowCastingMode.Off);
-                    Add(tris, "Water", LookTestMeshFactory.TriangleCount(river));
-
-                    Mesh cliff = LookTestMeshFactory.Cliff(shape, config, i);
-                    if (cliff != null)
-                    {
-                        cliff = SaveMesh(cliff);
-                        AddRenderer(groups[i].Ground, "Cliff", cliff, cliffMaterial, ShadowCastingMode.On);
-                        Add(tris, "Cliff", LookTestMeshFactory.TriangleCount(cliff));
-                    }
+                    EditorUtility.DisplayProgressBar("Look test", "Segment " + i, 0.3f + 0.4f * i / count);
+                    LookTestScatter.BuildSegment(ctx, i);
                 }
 
-                BuildWaterfall(config, shape, groups, segLength, waterfallMaterial, mistMaterial, tris);
+                EditorUtility.DisplayProgressBar("Look test", "Landmarks and backdrop", 0.72f);
+                LookTestLandmarks.Build(ctx);
+                LookTestLandmarks.Backdrop(ctx);
 
-                EditorUtility.DisplayProgressBar("Look test", "Trees", 0.55f);
-                ScatterTrees(config, shape, groups, segLength, barkMaterial, leafMaterial, tris);
+                EditorUtility.DisplayProgressBar("Look test", "Merging meshes", 0.78f);
+                batchSummary = batches.Emit(SaveMesh, (segment, group) => (segment < 0 ? backdropGroups : groups[segment]).For(group));
 
-                EditorUtility.DisplayProgressBar("Look test", "Rocks", 0.65f);
-                ScatterRocks(config, shape, groups, segLength, assets, materials, boulderMaterial, tris);
-
-                EditorUtility.DisplayProgressBar("Look test", "Plants", 0.75f);
-                ScatterPlants(config, shape, groups, segLength, assets, materials, tris);
-
-                // Composition root.
                 var rootObject = new GameObject("LookTestRoot");
                 LookTestRoot root = rootObject.AddComponent<LookTestRoot>();
                 var plantGroups = new GameObject[count];
-                var waterGroups = new GameObject[count];
+                var detailGroups = new GameObject[count];
+                var waterGroups = new GameObject[count + 1];
                 for (int i = 0; i < count; i++)
                 {
                     plantGroups[i] = groups[i].Plants.gameObject;
+                    detailGroups[i] = groups[i].Detail.gameObject;
                     waterGroups[i] = groups[i].Water.gameObject;
                 }
 
-                root.Configure(config, camera, sun, stretch.transform, segments, plantGroups, waterGroups);
+                waterGroups[count] = backdropGroups.Water.gameObject;
+                root.Configure(config, camera, sun, stretch.transform, segments, plantGroups, waterGroups, backdropRoot, detailGroups);
                 EditorUtility.SetDirty(root);
+
+                // Place the world for the first frame (the editor view and screenshots start here).
+                LookTestPath path = layout.Path;
+                LookTestWorldView view = stretch.AddComponent<LookTestWorldView>();
+                view.Init(segments, config.LoopLengthM, path.LoopOffset, config.RecycleBehindM, backdropRoot);
+                view.InitDetail(detailGroups, config.DetailRangeM);
+                view.Render(0.0);
+                LookTestCameraRig.Pose(path, config.LandscapeCamera, 0.0, 0f, out Vector3 camPos, out Quaternion camRot);
+                camera.transform.SetPositionAndRotation(camPos, camRot);
 
                 LookTestAssets.EnsureFolder(Path.GetDirectoryName(ScenePath).Replace('\\', '/'));
                 if (!EditorSceneManager.SaveScene(scene, ScenePath))
@@ -151,11 +147,22 @@ namespace JungleBooze.Editor.LookTest
                 }
 
                 EditorUtility.DisplayProgressBar("Look test", "Baking sky lighting (no lightmaps)", 0.85f);
+                // Bake the ambient from the plain sky: the horizon haze is a view effect, not a light source.
+                skyMaterial.SetFloat("_HorizonFog", 0f);
                 BakeEnvironment(config, hdri != null, report);
+                skyMaterial.SetFloat("_HorizonFog", 1f);
+                EditorUtility.SetDirty(skyMaterial);
+                if (float.IsNaN(RenderSettings.ambientProbe[0, 0]))
+                {
+                    report.Add("ERROR: the baked ambient light is not a number (NaN): every lit surface renders black.");
+                }
+
+                atmosphere.Apply();
                 EditorSceneManager.MarkSceneDirty(scene);
                 EditorSceneManager.SaveScene(scene, ScenePath);
                 AssetDatabase.SaveAssets();
 
+                report.Add("Loop offset per lap: " + path.LoopOffset.ToString("F1") + " m. River fall at s = " + layout.RiverFallS().ToString("F1") + " m.");
                 if (assets.Missing.Count > 0)
                 {
                     report.Add("Missing CC0 assets (plain stand-in materials used). Run: python3 tools/assets/fetch_cc0.py");
@@ -170,7 +177,7 @@ namespace JungleBooze.Editor.LookTest
                 EditorUtility.ClearProgressBar();
             }
 
-            Report(report, tris, config);
+            Report(report, batchSummary);
         }
 
         public static LookTestConfigAsset EnsureConfig()
@@ -193,13 +200,13 @@ namespace JungleBooze.Editor.LookTest
         private static Light CreateSun(LookTestConfigAsset c)
         {
             var go = new GameObject("Sun");
-            go.transform.rotation = Quaternion.Euler(c.SunPitchDeg, c.SunYawDeg, 0f);
+            go.transform.rotation = Quaternion.LookRotation(c.SunLightDirection, Vector3.up);
             Light light = go.AddComponent<Light>();
             light.type = LightType.Directional;
             light.color = c.SunColor;
             light.intensity = c.SunIntensity;
             light.shadows = LightShadows.Soft;
-            light.shadowStrength = 0.9f;
+            light.shadowStrength = 0.92f;
             return light;
         }
 
@@ -211,12 +218,8 @@ namespace JungleBooze.Editor.LookTest
             RenderSettings.defaultReflectionMode = DefaultReflectionMode.Skybox;
             RenderSettings.defaultReflectionResolution = 128;
             RenderSettings.reflectionIntensity = 1f;
-            RenderSettings.fog = true;
-            RenderSettings.fogMode = FogMode.ExponentialSquared;
-            RenderSettings.fogColor = c.FogColor;
-            RenderSettings.fogDensity = c.FogDensity;
-
-            // Gradient ambient until BakeEnvironment switches to the baked sky.
+            // The project's own height fog (JBAtmosphere.hlsl) replaces Unity fog.
+            RenderSettings.fog = false;
             UseTrilightAmbient(c);
         }
 
@@ -256,11 +259,9 @@ namespace JungleBooze.Editor.LookTest
         {
             var go = new GameObject("LookTestCamera");
             go.tag = "MainCamera";
-            go.transform.position = new Vector3(0f, c.CameraOffsetUpM, -c.CameraOffsetBehindM);
-            go.transform.LookAt(new Vector3(0f, c.CameraLookAtHeightM, c.CameraLookAheadM));
             Camera camera = go.AddComponent<Camera>();
             camera.clearFlags = CameraClearFlags.Skybox;
-            camera.fieldOfView = c.CameraFovDeg;
+            camera.fieldOfView = c.LandscapeCamera.VerticalFovDeg;
             camera.nearClipPlane = 0.3f;
             camera.farClipPlane = c.CameraFarClipM;
             camera.allowHDR = true;
@@ -274,6 +275,12 @@ namespace JungleBooze.Editor.LookTest
             return camera;
         }
 
+        /// <summary>
+        /// Post-processing: ACES, exposure, contrast, saturation, white balance, split toning and shadows/midtones/
+        /// highlights. URP bakes all grading into one 32³ LUT per frame (one lookup in the final pass), so this is the
+        /// grading LUT of strategy 4.4; a keyframe-matched external LUT (ColorLookup) replaces the hand values once
+        /// the owner approves keyframes.
+        /// </summary>
         private static void CreateVolume(LookTestConfigAsset c)
         {
             LookTestAssets.EnsureFolder(ConfigFolder);
@@ -289,11 +296,23 @@ namespace JungleBooze.Editor.LookTest
 
             WhiteBalance whiteBalance = AddComponent<WhiteBalance>(profile);
             whiteBalance.temperature.Override(c.WhiteBalanceTemperature);
+            whiteBalance.tint.Override(c.WhiteBalanceTint);
+
+            SplitToning split = AddComponent<SplitToning>(profile);
+            split.shadows.Override(c.SplitShadows);
+            split.highlights.Override(c.SplitHighlights);
+            split.balance.Override(c.SplitBalance);
+
+            ShadowsMidtonesHighlights smh = AddComponent<ShadowsMidtonesHighlights>(profile);
+            smh.shadows.Override(c.GradeShadows);
+            smh.midtones.Override(c.GradeMidtones);
+            smh.highlights.Override(c.GradeHighlights);
 
             Bloom bloom = AddComponent<Bloom>(profile);
             bloom.threshold.Override(c.BloomThreshold);
             bloom.intensity.Override(c.BloomIntensity);
             bloom.scatter.Override(c.BloomScatter);
+            bloom.tint.Override(c.BloomTint);
             bloom.highQualityFiltering.Override(false);
 
             Vignette vignette = AddComponent<Vignette>(profile);
@@ -320,360 +339,12 @@ namespace JungleBooze.Editor.LookTest
             return component;
         }
 
-        // ---------------------------------------------------------------- Waterfall
-
-        private static void BuildWaterfall(
-            LookTestConfigAsset c, LookTestTerrainShape shape, SegmentGroups[] groups, float segLength,
-            Material waterfallMaterial, Material mistMaterial, SortedDictionary<string, long> tris)
-        {
-            float wz = Mathf.Repeat(c.WaterfallZM, c.LoopLengthM);
-            if (shape.CliffPresence(wz) < 0.5f)
-            {
-                return;
-            }
-
-            int segment = Mathf.Clamp(Mathf.FloorToInt(wz / segLength), 0, groups.Length - 1);
-            float localZ = wz - segment * segLength;
-            float footX = shape.CliffFootX(wz) - 0.4f;
-            float footY = c.WaterLevelM - 0.1f;
-            Vector3 top = LookTestMeshFactory.CliffTop(shape, c, wz);
-
-            Mesh sheet = SaveMesh(LookTestMeshFactory.Waterfall(c.WaterfallWidthM, top.y - footY, top.x - footX + 0.3f));
-            Transform fall = AddRenderer(groups[segment].Water, "Waterfall", sheet, waterfallMaterial, ShadowCastingMode.Off);
-            fall.localPosition = new Vector3(footX, footY, localZ);
-            Add(tris, "Water", LookTestMeshFactory.TriangleCount(sheet));
-
-            if (c.MistParticles <= 0)
-            {
-                return;
-            }
-
-            var mistObject = new GameObject("Mist");
-            mistObject.transform.SetParent(groups[segment].Water, false);
-            mistObject.transform.localPosition = new Vector3(footX - 0.8f, c.WaterLevelM + 0.4f, localZ);
-            ParticleSystem particles = mistObject.AddComponent<ParticleSystem>();
-            particles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-
-            ParticleSystem.MainModule main = particles.main;
-            main.loop = true;
-            main.prewarm = true;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(2.2f, 3.6f);
-            main.startSpeed = new ParticleSystem.MinMaxCurve(0.3f, 1.1f);
-            main.startSize = new ParticleSystem.MinMaxCurve(1.8f, 3.8f);
-            main.startRotation = new ParticleSystem.MinMaxCurve(0f, 6.283f);
-            main.startColor = new Color(1f, 1f, 1f, 0.55f);
-            main.maxParticles = c.MistParticles;
-            main.simulationSpace = ParticleSystemSimulationSpace.Local;
-            main.gravityModifier = -0.03f;
-
-            ParticleSystem.EmissionModule emission = particles.emission;
-            emission.rateOverTime = c.MistParticles / 3f;
-
-            ParticleSystem.ShapeModule emitter = particles.shape;
-            emitter.shapeType = ParticleSystemShapeType.Box;
-            emitter.scale = new Vector3(1.5f, 0.4f, c.WaterfallWidthM);
-
-            ParticleSystem.ColorOverLifetimeModule fade = particles.colorOverLifetime;
-            fade.enabled = true;
-            var gradient = new Gradient();
-            gradient.SetKeys(
-                new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
-                new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.25f), new GradientAlphaKey(0f, 1f) });
-            fade.color = new ParticleSystem.MinMaxGradient(gradient);
-
-            ParticleSystemRenderer particleRenderer = mistObject.GetComponent<ParticleSystemRenderer>();
-            particleRenderer.sharedMaterial = mistMaterial;
-            particleRenderer.renderMode = ParticleSystemRenderMode.Billboard;
-            particleRenderer.shadowCastingMode = ShadowCastingMode.Off;
-            particleRenderer.receiveShadows = false;
-            particles.Play();
-        }
-
-        // ---------------------------------------------------------------- Trees
-
-        private static void ScatterTrees(
-            LookTestConfigAsset c, LookTestTerrainShape shape, SegmentGroups[] groups, float segLength,
-            Material bark, Material leaves, SortedDictionary<string, long> tris)
-        {
-            var variantRng = new Pcg32Random((ulong)(uint)c.Seed, VariantStream);
-            var trunks = new Mesh[TrunkVariants];
-            var crowns = new Mesh[TrunkVariants];
-            for (int v = 0; v < TrunkVariants; v++)
-            {
-                float radius = Mathf.Lerp(c.TrunkRadiusMinM, c.TrunkRadiusMaxM, (v + 0.5f) / TrunkVariants);
-                Mesh trunk = LookTestMeshFactory.Trunk(variantRng, TrunkReferenceHeightM, radius, c.BarkTileM);
-                trunk.name = "Trunk_" + v;
-                trunks[v] = SaveMesh(trunk);
-                Mesh crown = LookTestMeshFactory.Crown(variantRng, TrunkReferenceHeightM, c.CanopyCardsPerTree, c.CanopyCardSizeM);
-                crown.name = "Crown_" + v;
-                crowns[v] = SaveMesh(crown);
-            }
-
-            var rng = new Pcg32Random((ulong)(uint)c.Seed, TreeStream);
-            int placed = 0;
-            int attempts = 0;
-            while (placed < c.TreeCount && attempts < c.TreeCount * 20)
-            {
-                attempts++;
-                float z = rng.NextFloat(0f, c.LoopLengthM);
-                bool left = rng.Chance(0.6f);
-                Vector3 position;
-                if (left)
-                {
-                    float x = -c.PathHalfWidthM - 2.5f - 45f * Mathf.Pow(rng.NextFloat(), 1.4f);
-                    position = new Vector3(x, shape.Height(x, z) - 0.3f, z);
-                }
-                else if (shape.CliffPresence(z) > 0.35f)
-                {
-                    if (shape.WaterfallBump(z, 10f) > 0.2f)
-                    {
-                        continue;
-                    }
-
-                    Vector3 back = LookTestMeshFactory.CliffBack(shape, c, z);
-                    position = new Vector3(back.x + rng.NextFloat(0.5f, 14f), back.y - 0.4f, z);
-                }
-                else
-                {
-                    float minX = shape.RiverCenterX(z) + c.RiverHalfWidthM * 1.6f;
-                    float x = minX + 40f * Mathf.Pow(rng.NextFloat(), 1.4f);
-                    position = new Vector3(x, shape.Height(x, z) - 0.3f, z);
-                }
-
-                float height = rng.NextFloat(c.TrunkHeightMinM, c.TrunkHeightMaxM);
-                int variant = rng.NextInt(0, TrunkVariants);
-                Transform parent = Place(groups, segLength, position, out Vector3 local).Trees;
-                var tree = new GameObject("Tree").transform;
-                tree.SetParent(parent, false);
-                tree.localPosition = local;
-                // Trees near the path lean over it so crowns frame the run instead of lining it like an avenue.
-                float verge = Mathf.Abs(position.x) - c.PathHalfWidthM;
-                float lean = verge < 9f ? rng.NextFloat(4f, 13f) * (1f - verge / 9f) : rng.NextFloat(-3f, 3f);
-                float yaw = rng.NextFloat(0f, 360f);
-                tree.localRotation = Quaternion.Euler(0f, 0f, position.x < 0f ? -lean : lean) * Quaternion.Euler(0f, yaw, 0f);
-                tree.localScale = Vector3.one * (height / TrunkReferenceHeightM);
-
-                AddRenderer(tree, "Trunk", trunks[variant], bark, ShadowCastingMode.On);
-                AddRenderer(tree, "Crown", crowns[variant], leaves, ShadowCastingMode.On);
-                Add(tris, "Trees", LookTestMeshFactory.TriangleCount(trunks[variant]) + LookTestMeshFactory.TriangleCount(crowns[variant]));
-                placed++;
-            }
-
-            ScatterUnderstoryTrees(c, shape, groups, segLength, bark, leaves, variantRng, tris);
-        }
-
-        /// <summary>
-        /// Middle layer: slim 6-12 m trees with low, full crowns close to the path and the river bank, so the view is
-        /// framed by foliage at eye level instead of bare trunks.
-        /// </summary>
-        private static void ScatterUnderstoryTrees(
-            LookTestConfigAsset c, LookTestTerrainShape shape, SegmentGroups[] groups, float segLength,
-            Material bark, Material leaves, IRandom variantRng, SortedDictionary<string, long> tris)
-        {
-            const int variants = 4;
-            const float referenceHeight = 9f;
-            var trunks = new Mesh[variants];
-            var crowns = new Mesh[variants];
-            for (int v = 0; v < variants; v++)
-            {
-                Mesh trunk = LookTestMeshFactory.Trunk(variantRng, referenceHeight, Mathf.Lerp(0.12f, 0.22f, (v + 0.5f) / variants), c.BarkTileM);
-                trunk.name = "UnderTrunk_" + v;
-                trunks[v] = SaveMesh(trunk);
-                Mesh crown = LookTestMeshFactory.Crown(variantRng, referenceHeight, Mathf.Max(8, c.CanopyCardsPerTree / 2), c.CanopyCardSizeM * 0.6f);
-                crown.name = "UnderCrown_" + v;
-                crowns[v] = SaveMesh(crown);
-            }
-
-            var rng = new Pcg32Random((ulong)(uint)c.Seed, TreeStream + 50UL);
-            for (int i = 0; i < c.UnderstoryTreeCount; i++)
-            {
-                float z = rng.NextFloat(0f, c.LoopLengthM);
-                float x;
-                if (rng.Chance(0.6f))
-                {
-                    x = -c.PathHalfWidthM - rng.NextFloat(2.5f, 16f);
-                }
-                else
-                {
-                    float riverEdge = shape.RiverCenterX(z) - c.RiverHalfWidthM * 1.3f;
-                    if (riverEdge - (c.PathHalfWidthM + 2.5f) < 1f)
-                    {
-                        x = shape.RiverCenterX(z) + c.RiverHalfWidthM * rng.NextFloat(1.5f, 3f);
-                    }
-                    else
-                    {
-                        x = rng.NextFloat(c.PathHalfWidthM + 2.5f, riverEdge);
-                    }
-                }
-
-                var position = new Vector3(x, shape.Height(x, z) - 0.2f, z);
-                float height = rng.NextFloat(c.UnderstoryHeightMinM, c.UnderstoryHeightMaxM);
-                int variant = rng.NextInt(0, variants);
-                Transform parent = Place(groups, segLength, position, out Vector3 local).Trees;
-                var tree = new GameObject("UnderstoryTree").transform;
-                tree.SetParent(parent, false);
-                tree.localPosition = local;
-                tree.localRotation = Quaternion.Euler(rng.NextFloat(-4f, 4f), rng.NextFloat(0f, 360f), rng.NextFloat(-4f, 4f));
-                tree.localScale = Vector3.one * (height / referenceHeight);
-                AddRenderer(tree, "Trunk", trunks[variant], bark, ShadowCastingMode.On);
-                AddRenderer(tree, "Crown", crowns[variant], leaves, ShadowCastingMode.On);
-                Add(tris, "Trees (understory)", LookTestMeshFactory.TriangleCount(trunks[variant]) + LookTestMeshFactory.TriangleCount(crowns[variant]));
-            }
-        }
-
-        // ---------------------------------------------------------------- Rocks
-
-        private static void ScatterRocks(
-            LookTestConfigAsset c, LookTestTerrainShape shape, SegmentGroups[] groups, float segLength,
-            LookTestAssets assets, LookTestMaterials materials, Material boulderMaterial, SortedDictionary<string, long> tris)
-        {
-            var variantRng = new Pcg32Random((ulong)(uint)c.Seed, VariantStream + 100UL);
-            var boulders = new Mesh[BoulderVariants];
-            for (int v = 0; v < BoulderVariants; v++)
-            {
-                Mesh boulder = LookTestMeshFactory.Boulder(variantRng, 1f);
-                boulder.name = "Boulder_" + v;
-                boulders[v] = SaveMesh(boulder);
-            }
-
-            var rng = new Pcg32Random((ulong)(uint)c.Seed, RockStream);
-
-            // Procedural boulders: path edges, river banks and bed, forest floor.
-            for (int i = 0; i < c.BoulderCount; i++)
-            {
-                float z = rng.NextFloat(0f, c.LoopLengthM);
-                float pick = rng.NextFloat();
-                float x;
-                float size;
-                if (pick < 0.3f)
-                {
-                    x = (rng.Chance(0.5f) ? -1f : 1f) * (c.PathHalfWidthM + rng.NextFloat(1.2f, 3.5f));
-                    size = rng.NextFloat(0.35f, 1.1f);
-                }
-                else if (pick < 0.7f)
-                {
-                    x = shape.RiverCenterX(z) + rng.NextFloat(-1.3f, 1.3f) * c.RiverHalfWidthM;
-                    size = rng.NextFloat(0.5f, 1.8f);
-                }
-                else
-                {
-                    x = -c.PathHalfWidthM - rng.NextFloat(4f, 35f);
-                    size = rng.NextFloat(0.6f, 2.4f);
-                }
-
-                var position = new Vector3(x, shape.Height(x, z) - size * 0.25f, z);
-                Transform parent = Place(groups, segLength, position, out Vector3 local).Rocks;
-                Transform rock = AddRenderer(parent, "Boulder", boulders[rng.NextInt(0, BoulderVariants)], boulderMaterial, ShadowCastingMode.On);
-                rock.localPosition = local;
-                rock.localRotation = Quaternion.Euler(rng.NextFloat(-8f, 8f), rng.NextFloat(0f, 360f), rng.NextFloat(-8f, 8f));
-                rock.localScale = Vector3.one * size;
-                AddCullLod(rock.gameObject, c.RockCullScreenFraction);
-                Add(tris, "Rocks (procedural)", LookTestMeshFactory.TriangleCount(rock.GetComponent<MeshFilter>().sharedMesh));
-            }
-
-            // Scanned CC0 hero rocks near the path and the water.
-            List<ModelVariant> heroes = CollectVariants(assets, materials, c.RockModelIds, false);
-            if (heroes.Count == 0)
-            {
-                return;
-            }
-
-            for (int i = 0; i < c.HeroRockCount; i++)
-            {
-                float z = (i + rng.NextFloat(0.2f, 0.8f)) * c.LoopLengthM / Mathf.Max(1, c.HeroRockCount);
-                float x = i % 2 == 0
-                    ? -c.PathHalfWidthM - rng.NextFloat(1.5f, 4f)
-                    : shape.RiverCenterX(z) - c.RiverHalfWidthM * rng.NextFloat(0.6f, 1.1f);
-                ModelVariant variant = heroes[rng.NextInt(0, heroes.Count)];
-                float height = rng.NextFloat(1.2f, 2.6f);
-                var position = new Vector3(x, shape.Height(x, z) - 0.15f * height, z);
-                Transform instance = PlaceModel(groups, segLength, position, rng.NextFloat(0f, 360f), height, variant, ShadowCastingMode.On, "HeroRock", g => g.Rocks);
-                AddCullLod(instance.gameObject, c.RockCullScreenFraction);
-                Add(tris, "Rocks (scanned)", variant.Triangles);
-            }
-        }
-
-        // ---------------------------------------------------------------- Ferns and plants
-
-        private static void ScatterPlants(
-            LookTestConfigAsset c, LookTestTerrainShape shape, SegmentGroups[] groups, float segLength,
-            LookTestAssets assets, LookTestMaterials materials, SortedDictionary<string, long> tris)
-        {
-            List<ModelVariant> ferns = CollectVariants(assets, materials, new[] { c.FernModelId }, true);
-            var rng = new Pcg32Random((ulong)(uint)c.Seed, FernStream);
-            if (ferns.Count > 0)
-            {
-                for (int i = 0; i < c.FernCount; i++)
-                {
-                    float z = rng.NextFloat(0f, c.LoopLengthM);
-                    float x = UndergrowthX(c, shape, rng, z, 0.9f);
-                    ModelVariant variant = ferns[rng.NextInt(0, ferns.Count)];
-                    float height = rng.NextFloat(c.FernHeightMinM, c.FernHeightMaxM);
-                    var position = new Vector3(x, shape.Height(x, z) - 0.05f, z);
-                    Transform instance = PlaceModel(groups, segLength, position, rng.NextFloat(0f, 360f), height, variant, ShadowCastingMode.Off, "Fern", g => g.Plants);
-                    AddCullLod(instance.gameObject, c.PlantCullScreenFraction);
-                    Add(tris, "Ferns", variant.Triangles);
-                }
-            }
-
-            List<ModelVariant> plants = CollectVariants(assets, materials, c.PlantModelIds, true);
-            rng = new Pcg32Random((ulong)(uint)c.Seed, PlantStream);
-            if (plants.Count > 0)
-            {
-                for (int i = 0; i < c.PlantCount; i++)
-                {
-                    float z = rng.NextFloat(0f, c.LoopLengthM);
-                    float x = UndergrowthX(c, shape, rng, z, 1.4f);
-                    ModelVariant variant = plants[rng.NextInt(0, plants.Count)];
-                    float height = rng.NextFloat(c.PlantHeightMinM, c.PlantHeightMaxM);
-                    var position = new Vector3(x, shape.Height(x, z) - 0.05f, z);
-                    Transform instance = PlaceModel(groups, segLength, position, rng.NextFloat(0f, 360f), height, variant, ShadowCastingMode.Off, "Plant", g => g.Plants);
-                    AddCullLod(instance.gameObject, c.PlantCullScreenFraction);
-                    Add(tris, "Plants", variant.Triangles);
-                }
-            }
-        }
-
-        /// <summary>Undergrowth x: mostly the path verges and the near bank, some deeper in the forest. Never on the path or in the river.</summary>
-        private static float UndergrowthX(LookTestConfigAsset c, LookTestTerrainShape shape, IRandom rng, float z, float clearance)
-        {
-            float edge = c.PathHalfWidthM + clearance;
-            float pick = rng.NextFloat();
-            if (pick < 0.4f)
-            {
-                return -edge - 12f * rng.NextFloat() * rng.NextFloat();
-            }
-
-            if (pick < 0.65f)
-            {
-                float riverEdge = shape.RiverCenterX(z) - c.RiverHalfWidthM * 1.25f;
-                return Mathf.Lerp(edge, Mathf.Max(edge, riverEdge), rng.NextFloat());
-            }
-
-            if (pick < 0.8f)
-            {
-                return -edge - rng.NextFloat(6f, 30f);
-            }
-
-            return shape.RiverCenterX(z) + c.RiverHalfWidthM * rng.NextFloat(1.4f, 4.5f);
-        }
-
         // ---------------------------------------------------------------- Model variants (CC0 FBX)
 
-        private struct ModelVariant
-        {
-            public string Name;
-            public Mesh Mesh;
-            public Material Material;
-            public Matrix4x4 Matrix;
-            public Bounds Bounds;
-            public long Triangles;
-        }
-
         /// <summary>Every mesh inside the given models becomes a variant, with its pose inside the model file.</summary>
-        private static List<ModelVariant> CollectVariants(LookTestAssets assets, LookTestMaterials materials, string[] ids, bool foliage)
+        private static List<LookTestBuildContext.ModelVariant> CollectVariants(LookTestAssets assets, LookTestMaterials materials, string[] ids)
         {
-            var result = new List<ModelVariant>();
+            var result = new List<LookTestBuildContext.ModelVariant>();
             if (ids == null)
             {
                 return result;
@@ -687,7 +358,7 @@ namespace JungleBooze.Editor.LookTest
                     continue;
                 }
 
-                Material material = materials.ForModel(ids[m], foliage);
+                Material material = materials.ForModel(ids[m], true);
                 MeshFilter[] filters = model.GetComponentsInChildren<MeshFilter>(true);
                 Matrix4x4 toRoot = model.transform.worldToLocalMatrix;
                 for (int f = 0; f < filters.Length; f++)
@@ -705,14 +376,13 @@ namespace JungleBooze.Editor.LookTest
                         continue;
                     }
 
-                    result.Add(new ModelVariant
+                    result.Add(new LookTestBuildContext.ModelVariant
                     {
                         Name = ids[m] + "/" + filters[f].name,
                         Mesh = mesh,
                         Material = material,
                         Matrix = matrix,
                         Bounds = bounds,
-                        Triangles = LookTestMeshFactory.TriangleCount(mesh),
                     });
                 }
             }
@@ -720,42 +390,11 @@ namespace JungleBooze.Editor.LookTest
             return result;
         }
 
-        /// <summary>Scans that ship their own LOD chain (name_LOD1..3): only LOD0 is a variant; Mesh LOD handles distance.</summary>
+        /// <summary>Scans that ship their own LOD chain (name_LOD1..3): only LOD0 is a variant.</summary>
         internal static bool IsLowerLod(string meshName)
         {
             int index = meshName.LastIndexOf("_LOD", System.StringComparison.OrdinalIgnoreCase);
             return index >= 0 && index + 4 < meshName.Length && meshName.Substring(index + 4) != "0";
-        }
-
-        /// <summary>
-        /// Places a model variant standing on <paramref name="position"/> (stretch space), scaled to
-        /// <paramref name="height"/> meters, centered on its footprint.
-        /// </summary>
-        private static Transform PlaceModel(
-            SegmentGroups[] groups, float segLength, Vector3 position, float yawDeg, float height, ModelVariant variant,
-            ShadowCastingMode shadows, string name, System.Func<SegmentGroups, Transform> group)
-        {
-            Transform parent = group(Place(groups, segLength, position, out Vector3 local));
-            var instance = new GameObject(name).transform;
-            instance.SetParent(parent, false);
-            instance.localPosition = local;
-            instance.localRotation = Quaternion.Euler(0f, yawDeg, 0f);
-            // Scale to the wanted height, but never wider than 3 × that height (flat ground-cover meshes).
-            float scale = height / variant.Bounds.size.y;
-            float wide = Mathf.Max(variant.Bounds.size.x, variant.Bounds.size.z);
-            if (wide * scale > height * 3f)
-            {
-                scale = height * 3f / wide;
-            }
-
-            instance.localScale = Vector3.one * scale;
-
-            Matrix4x4 pose = Matrix4x4.Translate(new Vector3(-variant.Bounds.center.x, -variant.Bounds.min.y, -variant.Bounds.center.z)) * variant.Matrix;
-            Transform child = AddRenderer(instance, variant.Mesh.name, variant.Mesh, variant.Material, shadows);
-            child.localPosition = pose.GetColumn(3);
-            child.localRotation = pose.rotation;
-            child.localScale = pose.lossyScale;
-            return instance;
         }
 
         private static Bounds TransformBounds(Matrix4x4 matrix, Bounds bounds)
@@ -774,43 +413,22 @@ namespace JungleBooze.Editor.LookTest
 
         // ---------------------------------------------------------------- Helpers
 
-        /// <summary>Segment that owns stretch-space <paramref name="position"/>, and the position local to it.</summary>
-        private static SegmentGroups Place(SegmentGroups[] groups, float segLength, Vector3 position, out Vector3 local)
+        private static void ClearGeneratedMeshes()
         {
-            float loop = segLength * groups.Length;
-            float z = Mathf.Repeat(position.z, loop);
-            int index = Mathf.Clamp(Mathf.FloorToInt(z / segLength), 0, groups.Length - 1);
-            local = new Vector3(position.x, position.y, z - index * segLength);
-            return groups[index];
-        }
-
-        private static Transform AddRenderer(Transform parent, string name, Mesh mesh, Material material, ShadowCastingMode shadows)
-        {
-            var go = new GameObject(name);
-            go.transform.SetParent(parent, false);
-            go.AddComponent<MeshFilter>().sharedMesh = mesh;
-            MeshRenderer meshRenderer = go.AddComponent<MeshRenderer>();
-            var shared = new Material[Mathf.Max(1, mesh.subMeshCount)];
-            for (int i = 0; i < shared.Length; i++)
+            if (!AssetDatabase.IsValidFolder(MeshFolder))
             {
-                shared[i] = material;
+                return;
             }
 
-            meshRenderer.sharedMaterials = shared;
-            meshRenderer.shadowCastingMode = shadows;
-            meshRenderer.receiveShadows = true;
-            meshRenderer.lightProbeUsage = LightProbeUsage.Off;
-            meshRenderer.reflectionProbeUsage = ReflectionProbeUsage.BlendProbes;
-            return go.transform;
-        }
+            string[] guids = AssetDatabase.FindAssets("t:Mesh", new[] { MeshFolder });
+            var paths = new List<string>();
+            for (int i = 0; i < guids.Length; i++)
+            {
+                paths.Add(AssetDatabase.GUIDToAssetPath(guids[i]));
+            }
 
-        /// <summary>A one-level LODGroup: the object is culled once it is smaller than the given screen fraction.</summary>
-        private static void AddCullLod(GameObject instance, float screenFraction)
-        {
-            Renderer[] renderers = instance.GetComponentsInChildren<Renderer>(true);
-            LODGroup lod = instance.AddComponent<LODGroup>();
-            lod.SetLODs(new[] { new LOD(screenFraction, renderers) });
-            lod.RecalculateBounds();
+            var failed = new List<string>();
+            AssetDatabase.DeleteAssets(paths.ToArray(), failed);
         }
 
         private static Mesh SaveMesh(Mesh mesh)
@@ -818,31 +436,17 @@ namespace JungleBooze.Editor.LookTest
             return LookTestAssets.SaveOrReplace(mesh, MeshFolder + "/" + mesh.name + ".asset");
         }
 
-        private static void Add(SortedDictionary<string, long> tris, string key, long value)
-        {
-            tris.TryGetValue(key, out long current);
-            tris[key] = current + value;
-        }
-
-        private static void Report(List<string> report, SortedDictionary<string, long> tris, LookTestConfigAsset c)
+        private static void Report(List<string> report, string batchSummary)
         {
             var text = new StringBuilder();
             text.AppendLine("Look test scene built: " + ScenePath);
-            long total = 0L;
-            text.AppendLine("Triangles in the whole " + c.LoopLengthM + " m loop (the camera sees roughly half; plants and rocks are culled by distance):");
-            foreach (KeyValuePair<string, long> pair in tris)
-            {
-                text.AppendLine("  " + pair.Key + ": " + pair.Value.ToString("N0", System.Globalization.CultureInfo.InvariantCulture));
-                total += pair.Value;
-            }
-
-            text.AppendLine("  Total: " + total.ToString("N0", System.Globalization.CultureInfo.InvariantCulture));
+            text.Append(batchSummary);
             for (int i = 0; i < report.Count; i++)
             {
                 text.AppendLine(report[i]);
             }
 
-            text.AppendLine("Press Play to run through it. On-device numbers: see docs/PLAY_FIRST_BUILD.md, \"Look test\".");
+            text.AppendLine("Press Play to run through it. Shots and per-view budgets: LookTestBatch.CaptureShots.");
             string summary = text.ToString();
             Debug.Log(LogPrefix + summary);
             if (!Application.isBatchMode)
@@ -861,6 +465,7 @@ namespace JungleBooze.Editor.LookTest
                 Trees = Child(segment, "Trees");
                 Rocks = Child(segment, "Rocks");
                 Plants = Child(segment, "Plants");
+                Detail = Child(segment, "Detail");
             }
 
             public Transform Ground { get; }
@@ -872,6 +477,27 @@ namespace JungleBooze.Editor.LookTest
             public Transform Rocks { get; }
 
             public Transform Plants { get; }
+
+            public Transform Detail { get; }
+
+            public Transform For(LookTestBatchSet.Group group)
+            {
+                switch (group)
+                {
+                    case LookTestBatchSet.Group.Water:
+                        return Water;
+                    case LookTestBatchSet.Group.Trees:
+                        return Trees;
+                    case LookTestBatchSet.Group.Rocks:
+                        return Rocks;
+                    case LookTestBatchSet.Group.Plants:
+                        return Plants;
+                    case LookTestBatchSet.Group.Detail:
+                        return Detail;
+                    default:
+                        return Ground;
+                }
+            }
 
             private static Transform Child(Transform parent, string name)
             {

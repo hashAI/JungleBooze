@@ -3,14 +3,18 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 using JungleBooze.Core;
+using JungleBooze.Core.Settings;
 using JungleBooze.Gameplay.Bots;
 using JungleBooze.Gameplay.CameraRig;
 using JungleBooze.Gameplay.Config;
 using JungleBooze.Gameplay.Controls;
 using JungleBooze.Gameplay.Course;
+using JungleBooze.Gameplay.Feedback;
 using JungleBooze.Gameplay.Movement;
 using JungleBooze.Gameplay.Run;
 using JungleBooze.Gameplay.Views;
+using JungleBooze.Services.Haptics;
+using JungleBooze.Services.Settings;
 using JungleBooze.UI.FeelTest;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -25,11 +29,12 @@ namespace JungleBooze.App.FeelTest
     /// Composition root and frame driver of the Phase 1 feel test (spec 101). Builds the deterministic run
     /// (<see cref="RunSession"/> on the <see cref="FeelCourseAsset"/>), input (touch gestures, mouse, keyboard, or
     /// the Perfect bot), the gray-box course, the stand-in Pista (or the avatar prefab hook), the third-person
-    /// camera rig and the HUD. Update is the only per-frame entry point (ARCHITECTURE §4): read input → step the
+    /// camera rig and the HUD. Feedback: edge-brush leaves, haptics (<see cref="RunFeedbackRouter"/>), and persisted
+    /// settings (sensitivity, haptics, reduced motion; shown on the pause screen). Update is the only per-frame entry point (ARCHITECTURE §4): read input → step the
     /// fixed-step simulation → sync views with interpolation → camera → HUD. Keys: Esc pause, R restart,
     /// F1 debug, O camera profile (auto/landscape/portrait), B bot autoplay, M reduced motion.
     /// </summary>
-    public sealed class FeelTestRoot : MonoBehaviour
+    public sealed class FeelTestRoot : MonoBehaviour, IRunFeedbackListener
     {
         public const int TargetFrameRate = 60;
         private const int StepsPerSecond = 60;
@@ -76,6 +81,9 @@ namespace JungleBooze.App.FeelTest
         private DebugHitboxView _debugView;
         private CameraRigModel _rig;
         private FeelTestHud _hud;
+        private FeelSettings _settings;
+        private RunFeedbackRouter _feedback;
+        private EdgeBrushView _edgeBrush;
         private readonly StringBuilder _debugText = new StringBuilder(512);
         private readonly int[] _droppedTicks = new int[5];
         private readonly byte[] _droppedReasons = new byte[5];
@@ -108,7 +116,21 @@ namespace JungleBooze.App.FeelTest
 
         public CameraRigModel CameraRig => _rig;
 
+        public RunnerAvatar Avatar => _runnerView?.Avatar;
+
+        public FeelSettings Settings => _settings;
+
+        public RunFeedbackRouter Feedback => _feedback;
+
+        public EdgeBrushView EdgeBrush => _edgeBrush;
+
         public Camera Camera => _camera;
+
+        /// <summary>Editor scene builder: the rigged Pista prefab (null keeps the gray-box capsule).</summary>
+        public void SetAvatarPrefab(RunnerAvatar prefab)
+        {
+            _avatarPrefab = prefab;
+        }
 
         /// <summary>Called by the editor scene builder to fill in the scene references.</summary>
         public void Configure(MovementConfigAssets movement, GestureConfigAsset gestures, CameraProfileAsset landscape, CameraProfileAsset portrait, FeelCourseAsset course, FeelTestPalette palette, Camera targetCamera)
@@ -155,7 +177,19 @@ namespace JungleBooze.App.FeelTest
             RunnerAvatar avatar = _avatarPrefab != null
                 ? Instantiate(_avatarPrefab, transform)
                 : CapsuleRunnerAvatar.Create(transform, _palette.Runner, _palette.RunnerAccent);
+            avatar.Bind(_config);
             _runnerView = new RunnerView(_session.Simulation, avatar);
+
+            var brush = new GameObject("EdgeBrushLeaves");
+            brush.transform.SetParent(transform, false);
+            _edgeBrush = brush.AddComponent<EdgeBrushView>();
+            _edgeBrush.Build(_palette.Leaf != null ? _palette.Leaf : _palette.Hedge);
+
+            // Settings persist on device; tools running outside play mode never touch the player's prefs.
+            ISettingsStore store = Application.isPlaying ? new PlayerPrefsSettingsStore() : (ISettingsStore)new MemorySettingsStore();
+            _settings = new FeelSettings(store, _reducedMotion);
+            _feedback = new RunFeedbackRouter(IosHaptics.Create(), this, _config.JumpSlide.SoftLandingFall);
+            ApplySettings();
 
             var debug = new GameObject("DebugHitboxes");
             debug.transform.SetParent(transform, false);
@@ -175,6 +209,8 @@ namespace JungleBooze.App.FeelTest
                 hudObject.transform.SetParent(transform, false);
                 _hud = hudObject.AddComponent<FeelTestHud>();
                 _hud.Build(font, _config.Health.MaxHealth, TogglePause, Restart);
+                _hud.BuildSettings(font, StepSensitivity, ToggleHaptics, ToggleReducedMotion);
+                _hud.SetSettingsValues(_settings.Sensitivity, _settings.HapticsEnabled, _settings.ReducedMotion);
                 _hud.SetHint(Application.isMobilePlatform ? string.Empty : "drag/A D steer · W/Space jump · S slide · Q/E dodge · Esc pause · R restart · F1 debug · O camera · B bot · M reduced motion");
                 _pointer.IsOverUi = (id, pixel) => _hud != null && _hud.HitsControl(pixel);
                 _pointer.Enable();
@@ -194,6 +230,8 @@ namespace JungleBooze.App.FeelTest
             _recording.Clear();
             _courseView.ResetRun();
             _runnerView.ResetRun();
+            _feedback.Reset();
+            _edgeBrush.Clear();
             _events.Clear();
             _paused = false;
             _resumeCountdown = 0f;
@@ -247,6 +285,24 @@ namespace JungleBooze.App.FeelTest
             _orientationMode = landscape ? 1 : 2;
             _landscapeActive = landscape;
             _rig.SetProfile(landscape ? _landscape.Values : _portrait.Values, instant);
+        }
+
+        public void StepSensitivity(int steps)
+        {
+            _settings.StepSensitivity(steps);
+            ApplySettings();
+        }
+
+        public void ToggleHaptics()
+        {
+            _settings.SetHaptics(!_settings.HapticsEnabled);
+            ApplySettings();
+        }
+
+        public void ToggleReducedMotion()
+        {
+            _settings.SetReducedMotion(!_settings.ReducedMotion);
+            ApplySettings();
         }
 
         public void SetBotDriving(bool driving)
@@ -346,6 +402,7 @@ namespace JungleBooze.App.FeelTest
                 RunEvent e = _events[i];
                 _runnerView.OnRunEvent(e);
                 _courseView.OnRunEvent(e);
+                _feedback.OnRunEvent(e);
                 switch (e.Type)
                 {
                     case RunEventType.Land:
@@ -393,6 +450,11 @@ namespace JungleBooze.App.FeelTest
         private void Present(float alpha, float frameSeconds)
         {
             _runnerView.Sync(alpha, frameSeconds);
+            if (!Application.isPlaying)
+            {
+                _edgeBrush.ManualTick(frameSeconds);
+            }
+
             RunnerState shown = _runnerView.Interpolated;
             _rig.ReducedMotion = _reducedMotion;
             CameraPose pose = _rig.Update(CameraTarget(shown), frameSeconds);
@@ -407,6 +469,7 @@ namespace JungleBooze.App.FeelTest
             ref readonly RunnerState s = ref _session.Simulation.State;
             _hud.SetDistance(s.Distance);
             _hud.SetHealth(s.Health, s.Shield);
+            _hud.SetSettingsVisible(_paused && _resumeCountdown <= 0f);
             if (_paused)
             {
                 _hud.SetCenter(_resumeCountdown > 0f ? Countdown[Mathf.Clamp(Mathf.CeilToInt(_resumeCountdown * 3f), 0, 3)] : PausedText);
@@ -495,7 +558,7 @@ namespace JungleBooze.App.FeelTest
 
             if (keyboard.mKey.wasPressedThisFrame)
             {
-                _reducedMotion = !_reducedMotion;
+                ToggleReducedMotion();
             }
         }
 
@@ -620,6 +683,51 @@ namespace JungleBooze.App.FeelTest
             b.Append("fps ").Append((1f / Mathf.Max(0.0001f, frameSeconds)).ToString("0", CultureInfo.InvariantCulture))
                 .Append("  dropped sim time ").Append(_time.DroppedSeconds.ToString("0.00", CultureInfo.InvariantCulture)).Append(" s");
             return b.ToString();
+        }
+
+        private void ApplySettings()
+        {
+            _gestureRecognizer.SensitivityMultiplier = _settings.Sensitivity;
+            _reducedMotion = _settings.ReducedMotion;
+            _feedback.HapticsEnabled = _settings.HapticsEnabled;
+            if (_hud != null)
+            {
+                _hud.SetSettingsValues(_settings.Sensitivity, _settings.HapticsEnabled, _settings.ReducedMotion);
+            }
+        }
+
+        // ---- IRunFeedbackListener: visual feedback here; audio-director adds SFX at the same hooks. ----
+
+        public void OnEdgeBrush(int side, bool started)
+        {
+            RunnerState s = _runnerView.Interpolated;
+            _path.GetLateralBounds(s.S, s.X, out float xMin, out float xMax);
+            float edge = side > 0 ? xMax : xMin;
+            _edgeBrush.Burst(new Vector3(edge, s.GroundY, s.S), side, s.Speed, started ? 6 : 3);
+        }
+
+        public void OnJump()
+        {
+        }
+
+        public void OnLand(LandingKind kind, float fallHeight)
+        {
+        }
+
+        public void OnSlide()
+        {
+        }
+
+        public void OnDodge(int direction)
+        {
+        }
+
+        public void OnHit(HitKind kind)
+        {
+        }
+
+        public void OnDied(DeathCause cause)
+        {
         }
 
         private static void EnsureEventSystem()

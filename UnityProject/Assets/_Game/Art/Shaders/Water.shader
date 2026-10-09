@@ -41,11 +41,11 @@ Shader "JungleBooze/Water"
             #pragma vertex Vert
             #pragma fragment Frag
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
-            #pragma multi_compile_fog
             #pragma multi_compile_instancing
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "JBAtmosphere.hlsl"
 
             CBUFFER_START(UnityPerMaterial)
                 float _NormalTiling;
@@ -84,7 +84,6 @@ Shader "JungleBooze/Water"
                 half3 normalWS : TEXCOORD2;
                 half4 tangentWS : TEXCOORD3;
                 half4 color : TEXCOORD4;
-                half fogFactor : TEXCOORD5;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
                 UNITY_VERTEX_OUTPUT_STEREO
             };
@@ -104,7 +103,6 @@ Shader "JungleBooze/Water"
                 output.tangentWS = half4(normals.tangentWS, input.tangentOS.w * GetOddNegativeScale());
                 output.uv = input.uv * _NormalTiling;
                 output.color = input.color;
-                output.fogFactor = ComputeFogFactor(positions.positionCS.z);
                 return output;
             }
 
@@ -151,7 +149,7 @@ Shader "JungleBooze/Water"
                 color = lerp(color, foamLit, foam);
 
                 half alpha = saturate(lerp(_Opacity, 1.0h, fresnel) + foam) * input.color.a;
-                color = MixFog(color, input.fogFactor);
+                color = JBApplyFog(color, input.positionWS);
                 return half4(color, alpha);
             }
             ENDHLSL

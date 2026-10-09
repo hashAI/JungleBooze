@@ -55,15 +55,15 @@ Duko/continue, audio files) compiled clean on the Mac.
 | producer | not used yet | (the coordinating session does this role for now) | this file | — |
 | game-designer | done (2026-10-09) | AURELIA GDD, spec 101 movement/camera (46 ACs, 61 s feel course), spec 102 chunks/routes/World Director | `design/aurelia/GDD.md`, `design/aurelia/specs/` | Phase 2 chunk catalog detail; FTUE script |
 | balance-simulator | done (A3) | Python reference model, golden traces, S1–S9 report (`archive/pre-aurelia/docs/sim-reports/2026-10-07-spec001.md`) | `tools/sim/`, `docs/sim-reports/` | Phase 1: new movement/chunk model from the AURELIA spec (old model kept as reference) |
-| tech-architect | working (2026-10-09) | Look test v2 steps 2–3: S-curved graybox layout + shot frames + budget skeleton; light/atmosphere to Checkpoint A | `Assets/_Game/Editor/Setup/`, `docs/adr/0003-first-playable-bootstrap.md`, `docs/PLAY_FIRST_BUILD.md` | Add EditMode tests for `ProjectSetupRules`; Roslyn analyzers |
-| gameplay-engineer | working (2026-10-09) | Phase 1 done (dcc0721: EditMode 206/206, PlayMode 5/5, bot 0 hits). Now: real Pista + Animator in FeelTest, edge feedback, haptics hooks, sensitivity, portrait+landscape, gameplay video capture | `Scripts/Gameplay/PowerUps`, `Hazards`, `Companion`, `Views`, `App/RunSceneBootstrap.cs` | Wire audio events; then Batch 3 |
+| tech-architect | done (2026-10-09) | Look test v2 graybox + light (ADR 0007): 59–95 draws, 206–277k tris; Checkpoint A partly passed (F2–F4 good; waterfalls flat, roots black, P1 scale weak). Generated meshes/scene now git-ignored (rebuild with LookTestBatch.BuildScene) | `Assets/_Game/Editor/Setup/`, `docs/adr/0003-first-playable-bootstrap.md`, `docs/PLAY_FIRST_BUILD.md` | Add EditMode tests for `ProjectSetupRules`; Roslyn analyzers |
+| gameplay-engineer | done (2026-10-09) | Real Pista (Humanoid, sim-driven animation, no foot skating), edge-brush leaves, haptics hooks (JBHaptics.mm unbuilt), sensitivity/reduced motion settings, portrait+landscape, gameplay video capture `FeelTestVideo.Capture`. EditMode 260/260, PlayMode 8/8 | `Scripts/Gameplay/PowerUps`, `Hazards`, `Companion`, `Views`, `App/RunSceneBootstrap.cs` | Wire audio events; then Batch 3 |
 | ui-engineer | done (C2) | Track wired into the Run scene with gray-box views and HUD | `Scripts/Gameplay/Views`, `Scripts/App`, `Scripts/UI/Hud` | Fix errors the owner sends from Unity |
-| art-director | working (2026-10-09) | Meshy keyframes F1–F5 for look test v2 (cap 100 credits) → design/aurelia/keyframes/ | `design/aurelia/ENVIRONMENT_STRATEGY.md` | Store art later |
+| art-director | done (2026-10-09) | Meshy keyframes F1–F4 + P1 (93 credits) → design/aurelia/keyframes/ | `design/aurelia/ENVIRONMENT_STRATEGY.md` | Store art later |
 | asset-pipeline | done (2026-10-09) | Pista game-ready: 19.9k tris, 27 bones, 18 clips (`Art/Characters/Pista/`). Run clip matches 5 m/s (use 1.3x or Run_Alt); hair glossy/stringy; Unity import not yet verified | `art_source/pista/`, `tools/blender/pista/` | Report → import rigged Pista into LookTest |
 | audio-director | done (files) | SFX, Duko voice (from history), Jungle/menu music, `AudioPlayback` | `Assets/_Game/Audio`, `Scripts/Services/Audio` | Wire playback into the Run scene |
 | qa-engineer | waiting | — | — | FP1 stage F: test plan + owner play-test script |
 | performance-engineer | waiting | — | — | Benchmark scene (week 2+) |
-| code-reviewer | working (2026-10-09) | Review of Phase 1 Feel (dcc0721) → docs/reviews/2026-10-09-phase1-feel.md | — | Rerun after the owner's review, if the owner wants it |
+| code-reviewer | done (2026-10-09) | Phase 1 review: 1 blocking (swipe after resting thumb lost), 9 should-fix, 14 nits → docs/reviews/2026-10-09-phase1-feel.md | — | Rerun after the owner's review, if the owner wants it |
 | monetization-engineer | waiting | — | — | Week 4–5 |
 | appstore-compliance | done (2026-10-09) | AURELIA design review: no blocker; 16 ranked risks. High: name "AURELIA" alone is crowded (Kingdom of Aurelia, adult VN Aurelia); Unity `submitAnalytics` must be off for "Data Not Collected"; bundle id/product name still lane-era | `docs/compliance/2026-10-aurelia-design-review.md`, `docs/APP_STORE_CHECKLIST.md` | Privacy manifest when SDKs are chosen; follow-ups: "report an ad" option, Declared Age Range API, CI check for the word "booze" |
 | release-engineer | paused (owner: build the game first) | Partial: build script, fastlane lanes, one-command build, setup guide (stopped mid-verification) | `fastlane/`, `tools/build/`, `docs/RELEASE.md`, `.github/workflows/build-ios.yml` | Resume later: finish and verify the Fastfile lanes |
@@ -73,7 +73,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Spend log
 Meshy: 3 (image edit test) + 30 (Pista 3D v1) = **33 credits used**; balance 2,432 after the owner's upgrade.
-**From 2026-10-09: 1,000 Meshy credits pre-approved (no per-step cap); ask the owner before going past 1,000 spent since 2026-10-09.** Prefer free retries. Spent since 2026-10-09: 62 (Pista rig 5 + anims 57). Lifetime 95; balance 2,370. OpenAI: 3 draft images (well under $1); account out of credit.
+**From 2026-10-09: 1,000 Meshy credits pre-approved (no per-step cap); ask the owner before going past 1,000 spent since 2026-10-09.** Prefer free retries. Spent since 2026-10-09: 155 (Pista 62, keyframes 93). Lifetime 188; balance 2,277; ~845 of the 1,000 left. OpenAI: 3 draft images (well under $1); account out of credit.
 
 ## Resume watchdog
 - Routine `trig_0125FGkR542RNUbbCvMm3LWX` ("AURELIA resume watchdog") wakes session_01GJ9eWD47NbuMr3AXGv86j8 every 2 hours (minute 52 UTC). **Disabled 2026-10-08 (owner stopped the session).**
@@ -124,6 +124,7 @@ Meshy: 3 (image edit test) + 30 (Pista 3D v1) = **33 credits used**; balance 2,4
 
 ## Log
 Newest first. One line per event.
+- 2026-10-09: Owner picked store name "Aurelia: Wildward"; focus today = build the game, other work later. Reports in: real Pista + gameplay videos, Phase 1 review (1 blocker), keyframes, look test v2.
 - 2026-10-09: Phase 1 Feel implemented and verified in Unity (dcc0721). Launched gameplay-engineer (real Pista + video), code-reviewer (Phase 1), art-director (Meshy keyframes, cap 100).
 - 2026-10-09: Environment strategy revised to Meshy + CC0 + in-house: shopping list 831 credits (reserve 107); possible extra ask up to 600 credits only if a checkpoint shows a layer below the bar (near foliage most at risk). Launching keyframes (item 1, ~75 credits).
 - 2026-10-09: Owner: no purchases for environment (Meshy + CC0 + in-house only); store name "Aurelia: <coined word>"; bundle id later. gameplay-engineer finished spec 101 code (113 logic tests pass outside Unity, bot clears course) but blocked from Unity by LookTest compile break; told tech-architect to restore compile.

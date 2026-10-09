@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using JungleBooze.App.FeelTest;
+using JungleBooze.Editor.Characters;
 using JungleBooze.Gameplay.CameraRig;
 using JungleBooze.Gameplay.Config;
 using JungleBooze.Gameplay.Views;
@@ -94,6 +95,22 @@ namespace JungleBooze.Editor.FeelTest
             // Swipe up from the bottom edge must jump, not leave the app; the home indicator hides during a run.
             PlayerSettings.iOS.deferSystemGesturesMode = UnityEngine.iOS.SystemGestureDeferMode.All;
             PlayerSettings.iOS.hideHomeButton = true;
+
+            // The owner judges both orientations on the phone (ART_DIRECTION §9): autorotate between portrait and
+            // both landscapes; the camera rig switches profiles. Upside-down portrait stays off (iPhone convention).
+            PlayerSettings.defaultInterfaceOrientation = UIOrientation.AutoRotation;
+            PlayerSettings.allowedAutorotateToPortrait = true;
+            PlayerSettings.allowedAutorotateToPortraitUpsideDown = false;
+            PlayerSettings.allowedAutorotateToLandscapeLeft = true;
+            PlayerSettings.allowedAutorotateToLandscapeRight = true;
+            PlayerSettings.useAnimatedAutorotation = true;
+
+            // Batch mode doesn't write ProjectSettings.asset for these setters unless the singleton is dirty.
+            Object playerSettings = Unsupported.GetSerializedAssetInterfaceSingleton("PlayerSettings");
+            if (playerSettings != null)
+            {
+                EditorUtility.SetDirty(playerSettings);
+            }
         }
 
         public static MovementConfigAssets EnsureMovementAssets()
@@ -159,6 +176,7 @@ namespace JungleBooze.Editor.FeelTest
             palette.Runner = Lit("FT_Runner", Hex(0xD9783A), 0.35f);
             palette.RunnerAccent = Lit("FT_RunnerAccent", Hex(0x2F4F6F), 0.3f);
             palette.Marker = Lit("FT_Marker", Hex(0xEDE6D2), 0.1f);
+            palette.Leaf = Particle("FT_Leaf", Color.white);
             palette.DebugHitbox = Transparent("FT_DebugHitbox", new Color(1f, 0.15f, 0.15f, 0.28f));
             palette.DebugRunner = Transparent("FT_DebugRunner", new Color(0.2f, 1f, 0.35f, 0.35f));
             palette.DebugTarget = Transparent("FT_DebugTarget", new Color(0.2f, 0.6f, 1f, 0.8f));
@@ -206,6 +224,17 @@ namespace JungleBooze.Editor.FeelTest
             m.EnableKeyword("_EMISSION");
             m.SetColor("_EmissionColor", color * 0.6f);
             m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
+            EditorUtility.SetDirty(m);
+            return m;
+        }
+
+        private static Material Particle(string name, Color color)
+        {
+            Material m = LoadOrCreate(name, "Universal Render Pipeline/Particles/Simple Lit");
+            m.SetColor("_BaseColor", color);
+            m.SetFloat("_Surface", 0f);
+            m.SetFloat("_Smoothness", 0.1f);
+            m.enableInstancing = true;
             EditorUtility.SetDirty(m);
             return m;
         }
@@ -265,6 +294,18 @@ namespace JungleBooze.Editor.FeelTest
             var rootObject = new GameObject("FeelTestRoot");
             FeelTestRoot root = rootObject.AddComponent<FeelTestRoot>();
             root.Configure(movement, gestures, landscape, portrait, course, palette, camera);
+
+            // Rigged Pista when the model is in the project; otherwise the gray-box capsule stays.
+            if (File.Exists(PistaPaths.Model))
+            {
+                GameObject pista = AssetDatabase.LoadAssetAtPath<GameObject>(PistaPaths.Prefab);
+                if (pista == null)
+                {
+                    pista = PistaPrefabSetup.BuildAll();
+                }
+
+                root.SetAvatarPrefab(pista != null ? pista.GetComponent<RunnerAvatar>() : null);
+            }
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, FeelTestPaths.Scene);

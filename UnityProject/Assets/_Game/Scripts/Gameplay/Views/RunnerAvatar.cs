@@ -20,6 +20,11 @@ namespace JungleBooze.Gameplay.Views
         /// <summary>Blink during i-frames.</summary>
         public abstract void SetVisible(bool visible);
 
+        /// <summary>Gives the avatar the run's movement config (jump airtime, slide length) once, before the first frame.</summary>
+        public virtual void Bind(MovementConfig config)
+        {
+        }
+
         /// <summary>New run: clear transient animation state.</summary>
         public virtual void ResetPose()
         {

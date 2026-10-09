@@ -13,100 +13,214 @@ MonoBehaviour:
   m_Name: LookTestConfig
   m_EditorClassIdentifier: JungleBooze.App::JungleBooze.App.LookTest.LookTestConfigAsset
   _runSpeedMps: 9
-  _cameraFovDeg: 47
-  _cameraPortraitHorizontalFovDeg: 42
-  _cameraPortraitLookAtHeightM: 3.4
-  _cameraOffsetBehindM: 5.5
-  _cameraOffsetUpM: 2.5
-  _cameraLookAheadM: 10
-  _cameraLookAtHeightM: 1.3
-  _cameraFarClipM: 230
+  _landscapeCamera:
+    BackM: 9
+    UpM: 3.6
+    PitchDeg: 9
+    VerticalFovDeg: 55
+    LateralFollow: 0.7
+    FollowLagM: 3.2
+  _portraitCamera:
+    BackM: 9.2
+    UpM: 5.6
+    PitchDeg: 12
+    VerticalFovDeg: 65
+    LateralFollow: 0.8
+    FollowLagM: 3.2
+  _cameraFarClipM: 2600
   _targetFrameRate: 60
   _targetInternalMegapixels: 1.7
   _minRenderScale: 0.6
   _maxRenderScale: 1
-  _loopLengthM: 200
-  _segmentCount: 8
-  _recycleBehindM: 22
-  _seed: 20261008
-  _pathHalfWidthM: 3
-  _groundHalfWidthM: 70
-  _groundStepZM: 1
-  _leftSlope: 0.12
-  _groundBumpM: 0.6
-  _riverCenterXM: 17
-  _riverMeanderM: 3
-  _riverHalfWidthM: 4
-  _riverBedDepthM: 1.6
-  _waterLevelM: -0.55
-  _riverFlowSpeed: 0.35
-  _cliffStartZM: 88
-  _cliffEndZM: 182
-  _cliffHeightM: 16
-  _cliffSetbackM: 6
-  _cliffRampM: 35
-  _waterfallZM: 135
-  _waterfallWidthM: 5
+  _loopLengthM: 225
+  _segmentCount: 9
+  _recycleBehindM: 20
+  _seed: 20261009
+  _runnableHalfWidthM: 3.5
+  _trailHalfWidthM: 2.3
+  _stripHalfWidthM: 52
+  _groundStepM: 1
+  _groundBumpM: 0.5
+  _headingKeys:
+  - {x: 0, y: -10}
+  - {x: 22, y: -4}
+  - {x: 48, y: -12}
+  - {x: 80, y: -2}
+  - {x: 104, y: 7}
+  - {x: 124, y: 3}
+  - {x: 148, y: -8}
+  - {x: 168, y: 6}
+  - {x: 187, y: 28}
+  - {x: 205, y: 10}
+  - {x: 222, y: -10}
+  _heightKeys:
+  - {x: 0, y: 2.2}
+  - {x: 22, y: 1}
+  - {x: 52, y: 3.4}
+  - {x: 82, y: 3.5}
+  - {x: 102, y: 2.2}
+  - {x: 124, y: 0}
+  - {x: 146, y: 1.5}
+  - {x: 168, y: 4.6}
+  - {x: 190, y: 5.4}
+  - {x: 204, y: 5}
+  _enclosureKeys:
+  - {x: 0, y: 1}
+  - {x: 28, y: 1}
+  - {x: 40, y: 0.25}
+  - {x: 52, y: 0.9}
+  - {x: 66, y: 0.9}
+  - {x: 80, y: 0.6}
+  - {x: 96, y: 0.9}
+  - {x: 108, y: 0.7}
+  - {x: 118, y: 0.1}
+  - {x: 136, y: 0.1}
+  - {x: 148, y: 0.85}
+  - {x: 160, y: 0.85}
+  - {x: 170, y: 0.2}
+  - {x: 178, y: 0}
+  - {x: 207, y: 0}
+  - {x: 219, y: 0.65}
+  _bankLeftKeys:
+  - {x: 0, y: 4.5}
+  - {x: 30, y: 4}
+  - {x: 55, y: 3.5}
+  - {x: 72, y: 1}
+  - {x: 96, y: 1.2}
+  - {x: 108, y: 3}
+  - {x: 118, y: 1.2}
+  - {x: 135, y: 1}
+  - {x: 150, y: 3.5}
+  - {x: 170, y: 2.5}
+  - {x: 190, y: 2}
+  - {x: 210, y: 4.5}
+  _bankRightKeys:
+  - {x: 0, y: 3.5}
+  - {x: 30, y: 3}
+  - {x: 55, y: 3.5}
+  - {x: 75, y: 3}
+  - {x: 100, y: 3}
+  - {x: 114, y: 0.5}
+  - {x: 140, y: 0.6}
+  - {x: 152, y: 3}
+  - {x: 165, y: 0.5}
+  - {x: 205, y: 0.5}
+  - {x: 215, y: 3}
+  _rightEdgeKeys:
+  - {x: 0, y: 16}
+  - {x: 30, y: 18}
+  - {x: 55, y: 20}
+  - {x: 80, y: 24}
+  - {x: 100, y: 44}
+  - {x: 116, y: 24}
+  - {x: 136, y: 28}
+  - {x: 150, y: 44}
+  - {x: 163, y: 14}
+  - {x: 176, y: 6.5}
+  - {x: 198, y: 6.5}
+  - {x: 212, y: 10}
+  _belowRightKeys:
+  - {x: 0, y: -30}
+  - {x: 20, y: -40}
+  - {x: 150, y: -40}
+  - {x: 170, y: -24}
+  - {x: 190, y: -20}
+  - {x: 208, y: -24}
+  _valleyFloorY: -40
+  _canopyRoofHeightM: {x: 13, y: 24}
+  _sunPatches:
+  - {x: 82, y: -7, z: 13, w: 0.9}
+  - {x: 41, y: 0, z: 9, w: 0.7}
+  - {x: 60, y: 6, z: 6, w: 0.5}
+  _riverStartSM: 86
+  _riverEndSM: 164
+  _riverCrossSM: 124
+  _riverHalfWidthM: 6
+  _riverDepthM: 1.2
+  _fordDepthM: 0.15
+  _riverSlope: 0.03
+  _riverFlowSpeed: 0.45
   _waterfallFlowSpeed: 1.6
-  _mistParticles: 28
-  _treeCount: 110
-  _trunkHeightMinM: 16
-  _trunkHeightMaxM: 30
-  _trunkRadiusMinM: 0.45
-  _trunkRadiusMaxM: 1.2
-  _canopyCardsPerTree: 64
-  _canopyCardSizeM: 4
-  _boulderCount: 36
-  _heroRockCount: 6
-  _fernCount: 420
-  _plantCount: 150
-  _fernHeightMinM: 0.9
-  _fernHeightMaxM: 1.9
-  _plantHeightMinM: 0.8
-  _plantHeightMaxM: 2.2
-  _plantCullScreenFraction: 0.035
-  _rockCullScreenFraction: 0.015
+  _wallClumpsPerSegment: 70
+  _frameClumpsPerSegment: 4
+  _canopyTreesPerSegment: 9
+  _understoryTreesPerSegment: 8
+  _roofClumpsPerSegment: 26
+  _vinesPerSegment: 14
+  _edgeRootsPerSegment: 8
+  _boulderPerSegment: 6
+  _fernsPerSegment: 8
+  _plantsPerSegment: 3
   _windStrengthM: 0.12
-  _understoryTreeCount: 60
-  _understoryHeightMinM: 6
-  _understoryHeightMaxM: 12
+  _detailRangeM: 50
+  _stiltwoods:
+  - {x: 20, y: -10, z: 1}
+  - {x: 63, y: 12, z: 0.8}
+  - {x: 116, y: -15, z: 1.1}
+  - {x: 158, y: -11, z: 0.8}
+  - {x: 100, y: 16, z: 0.7}
+  _lightShafts:
+  - {x: 38, y: -3, z: 30}
+  - {x: 44, y: 5, z: 26}
+  - {x: 58, y: -8, z: 24}
+  - {x: 76, y: -7, z: 26}
+  - {x: 84, y: -2, z: 22}
+  - {x: 100, y: 4, z: 24}
+  - {x: 110, y: -6, z: 26}
+  - {x: 152, y: 2, z: 26}
+  - {x: 160, y: -6, z: 22}
+  - {x: 222, y: 3, z: 24}
+  - {x: 10, y: 6, z: 22}
+  - {x: 30, y: 2, z: 28}
   _skyHdriId: kloofendal_48d_partly_cloudy_puresky
   _forestFloorTextureId: leafy_grass
   _pathTextureId: forest_ground_05
   _riverBedTextureId: ganges_river_pebbles
-  _cliffTextureId: rock_face_03
+  _rockTextureId: rock_face_03
   _boulderTextureId: mossy_rock
   _barkTextureId: bark_brown_02
   _leafCardModelId: island_tree_02
   _fernModelId: fern_02
   _plantModelIds:
-  - food_ginger_01
-  - anthurium_botany_01
   - calathea_orbifolia_01
-  - shrub_sorrel_01
-  _rockModelIds:
-  - rock_07
-  - rock_09
-  _forestFloorTint: {r: 0.46, g: 0.6, b: 0.36, a: 1}
-  _pathTint: {r: 0.95, g: 0.86, b: 0.76, a: 1}
-  _riverBedTint: {r: 0.9, g: 0.95, b: 0.9, a: 1}
-  _scannedRockTint: {r: 0.62, g: 0.6, b: 0.54, a: 1}
-  _groundTileM: {x: 4, y: 5, z: 2.5}
-  _cliffTileM: 8
+  - food_ginger_01
+  _forestFloorTint: {r: 0.4, g: 0.55, b: 0.33, a: 1}
+  _pathTint: {r: 0.92, g: 0.82, b: 0.72, a: 1}
+  _riverBedTint: {r: 0.85, g: 0.92, b: 0.88, a: 1}
+  _rootstoneTint: {r: 0.62, g: 0.6, b: 0.55, a: 1}
+  _leafTint: {r: 0.78, g: 0.92, b: 0.66, a: 1}
+  _groundTileM: {x: 4.5, y: 5, z: 2.5}
+  _rockTileM: 9
   _barkTileM: 2
-  _sunPitchDeg: 42
-  _sunYawDeg: -38
-  _sunColor: {r: 1, g: 0.93, b: 0.82, a: 1}
-  _sunIntensity: 2.6
-  _skyExposure: 1
+  _sunElevationDeg: 27
+  _sunAzimuthDeg: -32
+  _sunColor: {r: 1, g: 0.86, b: 0.66, a: 1}
+  _sunIntensity: 3.8
+  _skyExposure: 0.85
   _skyRotationDeg: 0
+  _skyTint: {r: 0.92, g: 0.98, b: 1, a: 1}
   _ambientIntensity: 1
   _bakeEnvironmentLighting: 1
   _fallbackSkyAmbient: {r: 0.55, g: 0.66, b: 0.72, a: 1}
   _fallbackEquatorAmbient: {r: 0.36, g: 0.42, b: 0.34, a: 1}
   _fallbackGroundAmbient: {r: 0.16, g: 0.15, b: 0.11, a: 1}
-  _fogColor: {r: 0.56, g: 0.7, b: 0.7, a: 1}
-  _fogDensity: 0.0075
+  _fogColor: {r: 0.62, g: 0.76, b: 0.8, a: 1}
+  _fogSunColor: {r: 1, g: 0.86, b: 0.62, a: 1}
+  _fogDensity: 0.0034
+  _fogHeightFalloff: 0.045
+  _fogBaseHeightM: 0
+  _fogStartM: 6
+  _fogMaxOpacity: 0.96
+  _fogSunPower: 6
+  _skyFogDistanceM: 2400
+  _dappleSizeM: 9
+  _dappleLitFraction: 0.28
+  _canopyAmbient: 0.5
+  _canopyTint: {r: 0.88, g: 0.96, b: 0.8, a: 1}
+  _shaftColor: {r: 1, g: 0.82, b: 0.5, a: 1}
+  _shaftIntensity: 0.55
+  _mistColor: {r: 0.86, g: 0.92, b: 0.94, a: 1}
+  _mistOpacity: 0.5
   _hdr: 1
   _msaaSamples: 4
   _shadowDistanceM: 45
@@ -114,17 +228,91 @@ MonoBehaviour:
   _shadowCascades: 1
   _softShadows: 1
   _acesTonemapping: 1
-  _postExposure: 0.25
-  _contrast: 12
-  _saturation: 8
-  _whiteBalanceTemperature: 4
-  _bloomThreshold: 1.1
-  _bloomIntensity: 0.35
-  _bloomScatter: 0.6
-  _vignetteIntensity: 0.2
-  _waterShallowColor: {r: 0.22, g: 0.75, b: 0.68, a: 1}
-  _waterDeepColor: {r: 0.07, g: 0.4, b: 0.43, a: 1}
-  _waterOpacity: 0.72
+  _postExposure: 0.45
+  _contrast: 18
+  _saturation: 14
+  _whiteBalanceTemperature: 6
+  _whiteBalanceTint: -4
+  _splitShadows: {r: 0.42, g: 0.52, b: 0.55, a: 1}
+  _splitHighlights: {r: 0.92, g: 0.72, b: 0.42, a: 1}
+  _splitBalance: 10
+  _gradeShadows: {x: 0.96, y: 1.02, z: 1.04, w: -0.06}
+  _gradeMidtones: {x: 1, y: 1.01, z: 0.98, w: 0}
+  _gradeHighlights: {x: 1.04, y: 1, z: 0.94, w: 0.02}
+  _bloomThreshold: 1
+  _bloomIntensity: 0.45
+  _bloomScatter: 0.7
+  _bloomTint: {r: 1, g: 0.93, b: 0.8, a: 1}
+  _vignetteIntensity: 0.26
+  _waterShallowColor: {r: 0.2, g: 0.78, b: 0.72, a: 1}
+  _waterDeepColor: {r: 0.05, g: 0.42, b: 0.46, a: 1}
+  _waterOpacity: 0.78
   _waterNormalTilingPerM: 0.35
+  _mainDrawBudget: 250
+  _mainTriangleBudget: 350000
+  _shadowDrawBudget: 100
+  _shadowTriangleBudget: 150000
+  _budgetLines:
+  - Layer: L0
+    Description: Path and edge dressing
+    Draws: 40
+    Triangles: 50000
+  - Layer: L1
+    Description: Foliage walls
+    Draws: 30
+    Triangles: 90000
+  - Layer: L2
+    Description: Trunks, stiltwoods, rootstone
+    Draws: 50
+    Triangles: 90000
+  - Layer: L3
+    Description: Canopy roof
+    Draws: 10
+    Triangles: 25000
+  - Layer: L4
+    Description: Forest wall (impostors)
+    Draws: 10
+    Triangles: 2000
+  - Layer: L5
+    Description: Backdrop
+    Draws: 6
+    Triangles: 1000
+  - Layer: L6
+    Description: Sky
+    Draws: 1
+    Triangles: 0
+  - Layer: W
+    Description: Water, mist, light shafts
+    Draws: 24
+    Triangles: 12000
+  - Layer: FX
+    Description: Pista, pickups, effects
+    Draws: 40
+    Triangles: 35000
+  _shots:
+  - Name: F1_out_of_the_roots
+    DistanceM: 25
+    Portrait: 0
+  - Name: F2_the_fork
+    DistanceM: 80
+    Portrait: 0
+  - Name: F3_the_ford
+    DistanceM: 124
+    Portrait: 0
+  - Name: F4_the_basin
+    DistanceM: 190
+    Portrait: 0
+  - Name: P1_the_basin_portrait
+    DistanceM: 190
+    Portrait: 1
+  - Name: X_climb_055m
+    DistanceM: 55
+    Portrait: 0
+  - Name: X_return_215m
+    DistanceM: 215
+    Portrait: 0
+  - Name: XP_roots_portrait
+    DistanceM: 25
+    Portrait: 1
   _statsRefreshSeconds: 0.5
   _showQualityPanel: 1

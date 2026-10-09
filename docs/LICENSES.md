@@ -25,6 +25,7 @@ the owner with commercial rights per Meshy's terms. No attribution required.
 | Pista clean mesh + textures (`art_source/pista/clean/`), our cleanup/bake of v1 in Blender (`tools/blender/pista/`) | Derived from Pista 3D v1 | 2026-10-09 | Owned by owner (Meshy paid plan output, our edits) |
 | Pista rig (24 humanoid bones; we added 3 ponytail bones) | Meshy Auto-Rigging API, task `01a11d3f-f3a4-7369-9470-67c27273c6dc` | 2026-10-09 | Owned by owner (Meshy paid plan) |
 | Pista animation clips in `UnityProject/Assets/_Game/Art/Characters/Pista/Pista.fbx` (Meshy animation library ids 0, 9, 10, 16, 190, 246, 416, 466, 467, 477, 485, 495, 503, 508, 517, 539; ids 184, 509, 538 bought and not used) | Meshy Animation API, tasks `01a11d40-f7da-738c-9942-c9c7c92af726`, `01a11d40-f7d0-72fb-b861-1f2a3b180a5c` | 2026-10-09 | Owned by owner (Meshy paid plan). **Re-check Meshy's terms for library animations before launch** (they are Meshy-provided motions applied to our rig, not generated from our input) |
+| Look test v2 keyframes (`design/aurelia/keyframes/*.jpg`, raw in `art_source/environment/meshy/keyframes_raw/`), reference only, not shipped | Meshy text-to-image / image-to-image (`nano-banana`, `nano-banana-pro`, third-party Google models inside Meshy); inputs: our prompts, our own vision-board crops; task ids in `art_source/environment/meshy/calls.jsonl` | 2026-10-09 | Owned by owner (Meshy paid plan). **Re-check Meshy's terms for third-party image models before any of these are used in store art** |
 
 ## Build and CI tools (not shipped in the app)
 

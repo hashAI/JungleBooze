@@ -19,6 +19,7 @@ namespace JungleBooze.Editor.LookTest
         public const string WaterShaderPath = ShaderFolder + "/Water.shader";
         public const string SkyShaderPath = ShaderFolder + "/SkyHdri.shader";
         public const string MistShaderPath = ShaderFolder + "/Mist.shader";
+        public const string AtmosCardShaderPath = ShaderFolder + "/AtmosCard.shader";
 
         private const int AlphaTestQueue = 2450;
 
@@ -28,6 +29,7 @@ namespace JungleBooze.Editor.LookTest
         private readonly Shader _water;
         private readonly Shader _sky;
         private readonly Shader _mist;
+        private readonly Shader _atmosCard;
 
         public LookTestMaterials(LookTestConfigAsset config, LookTestAssets assets)
         {
@@ -37,6 +39,7 @@ namespace JungleBooze.Editor.LookTest
             _water = LoadShader(WaterShaderPath);
             _sky = LoadShader(SkyShaderPath);
             _mist = LoadShader(MistShaderPath);
+            _atmosCard = LoadShader(AtmosCardShaderPath);
         }
 
         public Material Ground()
@@ -60,11 +63,52 @@ namespace JungleBooze.Editor.LookTest
             return Save(m);
         }
 
-        public Material Cliff()
+        /// <summary>Rootstone landforms (graybox): pillars, arches, stilt-root rock, ledges.</summary>
+        public Material Rootstone()
         {
-            LookTestAssets.TextureSet set = _assets.FindTextures(LookTestAssets.TexturesFolder, _config.CliffTextureId, string.Empty);
-            Material m = Nature("Cliff", set, 1f / _config.CliffTileM, new Color(0.45f, 0.43f, 0.38f, 1f));
+            LookTestAssets.TextureSet set = _assets.FindTextures(LookTestAssets.TexturesFolder, _config.RockTextureId, string.Empty);
+            Material m = Nature("Rootstone", set, 1f / _config.RockTileM, new Color(0.45f, 0.43f, 0.38f, 1f));
+            m.SetColor("_BaseColor", set.Albedo != null ? _config.RootstoneTint : new Color(0.45f, 0.43f, 0.38f, 1f));
             m.SetFloat("_VertexAO", 1f);
+            return Save(m);
+        }
+
+        /// <summary>Distant forest canopy seen from above (valley floor, pillar tops): lumpy green blobs, no alpha.</summary>
+        public Material FarCanopy()
+        {
+            LookTestAssets.TextureSet set = _assets.FindTextures(LookTestAssets.TexturesFolder, _config.ForestFloorTextureId, string.Empty);
+            Material m = Nature("FarCanopy", set, 1f / 6f, new Color(0.16f, 0.30f, 0.14f, 1f));
+            m.SetColor("_BaseColor", set.Albedo != null ? new Color(0.36f, 0.55f, 0.30f, 1f) : new Color(0.16f, 0.30f, 0.14f, 1f));
+            m.SetFloat("_VertexAO", 1f);
+            return Save(m);
+        }
+
+        /// <summary>Additive gold light shafts (Atmos Card shader).</summary>
+        public Material LightShaft()
+        {
+            Material m = Fresh("LightShaft", _atmosCard);
+            m.SetFloat("_SrcBlend", (float)BlendMode.One);
+            m.SetFloat("_DstBlend", (float)BlendMode.One);
+            m.SetFloat("_Intensity", 1f);
+            m.SetVector("_NearFade", new Vector4(7f, 18f, 0f, 0f));
+            m.SetVector("_FarFade", new Vector4(110f, 170f, 0f, 0f));
+            m.renderQueue = (int)RenderQueue.Transparent + 6;
+            return Save(m);
+        }
+
+        /// <summary>Alpha-blended mist billows (Atmos Card shader, _MIST).</summary>
+        public Material MistCard(Texture2D soft)
+        {
+            Material m = Fresh("MistCard", _atmosCard);
+            m.SetTexture("_MainTex", soft);
+            m.SetFloat("_Mist", 1f);
+            m.EnableKeyword("_MIST");
+            m.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
+            m.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
+            m.SetFloat("_Intensity", 1f);
+            m.SetVector("_NearFade", new Vector4(3f, 12f, 0f, 0f));
+            m.SetVector("_FarFade", new Vector4(2500f, 3000f, 0f, 0f));
+            m.renderQueue = (int)RenderQueue.Transparent + 3;
             return Save(m);
         }
 
@@ -89,7 +133,12 @@ namespace JungleBooze.Editor.LookTest
         {
             LookTestAssets.TextureSet set = _assets.FindTextures(LookTestAssets.ModelsFolder, _config.LeafCardModelId, "leaves");
             Material m = Nature("Leaves", set, 1f, new Color(0.22f, 0.36f, 0.14f, 1f));
-            Foliage(m, set, 0.55f, 0.04f);
+            Foliage(m, set, 0.7f, 0.04f);
+            if (set.Albedo != null)
+            {
+                m.SetColor("_BaseColor", _config.LeafTint);
+            }
+
             m.SetFloat("_VertexAO", 1f);
             return Save(m);
         }
@@ -105,7 +154,7 @@ namespace JungleBooze.Editor.LookTest
             }
             else if (set.Albedo != null)
             {
-                m.SetColor("_BaseColor", _config.ScannedRockTint);
+                m.SetColor("_BaseColor", _config.RootstoneTint);
             }
 
             return Save(m);
@@ -116,6 +165,11 @@ namespace JungleBooze.Editor.LookTest
             Material m = Water("River", normal);
             m.SetVector("_FlowA", new Vector4(0.02f, _config.RiverFlowSpeed, 0f, 0f));
             m.SetVector("_FlowB", new Vector4(-0.03f, _config.RiverFlowSpeed * 0.63f, 0f, 0f));
+            m.SetFloat("_FoamStrength", 0.6f);
+            m.SetFloat("_ReflectionStrength", 0.45f);
+            m.SetFloat("_FresnelPower", 5f);
+            m.SetFloat("_Opacity", 0.62f);
+            m.SetFloat("_SpecularStrength", 1.0f);
             return Save(m);
         }
 
@@ -140,6 +194,16 @@ namespace JungleBooze.Editor.LookTest
             return Save(m);
         }
 
+        /// <summary>Plunge pool and terrace pools: the river water, calmer.</summary>
+        public Material Pool(Texture2D normal)
+        {
+            Material m = Water("Pool", normal);
+            m.SetVector("_FlowA", new Vector4(0.03f, 0.06f, 0f, 0f));
+            m.SetVector("_FlowB", new Vector4(-0.04f, 0.03f, 0f, 0f));
+            m.SetFloat("_FoamStrength", 1.4f);
+            return Save(m);
+        }
+
         public Material Sky(Cubemap hdri)
         {
             Material m = Fresh("Sky", _sky);
@@ -150,6 +214,8 @@ namespace JungleBooze.Editor.LookTest
 
             m.SetFloat("_Exposure", _config.SkyExposure);
             m.SetFloat("_Rotation", Mathf.Repeat(_config.SkyRotationDeg, 360f));
+            m.SetColor("_Tint", _config.SkyTint);
+            m.SetFloat("_HorizonFog", 1f);
             return Save(m);
         }
 
@@ -192,6 +258,9 @@ namespace JungleBooze.Editor.LookTest
 
             m.SetTextureScale("_BaseMap", new Vector2(tiling, tiling));
             m.SetFloat("_VertexAO", 0f);
+            // Look test v2: every Nature Lit mesh is merged per segment with canopy cover painted in vertex color B.
+            m.SetFloat("_CanopyCover", 1f);
+            m.SetFloat("_WindVertexColor", 1f);
             return m;
         }
 

@@ -5,6 +5,7 @@ Newest first.
 
 | Date | Gate | Decision | Options considered | Decided by |
 |---|---|---|---|---|
+| 2026-10-09 | G6 | Store name **"Aurelia: Wildward"** (fallback Verdaway); domain waits for the attorney check. Owner: focus on building the game today; naming/compliance/other work comes later | Wildward / Verdaway / Lumenwild | Owner |
 | 2026-10-09 | G2 | **No purchases for environment art** (declined SeedMesh, Amplify Impostors, OpenAI credit). Use Meshy (inside the 1,000 pre-approved credits; ask beyond), CC0 and in-house Blender/procedural work | Approve all ~$175 / OpenAI only / no new money | Owner |
 | 2026-10-09 | G6 | Store name: "Aurelia: <coined word>"; coordinator prepares 6–8 options with collision checks. Bundle id decided later (before the first TestFlight upload) | Aurelia: coined / new coined / AURELIA alone | Owner |
 | 2026-10-09 | — | Quality is never compromised to save money. If top-notch quality needs more budget (beyond the 1,000 Meshy credits, or any paid tool/asset/service), ask the owner with the expected cost and why cheaper options fall short | — | Owner |

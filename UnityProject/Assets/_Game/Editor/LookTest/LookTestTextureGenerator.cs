@@ -6,9 +6,10 @@ using UnityEngine;
 namespace JungleBooze.Editor.LookTest
 {
     /// <summary>
-    /// Generates the two small textures the look test needs and no CC0 library offers in a mobile-ready form:
-    /// a seamless water normal map (sum of sine waves with whole-number frequencies, so it tiles exactly) and a soft
-    /// round mist particle. Written as PNG files under <see cref="Folder"/> and imported with fixed settings.
+    /// Generates the small textures the look test needs and no CC0 library offers in a mobile-ready form:
+    /// a seamless water normal map (sum of sine waves with whole-number frequencies, so it tiles exactly), a soft
+    /// round mist particle, and the canopy dapple pattern (tiling blobs, rank-equalized so a threshold t lights
+    /// exactly 1 - t of the area; JBAtmosphere.hlsl). Written as PNG files under <see cref="Folder"/> and imported with fixed settings.
     /// Deterministic (seeded); editor only.
     /// </summary>
     public static class LookTestTextureGenerator
@@ -16,10 +17,13 @@ namespace JungleBooze.Editor.LookTest
         public const string Folder = "Assets/_Game/Art/LookTest/Generated";
         public const string WaterNormalPath = Folder + "/WaterNormal.png";
         public const string MistPath = Folder + "/MistSoft.png";
+        public const string DapplePath = Folder + "/CanopyDapple.png";
 
         private const int WaterSize = 512;
         private const int MistSize = 128;
         private const int Waves = 14;
+        private const int DappleSize = 256;
+        private const int DappleBlobs = 90;
 
         public static Texture2D EnsureWaterNormal(int seed)
         {
@@ -120,6 +124,88 @@ namespace JungleBooze.Editor.LookTest
             }
 
             return AssetDatabase.LoadAssetAtPath<Texture2D>(MistPath);
+        }
+
+        /// <summary>Tileable sun-fleck pattern for the canopy light (R8, values uniformly distributed in 0..1).</summary>
+        public static Texture2D EnsureDapple(int seed)
+        {
+            if (!File.Exists(DapplePath))
+            {
+                float[] values = DappleValues(seed, DappleSize, DappleBlobs);
+                var texture = new Texture2D(DappleSize, DappleSize, TextureFormat.RGB24, false, true);
+                var pixels = new Color32[values.Length];
+                for (int i = 0; i < values.Length; i++)
+                {
+                    byte v = (byte)Mathf.RoundToInt(values[i] * 255f);
+                    pixels[i] = new Color32(v, v, v, 255);
+                }
+
+                texture.SetPixels32(pixels);
+                texture.Apply();
+                Write(texture, DapplePath);
+            }
+
+            var importer = (TextureImporter)AssetImporter.GetAtPath(DapplePath);
+            if (importer != null && importer.sRGBTexture)
+            {
+                importer.textureType = TextureImporterType.SingleChannel;
+                importer.sRGBTexture = false;
+                importer.wrapMode = TextureWrapMode.Repeat;
+                importer.mipmapEnabled = true;
+                SetIos(importer, TextureImporterFormat.R8);
+                importer.SaveAndReimport();
+            }
+
+            return AssetDatabase.LoadAssetAtPath<Texture2D>(DapplePath);
+        }
+
+        /// <summary>
+        /// Dapple values (row-major, size²): a sum of soft round blobs of mixed sizes that wraps at the borders, then
+        /// replaced by its rank so the values are uniform in [0, 1]. Pure; unit-tested.
+        /// </summary>
+        public static float[] DappleValues(int seed, int size, int blobs)
+        {
+            var rng = new Pcg32Random((ulong)(uint)seed, 0xDA991EUL);
+            var field = new float[size * size];
+            for (int b = 0; b < blobs; b++)
+            {
+                float cx = rng.NextFloat(0f, size);
+                float cy = rng.NextFloat(0f, size);
+                float radius = size * Mathf.Lerp(0.015f, 0.07f, rng.NextFloat() * rng.NextFloat());
+                float weight = rng.NextFloat(0.5f, 1f);
+                int reach = Mathf.CeilToInt(radius * 2.5f);
+                for (int dy = -reach; dy <= reach; dy++)
+                {
+                    for (int dx = -reach; dx <= reach; dx++)
+                    {
+                        float r2 = (dx * dx + dy * dy) / (radius * radius);
+                        if (r2 > 6.25f)
+                        {
+                            continue;
+                        }
+
+                        int x = ((Mathf.FloorToInt(cx) + dx) % size + size) % size;
+                        int y = ((Mathf.FloorToInt(cy) + dy) % size + size) % size;
+                        field[y * size + x] += weight * Mathf.Exp(-r2);
+                    }
+                }
+            }
+
+            // Rank equalization: value = rank / (n - 1).
+            var order = new int[field.Length];
+            for (int i = 0; i < order.Length; i++)
+            {
+                order[i] = i;
+            }
+
+            System.Array.Sort((float[])field.Clone(), order);
+            var result = new float[field.Length];
+            for (int rank = 0; rank < order.Length; rank++)
+            {
+                result[order[rank]] = rank / (float)(order.Length - 1);
+            }
+
+            return result;
         }
 
         private static void Write(Texture2D texture, string assetPath)

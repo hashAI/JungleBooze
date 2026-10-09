@@ -6,11 +6,11 @@ using UnityEngine;
 namespace JungleBooze.Editor.LookTest
 {
     /// <summary>
-    /// Procedural meshes for the look test (editor only, allocates): ground and river per segment, the cliff, the
-    /// waterfall sheet, tree trunks with buttress roots, leaf-card crowns and low-poly boulders. Ground, river and
-    /// cliff take their shape from <see cref="LookTestTerrainShape"/>, so neighbouring segments meet exactly and the
-    /// loop is seamless. UVs are in meters (materials set the tiling). Vertex color: R/G material layers or foam,
-    /// A ambient occlusion or edge fade.
+    /// Procedural meshes for the look test (editor only, allocates): ground and river strips in path space (shape
+    /// from <see cref="LookTestStretchLayout"/>, so neighbouring segments meet exactly and the loop is seamless),
+    /// tubes (stilt roots, rootstone pillars and arches, vines), leaf-card clumps and crowns, trunks, boulders,
+    /// pools and waterfall sheets. UVs are in meters (materials set the tiling). Vertex color: R/G material layers or
+    /// foam, B canopy cover (painted when merged), A ambient occlusion or edge fade.
     /// Triangle convention of <see cref="Grid"/>: for grid axes u (first index) and v (second index) the front
     /// face points along cross(dP/dv, dP/du).
     /// </summary>
@@ -24,167 +24,396 @@ namespace JungleBooze.Editor.LookTest
             public Vector3 Bitangent;
         }
 
-        public static Mesh Ground(LookTestTerrainShape shape, LookTestConfigAsset c, int segment)
+        /// <summary>Lateral sample positions of the ground strip: fine near the trail, coarse far out; the runnable edges are exact.</summary>
+        public static List<float> StripColumns(LookTestConfigAsset c)
         {
-            float segLength = c.LoopLengthM / c.SegmentCount;
-            float z0 = segment * segLength;
-            List<float> xs = GroundColumns(c);
-            int rows = Mathf.Max(1, Mathf.RoundToInt(segLength / c.GroundStepZM));
-
-            var positions = new Vector3[xs.Count, rows + 1];
-            var frames = new Frame[xs.Count, rows + 1];
-            var uvs = new Vector2[xs.Count, rows + 1];
-            var colors = new Color[xs.Count, rows + 1];
-            for (int i = 0; i < xs.Count; i++)
+            var columns = new List<float>();
+            float w = c.StripHalfWidthM;
+            float run = c.RunnableHalfWidthM;
+            for (float d = -w; d < w - 0.01f;)
             {
+                columns.Add(d);
+                float ad = Mathf.Abs(d);
+                d += ad < run + 4f ? 0.5f : ad < 16f ? 1f : ad < 30f ? 2f : 3.5f;
+            }
+
+            columns.Add(w);
+            InsertSorted(columns, -run);
+            InsertSorted(columns, run);
+            return columns;
+        }
+
+        /// <summary>Ground of the path range [s0, s1] (world space, loop 0). UV = (d, s) in meters.</summary>
+        public static Mesh GroundStrip(LookTestStretchLayout layout, float s0, float s1, string name)
+        {
+            LookTestConfigAsset c = layout.Config;
+            List<float> columns = StripColumns(c);
+            int rows = Mathf.Max(1, Mathf.RoundToInt((s1 - s0) / c.GroundStepM));
+            var positions = new Vector3[columns.Count, rows + 1];
+            var frames = new Frame[columns.Count, rows + 1];
+            var uvs = new Vector2[columns.Count, rows + 1];
+            var colors = new Color[columns.Count, rows + 1];
+            const float e = 0.3f;
+            for (int i = 0; i < columns.Count; i++)
+            {
+                float d = columns[i];
                 for (int j = 0; j <= rows; j++)
                 {
-                    float local = segLength * j / rows;
-                    float x = xs[i];
-                    float z = z0 + local;
-                    float h = shape.Height(x, z);
-                    positions[i, j] = new Vector3(x, h, local);
-                    Vector3 n = shape.Normal(x, z);
-                    frames[i, j] = new Frame
-                    {
-                        Normal = n,
-                        Tangent = new Vector3(1f, -n.x / Mathf.Max(n.y, 0.05f), 0f).normalized,
-                        Bitangent = new Vector3(0f, -n.z / Mathf.Max(n.y, 0.05f), 1f).normalized,
-                    };
-                    uvs[i, j] = new Vector2(x, z);
-                    colors[i, j] = shape.Weights(x, z);
+                    float s = Mathf.Lerp(s0, s1, (float)j / rows);
+                    positions[i, j] = GroundPoint(layout, s, d);
+                    Vector3 alongS = GroundPoint(layout, s + e, d) - GroundPoint(layout, s - e, d);
+                    Vector3 alongD = GroundPoint(layout, s, d + e) - GroundPoint(layout, s, d - e);
+                    frames[i, j] = new Frame { Normal = Vector3.Cross(alongS, alongD).normalized, Tangent = alongD.normalized, Bitangent = alongS.normalized };
+                    uvs[i, j] = new Vector2(d, s);
+                    colors[i, j] = layout.GroundWeights(s, d);
                 }
             }
 
-            return Grid("Ground_" + segment, positions, frames, uvs, colors);
+            return Grid(name, positions, frames, uvs, colors);
         }
 
-        public static Mesh River(LookTestTerrainShape shape, LookTestConfigAsset c, int segment)
+        public static Vector3 GroundPoint(LookTestStretchLayout layout, float s, float d)
         {
-            float segLength = c.LoopLengthM / c.SegmentCount;
-            float z0 = segment * segLength;
-            const int columns = 11;
-            int rows = Mathf.Max(1, Mathf.RoundToInt(segLength / c.GroundStepZM));
-            float half = c.RiverHalfWidthM;
-            float reach = half + 1.6f;
-
-            var positions = new Vector3[columns, rows + 1];
-            var frames = new Frame[columns, rows + 1];
-            var uvs = new Vector2[columns, rows + 1];
-            var colors = new Color[columns, rows + 1];
-            for (int i = 0; i < columns; i++)
-            {
-                float across = -reach + 2f * reach * i / (columns - 1);
-                for (int j = 0; j <= rows; j++)
-                {
-                    float local = segLength * j / rows;
-                    float z = z0 + local;
-                    float center = shape.RiverCenterX(z);
-                    float x = center + across;
-                    positions[i, j] = new Vector3(x, c.WaterLevelM, local);
-                    frames[i, j] = new Frame { Normal = Vector3.up, Tangent = Vector3.right, Bitangent = Vector3.forward };
-                    uvs[i, j] = new Vector2(x, z);
-
-                    float bankFoam = 0.35f * LookTestTerrainShape.Smooth(half * 0.75f, half + 1.2f, Mathf.Abs(across));
-                    float plunge = shape.WaterfallBump(z, 9f) * LookTestTerrainShape.Smooth(-0.5f, half, across);
-                    float edge = 1f - LookTestTerrainShape.Smooth(half + 0.2f, reach, Mathf.Abs(across));
-                    colors[i, j] = new Color(Mathf.Clamp01(bankFoam + plunge), 0f, 0f, edge);
-                }
-            }
-
-            return Grid("River_" + segment, positions, frames, uvs, colors);
+            return layout.Path.World(s, d, layout.GroundY(s, d));
         }
 
-        /// <summary>Cliff wall for one segment, or null when the cliff does not reach into it.</summary>
-        public static Mesh Cliff(LookTestTerrainShape shape, LookTestConfigAsset c, int segment)
+        /// <summary>
+        /// River water over [s0, s1] (world space, loop 0), up to where it falls off the plateau edge; null if the
+        /// river is not in the range. Columns run along d (the river is defined along d). R = foam, A = soft edge.
+        /// </summary>
+        public static Mesh RiverStrip(LookTestStretchLayout layout, float s0, float s1, string name)
         {
-            float segLength = c.LoopLengthM / c.SegmentCount;
-            float z0 = segment * segLength;
-            if (z0 + segLength < c.CliffStartZM || z0 > c.CliffEndZM)
+            LookTestConfigAsset c = layout.Config;
+            float fall = layout.RiverFallS();
+            float end = Mathf.Min(c.RiverEndSM, fall > 0f ? fall + 0.6f : c.RiverEndSM);
+            float a = Mathf.Max(s0, c.RiverStartSM);
+            float b = Mathf.Min(s1, end);
+            if (b - a < 0.25f)
             {
                 return null;
             }
 
-            int columns = Mathf.Max(2, Mathf.RoundToInt(segLength / c.GroundStepZM)) + 1;
-            const int faceRows = 14;
-            const int lipRows = 4;
-            int heightRows = faceRows + lipRows;
-
-            var positions = new Vector3[heightRows + 1, columns];
-            var frames = new Frame[heightRows + 1, columns];
-            var uvs = new Vector2[heightRows + 1, columns];
-            var colors = new Color[heightRows + 1, columns];
-            for (int j = 0; j < columns; j++)
+            const int across = 11;
+            int rows = Mathf.Max(1, Mathf.CeilToInt((b - a) / 0.5f));
+            float reach = c.RiverHalfWidthM * 1.35f;
+            var positions = new Vector3[across, rows + 1];
+            var frames = new Frame[across, rows + 1];
+            var uvs = new Vector2[across, rows + 1];
+            var colors = new Color[across, rows + 1];
+            float along = a;
+            Vector3 previous = Vector3.zero;
+            for (int j = 0; j <= rows; j++)
             {
-                float local = segLength * j / (columns - 1);
-                float z = z0 + local;
-                for (int i = 0; i <= heightRows; i++)
+                float s = Mathf.Lerp(a, b, (float)j / rows);
+                float rd = layout.RiverD(s);
+                float y = layout.WaterY(rd);
+                Vector3 center = layout.Path.World(s, rd, y);
+                if (j > 0)
                 {
-                    positions[i, j] = CliffPoint(shape, c, z, i, faceRows, lipRows) - new Vector3(0f, 0f, z0);
+                    along += Vector3.Distance(center, previous);
+                }
+
+                previous = center;
+                for (int i = 0; i < across; i++)
+                {
+                    float t = (float)i / (across - 1) * 2f - 1f;
+                    float d = rd + t * reach;
+                    positions[i, j] = layout.Path.World(s, d, y);
+                    frames[i, j] = new Frame { Normal = Vector3.up, Tangent = layout.Path.Right(s), Bitangent = layout.Path.Forward(s) };
+                    uvs[i, j] = new Vector2(t * reach, along);
+                    float ford = 1f - LookTestMath.Smooth(c.RunnableHalfWidthM, c.RunnableHalfWidthM + 3f, Mathf.Abs(d));
+                    float foam = Mathf.Clamp01(0.7f * LookTestMath.Smooth(0.6f, 0.95f, Mathf.Abs(t)) + 0.12f * ford);
+                    float edge = 1f - LookTestMath.Smooth(0.82f, 1f, Mathf.Abs(t));
+                    colors[i, j] = new Color(foam, 0f, 0f, edge);
                 }
             }
 
-            for (int j = 0; j < columns; j++)
+            return Grid(name, positions, frames, uvs, colors);
+        }
+
+        /// <summary>Flat round pool surface of <paramref name="radius"/> at the origin, foam (R) near the rim, soft edge (A).</summary>
+        public static Mesh Pool(float radius, float foamWidth, string name)
+        {
+            const int rings = 6;
+            const int sides = 32;
+            var positions = new Vector3[sides + 1, rings + 1];
+            var frames = new Frame[sides + 1, rings + 1];
+            var uvs = new Vector2[sides + 1, rings + 1];
+            var colors = new Color[sides + 1, rings + 1];
+            for (int k = 0; k <= sides; k++)
             {
-                float z = z0 + segLength * j / (columns - 1);
-                for (int i = 0; i <= heightRows; i++)
+                float a = 2f * Mathf.PI * k / sides;
+                for (int j = 0; j <= rings; j++)
                 {
-                    Vector3 p = positions[i, j];
-                    Vector3 alongZ = CliffPoint(shape, c, z + 0.3f, i, faceRows, lipRows) - CliffPoint(shape, c, z - 0.3f, i, faceRows, lipRows);
-                    Vector3 up = positions[Mathf.Min(i + 1, heightRows), j] - positions[Mathf.Max(i - 1, 0), j];
-                    if (up.sqrMagnitude < 1e-6f)
-                    {
-                        up = Vector3.up;
-                    }
-
-                    Vector3 n = Vector3.Cross(alongZ, up);
-                    if (n.sqrMagnitude < 1e-8f)
-                    {
-                        n = Vector3.left;
-                    }
-
-                    frames[i, j] = new Frame { Normal = n.normalized, Tangent = alongZ.normalized, Bitangent = up.normalized };
-                    uvs[i, j] = new Vector2(z, p.y + (i > faceRows ? (p.x - positions[faceRows, j].x) : 0f));
-                    float ao = 0.7f + 0.3f * LookTestTerrainShape.Smooth(0f, 4f, p.y - positions[0, j].y);
-                    colors[i, j] = new Color(0f, 0f, 0f, ao);
+                    float r = radius * (1f - (float)j / rings);
+                    var p = new Vector3(Mathf.Cos(a) * r, 0f, Mathf.Sin(a) * r);
+                    positions[k, j] = p;
+                    frames[k, j] = new Frame { Normal = Vector3.up, Tangent = Vector3.right, Bitangent = Vector3.forward };
+                    uvs[k, j] = new Vector2(p.x, p.z);
+                    float fromRim = radius - r;
+                    colors[k, j] = new Color(1f - LookTestMath.Smooth(0f, foamWidth, fromRim) * 0.85f, 0f, 0f, LookTestMath.Smooth(0f, 0.8f, fromRim));
                 }
             }
 
-            return Grid("Cliff_" + segment, positions, frames, uvs, colors);
+            Mesh mesh = Grid(name, positions, frames, uvs, colors);
+            FaceUp(mesh);
+            return mesh;
         }
 
-        /// <summary>Top of the cliff face at <paramref name="z"/> (stretch space), used to place the waterfall and crowns.</summary>
-        public static Vector3 CliffTop(LookTestTerrainShape shape, LookTestConfigAsset c, float z)
+        /// <summary>
+        /// Tube along <paramref name="spine"/> with per-point radii: stilt roots, rootstone pillars and arches, vines.
+        /// <paramref name="lobes"/> braided strands (radius ripples around the tube) that twist along it; parallel
+        /// transport frames, so bends do not twist the surface. UV x = around (m, whole repeats of
+        /// <paramref name="uvTileM"/>), y = length (m). Vertex color A = ambient occlusion (dark underside and base).
+        /// </summary>
+        public static Mesh Tube(string name, IList<Vector3> spine, IList<float> radii, int sides, float uvTileM, int lobes, float lobeAmount, float twistPerM, float seed)
         {
-            return CliffPoint(shape, c, z, 14, 14, 4);
-        }
-
-        public static Vector3 CliffBack(LookTestTerrainShape shape, LookTestConfigAsset c, float z)
-        {
-            return CliffPoint(shape, c, z, 18, 14, 4);
-        }
-
-        private static Vector3 CliffPoint(LookTestTerrainShape shape, LookTestConfigAsset c, float z, int row, int faceRows, int lipRows)
-        {
-            float presence = shape.CliffPresence(z);
-            float foot = shape.CliffFootX(z);
-            float baseY = shape.Height(foot, z) - 1.5f;
-            float height = c.CliffHeightM * presence + 1.5f * presence;
-            float smoothFace = 1f - 0.7f * shape.WaterfallBump(z, 5f);
-
-            if (row <= faceRows)
+            int n = spine.Count;
+            var tangents = new Vector3[n];
+            for (int j = 0; j < n; j++)
             {
-                float t = (float)row / faceRows;
-                float y = baseY + height * t;
-                float lean = 0.12f * height * t;
-                float noise = presence * smoothFace * (0.9f * shape.Wave(z, 13, 2.3f * t) + 0.55f * shape.Wave(z, 31, 1.3f + 5.1f * t) + 0.35f * shape.Wave(z, 57, 0.7f + 9.3f * t));
-                return new Vector3(foot + lean + noise, y, z);
+                Vector3 t = spine[Mathf.Min(j + 1, n - 1)] - spine[Mathf.Max(j - 1, 0)];
+                tangents[j] = t.sqrMagnitude > 1e-8f ? t.normalized : Vector3.up;
             }
 
-            Vector3 top = CliffPoint(shape, c, z, faceRows, faceRows, lipRows);
-            float k = (float)(row - faceRows) / lipRows;
-            float back = 10f * k * k + 1.5f * k;
-            return new Vector3(top.x + back * presence + 0.01f * row, top.y + 0.6f * k * presence, z);
+            Vector3 normal0 = Vector3.Cross(tangents[0], Mathf.Abs(tangents[0].y) < 0.9f ? Vector3.up : Vector3.right).normalized;
+            var normals = new Vector3[n];
+            normals[0] = normal0;
+            for (int j = 1; j < n; j++)
+            {
+                // Parallel transport: rotate the previous normal by the rotation between tangents.
+                Quaternion q = Quaternion.FromToRotation(tangents[j - 1], tangents[j]);
+                normals[j] = (q * normals[j - 1]).normalized;
+            }
+
+            float meanRadius = 0f;
+            for (int j = 0; j < n; j++)
+            {
+                meanRadius += radii[j];
+            }
+
+            meanRadius /= n;
+            float around = Mathf.Max(1f, Mathf.Round(2f * Mathf.PI * meanRadius / uvTileM)) * uvTileM;
+            float minY = float.MaxValue;
+            for (int j = 0; j < n; j++)
+            {
+                minY = Mathf.Min(minY, spine[j].y);
+            }
+
+            var positions = new Vector3[sides + 1, n];
+            var frames = new Frame[sides + 1, n];
+            var uvs = new Vector2[sides + 1, n];
+            var colors = new Color[sides + 1, n];
+            float length = 0f;
+            for (int j = 0; j < n; j++)
+            {
+                if (j > 0)
+                {
+                    length += Vector3.Distance(spine[j], spine[j - 1]);
+                }
+
+                Vector3 bin = Vector3.Cross(tangents[j], normals[j]);
+                for (int k = 0; k <= sides; k++)
+                {
+                    float theta = 2f * Mathf.PI * k / sides;
+                    float lobe = lobes > 0 ? Mathf.Pow(0.5f + 0.5f * Mathf.Cos(lobes * theta + twistPerM * length + seed), 2f) : 0.5f;
+                    float wobble = 0.06f * Mathf.Sin(3f * theta + 0.7f * length + seed * 2.3f) + 0.04f * Mathf.Sin(7f * theta - 1.3f * length + seed);
+                    float r = radii[j] * (1f + lobeAmount * (lobe - 0.5f) + wobble * lobeAmount * 2f);
+                    Vector3 radial = normals[j] * Mathf.Cos(theta) + bin * Mathf.Sin(theta);
+                    positions[k, j] = spine[j] + radial * r;
+                    frames[k, j] = new Frame { Normal = radial, Tangent = Vector3.Cross(tangents[j], radial), Bitangent = tangents[j] };
+                    uvs[k, j] = new Vector2(around * k / sides, length);
+                    float underside = 0.62f + 0.38f * (radial.y * 0.5f + 0.5f);
+                    float baseAo = Mathf.Lerp(0.5f, 1f, LookTestMath.Smooth(0f, 4f, positions[k, j].y - minY));
+                    colors[k, j] = new Color(0f, 0f, 0f, underside * baseAo * Mathf.Lerp(0.8f, 1f, lobe));
+                }
+            }
+
+            // Normals from the actual surface (the lobes change them), oriented outward.
+            for (int j = 0; j < n; j++)
+            {
+                for (int k = 0; k <= sides; k++)
+                {
+                    Vector3 du = positions[Mathf.Min(k + 1, sides), j] - positions[Mathf.Max(k - 1, 0), j];
+                    Vector3 dv = positions[k, Mathf.Min(j + 1, n - 1)] - positions[k, Mathf.Max(j - 1, 0)];
+                    Vector3 nrm = Vector3.Cross(du, dv);
+                    if (nrm.sqrMagnitude < 1e-10f)
+                    {
+                        continue;
+                    }
+
+                    nrm.Normalize();
+                    if (Vector3.Dot(nrm, frames[k, j].Normal) < 0f)
+                    {
+                        nrm = -nrm;
+                    }
+
+                    frames[k, j].Normal = nrm;
+                }
+            }
+
+            Mesh mesh = Grid(name, positions, frames, uvs, colors);
+            OrientOutward(mesh, spine);
+            return mesh;
+        }
+
+        /// <summary>
+        /// A clump of leaf cards in an ellipsoid (radius, height) standing on the origin: bushes, framing leaf masses
+        /// and canopy-roof clusters. Normals point away from the clump centre (soft, rounded lighting and backlight
+        /// glow). <paramref name="tiltDown"/> 0..1 turns cards to face down (roof clusters seen from below).
+        /// </summary>
+        public static Mesh Clump(IRandom rng, float radius, float height, int cards, float cardSize, float tiltDown, string name)
+        {
+            var vertices = new List<Vector3>(cards * 4);
+            var normals = new List<Vector3>(cards * 4);
+            var tangents = new List<Vector4>(cards * 4);
+            var uvs = new List<Vector2>(cards * 4);
+            var colors = new List<Color>(cards * 4);
+            var triangles = new List<int>(cards * 6);
+            var center = new Vector3(0f, height * 0.45f, 0f);
+            for (int i = 0; i < cards; i++)
+            {
+                // Points inside the ellipsoid, biased to the surface (a full silhouette, a hollow-ish core).
+                Vector3 dir = new Vector3(rng.NextFloat(-1f, 1f), rng.NextFloat(-0.6f, 1f), rng.NextFloat(-1f, 1f));
+                if (dir.sqrMagnitude < 1e-4f)
+                {
+                    dir = Vector3.up;
+                }
+
+                dir.Normalize();
+                float reach = Mathf.Lerp(0.55f, 1f, Mathf.Sqrt(rng.NextFloat()));
+                var p = new Vector3(dir.x * radius * reach, center.y + dir.y * height * 0.55f * reach, dir.z * radius * reach);
+                p.y = Mathf.Max(p.y, height * 0.05f);
+                float size = cardSize * rng.NextFloat(0.7f, 1.25f);
+                float pitch = Mathf.Lerp(rng.NextFloat(-60f, 10f), rng.NextFloat(70f, 110f), tiltDown);
+                Quaternion orientation = Quaternion.Euler(pitch, rng.NextFloat(0f, 360f), rng.NextFloat(-30f, 30f));
+                Vector3 right = orientation * Vector3.right * size * 0.5f;
+                Vector3 up = orientation * Vector3.up * size * 0.5f;
+                int start = vertices.Count;
+                Vector3[] corners = { p - right - up, p + right - up, p - right + up, p + right + up };
+                Vector2[] cornerUvs = { new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0f, 1f), new Vector2(1f, 1f) };
+                for (int k = 0; k < 4; k++)
+                {
+                    Vector3 n = (corners[k] - center).normalized;
+                    if (tiltDown > 0.5f)
+                    {
+                        n = Vector3.Slerp(n, Vector3.down, 0.5f).normalized;
+                    }
+
+                    Vector3 t = Vector3.ProjectOnPlane(right, n).normalized;
+                    if (t.sqrMagnitude < 1e-6f)
+                    {
+                        t = Vector3.right;
+                    }
+
+                    float w = Vector3.Dot(Vector3.Cross(n, t), up) < 0f ? -1f : 1f;
+                    vertices.Add(corners[k]);
+                    normals.Add(n);
+                    tangents.Add(new Vector4(t.x, t.y, t.z, w));
+                    uvs.Add(cornerUvs[k]);
+                    float ao = Mathf.Lerp(0.45f, 1f, Mathf.Clamp01(corners[k].y / Mathf.Max(0.1f, height)));
+                    ao *= Mathf.Lerp(0.7f, 1f, reach);
+                    colors.Add(new Color(0f, 0f, 0f, ao));
+                }
+
+                triangles.Add(start);
+                triangles.Add(start + 2);
+                triangles.Add(start + 1);
+                triangles.Add(start + 1);
+                triangles.Add(start + 2);
+                triangles.Add(start + 3);
+            }
+
+            var mesh = new Mesh { name = name };
+            mesh.SetVertices(vertices);
+            mesh.SetNormals(normals);
+            mesh.SetTangents(tangents);
+            mesh.SetUVs(0, uvs);
+            mesh.SetColors(colors);
+            mesh.SetTriangles(triangles, 0);
+            mesh.RecalculateBounds();
+            return mesh;
+        }
+
+        /// <summary>Flips triangles of a tube whose winding faces inward (front face must point away from the spine).</summary>
+        private static void OrientOutward(Mesh mesh, IList<Vector3> spine)
+        {
+            int[] tris = mesh.triangles;
+            Vector3[] v = mesh.vertices;
+            if (tris.Length < 3)
+            {
+                return;
+            }
+
+            Vector3 a = v[tris[0]];
+            Vector3 b = v[tris[1]];
+            Vector3 c = v[tris[2]];
+            Vector3 faceNormal = Vector3.Cross(b - a, c - a);
+            Vector3 centroid = (a + b + c) / 3f;
+            Vector3 nearest = spine[0];
+            float best = float.MaxValue;
+            for (int i = 0; i < spine.Count; i++)
+            {
+                float dist = (spine[i] - centroid).sqrMagnitude;
+                if (dist < best)
+                {
+                    best = dist;
+                    nearest = spine[i];
+                }
+            }
+
+            if (Vector3.Dot(faceNormal, centroid - nearest) >= 0f)
+            {
+                return;
+            }
+
+            for (int i = 0; i < tris.Length; i += 3)
+            {
+                int swap = tris[i + 1];
+                tris[i + 1] = tris[i + 2];
+                tris[i + 2] = swap;
+            }
+
+            mesh.triangles = tris;
+        }
+
+        /// <summary>Flips a flat mesh so its triangles face +y.</summary>
+        private static void FaceUp(Mesh mesh)
+        {
+            int[] tris = mesh.triangles;
+            Vector3[] v = mesh.vertices;
+            for (int i = 0; i < tris.Length; i += 3)
+            {
+                Vector3 n = Vector3.Cross(v[tris[i + 1]] - v[tris[i]], v[tris[i + 2]] - v[tris[i]]);
+                if (n.y < 0f)
+                {
+                    int swap = tris[i + 1];
+                    tris[i + 1] = tris[i + 2];
+                    tris[i + 2] = swap;
+                }
+            }
+
+            mesh.triangles = tris;
+        }
+
+        private static void InsertSorted(List<float> xs, float value)
+        {
+            for (int i = 0; i < xs.Count; i++)
+            {
+                if (Mathf.Abs(xs[i] - value) < 0.05f)
+                {
+                    xs[i] = value;
+                    return;
+                }
+
+                if (xs[i] > value)
+                {
+                    xs.Insert(i, value);
+                    return;
+                }
+            }
+
+            xs.Add(value);
         }
 
         /// <summary>Waterfall sheet in local space: origin at the plunge point, falling along -y, facing -x.</summary>
@@ -207,9 +436,9 @@ namespace JungleBooze.Editor.LookTest
                     float z = s * width * (0.85f + 0.15f * t);
                     positions[i, j] = new Vector3(x, y, z);
                     uvs[i, j] = new Vector2(z, y);
-                    float foam = Mathf.Clamp01(0.35f + 0.65f * (1f - LookTestTerrainShape.Smooth(0f, 0.3f, t)) + 0.3f * LookTestTerrainShape.Smooth(0.9f, 1f, t));
-                    float edge = 1f - LookTestTerrainShape.Smooth(0.32f, 0.5f, Mathf.Abs(s));
-                    colors[i, j] = new Color(foam, 0f, 0f, edge * (1f - 0.5f * LookTestTerrainShape.Smooth(0.95f, 1f, t)));
+                    float foam = Mathf.Clamp01(0.35f + 0.65f * (1f - LookTestMath.Smooth(0f, 0.3f, t)) + 0.3f * LookTestMath.Smooth(0.9f, 1f, t));
+                    float edge = 1f - LookTestMath.Smooth(0.32f, 0.5f, Mathf.Abs(s));
+                    colors[i, j] = new Color(foam, 0f, 0f, edge * (1f - 0.5f * LookTestMath.Smooth(0.95f, 1f, t)));
                 }
             }
 
@@ -230,8 +459,12 @@ namespace JungleBooze.Editor.LookTest
         /// <summary>Tapered, slightly bent trunk with buttress roots. Pivot at the base. u in meters around, v = height.</summary>
         public static Mesh Trunk(IRandom rng, float height, float radius, float barkTileM)
         {
-            const int sides = 14;
-            const int rings = 18;
+            return Trunk(rng, height, radius, barkTileM, 14, 18);
+        }
+
+        /// <summary>Trunk with a chosen resolution (sides around, rings up).</summary>
+        public static Mesh Trunk(IRandom rng, float height, float radius, float barkTileM, int sides, int rings)
+        {
             float flare = rng.NextFloat(0.6f, 1.4f);
             int lobes = rng.NextInt(4, 7);
             float lobePhase = rng.NextFloat(0f, 6.283f);
@@ -261,7 +494,7 @@ namespace JungleBooze.Editor.LookTest
                     Vector3 normal = (radial + Vector3.up * (buttress * 0.5f)).normalized;
                     frames[k, j] = new Frame { Normal = normal, Tangent = tangent, Bitangent = Vector3.up };
                     uvs[k, j] = new Vector2(circumference * k / sides, y);
-                    float ao = Mathf.Lerp(0.5f, 1f, LookTestTerrainShape.Smooth(0f, 3f, y)) * (1f - 0.25f * (1f - lobe) * buttress / Mathf.Max(flare, 0.01f));
+                    float ao = Mathf.Lerp(0.5f, 1f, LookTestMath.Smooth(0f, 3f, y)) * (1f - 0.25f * (1f - lobe) * buttress / Mathf.Max(flare, 0.01f));
                     colors[k, j] = new Color(0f, 0f, 0f, ao);
                 }
             }
@@ -348,11 +581,19 @@ namespace JungleBooze.Editor.LookTest
         /// <summary>Low-poly boulder (subdivided icosahedron, displaced, flattened base). Box-projected UVs in meters.</summary>
         public static Mesh Boulder(IRandom rng, float radius)
         {
+            return Boulder(rng, radius, 2);
+        }
+
+        /// <summary>Boulder with 0-3 subdivisions (1 = 80 triangles: far canopy blobs and pillar-top tufts).</summary>
+        public static Mesh Boulder(IRandom rng, float radius, int subdivisions)
+        {
             var points = new List<Vector3>();
             var faces = new List<int>();
             Icosahedron(points, faces);
-            Subdivide(points, faces);
-            Subdivide(points, faces);
+            for (int i = 0; i < Mathf.Clamp(subdivisions, 0, 3); i++)
+            {
+                Subdivide(points, faces);
+            }
 
             var phases = new float[9];
             for (int i = 0; i < phases.Length; i++)
@@ -503,47 +744,6 @@ namespace JungleBooze.Editor.LookTest
             mesh.triangles = triangles;
             mesh.RecalculateBounds();
             return mesh;
-        }
-
-        private static List<float> GroundColumns(LookTestConfigAsset c)
-        {
-            var xs = new List<float>();
-            float w = c.GroundHalfWidthM;
-            float fineMin = -c.PathHalfWidthM - 8f;
-            float fineMax = c.RiverCenterXM + c.RiverMeanderM * 1.4f + c.RiverHalfWidthM * 2f + 4f;
-            float x = -w;
-            while (x < w)
-            {
-                xs.Add(x);
-                x += x >= fineMin && x < fineMax ? 0.75f : 3f;
-            }
-
-            xs.Add(w);
-
-            // The path edges must be exact vertices so the path stays flat at y = 0.
-            InsertSorted(xs, -c.PathHalfWidthM);
-            InsertSorted(xs, c.PathHalfWidthM);
-            return xs;
-        }
-
-        private static void InsertSorted(List<float> xs, float value)
-        {
-            for (int i = 0; i < xs.Count; i++)
-            {
-                if (Mathf.Abs(xs[i] - value) < 0.05f)
-                {
-                    xs[i] = value;
-                    return;
-                }
-
-                if (xs[i] > value)
-                {
-                    xs.Insert(i, value);
-                    return;
-                }
-            }
-
-            xs.Add(value);
         }
 
         private static void Icosahedron(List<Vector3> points, List<int> faces)

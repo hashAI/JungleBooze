@@ -1,113 +1,131 @@
+using JungleBooze.Gameplay.Animation;
+using JungleBooze.Gameplay.Config;
 using JungleBooze.Gameplay.Movement;
 using UnityEngine;
 
 namespace JungleBooze.Gameplay.Views
 {
     /// <summary>
-    /// Hook for the rigged Pista model (asset-pipeline delivers it in Assets/_Game/Art/Characters/Pista/). Put this
-    /// component on the root of a prefab that contains the model and an <see cref="Animator"/>, then assign that
-    /// prefab as the FeelTest root's avatar. It drives these Animator parameters when they exist (missing ones are
-    /// skipped): floats <c>Speed</c> (m/s), <c>Lateral</c> (−1…1), <c>VerticalSpeed</c> (m/s), <c>HeightAboveGround</c>
-    /// (m); bools <c>Grounded</c>, <c>Sliding</c>, <c>Dead</c>; triggers <c>Jump</c>, <c>Land</c>, <c>HardLand</c>,
-    /// <c>Dodge</c>, <c>Stumble</c>, <c>Crash</c>, <c>Fall</c>, <c>LedgePull</c>. The model's feet must be at the
-    /// prefab origin, facing +Z, 1.65 m tall. Root motion must be off: the simulation owns the position.
+    /// The rigged Pista (prefab <c>Assets/_Game/Prefabs/Characters/Pista.prefab</c>). A thin adapter: the plain-C#
+    /// <see cref="RunnerAnimationModel"/> decides states, rates and lean; this component cross-fades the Animator,
+    /// steps it manually (the Animator component stays disabled so evaluation order is fixed: state → animation →
+    /// procedural), then applies the in-air foot anchor and the ponytail spring. Root motion is off: the simulation
+    /// owns the position. No allocation per frame.
     /// </summary>
     public sealed class AnimatedRunnerAvatar : RunnerAvatar
     {
-        private static readonly int SpeedId = Animator.StringToHash("Speed");
-        private static readonly int LateralId = Animator.StringToHash("Lateral");
-        private static readonly int VerticalSpeedId = Animator.StringToHash("VerticalSpeed");
-        private static readonly int HeightId = Animator.StringToHash("HeightAboveGround");
-        private static readonly int GroundedId = Animator.StringToHash("Grounded");
-        private static readonly int SlidingId = Animator.StringToHash("Sliding");
-        private static readonly int DeadId = Animator.StringToHash("Dead");
-        private static readonly int JumpId = Animator.StringToHash("Jump");
-        private static readonly int LandId = Animator.StringToHash("Land");
-        private static readonly int HardLandId = Animator.StringToHash("HardLand");
-        private static readonly int DodgeId = Animator.StringToHash("Dodge");
-        private static readonly int StumbleId = Animator.StringToHash("Stumble");
-        private static readonly int CrashId = Animator.StringToHash("Crash");
-        private static readonly int FallId = Animator.StringToHash("Fall");
-        private static readonly int LedgePullId = Animator.StringToHash("LedgePull");
+        private const float FixedStep = 1f / 60f;
+
+        private static readonly int LocoBlendId = Animator.StringToHash("LocoBlend");
+        private static readonly int RunRateId = Animator.StringToHash("RunRate");
+        private static readonly int StateRateId = Animator.StringToHash("StateRate");
+        private static readonly int LocomotionHash = Animator.StringToHash("Locomotion");
+
+        private static readonly string[] StateNames = { "Idle", "Locomotion", "Jump", "Fall", "Slide", "Stumble", "LandHard", "Death" };
+        private static readonly string[] StateClips = { "Idle", "Run_Alt", "Jump", "Fall", "Slide", "Stumble", "Land_Run", "Death_Backward" };
+        private static readonly string[] HairBones = { "Ponytail01", "Ponytail02", "Ponytail03" };
 
         [SerializeField] private Animator _animator;
+        [SerializeField] private Transform _modelRoot;
+        [SerializeField] private RunnerAnimationConfigAsset _config;
 
+        private readonly int[] _stateHashes = new int[StateNames.Length];
+        private readonly float[] _stateLengths = new float[StateNames.Length];
+        private readonly Vector3[] _hairTargets = new Vector3[3];
+        private readonly Transform[] _hair = new Transform[3];
+        private readonly Quaternion[] _hairRest = new Quaternion[3];
+
+        private RunnerAnimationConfig _values;
+        private RunnerAnimationModel _model;
+        private SpringChain _spring;
         private Renderer[] _renderers;
-        private int _present;
+        private Transform _spine;
+        private Transform _chest;
+        private Transform _leftFoot;
+        private Transform _rightFoot;
+        private float _hairTipLength;
+        private float _anchorOffset;
+        private Vector3 _lastPosition;
+        private Vector3 _lastVelocity;
+        private bool _hasLast;
+        private bool _ready;
 
-        private void Awake()
+        public RunnerAnimationModel Model => _model;
+
+        public Animator Animator => _animator;
+
+        /// <summary>Current in-air foot anchor offset (m, ≤ 0).</summary>
+        public float AnchorOffset => _anchorOffset;
+
+        /// <summary>Editor setup: wires the prefab's references.</summary>
+        public void Configure(Animator animator, Transform modelRoot, RunnerAnimationConfigAsset config)
         {
-            if (_animator == null)
+            _animator = animator;
+            _modelRoot = modelRoot;
+            _config = config;
+        }
+
+        public override void Bind(MovementConfig config)
+        {
+            Init();
+            if (config == null)
             {
-                _animator = GetComponentInChildren<Animator>();
+                return;
             }
 
-            if (_animator != null)
-            {
-                _animator.applyRootMotion = false;
-                AnimatorControllerParameter[] parameters = _animator.parameters;
-                for (int i = 0; i < parameters.Length; i++)
-                {
-                    _present |= Bit(parameters[i].nameHash);
-                }
-            }
-
-            _renderers = GetComponentsInChildren<Renderer>();
+            _values.SlideDuration = config.JumpSlide.SlideDuration;
+            JumpArc arc = JumpArc.Measure(config.JumpSlide, FixedStep);
+            _model = new RunnerAnimationModel(_values, arc.Airtime);
         }
 
         public override void Apply(in RunnerVisualState state, float frameSeconds)
         {
-            transform.SetPositionAndRotation(state.Position, state.Facing);
+            Init();
+            float dt = Mathf.Max(0f, frameSeconds);
             if (_animator == null)
             {
+                transform.SetPositionAndRotation(state.Position, state.Facing);
                 return;
             }
 
-            SetFloat(SpeedId, state.Dead ? 0f : state.Speed);
-            SetFloat(LateralId, state.VLatMax > 0f ? Mathf.Clamp(state.VLat / state.VLatMax, -1f, 1f) : 0f);
-            SetFloat(VerticalSpeedId, state.Vy);
-            SetFloat(HeightId, state.HeightAboveGround);
-            SetBool(GroundedId, state.Grounded);
-            SetBool(SlidingId, state.Sliding);
-            SetBool(DeadId, state.Dead);
+            _model.Update(state, dt, LocomotionPhase());
+            ref readonly RunnerAnimationOutput o = ref _model.Output;
+            if (o.Changed)
+            {
+                int index = (int)o.State;
+                float offset = o.StartNormalized * _stateLengths[index];
+                if (o.Fade <= 0f)
+                {
+                    _animator.PlayInFixedTime(_stateHashes[index], 0, offset);
+                }
+                else
+                {
+                    _animator.CrossFadeInFixedTime(_stateHashes[index], o.Fade, 0, offset);
+                }
+            }
+
+            _animator.SetFloat(LocoBlendId, o.LocoBlend);
+            _animator.SetFloat(RunRateId, o.RunRate);
+            _animator.SetFloat(StateRateId, o.StateRate);
+
+            transform.SetPositionAndRotation(state.Position, state.Facing * Quaternion.Euler(0f, o.YawDeg, -o.RollDeg));
+            RestoreHair();
+            _animator.Update(dt);
+
+            ApplyForwardLean(o.ForwardLeanDeg);
+            ApplyFootAnchor(o.AnchorWeight, dt);
+            ApplyHair(state.Position, dt);
         }
 
         public override void OnRunEvent(in RunEvent runEvent)
         {
-            if (_animator == null)
-            {
-                return;
-            }
-
-            switch (runEvent.Type)
-            {
-                case RunEventType.Jump:
-                    Trigger(JumpId);
-                    break;
-                case RunEventType.Land:
-                    Trigger(runEvent.Reason == (byte)LandingKind.Hard ? HardLandId : LandId);
-                    break;
-                case RunEventType.Dodge:
-                    Trigger(DodgeId);
-                    break;
-                case RunEventType.Hit:
-                    Trigger(runEvent.Reason == (byte)HitKind.Crash ? CrashId : StumbleId);
-                    break;
-                case RunEventType.Died:
-                    if (runEvent.Reason == (byte)DeathCause.Fall)
-                    {
-                        Trigger(FallId);
-                    }
-
-                    break;
-                case RunEventType.LedgeAssist:
-                    Trigger(LedgePullId);
-                    break;
-            }
+            Init();
+            _model.OnRunEvent(runEvent);
         }
 
         public override void SetVisible(bool visible)
         {
+            Init();
             for (int i = 0; i < _renderers.Length; i++)
             {
                 _renderers[i].enabled = visible;
@@ -116,44 +134,227 @@ namespace JungleBooze.Gameplay.Views
 
         public override void ResetPose()
         {
+            Init();
             SetVisible(true);
+            _model.Reset();
+            _anchorOffset = 0f;
+            _hasLast = false;
+            _spring.Reset();
+            if (_modelRoot != null)
+            {
+                _modelRoot.localPosition = Vector3.zero;
+            }
+
             if (_animator != null)
             {
                 _animator.Rebind();
+                RestoreHair();
+                _animator.PlayInFixedTime(_stateHashes[(int)RunnerAnimState.Idle], 0, 0f);
                 _animator.Update(0f);
             }
         }
 
-        private static int Bit(int hash)
+        private void Awake()
         {
-            return hash == SpeedId ? 1 << 0 : hash == LateralId ? 1 << 1 : hash == VerticalSpeedId ? 1 << 2 : hash == HeightId ? 1 << 3 :
-                hash == GroundedId ? 1 << 4 : hash == SlidingId ? 1 << 5 : hash == DeadId ? 1 << 6 : hash == JumpId ? 1 << 7 :
-                hash == LandId ? 1 << 8 : hash == HardLandId ? 1 << 9 : hash == DodgeId ? 1 << 10 : hash == StumbleId ? 1 << 11 :
-                hash == CrashId ? 1 << 12 : hash == FallId ? 1 << 13 : hash == LedgePullId ? 1 << 14 : 0;
+            Init();
         }
 
-        private void SetFloat(int id, float value)
+        private void Init()
         {
-            if ((_present & Bit(id)) != 0)
+            if (_ready)
             {
-                _animator.SetFloat(id, value);
+                return;
+            }
+
+            _ready = true;
+            if (_animator == null)
+            {
+                _animator = GetComponentInChildren<Animator>();
+            }
+
+            if (_modelRoot == null && _animator != null)
+            {
+                _modelRoot = _animator.transform;
+            }
+
+            _values = _config != null ? _config.Values.Clone() : new RunnerAnimationConfig();
+            _model = new RunnerAnimationModel(_values, 0.6f);
+            _spring = new SpringChain(3);
+            _renderers = GetComponentsInChildren<Renderer>(true);
+
+            for (int i = 0; i < StateNames.Length; i++)
+            {
+                _stateHashes[i] = Animator.StringToHash(StateNames[i]);
+                _stateLengths[i] = 1f;
+            }
+
+            if (_animator == null)
+            {
+                return;
+            }
+
+            // Manual stepping: Apply() evaluates the Animator, then the procedural layers run on top.
+            _animator.enabled = false;
+            _animator.applyRootMotion = false;
+            _animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+            if (_animator.runtimeAnimatorController != null)
+            {
+                AnimationClip[] clips = _animator.runtimeAnimatorController.animationClips;
+                for (int s = 0; s < StateClips.Length; s++)
+                {
+                    for (int c = 0; c < clips.Length; c++)
+                    {
+                        if (clips[c].name == StateClips[s])
+                        {
+                            _stateLengths[s] = clips[c].length;
+                        }
+                    }
+                }
+            }
+
+            if (_animator.isHuman)
+            {
+                _leftFoot = _animator.GetBoneTransform(HumanBodyBones.LeftFoot);
+                _rightFoot = _animator.GetBoneTransform(HumanBodyBones.RightFoot);
+                _spine = _animator.GetBoneTransform(HumanBodyBones.Spine);
+                _chest = _animator.GetBoneTransform(HumanBodyBones.Chest);
+            }
+
+            for (int i = 0; i < HairBones.Length; i++)
+            {
+                _hair[i] = FindDeep(_animator.transform, HairBones[i]);
+                if (_hair[i] != null)
+                {
+                    _hairRest[i] = _hair[i].localRotation;
+                }
+            }
+
+            _hairTipLength = _hair[1] != null && _hair[2] != null ? Vector3.Distance(_hair[1].position, _hair[2].position) : 0.1f;
+            _spring.Stiffness = _values.HairStiffness;
+            _spring.Damping = _values.HairDamping;
+            _spring.Gravity = _values.HairGravity;
+            _spring.MaxAngleDeg = _values.HairMaxAngleDeg;
+            _animator.Rebind();
+        }
+
+        private float LocomotionPhase()
+        {
+            if (!_animator.isInitialized)
+            {
+                return -1f;
+            }
+
+            AnimatorStateInfo info = _animator.IsInTransition(0) ? _animator.GetNextAnimatorStateInfo(0) : _animator.GetCurrentAnimatorStateInfo(0);
+            if (info.shortNameHash != LocomotionHash)
+            {
+                return -1f;
+            }
+
+            float t = info.normalizedTime;
+            return t - Mathf.Floor(t);
+        }
+
+        private void ApplyForwardLean(float degrees)
+        {
+            if (_spine == null || _chest == null || Mathf.Abs(degrees) < 0.01f)
+            {
+                return;
+            }
+
+            // Split over two spine joints so the back curves instead of hinging.
+            Quaternion half = Quaternion.AngleAxis(degrees * 0.5f, transform.right);
+            _spine.rotation = half * _spine.rotation;
+            _chest.rotation = half * _chest.rotation;
+        }
+
+        private void ApplyFootAnchor(float weight, float dt)
+        {
+            if (_modelRoot == null || _leftFoot == null || _rightFoot == null)
+            {
+                return;
+            }
+
+            float target = 0f;
+            if (weight > 0.001f)
+            {
+                float left = _modelRoot.InverseTransformPoint(_leftFoot.position).y;
+                float right = _modelRoot.InverseTransformPoint(_rightFoot.position).y;
+                float lift = Mathf.Clamp(Mathf.Min(left, right) - _values.AnkleRestHeight, 0f, _values.MaxAnchorDrop);
+                target = -lift * weight;
+            }
+
+            _anchorOffset = RunnerAnimationModel.Damp(_anchorOffset, target, _values.AnchorHalfLife, dt);
+            _modelRoot.localPosition = new Vector3(0f, _anchorOffset, 0f);
+        }
+
+        private void RestoreHair()
+        {
+            for (int i = 0; i < _hair.Length; i++)
+            {
+                if (_hair[i] != null)
+                {
+                    _hair[i].localRotation = _hairRest[i];
+                }
             }
         }
 
-        private void SetBool(int id, bool value)
+        private void ApplyHair(Vector3 worldPosition, float dt)
         {
-            if ((_present & Bit(id)) != 0)
+            if (_hair[0] == null || _hair[1] == null || _hair[2] == null)
             {
-                _animator.SetBool(id, value);
+                return;
+            }
+
+            // Inertia from the body's motion along the path (jump arcs, landings, steering, speed changes).
+            Vector3 inertial = Vector3.zero;
+            if (dt > 0f)
+            {
+                Vector3 velocity = _hasLast ? (worldPosition - _lastPosition) / dt : Vector3.zero;
+                Vector3 accel = _hasLast ? (velocity - _lastVelocity) / dt : Vector3.zero;
+                accel = Vector3.ClampMagnitude(accel, _values.HairMaxAcceleration);
+                inertial = transform.InverseTransformDirection(-accel * _values.HairInertia);
+                _lastVelocity = velocity;
+                _lastPosition = worldPosition;
+                _hasLast = true;
+            }
+
+            Transform space = transform;
+            Vector3 root = space.InverseTransformPoint(_hair[0].position);
+            _hairTargets[0] = space.InverseTransformPoint(_hair[1].position);
+            _hairTargets[1] = space.InverseTransformPoint(_hair[2].position);
+            _hairTargets[2] = space.InverseTransformPoint(_hair[2].TransformPoint(new Vector3(0f, _hairTipLength, 0f)));
+            _spring.Step(root, _hairTargets, space.InverseTransformDirection(Vector3.down), inertial, dt);
+
+            for (int i = 0; i < 3; i++)
+            {
+                Transform bone = _hair[i];
+                Vector3 child = i < 2 ? _hair[i + 1].position : bone.TransformPoint(new Vector3(0f, _hairTipLength, 0f));
+                Vector3 from = child - bone.position;
+                Vector3 to = space.TransformPoint(_spring[i]) - bone.position;
+                if (from.sqrMagnitude > 1e-8f && to.sqrMagnitude > 1e-8f)
+                {
+                    bone.rotation = Quaternion.FromToRotation(from, to) * bone.rotation;
+                }
             }
         }
 
-        private void Trigger(int id)
+        private static Transform FindDeep(Transform parent, string name)
         {
-            if ((_present & Bit(id)) != 0)
+            if (parent.name == name)
             {
-                _animator.SetTrigger(id);
+                return parent;
             }
+
+            for (int i = 0; i < parent.childCount; i++)
+            {
+                Transform found = FindDeep(parent.GetChild(i), name);
+                if (found != null)
+                {
+                    return found;
+                }
+            }
+
+            return null;
         }
     }
 }

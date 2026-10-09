@@ -5,6 +5,10 @@
 // - _ALPHATEST_ON: alpha from a separate mask (R), clip + alpha-to-coverage (smooth edges with MSAA).
 // - _WIND_ON: vertex sway; weight grows with height above the object's pivot, phase varies with world position.
 // - Vertex color A is baked ambient occlusion on generated meshes (_VertexAO = 1); imported models use 0.
+// - Look test v2: segments are merged into one mesh per material (ENVIRONMENT_STRATEGY 4.3), so the wind weight
+//   comes from vertex color R (_WindVertexColor = 1) instead of the height above the pivot, and vertex color B
+//   carries the canopy cover baked by the builder (_CanopyCover = 1): dappled sun and darker, greener ambient
+//   under the roof (JBAtmosphere.hlsl). Fog is the project's height fog with sun in-scatter, not Unity fog.
 // SRP Batcher compatible (all material values in UnityPerMaterial), GPU instancing on.
 Shader "JungleBooze/Nature Lit"
 {
@@ -45,6 +49,8 @@ Shader "JungleBooze/Nature Lit"
         _WindSpeed("Wind Speed", Float) = 1
         _WindHeightScale("Wind Weight per m Height", Float) = 0.15
         _WindDirection("Wind Direction (xz)", Vector) = (1, 0, 0.35, 0)
+        _WindVertexColor("Wind Weight from Vertex Color R", Range(0, 1)) = 0
+        _CanopyCover("Canopy Cover from Vertex Color B", Range(0, 1)) = 0
 
         [Enum(UnityEngine.Rendering.CullMode)] _Cull("Cull", Float) = 2
         [HideInInspector] _AlphaToMask("Alpha To Mask", Float) = 0
@@ -56,6 +62,7 @@ Shader "JungleBooze/Nature Lit"
 
         HLSLINCLUDE
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+        #include "JBAtmosphere.hlsl"
 
         CBUFFER_START(UnityPerMaterial)
             float4 _BaseMap_ST;
@@ -82,6 +89,8 @@ Shader "JungleBooze/Nature Lit"
             half _Wind;
             half _Cull;
             half _AlphaToMask;
+            half _WindVertexColor;
+            half _CanopyCover;
         CBUFFER_END
 
         TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
@@ -97,13 +106,15 @@ Shader "JungleBooze/Nature Lit"
 
         // World-space sway. Weight: height above the object's pivot (meters) times _WindHeightScale, squared so the
         // base stays planted. Two sine octaves plus a small flutter; phase from world xz so neighbors differ.
-        float3 ApplyWind(float3 positionWS)
+        float3 ApplyWind(float3 positionWS, half4 color)
         {
         #if defined(_WIND_ON)
             float3 pivotWS = GetObjectToWorldMatrix()._m03_m13_m23;
             float weight = saturate((positionWS.y - pivotWS.y) * _WindHeightScale);
             weight *= weight;
-            float phase = dot(pivotWS.xz, float2(0.13, 0.17)) + _Time.y * _WindSpeed;
+            weight = lerp(weight, color.r, _WindVertexColor);
+            float2 phaseOrigin = lerp(pivotWS.xz, floor(positionWS.xz * 0.25) * 4.0, _WindVertexColor);
+            float phase = dot(phaseOrigin, float2(0.13, 0.17)) + _Time.y * _WindSpeed;
             float sway = sin(phase) * 0.65 + sin(phase * 2.3 + 1.7) * 0.35;
             float flutter = sin(_Time.y * _WindSpeed * 6.0 + dot(positionWS, float3(1.3, 0.7, 1.1))) * 0.15;
             float2 dir = normalize(_WindDirection.xz + float2(1e-4, 0.0));
@@ -135,7 +146,6 @@ Shader "JungleBooze/Nature Lit"
             #pragma shader_feature_local_vertex _WIND_ON
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
-            #pragma multi_compile_fog
             #pragma multi_compile_instancing
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
@@ -158,7 +168,6 @@ Shader "JungleBooze/Nature Lit"
                 half3 normalWS : TEXCOORD2;
                 half4 tangentWS : TEXCOORD3;
                 half4 color : TEXCOORD4;
-                half fogFactor : TEXCOORD5;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
                 UNITY_VERTEX_OUTPUT_STEREO
             };
@@ -170,7 +179,7 @@ Shader "JungleBooze/Nature Lit"
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
 
-                float3 positionWS = ApplyWind(TransformObjectToWorld(input.positionOS.xyz));
+                float3 positionWS = ApplyWind(TransformObjectToWorld(input.positionOS.xyz), input.color);
                 VertexNormalInputs normals = GetVertexNormalInputs(input.normalOS, input.tangentOS);
 
                 output.positionCS = TransformWorldToHClip(positionWS);
@@ -180,7 +189,6 @@ Shader "JungleBooze/Nature Lit"
                 real sign = input.tangentOS.w * GetOddNegativeScale();
                 output.tangentWS = half4(normals.tangentWS, sign);
                 output.color = input.color;
-                output.fogFactor = ComputeFogFactor(output.positionCS.z);
                 return output;
             }
 
@@ -251,21 +259,30 @@ Shader "JungleBooze/Nature Lit"
                 inputData.normalWS = normalWS;
                 inputData.viewDirectionWS = GetWorldSpaceNormalizeViewDir(input.positionWS);
                 inputData.shadowCoord = TransformWorldToShadowCoord(input.positionWS);
-                inputData.fogCoord = input.fogFactor;
                 inputData.bakedGI = SampleSH(normalWS);
                 inputData.normalizedScreenSpaceUV = GetNormalizedScreenSpaceUV(input.positionCS);
                 inputData.shadowMask = half4(1.0h, 1.0h, 1.0h, 1.0h);
 
-                half4 color = UniversalFragmentPBR(inputData, surface);
+                // URP PBR with the main light and ambient modulated by the canopy (JBAtmosphere.hlsl).
+                half cover = saturate(input.color.b) * _CanopyCover;
+                BRDFData brdfData;
+                half brdfAlpha = surface.alpha;
+                InitializeBRDFData(surface.albedo, surface.metallic, surface.specular, surface.smoothness, brdfAlpha, brdfData);
+                Light mainLight = GetMainLight(inputData.shadowCoord, inputData.positionWS, inputData.shadowMask);
+                mainLight.shadowAttenuation *= JBCanopyLight(inputData.positionWS, cover);
+                half3 bakedGI = inputData.bakedGI * JBCanopyAmbient(cover);
+                half giOcclusion = surface.occlusion * lerp(1.0h, 0.55h, cover);
+                half4 color = half4(GlobalIllumination(brdfData, bakedGI, giOcclusion, inputData.positionWS, inputData.normalWS, inputData.viewDirectionWS), alpha);
+                color.rgb += LightingPhysicallyBased(brdfData, mainLight, inputData.normalWS, inputData.viewDirectionWS);
 
             #if defined(_ALPHATEST_ON)
-                // Thin leaves: light from behind shines through (cheap wrap term, shadowed).
-                Light mainLight = GetMainLight(inputData.shadowCoord);
+                // Thin leaves: light from behind shines through (cheap wrap term, shadowed and dappled).
                 half backLight = saturate(dot(-normalWS, mainLight.direction));
-                color.rgb += surface.albedo * mainLight.color * backLight * mainLight.shadowAttenuation * _Translucency;
+                backLight = backLight * backLight;
+                color.rgb += surface.albedo * mainLight.color * backLight * mainLight.shadowAttenuation * mainLight.distanceAttenuation * _Translucency;
             #endif
 
-                color.rgb = MixFog(color.rgb, inputData.fogCoord);
+                color.rgb = JBApplyFog(color.rgb, inputData.positionWS);
                 color.a = alpha;
                 return color;
             }
@@ -299,6 +316,7 @@ Shader "JungleBooze/Nature Lit"
                 float4 positionOS : POSITION;
                 float3 normalOS : NORMAL;
                 float2 uv : TEXCOORD0;
+                half4 color : COLOR;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -315,7 +333,7 @@ Shader "JungleBooze/Nature Lit"
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
 
-                float3 positionWS = ApplyWind(TransformObjectToWorld(input.positionOS.xyz));
+                float3 positionWS = ApplyWind(TransformObjectToWorld(input.positionOS.xyz), input.color);
                 float3 normalWS = TransformObjectToWorldNormal(input.normalOS);
                 float4 positionCS = TransformWorldToHClip(ApplyShadowBias(positionWS, normalWS, _LightDirection));
             #if UNITY_REVERSED_Z
@@ -359,6 +377,7 @@ Shader "JungleBooze/Nature Lit"
             {
                 float4 positionOS : POSITION;
                 float2 uv : TEXCOORD0;
+                half4 color : COLOR;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -374,7 +393,7 @@ Shader "JungleBooze/Nature Lit"
                 DepthVaryings output = (DepthVaryings)0;
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
-                output.positionCS = TransformWorldToHClip(ApplyWind(TransformObjectToWorld(input.positionOS.xyz)));
+                output.positionCS = TransformWorldToHClip(ApplyWind(TransformObjectToWorld(input.positionOS.xyz), input.color));
                 output.uv = TRANSFORM_TEX(input.uv, _BaseMap);
                 return output;
             }

@@ -27,11 +27,14 @@ namespace JungleBooze.App.LookTest
         [SerializeField] private Transform[] _segments;
         [SerializeField] private GameObject[] _plantGroups;
         [SerializeField] private GameObject[] _waterGroups;
+        [SerializeField] private Transform _backdrop;
+        [SerializeField] private GameObject[] _detailGroups;
 
         private const float StandInHeightM = 1.65f;
         private const float CameraSmoothingS = 0.12f;
 
         private LookTestWorldView _worldView;
+        private LookTestPath _path;
         private Transform _runner;
         private double _distanceM;
         private float _runTimeS;
@@ -62,7 +65,9 @@ namespace JungleBooze.App.LookTest
             Transform stretchRoot,
             Transform[] segments,
             GameObject[] plantGroups,
-            GameObject[] waterGroups)
+            GameObject[] waterGroups,
+            Transform backdrop,
+            GameObject[] detailGroups)
         {
             _config = config;
             _camera = targetCamera;
@@ -71,6 +76,8 @@ namespace JungleBooze.App.LookTest
             _segments = segments;
             _plantGroups = plantGroups;
             _waterGroups = waterGroups;
+            _backdrop = backdrop;
+            _detailGroups = detailGroups;
         }
 
         private void Start()
@@ -87,7 +94,7 @@ namespace JungleBooze.App.LookTest
 
             _runner = CreateStandIn(transform);
             _camera.farClipPlane = _config.CameraFarClipM;
-            _camera.fieldOfView = _config.CameraFovDeg;
+            _path = _config.CreatePath();
             _cameraData = _camera.GetUniversalAdditionalCameraData();
 
             _worldView = _stretchRoot.GetComponent<LookTestWorldView>();
@@ -96,7 +103,8 @@ namespace JungleBooze.App.LookTest
                 _worldView = _stretchRoot.gameObject.AddComponent<LookTestWorldView>();
             }
 
-            _worldView.Init(_segments, _config.LoopLengthM, _config.RecycleBehindM);
+            _worldView.Init(_segments, _config.LoopLengthM, _path.LoopOffset, _config.RecycleBehindM, _backdrop);
+            _worldView.InitDetail(_detailGroups, _config.DetailRangeM);
             PlaceRunnerAndCamera(true);
 
             if (_sun != null && _sun.shadows != LightShadows.None)
@@ -165,17 +173,18 @@ namespace JungleBooze.App.LookTest
         private void PlaceRunnerAndCamera(bool snap)
         {
             float x = LookTestCameraRig.RunnerX(_runTimeS);
-            float z = (float)_distanceM;
-            _runner.localPosition = LookTestCameraRig.RunnerPosition(_runTimeS, z);
+            _runner.localPosition = LookTestCameraRig.RunnerPosition(_path, _distanceM, x);
+            _runner.localRotation = Quaternion.Euler(0f, _path.HeadingRad(_distanceM) * Mathf.Rad2Deg, 0f);
             _worldView.Render(_distanceM);
 
-            Vector3 target = LookTestCameraRig.CameraTarget(_config, x, z);
+            LookTestCameraProfile profile = LookTestCameraRig.Profile(_config, _camera.aspect);
+            LookTestCameraRig.Pose(_path, profile, _distanceM, x, out Vector3 target, out Quaternion rotation);
             Transform cam = _camera.transform;
             cam.position = snap
                 ? target
                 : Vector3.SmoothDamp(cam.position, target, ref _cameraVelocity, CameraSmoothingS);
-            cam.LookAt(LookTestCameraRig.LookAtPoint(_config, x, z, _camera.aspect));
-            _camera.fieldOfView = LookTestCameraRig.VerticalFov(_config, _camera.aspect);
+            cam.rotation = rotation;
+            _camera.fieldOfView = profile.VerticalFovDeg;
         }
 
         /// <summary>Capsule stand-in for Pista until the rigged model is imported; casts and receives real shadows. Also used by the editor screenshot tool.</summary>
@@ -184,7 +193,7 @@ namespace JungleBooze.App.LookTest
             var root = new GameObject("Pista (stand-in)");
             root.transform.SetParent(parent, false);
             GameObject body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            body.name = "Body";
+            body.name = "FX Pista stand-in";
             Collider collider = body.GetComponent<Collider>();
             if (Application.isPlaying)
             {
@@ -243,7 +252,12 @@ namespace JungleBooze.App.LookTest
             });
             panel.AddToggle("MSAA", () => _camera.allowMSAA, on => _camera.allowMSAA = on);
             panel.AddToggle("HDR", () => _camera.allowHDR, on => _camera.allowHDR = on);
-            panel.AddToggle("Plants", () => GroupActive(_plantGroups), on => SetGroups(_plantGroups, on));
+            panel.AddToggle("Plants", () => GroupActive(_plantGroups), on =>
+            {
+                SetGroups(_plantGroups, on);
+                _worldView.InitDetail(on ? _detailGroups : null, _config.DetailRangeM);
+                SetGroups(_detailGroups, on);
+            });
             panel.AddToggle("Water", () => GroupActive(_waterGroups), on => SetGroups(_waterGroups, on));
             panel.AddAction(() => Application.targetFrameRate >= 60 ? "60 fps" : "30 fps", () =>
             {

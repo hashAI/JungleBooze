@@ -39,8 +39,20 @@ namespace JungleBooze.UI.FeelTest
         private int _shownHealth = -1;
         private bool _shownShield;
         private bool _landscape = true;
+        private GameObject _settings;
+        private RectTransform _settingsRect;
+        private Text _sensitivityValue;
+        private Text _hapticsLabel;
+        private Text _reducedMotionLabel;
+        private float _shownSensitivity = -1f;
+        private int _shownHaptics = -1;
+        private int _shownReducedMotion = -1;
 
         public bool ResultsVisible => _results != null && _results.activeSelf;
+
+        public bool SettingsVisible => _settings != null && _settings.activeSelf;
+
+        public string SensitivityText => _sensitivityValue != null ? _sensitivityValue.text : string.Empty;
 
         public bool DebugVisible => _debug != null && _debug.gameObject.activeSelf;
 
@@ -108,6 +120,68 @@ namespace JungleBooze.UI.FeelTest
             _hint = HudFactory.CreateText(_safe, "Hint", font, 14, new Color(1f, 1f, 1f, 0.85f), Ink, TextAnchor.LowerCenter);
             _hint.fontStyle = FontStyle.Normal;
             HudFactory.Place(_hint.rectTransform, new Vector2(0.5f, 0f), new Vector2(800f, 24f), new Vector2(0f, 8f));
+        }
+
+        /// <summary>
+        /// Settings panel shown while paused: steering sensitivity (− / +), haptics and reduced motion toggles.
+        /// Values are persisted by the caller (FeelSettings).
+        /// </summary>
+        public void BuildSettings(Font font, Action<int> onSensitivityStep, Action onHapticsToggle, Action onReducedMotionToggle)
+        {
+            Image panel = HudFactory.CreatePanel(_safe, "Settings", Parchment, new Vector2(0.5f, 0.32f), new Vector2(420f, 170f), Vector2.zero);
+            _settings = panel.transform.parent.gameObject;
+            _settingsRect = (RectTransform)_settings.transform;
+
+            Text label = HudFactory.CreateText(panel.transform, "SensitivityLabel", font, 20, Ink, Color.clear, TextAnchor.MiddleLeft);
+            HudFactory.Place(label.rectTransform, new Vector2(0f, 1f), new Vector2(160f, 44f), new Vector2(18f, -12f));
+            label.text = "Steering";
+            HudFactory.CreateButton(panel.transform, "SensitivityDown", Parchment, new Vector2(0f, 1f), new Vector2(48f, 44f), new Vector2(180f, -10f), font, "-", 26, Ink, Color.clear, () => onSensitivityStep?.Invoke(-1));
+            _sensitivityValue = HudFactory.CreateText(panel.transform, "SensitivityValue", font, 22, Ink, Color.clear, TextAnchor.MiddleCenter);
+            HudFactory.Place(_sensitivityValue.rectTransform, new Vector2(0f, 1f), new Vector2(84f, 44f), new Vector2(236f, -12f));
+            HudFactory.CreateButton(panel.transform, "SensitivityUp", Parchment, new Vector2(0f, 1f), new Vector2(48f, 44f), new Vector2(328f, -10f), font, "+", 26, Ink, Color.clear, () => onSensitivityStep?.Invoke(1));
+
+            Button haptics = HudFactory.CreateButton(panel.transform, "Haptics", Parchment, new Vector2(0f, 0f), new Vector2(180f, 48f), new Vector2(18f, 22f), font, "Haptics", 18, Ink, Color.clear, () => onHapticsToggle?.Invoke());
+            _hapticsLabel = haptics.GetComponentInChildren<Text>();
+            Button reduced = HudFactory.CreateButton(panel.transform, "ReducedMotion", Parchment, new Vector2(1f, 0f), new Vector2(200f, 48f), new Vector2(-18f, 22f), font, "Motion", 18, Ink, Color.clear, () => onReducedMotionToggle?.Invoke());
+            _reducedMotionLabel = reduced.GetComponentInChildren<Text>();
+            _settings.SetActive(false);
+        }
+
+        public void SetSettingsVisible(bool visible)
+        {
+            if (_settings != null && _settings.activeSelf != visible)
+            {
+                _settings.SetActive(visible);
+            }
+        }
+
+        /// <summary>Updates the settings labels (only when a value changed).</summary>
+        public void SetSettingsValues(float sensitivity, bool haptics, bool reducedMotion)
+        {
+            if (_settings == null)
+            {
+                return;
+            }
+
+            if (!Mathf.Approximately(sensitivity, _shownSensitivity))
+            {
+                _shownSensitivity = sensitivity;
+                _sensitivityValue.text = sensitivity.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + "x";
+            }
+
+            int h = haptics ? 1 : 0;
+            if (h != _shownHaptics && _hapticsLabel != null)
+            {
+                _shownHaptics = h;
+                _hapticsLabel.text = haptics ? "Haptics: ON" : "Haptics: OFF";
+            }
+
+            int r = reducedMotion ? 1 : 0;
+            if (r != _shownReducedMotion && _reducedMotionLabel != null)
+            {
+                _shownReducedMotion = r;
+                _reducedMotionLabel.text = reducedMotion ? "Reduced motion: ON" : "Reduced motion: OFF";
+            }
         }
 
         public void SetOrientation(bool landscape)
@@ -196,6 +270,11 @@ namespace JungleBooze.UI.FeelTest
         public bool HitsControl(Vector2 screenPixel)
         {
             if (RectTransformUtility.RectangleContainsScreenPoint(_pauseButton, screenPixel, null))
+            {
+                return true;
+            }
+
+            if (SettingsVisible && RectTransformUtility.RectangleContainsScreenPoint(_settingsRect, screenPixel, null))
             {
                 return true;
             }
