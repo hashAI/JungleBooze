@@ -20,7 +20,7 @@ animations (approved cap 150 credits). Then import rigged Pista into the LookTes
 
 ## Current milestone
 **AURELIA, Phase 0: look test** (owner go, 2026-10-08). Source of truth for the direction: `design/aurelia/BLUEPRINT.md` and
-`design/aurelia/vision_board.png`. Pista, Duko and the game name stay. Look: **realistic**, AI-made art plus free CC0 assets,
+`design/aurelia/vision_board.png`. Pista stays (Duko dropped 2026-10-08); store name "Aurelia: Wildward". Look: **realistic**, AI-made art plus free CC0 assets,
 no paid packs. Quality bar: professional, polished in a small scope (owner wants "the greatest product").
 
 **Phase plan (owner checks at the end of each phase; don't start the next until it passes):**
@@ -28,7 +28,7 @@ no paid packs. Quality bar: professional, polished in a small scope (owner wants
 |---|---|---|---|
 | **0 Look test** ← now | One realistic forest + waterfall stretch, realistic Pista running through it, on iPhone | Looks professional on the phone and runs smoothly | 1–2 wk |
 | 1 Feel | Movement + camera tuned: a fun 60-second run | Is just running fun? | 2–3 wk |
-| 2 Vertical slice | Blueprint Part LV: route choice, river/swim, vine, Duko, a creature, a secret, results, first upgrade | 5 testers say "let me try again" | 4–6 wk |
+| 2 Vertical slice | Blueprint Part LV: route choice, river/swim, vine, a creature, a secret, results, first upgrade | 5 testers say "let me try again" | 4–6 wk |
 | 3 MVP | Full forest biome, 12–15 chunks, journal, 5–8 unlock abilities, light adaptive difficulty, audio | Owner wants to play daily | 3–4 mo |
 | 4 Retention test | Missions, daily expedition, next-goal results; TestFlight 20–50 testers | D1 ≥ 40%, D7 ≥ 15% | 1–2 mo |
 | 5 Launch | Store, compliance, performance | Ship | ~1 mo |
@@ -53,14 +53,14 @@ Duko/continue, audio files) compiled clean on the Mac.
 | Agent | State | Current / last task | Output | Next for this agent |
 |---|---|---|---|---|
 | producer | not used yet | (the coordinating session does this role for now) | this file | — |
-| game-designer | working (2026-10-09) | Spec 103: 5-minute vertical slice (chunks, swim, vine, canopy, creature, secret, results, first upgrade) | `design/aurelia/GDD.md`, `design/aurelia/specs/` | Phase 2 chunk catalog detail; FTUE script |
+| game-designer | done (2026-10-09) | Spec 103 vertical slice: scripted "Expedition 1", 13 chunks ~4:05, swim/vine/canopy/sailback/Veil Grotto secret/Shield/Deep Breath upgrade, AC-103-01–50 | `design/aurelia/GDD.md`, `design/aurelia/specs/` | Phase 2 chunk catalog detail; FTUE script |
 | balance-simulator | done (A3) | Python reference model, golden traces, S1–S9 report (`archive/pre-aurelia/docs/sim-reports/2026-10-07-spec001.md`) | `tools/sim/`, `docs/sim-reports/` | Phase 1: new movement/chunk model from the AURELIA spec (old model kept as reference) |
 | tech-architect | working (2026-10-09) | Look test: layered waterfalls, mist, roots, P1 scale, water; integration path for Art/Environment assets | `Assets/_Game/Editor/Setup/`, `docs/adr/0003-first-playable-bootstrap.md`, `docs/PLAY_FIRST_BUILD.md` | Add EditMode tests for `ProjectSetupRules`; Roslyn analyzers |
 | gameplay-engineer | working (2026-10-09) | Fix Phase 1 review findings (blocker: swipe after resting thumb), camera framing 19–22%/14–16% [ASSUMED], dodge from current position [ASSUMED], re-record videos | `Scripts/Gameplay/PowerUps`, `Hazards`, `Companion`, `Views`, `App/RunSceneBootstrap.cs` | Wire audio events; then Batch 3 |
 | ui-engineer | done (C2) | Track wired into the Run scene with gray-box views and HUD | `Scripts/Gameplay/Views`, `Scripts/App`, `Scripts/UI/Hud` | Fix errors the owner sends from Unity |
 | art-director | done (2026-10-09) | Meshy keyframes F1–F4 + P1 (93 credits) → design/aurelia/keyframes/ | `design/aurelia/ENVIRONMENT_STRATEGY.md` | Store art later |
 | asset-pipeline | working (2026-10-09) | Rootstone Blender kit + hero arch, Meshy stiltwoods ×3 + leaf cards, backdrop layers (cap 450 credits) → Art/Environment/ | `art_source/pista/`, `tools/blender/pista/` | Report → import rigged Pista into LookTest |
-| audio-director | done (files) | SFX, Duko voice (from history), Jungle/menu music, `AudioPlayback` | `Assets/_Game/Audio`, `Scripts/Services/Audio` | Wire playback into the Run scene |
+| audio-director | waiting | Old lane-era audio archived (2026-10-09) | — | AURELIA audio after the vertical slice (ElevenLabs needs owner OK) |
 | qa-engineer | waiting | — | — | FP1 stage F: test plan + owner play-test script |
 | performance-engineer | waiting | — | — | Benchmark scene (week 2+) |
 | code-reviewer | done (2026-10-09) | Phase 1 review: 1 blocking (swipe after resting thumb lost), 9 should-fix, 14 nits → docs/reviews/2026-10-09-phase1-feel.md | — | Rerun after the owner's review, if the owner wants it |
@@ -98,6 +98,7 @@ Meshy: 3 (image edit test) + 30 (Pista 3D v1) = **33 credits used**; balance 2,4
 2. Jungle music variation: three loops on disk (A/B/C). Playback is not wired yet; default to A until the owner listens.
 
 ## Assumptions waiting for owner review (`[ASSUMED]`)
+- Spec 103 (2026-10-09): Deep Breath is ability #1 (150 coins; opens the Sunken Arch), replacing Trail Sense in GDD §13; no drowning/breath meter; no revive offer in the first run; the slice compresses the Blueprint's 10-min first run to ~4 min. Full list in spec 103 §17.
 - AURELIA (spec 101/GDD, 2026-10-09): controls "Steer + Flick" (drag steers 0.040 m/pt, flick = 2.2 m dodge, swipe up/down fire on threshold); speed 10→16 m/s; fixed jump 1.41 m / 0.60 s, coyote 100 ms, buffer 150 ms; frontal crash into a tall blocker ends the run; health +1 per 350 m undamaged; revive 1/2/4 crystals (max 3); rare resource "Crystals"; power-ups Magnet/Shield/Explorer Vision; 7 abilities; rating 9+; first 60 s can't die; analytics on-device (TestFlight upload only); DDA starts −0.3; MVP 14 chunks. Owner confirms controls at the Phase 1 check.
 - Track: seam-fallback breather doesn't reset the breather timer; each breather gets its own pick; mover moves for 30 ticks after its trigger tick; random stream ids TrackGeneration=1…Cosmetic=5.
 - Collisions: a second obstacle clipped on the same tick as a stumble is ignored; obstacles touched while invulnerable are ignored for that pass; a box already overlapping at tick start is a stumble, never a death; sliding under a standard high barrier counts as a near-miss.
@@ -124,6 +125,7 @@ Meshy: 3 (image edit test) + 30 (Pista 3D v1) = **33 credits used**; balance 2,4
 
 ## Log
 Newest first. One line per event.
+- 2026-10-09: game-designer done: spec 103 vertical slice. [ASSUMED] Deep Breath first (recommended option A).
 - 2026-10-09: Owner asked for an OpenAI image test: F4 keyframe with gpt-image-2 medium 1536x1024 succeeded and beats Meshy. OpenAI images approved (medium quality; working cap $75). Backdrops/leaf textures switch to OpenAI.
 - 2026-10-09: Launched gameplay-engineer (review fixes), game-designer (spec 103 vertical slice), asset-pipeline (environment kit, cap 450 credits), tech-architect (water/mist/roots + integration). Sent owner gameplay videos, keyframes, look test v2.
 - 2026-10-09: Owner picked store name "Aurelia: Wildward"; focus today = build the game, other work later. Reports in: real Pista + gameplay videos, Phase 1 review (1 blocker), keyframes, look test v2.
