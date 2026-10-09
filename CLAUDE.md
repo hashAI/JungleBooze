@@ -30,8 +30,8 @@ defined in `.claude/agents/`. Read `docs/AGENT_PLAN.md` for the full plan.
      it. The old lane-based direction lives only in `archive/pre-aurelia/` and must never leak back into the game.
    - **Quality is top-notch, never compromised** (not for time, not for money). If something isn't at full quality,
      it isn't done.
-   - **Autonomy:** no permission needed for work, tools, installs, Unity, or design calls. Use your own
-     recommendations instead of asking; mark them `[ASSUMED]` and log them in `docs/STATUS.md`. Follow the phase
+   - **Autonomy:** no permission needed for work, tools, installs, Unity, design or taste calls. Don't ask the
+     owner questions; use your own recommendations; mark them `[ASSUMED]` and log them in `docs/STATUS.md`. Follow the phase
      plan in `docs/STATUS.md`. Think, test, validate and improve freely: compile, run tests, render
      screenshots/previews, play it, and look at the results yourself before calling anything done.
    - **Money needs approval.** Pre-approved: **1,000 Meshy credits** (counted from 2026-10-09, shared, no per-step
@@ -49,11 +49,12 @@ defined in `.claude/agents/`. Read `docs/AGENT_PLAN.md` for the full plan.
      (SendUserFile) whenever there is something visual worth seeing or judging, with a one-line caption.
 
 ## Ground rules for every agent
-1. **The owner decides identity and taste.** Hero, creatures/companions, art style, name, icon, prices, and "is it fun" are
-   the owner's calls. Prepare options, but never decide these yourself. Check `design/DECISIONS.md` first.
-   Subagents never ask the owner directly: end your report with an **Open questions for owner** section
-   (each with 2–4 options and a recommendation). The coordinating session asks the owner and logs the answer.
-   Where a question doesn't block you, proceed with your recommended default and mark it `[ASSUMED]`.
+1. **Owner delegated decisions (2026-10-09).** The owner no longer wants to be asked: the coordinator and agents take
+   their own best recommendation on everything, including identity and taste calls (art, characters, creatures,
+   names, feel), always within the binding blueprint. Log each such call as `[ASSUMED]` in `docs/STATUS.md` (and in
+   `design/DECISIONS.md` if it's significant) so the owner can review and overrule later. Subagents still end their
+   report with an **Open questions** section with a recommendation; the coordinator decides instead of asking.
+   **Only money still needs the owner's OK** (see Owner rules). The owner's phase checks remain: show results.
 2. **Specs before code.** Gameplay work starts from a game-designer spec with acceptance criteria.
 3. **Tests with every change.** Gameplay logic is plain C# with EditMode tests. Behavior inside scenes gets PlayMode tests.
 4. **Data-driven.** Tuning numbers live in ScriptableObjects under `Assets/_Game/Config`, never hard-coded in code.
