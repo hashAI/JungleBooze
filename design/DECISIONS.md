@@ -5,6 +5,7 @@ Newest first.
 
 | Date | Gate | Decision | Options considered | Decided by |
 |---|---|---|---|---|
+| 2026-10-09 | — | All 2D images come from OpenAI only (Meshy for 3D meshes only). Agents choose sizes wisely per use | — | Owner |
 | 2026-10-09 | — | **OpenAI images approved** for art (gpt-image-2, medium quality, at the resolution each use needs): keyframes/concepts, backdrop layers, leaf/foliage textures. Working cap $75 (the strategy's estimate, ~$43 expected) [ASSUMED]; ask the owner before going past it. Log each call in `art_source/environment/openai/calls.jsonl`. First test (F4 basin) beat the Meshy images | Meshy images / OpenAI | Owner |
 | 2026-10-09 | G6 | Store name **"Aurelia: Wildward"** (fallback Verdaway); domain waits for the attorney check. Owner: focus on building the game today; naming/compliance/other work comes later | Wildward / Verdaway / Lumenwild | Owner |
 | 2026-10-09 | G2 | **No purchases for environment art** (declined SeedMesh, Amplify Impostors, OpenAI credit). Use Meshy (inside the 1,000 pre-approved credits; ask beyond), CC0 and in-house Blender/procedural work | Approve all ~$175 / OpenAI only / no new money | Owner |
