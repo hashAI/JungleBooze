@@ -30,12 +30,27 @@ used), OpenAI images $75 (~$4 used); everything else needs the owner's OK. Git L
 **Pending owner answers:** (1) audio: RESOLVED, ElevenLabs with the owner's existing key/plan (audio-director launched); (2) owner's iPhone model + the
 5-minute device setup for the benchmark build (performance-engineer writes the steps).
 
-**Agents running at handoff time (if a new session starts before they report, check their outputs/files and relaunch):**
-tech-architect painterly v4 (arch via 3D + painted cards, painted scrolling foam, pillar impostors, overdraw cuts, quality tiers)
-→ /tmp/junglebooze-hero/F4_compare_painterly_v4.jpg; performance-engineer iPhone 12 readiness (device bench build + soak,
-offline GPU/overdraw analysis, docs/perf/2026-10-iphone12-readiness.md); ui-engineer real painterly UI (home, HUD, pause/settings,
-results, toasts, layout bug fixes; screenshots /tmp/junglebooze-ui/); asset-pipeline painterly forest kit
-(Art/Environment/{Forest,Obstacles,Creatures}, sailback; caps Meshy 200, OpenAI $10); game-designer spec 104 MVP content.
+**State at handoff (2026-10-09 ~23:30 IST, commit 16e6a8e): NO agents running.** Everything committed; EditMode 597/597,
+PlayMode 24/24. Done since the plan was written: spec 104 MVP content (USP checklist §16); painterly hero v4 (~75% of F4_f,
+sent; gaps: arch card squat/grey because mid jungle hides its legs, sky 18.5% > 16%, weak sun glow, repetitive tier cascades,
+rocks read as green mounds); real painterly UI (home, HUD, pause/settings, results, journal, abilities; owner saw screenshots;
+privacy-policy URL needed before launch); painterly Expedition kit (33 obstacles/pickups, trail/terrain, stiltwoods, backdrops,
+rigged sailback; weak: 0.5 m root reads thin at 14 m, obstacle bushes lumpy, canopy-beam moss blotchy, canopy platform over
+budget); adaptive audio (ElevenLabs, theme B kalimba/marimba/flute [ASSUMED]; ElevenLabs music is iOS-only on the owner's plan,
+replace before Android); iPhone 12 tooling (`tools/build/device_bench.sh`, docs/perf/2026-10-iphone12-readiness.md: v4 est.
+9–13 ms GPU on A14, risk = alpha-tested leaf overdraw; cuts to do: sort merged leaf meshes front-to-back, drop CPU copies of
+generated meshes (24 MB), shrink the 32 MB sky texture).
+
+**Next actions for the new session (launch in parallel, lean prompts, commit after each):**
+1. tech-architect: hero v5 = perf cuts above + v4 gaps → send owner the comparison for FINAL approval (look gate).
+2. tech-architect or gameplay-engineer (Expedition views): WORLD ART PASS: dress all 15 slice chunks with the painterly kit
+   (Art/Environment/{Forest,Obstacles,Creatures,Plants,Rootstone,Backdrops}), painterly shading/grade from the hero, sailback
+   in-game; readability at 16 m/s; bot video with audio → send owner.
+3. asset-pipeline: kit fixes listed above (root readability, bush tops, canopy moss, platform budget).
+4. game-designer: sync GDD/spec 102/ResultsConfig with spec 104; then gameplay-engineer implements spec 104 (Phase 3).
+5. ui-engineer: wire HUD results count-up sounds, ambience volume slider, localization of content names.
+6. Owner device test when the owner provides the iPhone (5 steps in the perf doc); then Phase 1 feel check on phone.
+7. code-reviewer on UI + audio + perf commits.
 
 **Plan to complete Phases 0–3 (in order; parallelize within a step; review + commit after each report):**
 - **Phase 0 Look:** v4 → owner approves the hero render; device benchmark on the owner's iPhone (60 fps, 10-min soak, thermals).
@@ -160,6 +175,7 @@ Meshy: 3 (image edit test) + 30 (Pista 3D v1) = **33 credits used**; balance 2,4
 
 ## Log
 Newest first. One line per event.
+- 2026-10-09 23:30: Committed UI, audio, hero v4, iPhone 12 tooling (16e6a8e). No agents running. Handoff ready (owner to /clear).
 - 2026-10-09 ~21:00: Owner: complete Phases 0–3 and keep context lean. Handoff note + Phase 0–3 plan written; hand off once the 5 running agents report.
 - 2026-10-09: Painterly FINAL. Owner: start building the remaining parts. Launched ui-engineer (real UI), asset-pipeline (painterly forest kit + sailback), game-designer (spec 104 MVP content); tech-architect (painterly v4) and performance-engineer (iPhone 12) running.
 - 2026-10-09: Owner chose painterly (B); tricks for arch/foam/pillars; hard requirement iPhone 12. Launching painterly v4 (tricks) + performance-engineer (iPhone 12 readiness).
