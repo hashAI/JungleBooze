@@ -32,5 +32,28 @@ namespace JungleBooze.Gameplay.Movement
         Revived,
         /// <summary>A Low obstacle with a walkable top became floor. Id = obstacle.</summary>
         WalkableLanding,
+
+        /// <summary>A timed shield ran out unused.</summary>
+        ShieldExpired,
+
+        // ---- World / expedition events (spec 102–103), appended by the run tracker after the simulation step. ----
+
+        /// <summary>Id = crystal id.</summary>
+        Crystal,
+
+        /// <summary>Id = power-up id, Reason = <c>PowerUpKind</c>.</summary>
+        PowerUp,
+
+        /// <summary>Id = discovery entry index, Reason = 1 first time / 0 seen again.</summary>
+        Discovery,
+
+        /// <summary>Value = bonus coins, Id = chunk serial.</summary>
+        CleanLine,
+
+        /// <summary>Id = chunk serial, Reason = <c>RouteType</c>.</summary>
+        RouteChosen,
+
+        /// <summary>Id = chunk serial (the runner crossed its entry seam).</summary>
+        ChunkEntered,
     }
 }

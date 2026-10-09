@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bc7cd0fd53bc141e1bca2273dbac6faa, type: 3}
+  m_Name: PickupConfig
+  m_EditorClassIdentifier: JungleBooze.Gameplay::JungleBooze.Gameplay.Config.PickupConfigAsset
+  _values:
+    CrystalPad: 0.4
+    PowerUpPad: 0.5
+    CleanLineBonus: 0.5
+    PerfectReleaseCoins: 10
+    PerfectSpanBonusCoins: 25
+    ShieldDuration: 30
+    ShieldWarnTime: 3

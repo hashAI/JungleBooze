@@ -30,6 +30,12 @@ namespace JungleBooze.Core
         public const ulong VineSchedule = 6;
 
         /// <summary>
+        /// Discovery slot assignment (spec 102 §6.3 step 4: "a new Discovery stream"). Forked by the World Director
+        /// after TrackGeneration, ObstacleVariants and Pickups. [Appended 2026-10-09 by gameplay-engineer.]
+        /// </summary>
+        public const ulong Discovery = 7;
+
+        /// <summary>
         /// Companion choices that must replay identically (cheer variant, GDD 15.1). Numbered 16 so features added
         /// in parallel can take 7 onward without a clash.
         /// </summary>

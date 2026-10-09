@@ -6,6 +6,9 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/_Game/Scenes/Expedition.unity
+    guid: 67817aca8677b46958918528d372cbe8
+  - enabled: 1
     path: Assets/_Game/Scenes/FeelTest.unity
     guid: de834c5e415cf43d98660bea2de8c94a
   - enabled: 1

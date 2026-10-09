@@ -1,0 +1,203 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 127402b584390418eb53bb16ddc7cce7, type: 3}
+  m_Name: F_Branch_Ravine_01
+  m_EditorClassIdentifier: JungleBooze.Gameplay::JungleBooze.Gameplay.Config.ChunkDefinitionAsset
+  _definition:
+    Id: F_Branch_Ravine_01
+    Label: R6
+    Biome: 0
+    Environment: 0
+    Category: 1
+    Length: 220
+    Entry: 0
+    Exit: 0
+    Rating: 5
+    RatingMin: 4
+    RatingMax: 7
+    Dimensions:
+      Reaction: 2
+      Navigation: 1
+      Traversal: 1
+      Risk: 2
+      Complexity: 2
+    PhaseMin: 2
+    PhaseMax: 5
+    RequiredAbilities: 0
+    ShowcaseAbilities: 0
+    Reward: 1
+    SetPiece: 0
+    RunOpener: 0
+    PoolEnabled: 0
+    BaseWeight: 1
+    EventCompatibility: 0
+    Variants:
+    - Name: Default
+      ScriptOnly: 0
+      Length: 0
+      Placeholder: 0
+      PlaceholderNote: 
+      Widths:
+      - S: 0
+        XMin: -3.5
+        XMax: 3.5
+      - S: 220
+        XMin: -3.5
+        XMax: 3.5
+      Floors:
+      - Kind: 0
+        SMin: 95
+        SMax: 98.5
+        XMin: -99
+        XMax: 99
+        Y0: 0
+        Y1: 0
+      - Kind: 0
+        SMin: 185
+        SMax: 188
+        XMin: -99
+        XMax: 99
+        Y0: 0
+        Y1: 0
+      Dividers: []
+      Routes:
+      - Name: High ledge (Root Vault)
+        Type: 2
+        Steps: []
+        RequiredAbility: 8
+        Locked: 1
+        Note: "Raised root ledge \u2264 1.6 m on the right (Phase 3)"
+      Obstacles:
+      - Label: Low 0.6 @30
+        Class: 0
+        SMin: 30
+        SMax: 30.6
+        XMin: -3.5
+        XMax: 3.5
+        YMin: 0
+        YMax: 0.6
+        WalkableTop: 0
+      - Label: Rock 1.4 @55
+        Class: 2
+        SMin: 55
+        SMax: 55.6
+        XMin: 0.8
+        XMax: 2.2
+        YMin: 0
+        YMax: 2.5
+        WalkableTop: 0
+      - Label: Rock 1.4 @70
+        Class: 2
+        SMin: 70
+        SMax: 70.6
+        XMin: -2.2
+        XMax: -0.8
+        YMin: 0
+        YMax: 2.5
+        WalkableTop: 0
+      - Label: High @118
+        Class: 1
+        SMin: 118
+        SMax: 118.6
+        XMin: -3.5
+        XMax: 3.5
+        YMin: 1
+        YMax: 2.5
+        WalkableTop: 0
+      - Label: Low 0.6 @140
+        Class: 0
+        SMin: 140
+        SMax: 140.6
+        XMin: -3.5
+        XMax: 3.5
+        YMin: 0
+        YMax: 0.6
+        WalkableTop: 0
+      - Label: Thorns @160
+        Class: 3
+        SMin: 160
+        SMax: 165
+        XMin: 0.5
+        XMax: 3.5
+        YMin: 0
+        YMax: 0.5
+        WalkableTop: 0
+      Coins:
+      - Kind: 2
+        S0: 30
+        S1: 30
+        X: 0
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      - Kind: 1
+        S0: 48
+        S1: 78
+        X: 0
+        Step: 2.5
+        Amp: -1.5
+        Period: 30
+        Count: 0
+        Y: 0
+      - Kind: 2
+        S0: 96.75
+        S1: 96.75
+        X: 0
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      - Kind: 3
+        S0: 118
+        S1: 118
+        X: 0
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      - Kind: 2
+        S0: 140
+        S1: 140
+        X: 0
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      - Kind: 0
+        S0: 155
+        S1: 170
+        X: -2
+        Step: 2.5
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 2
+        S0: 186.5
+        S1: 186.5
+        X: 0
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      Crystals: []
+      PowerUps: []
+      Discoveries: []
+      Traversal: []
+      Help: []
+    ValidatedMask: 1

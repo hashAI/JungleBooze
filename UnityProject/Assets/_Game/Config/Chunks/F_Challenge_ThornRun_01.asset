@@ -1,0 +1,299 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 127402b584390418eb53bb16ddc7cce7, type: 3}
+  m_Name: F_Challenge_ThornRun_01
+  m_EditorClassIdentifier: JungleBooze.Gameplay::JungleBooze.Gameplay.Config.ChunkDefinitionAsset
+  _definition:
+    Id: F_Challenge_ThornRun_01
+    Label: C13
+    Biome: 0
+    Environment: 0
+    Category: 2
+    Length: 200
+    Entry: 0
+    Exit: 0
+    Rating: 6
+    RatingMin: 6
+    RatingMax: 9
+    Dimensions:
+      Reaction: 3
+      Navigation: 2
+      Traversal: 0
+      Risk: 3
+      Complexity: 2
+    PhaseMin: 3
+    PhaseMax: 5
+    RequiredAbilities: 0
+    ShowcaseAbilities: 0
+    Reward: 1
+    SetPiece: 0
+    RunOpener: 0
+    PoolEnabled: 1
+    BaseWeight: 1
+    EventCompatibility: 0
+    Variants:
+    - Name: Default
+      ScriptOnly: 0
+      Length: 0
+      Placeholder: 0
+      PlaceholderNote: 
+      Widths:
+      - S: 0
+        XMin: -3.5
+        XMax: 3.5
+      - S: 15
+        XMin: -3.5
+        XMax: 3.5
+      - S: 35
+        XMin: -1.5
+        XMax: 1.5
+      - S: 85
+        XMin: -1.5
+        XMax: 1.5
+      - S: 100
+        XMin: -3.5
+        XMax: 3.5
+      - S: 200
+        XMin: -3.5
+        XMax: 3.5
+      Floors:
+      - Kind: 0
+        SMin: 75
+        SMax: 78
+        XMin: -99
+        XMax: 99
+        Y0: 0
+        Y1: 0
+      - Kind: 0
+        SMin: 150
+        SMax: 154.5
+        XMin: -99
+        XMax: 99
+        Y0: 0
+        Y1: 0
+      Dividers: []
+      Routes: []
+      Obstacles:
+      - Label: Thorns @25
+        Class: 3
+        SMin: 25
+        SMax: 26.5
+        XMin: -1.5
+        XMax: 0
+        YMin: 0
+        YMax: 0.5
+        WalkableTop: 0
+      - Label: Thorns @35
+        Class: 3
+        SMin: 35
+        SMax: 36.5
+        XMin: 0
+        XMax: 1.5
+        YMin: 0
+        YMax: 0.5
+        WalkableTop: 0
+      - Label: Thorns @45
+        Class: 3
+        SMin: 45
+        SMax: 46.5
+        XMin: -1.5
+        XMax: 0
+        YMin: 0
+        YMax: 0.5
+        WalkableTop: 0
+      - Label: High @60
+        Class: 1
+        SMin: 60
+        SMax: 60.6
+        XMin: -1.5
+        XMax: 1.5
+        YMin: 1
+        YMax: 2.5
+        WalkableTop: 0
+      - Label: Rock 1.4 @92
+        Class: 2
+        SMin: 92
+        SMax: 92.6
+        XMin: -2.7
+        XMax: -1.3
+        YMin: 0
+        YMax: 2.5
+        WalkableTop: 0
+      - Label: Rock 1.4 @101
+        Class: 2
+        SMin: 101
+        SMax: 101.6
+        XMin: 0.3
+        XMax: 1.7
+        YMin: 0
+        YMax: 2.5
+        WalkableTop: 0
+      - Label: Rock 1.4 @110
+        Class: 2
+        SMin: 110
+        SMax: 110.6
+        XMin: -1.7
+        XMax: -0.3
+        YMin: 0
+        YMax: 2.5
+        WalkableTop: 0
+      - Label: Thorny log
+        Class: 0
+        SMin: 125
+        SMax: 127
+        XMin: -3.5
+        XMax: 3.5
+        YMin: 0
+        YMax: 0.8
+        WalkableTop: 1
+      - Label: High @137
+        Class: 1
+        SMin: 137
+        SMax: 137.6
+        XMin: -3.5
+        XMax: 3.5
+        YMin: 1
+        YMax: 2.5
+        WalkableTop: 0
+      - Label: Thorns @165
+        Class: 3
+        SMin: 165
+        SMax: 165.6
+        XMin: -3.5
+        XMax: 3.5
+        YMin: 0
+        YMax: 0.6
+        WalkableTop: 0
+      - Label: High @178
+        Class: 1
+        SMin: 178
+        SMax: 178.6
+        XMin: -3.5
+        XMax: 3.5
+        YMin: 1
+        YMax: 2.5
+        WalkableTop: 0
+      Coins:
+      - Kind: 1
+        S0: 20
+        S1: 50
+        X: 0
+        Step: 2
+        Amp: 0.8
+        Period: 20
+        Count: 0
+        Y: 0
+      - Kind: 3
+        S0: 60
+        S1: 60
+        X: 0
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      - Kind: 2
+        S0: 76.5
+        S1: 76.5
+        X: 0
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      - Kind: 0
+        S0: 90
+        S1: 94
+        X: 0.5
+        Step: 2
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 0
+        S0: 99
+        S1: 103
+        X: -1.5
+        Step: 2
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 0
+        S0: 108
+        S1: 112
+        X: 1
+        Step: 2
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 0
+        S0: 125
+        S1: 127
+        X: 0
+        Step: 1
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 3
+        S0: 137
+        S1: 137
+        X: 0
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      - Kind: 2
+        S0: 152.25
+        S1: 152.25
+        X: 0
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      - Kind: 2
+        S0: 165
+        S1: 165
+        X: 0
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      - Kind: 3
+        S0: 178
+        S1: 178
+        X: 0
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      - Kind: 0
+        S0: 182
+        S1: 192
+        X: 0
+        Step: 2.5
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      Crystals: []
+      PowerUps: []
+      Discoveries: []
+      Traversal: []
+      Help: []
+    ValidatedMask: 1

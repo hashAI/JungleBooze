@@ -1,0 +1,444 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 127402b584390418eb53bb16ddc7cce7, type: 3}
+  m_Name: F_Straight_Roots_01
+  m_EditorClassIdentifier: JungleBooze.Gameplay::JungleBooze.Gameplay.Config.ChunkDefinitionAsset
+  _definition:
+    Id: F_Straight_Roots_01
+    Label: C2
+    Biome: 0
+    Environment: 0
+    Category: 0
+    Length: 220
+    Entry: 0
+    Exit: 0
+    Rating: 3
+    RatingMin: 2
+    RatingMax: 5
+    Dimensions:
+      Reaction: 2
+      Navigation: 1
+      Traversal: 0
+      Risk: 1
+      Complexity: 1
+    PhaseMin: 1
+    PhaseMax: 5
+    RequiredAbilities: 0
+    ShowcaseAbilities: 0
+    Reward: 1
+    SetPiece: 0
+    RunOpener: 0
+    PoolEnabled: 1
+    BaseWeight: 1
+    EventCompatibility: 0
+    Variants:
+    - Name: Learn
+      ScriptOnly: 1
+      Length: 0
+      Placeholder: 0
+      PlaceholderNote: 
+      Widths:
+      - S: 0
+        XMin: -3.5
+        XMax: 3.5
+      - S: 220
+        XMin: -3.5
+        XMax: 3.5
+      Floors: []
+      Dividers: []
+      Routes: []
+      Obstacles:
+      - Label: Root
+        Class: 0
+        SMin: 20
+        SMax: 20.6
+        XMin: -3.5
+        XMax: 3.5
+        YMin: 0
+        YMax: 0.5
+        WalkableTop: 0
+      - Label: Root
+        Class: 0
+        SMin: 45
+        SMax: 45.6
+        XMin: -3.5
+        XMax: 3.5
+        YMin: 0
+        YMax: 0.6
+        WalkableTop: 0
+      - Label: Fallen log
+        Class: 0
+        SMin: 70
+        SMax: 72
+        XMin: -3.5
+        XMax: 3.5
+        YMin: 0
+        YMax: 0.9
+        WalkableTop: 1
+      - Label: Hanging branch
+        Class: 1
+        SMin: 100
+        SMax: 100.6
+        XMin: -3.5
+        XMax: 3.5
+        YMin: 1
+        YMax: 2.5
+        WalkableTop: 0
+      - Label: Hanging branch
+        Class: 1
+        SMin: 125
+        SMax: 125.6
+        XMin: -3.5
+        XMax: 3.5
+        YMin: 1
+        YMax: 2.5
+        WalkableTop: 0
+      - Label: Root wall left
+        Class: 2
+        SMin: 160
+        SMax: 160.6
+        XMin: -3.5
+        XMax: 0.5
+        YMin: 0
+        YMax: 2.5
+        WalkableTop: 0
+      - Label: Root wall right
+        Class: 2
+        SMin: 180
+        SMax: 180.6
+        XMin: -0.5
+        XMax: 3.5
+        YMin: 0
+        YMax: 2.5
+        WalkableTop: 0
+      - Label: Root (left)
+        Class: 0
+        SMin: 200
+        SMax: 200.6
+        XMin: -3.5
+        XMax: 0
+        YMin: 0
+        YMax: 0.5
+        WalkableTop: 0
+      Coins:
+      - Kind: 2
+        S0: 20
+        S1: 20
+        X: 0
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      - Kind: 0
+        S0: 27
+        S1: 39
+        X: 0
+        Step: 3
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 2
+        S0: 45
+        S1: 45
+        X: 0
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      - Kind: 0
+        S0: 52
+        S1: 64
+        X: 0
+        Step: 3
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 0
+        S0: 70
+        S1: 72
+        X: 0
+        Step: 1
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 0
+        S0: 80
+        S1: 94
+        X: 0
+        Step: 3.5
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 3
+        S0: 100
+        S1: 100
+        X: 0
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      - Kind: 0
+        S0: 108
+        S1: 120
+        X: 0
+        Step: 3
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 3
+        S0: 125
+        S1: 125
+        X: 0
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      - Kind: 0
+        S0: 150
+        S1: 175
+        X: 2
+        Step: 3
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 0
+        S0: 176
+        S1: 190
+        X: -2
+        Step: 2.8
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 2
+        S0: 200
+        S1: 200
+        X: -1.8
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      Crystals: []
+      PowerUps: []
+      Discoveries: []
+      Traversal: []
+      Help:
+      - Move: 1
+        S: 20
+        XMin: -99
+        XMax: 99
+      - Move: 2
+        S: 100
+        XMin: -99
+        XMax: 99
+      - Move: 3
+        S: 160
+        XMin: -3.5
+        XMax: 0.5
+    - Name: B
+      ScriptOnly: 0
+      Length: 200
+      Placeholder: 0
+      PlaceholderNote: 
+      Widths:
+      - S: 0
+        XMin: -3.5
+        XMax: 3.5
+      - S: 200
+        XMin: -3.5
+        XMax: 3.5
+      Floors:
+      - Kind: 0
+        SMin: 115
+        SMax: 118.5
+        XMin: -99
+        XMax: 99
+        Y0: 0
+        Y1: 0
+      Dividers: []
+      Routes: []
+      Obstacles:
+      - Label: Low 0.6 @20
+        Class: 0
+        SMin: 20
+        SMax: 20.6
+        XMin: -3.5
+        XMax: 3.5
+        YMin: 0
+        YMax: 0.6
+        WalkableTop: 0
+      - Label: High @40
+        Class: 1
+        SMin: 40
+        SMax: 40.6
+        XMin: -3.5
+        XMax: 3.5
+        YMin: 1
+        YMax: 2.5
+        WalkableTop: 0
+      - Label: Rock 1.2 @60
+        Class: 2
+        SMin: 60
+        SMax: 60.6
+        XMin: 0.6
+        XMax: 1.8000001
+        YMin: 0
+        YMax: 2.5
+        WalkableTop: 0
+      - Label: Low 0.6 @80
+        Class: 0
+        SMin: 80
+        SMax: 80.6
+        XMin: -3.5
+        XMax: 3.5
+        YMin: 0
+        YMax: 0.6
+        WalkableTop: 0
+      - Label: High @92
+        Class: 1
+        SMin: 92
+        SMax: 92.6
+        XMin: -3.5
+        XMax: 3.5
+        YMin: 1
+        YMax: 2.5
+        WalkableTop: 0
+      - Label: Rock 1.4 @135
+        Class: 2
+        SMin: 135
+        SMax: 135.6
+        XMin: -2.2
+        XMax: -0.8
+        YMin: 0
+        YMax: 2.5
+        WalkableTop: 0
+      - Label: Rock 1.4 @150
+        Class: 2
+        SMin: 150
+        SMax: 150.6
+        XMin: 0.8
+        XMax: 2.2
+        YMin: 0
+        YMax: 2.5
+        WalkableTop: 0
+      - Label: Rock 1.4 @165
+        Class: 2
+        SMin: 165
+        SMax: 165.6
+        XMin: -1.7
+        XMax: -0.3
+        YMin: 0
+        YMax: 2.5
+        WalkableTop: 0
+      - Label: Low 0.5 @185
+        Class: 0
+        SMin: 185
+        SMax: 185.6
+        XMin: -3.5
+        XMax: 3.5
+        YMin: 0
+        YMax: 0.5
+        WalkableTop: 0
+      Coins:
+      - Kind: 2
+        S0: 20
+        S1: 20
+        X: 0
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      - Kind: 3
+        S0: 40
+        S1: 40
+        X: 0
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      - Kind: 0
+        S0: 50
+        S1: 70
+        X: -1.5
+        Step: 2.5
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 2
+        S0: 80
+        S1: 80
+        X: 0
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      - Kind: 3
+        S0: 92
+        S1: 92
+        X: 0
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      - Kind: 2
+        S0: 116.75
+        S1: 116.75
+        X: 0
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      - Kind: 1
+        S0: 128
+        S1: 172
+        X: 0.2
+        Step: 2.5
+        Amp: 1.6
+        Period: 30
+        Count: 0
+        Y: 0
+      - Kind: 2
+        S0: 185
+        S1: 185
+        X: 0
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      Crystals: []
+      PowerUps:
+      - S: 100
+        X: 0
+        Y: 1
+        OnRisky: 0
+      Discoveries: []
+      Traversal: []
+      Help: []
+    ValidatedMask: 3

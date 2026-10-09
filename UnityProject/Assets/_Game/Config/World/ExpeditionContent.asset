@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 28c8a38643c7141b78b6b6b8fccd8391, type: 3}
+  m_Name: ExpeditionContent
+  m_EditorClassIdentifier: JungleBooze.Gameplay::JungleBooze.Gameplay.Config.ExpeditionContentAsset
+  Catalog: {fileID: 11400000, guid: 71633bd50657d453c9257b5f585ff597, type: 2}
+  Script: {fileID: 11400000, guid: 8e257e4f9dcd44eecae67d23ddd63d02, type: 2}
+  Director: {fileID: 11400000, guid: a5cefb7a68cc44e7c87262e639a83ad5, type: 2}
+  Pickups: {fileID: 11400000, guid: cfca35d0ac1d241f0b5933dc5dcf2bc3, type: 2}
+  Results: {fileID: 11400000, guid: d09b01cc46ba84b77b45b549dbf610d6, type: 2}
+  Discoveries:
+  - {fileID: 11400000, guid: 4c920080548084f68b382c4cba973c59, type: 2}
+  - {fileID: 11400000, guid: 9f27c80f7a6e04e4db0c427dad97261d, type: 2}
+  - {fileID: 11400000, guid: 5e4e474861fb2414ead2929dddd29840, type: 2}
+  - {fileID: 11400000, guid: 5f1c45f37310643f388d13b8956de4ed, type: 2}
+  Abilities:
+  - {fileID: 11400000, guid: 081a0eb4d022c4a1c811f0b26daae945, type: 2}
+  - {fileID: 11400000, guid: 5b3fafc57a41f4dc29bc71408487a1c8, type: 2}
+  - {fileID: 11400000, guid: 6fc104b6d954b4b87982c286a1d34610, type: 2}
+  - {fileID: 11400000, guid: 28af800aca5d14d6eab7fb83c430aee3, type: 2}
+  - {fileID: 11400000, guid: 692d5f7e33d644b4bb4f6e7b974cb255, type: 2}
+  - {fileID: 11400000, guid: 90fdd622dbd2244ebaa0b39bfcf12cf1, type: 2}
+  - {fileID: 11400000, guid: 645de96b2c3f2422d9ed62c86ef94596, type: 2}

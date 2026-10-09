@@ -80,11 +80,19 @@ namespace JungleBooze.Editor.FeelTest
         [MenuItem("JungleBooze/Feel Test/Use Feel Test Build Settings", false, 21)]
         public static void UseFeelTestBuildSettings()
         {
+            // The Expedition scene (vertical slice) stays the first build scene once it exists; FeelTest follows it.
+            const string expedition = "Assets/_Game/Scenes/Expedition.unity";
             EditorBuildSettingsScene[] scenes = EditorBuildSettings.scenes;
-            var updated = new List<EditorBuildSettingsScene> { new EditorBuildSettingsScene(FeelTestPaths.Scene, true) };
+            var updated = new List<EditorBuildSettingsScene>();
+            if (File.Exists(expedition))
+            {
+                updated.Add(new EditorBuildSettingsScene(expedition, true));
+            }
+
+            updated.Add(new EditorBuildSettingsScene(FeelTestPaths.Scene, true));
             for (int i = 0; i < scenes.Length; i++)
             {
-                if (scenes[i].path != FeelTestPaths.Scene)
+                if (scenes[i].path != FeelTestPaths.Scene && scenes[i].path != expedition)
                 {
                     updated.Add(scenes[i]);
                 }

@@ -1,0 +1,224 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 127402b584390418eb53bb16ddc7cce7, type: 3}
+  m_Name: R_Swim_Pool_01
+  m_EditorClassIdentifier: JungleBooze.Gameplay::JungleBooze.Gameplay.Config.ChunkDefinitionAsset
+  _definition:
+    Id: R_Swim_Pool_01
+    Label: C6
+    Biome: 0
+    Environment: 1
+    Category: 0
+    Length: 320
+    Entry: 0
+    Exit: 0
+    Rating: 3
+    RatingMin: 3
+    RatingMax: 6
+    Dimensions:
+      Reaction: 1
+      Navigation: 1
+      Traversal: 3
+      Risk: 1
+      Complexity: 1
+    PhaseMin: 0
+    PhaseMax: 5
+    RequiredAbilities: 0
+    ShowcaseAbilities: 1
+    Reward: 1
+    SetPiece: 0
+    RunOpener: 0
+    PoolEnabled: 1
+    BaseWeight: 1
+    EventCompatibility: 0
+    Variants:
+    - Name: Default
+      ScriptOnly: 0
+      Length: 0
+      Placeholder: 1
+      PlaceholderNote: "Swim section (spec 103 \xA74) is Part B. Stand-in run on
+        foot: FloatingLog/Snag \u2192 Low, LowBranch \u2192 High, Rock \u2192 Blocker;
+        currents, dive/leap, underwater coins and the Sunken Arch deep dive are data
+        only."
+      Widths:
+      - S: 0
+        XMin: -3.5
+        XMax: 3.5
+      - S: 6
+        XMin: -3.5
+        XMax: 3.5
+      - S: 30
+        XMin: -4.5
+        XMax: 4.5
+      - S: 290
+        XMin: -4.5
+        XMax: 4.5
+      - S: 314
+        XMin: -3.5
+        XMax: 3.5
+      - S: 320
+        XMin: -3.5
+        XMax: 3.5
+      Floors: []
+      Dividers: []
+      Routes:
+      - Name: Sunken Arch (Deep Breath)
+        Type: 3
+        Steps: []
+        RequiredAbility: 1
+        Locked: 1
+        Note: "Deep dive at 214\u2013222, x \u22123.5\u2026\u22120.5 (Part B)"
+      Obstacles:
+      - Label: FloatingLog (stand-in)
+        Class: 0
+        SMin: 60
+        SMax: 60.6
+        XMin: -4.5
+        XMax: 4.5
+        YMin: 0
+        YMax: 0.5
+        WalkableTop: 0
+      - Label: Debris mat (stand-in)
+        Class: 0
+        SMin: 90
+        SMax: 90.6
+        XMin: -4.5
+        XMax: 0.5
+        YMin: 0
+        YMax: 0.5
+        WalkableTop: 0
+      - Label: Snag (stand-in)
+        Class: 0
+        SMin: 115
+        SMax: 115.6
+        XMin: -4.5
+        XMax: 4.5
+        YMin: 0
+        YMax: 0.4
+        WalkableTop: 0
+      - Label: Rock
+        Class: 2
+        SMin: 150
+        SMax: 150.6
+        XMin: 0.8
+        XMax: 2.2
+        YMin: 0
+        YMax: 2.5
+        WalkableTop: 0
+      - Label: Rock
+        Class: 2
+        SMin: 165
+        SMax: 165.6
+        XMin: -2.2
+        XMax: -0.8
+        YMin: 0
+        YMax: 2.5
+        WalkableTop: 0
+      - Label: Rock
+        Class: 2
+        SMin: 180
+        SMax: 180.6
+        XMin: -0.19999999
+        XMax: 1.2
+        YMin: 0
+        YMax: 2.5
+        WalkableTop: 0
+      - Label: LowBranch (stand-in)
+        Class: 1
+        SMin: 255
+        SMax: 255.6
+        XMin: -1
+        XMax: 4.5
+        YMin: 1
+        YMax: 2.5
+        WalkableTop: 0
+      - Label: FloatingLog (stand-in)
+        Class: 0
+        SMin: 270
+        SMax: 270.6
+        XMin: -4.5
+        XMax: 4.5
+        YMin: 0
+        YMax: 0.5
+        WalkableTop: 0
+      Coins:
+      - Kind: 0
+        S0: 45
+        S1: 115
+        X: -2.5
+        Step: 2
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 1
+        S0: 140
+        S1: 200
+        X: 0
+        Step: 2.5
+        Amp: -1.6
+        Period: 30
+        Count: 0
+        Y: 0
+      - Kind: 0
+        S0: 230
+        S1: 240
+        X: 0
+        Step: 1.5
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      Crystals: []
+      PowerUps: []
+      Discoveries:
+      - EntryId: D-04
+        S: 262
+        XMin: -3.5
+        XMax: -0.5
+        Placeholder: 1
+        RequiredAbility: 1
+        Note: "Stand-in: with Deep Breath, pass x \u22123.5\u2026\u22120.5 at s 262
+          (the deep-dive exit). Part B replaces it with the real deep dive."
+      Traversal:
+      - Mode: 0
+        SMin: 30
+        SMax: 290
+        XMin: -4.5
+        XMax: 4.5
+        Value: 0
+        Note: "[Part B placeholder] Water volume: swimEnterDepth reached at 30, wade
+          out 290\u2013305"
+      - Mode: 0
+        SMin: 40
+        SMax: 120
+        XMin: -4.5
+        XMax: 4.5
+        Value: 1.5
+        Note: '[Part B placeholder] Lateral current +1.5 m/s (pushes right)'
+      - Mode: 0
+        SMin: 140
+        SMax: 200
+        XMin: -4.5
+        XMax: 4.5
+        Value: 3
+        Note: '[Part B placeholder] Rapids: forward current +3.0 m/s'
+      - Mode: 3
+        SMin: 214
+        SMax: 222
+        XMin: -3.5
+        XMax: -0.5
+        Value: -2.5
+        Note: "[Part B placeholder] DeepDiveZone \u2192 Sunken Arch (needs Deep Breath);
+          path 222\u2013262, surfaces at x \u22122.0; 2 crystals"
+      Help: []
+    ValidatedMask: 1

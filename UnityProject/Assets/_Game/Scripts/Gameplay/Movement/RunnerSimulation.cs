@@ -24,9 +24,11 @@ namespace JungleBooze.Gameplay.Movement
         private readonly SpeedCurve _speedCurve;
         private readonly float _dt;
         private readonly int[] _ids = new int[QueryCapacity];
-        private readonly bool[] _resolved;
-        private readonly bool[] _removed;
-        private readonly bool[] _collected;
+        // Per-item state keyed by id % slots and stamped with id + 1 (0 = none), so a streamed path can recycle
+        // slots without the simulation clearing anything (IPathQuery ids).
+        private readonly int[] _resolved;
+        private readonly int[] _removed;
+        private readonly int[] _collected;
         private readonly float[] _safeS = new float[SafeRingSize];
         private readonly float[] _safeX = new float[SafeRingSize];
         private readonly float[] _safeY = new float[SafeRingSize];
@@ -63,9 +65,9 @@ namespace JungleBooze.Gameplay.Movement
             _dt = stepSeconds;
             Events = events ?? new RunEventBuffer(128);
             _speedCurve = new SpeedCurve(config.Speed);
-            _resolved = new bool[Math.Max(1, path.ObstacleCount)];
-            _removed = new bool[Math.Max(1, path.ObstacleCount)];
-            _collected = new bool[Math.Max(1, path.CoinCount)];
+            _resolved = new int[Math.Max(1, path.ObstacleSlots)];
+            _removed = new int[Math.Max(1, path.ObstacleSlots)];
+            _collected = new int[Math.Max(1, path.CoinSlots)];
 
             JumpSlideConfig js = config.JumpSlide;
             _coyoteTicks = ToTicks(js.CoyoteTime);
@@ -119,18 +121,18 @@ namespace JungleBooze.Gameplay.Movement
 
         public bool IsObstacleResolved(int id)
         {
-            return id >= 0 && id < _resolved.Length && _resolved[id];
+            return Has(_resolved, id);
         }
 
         /// <summary>Removed by a revive: no longer exists for the simulation (views hide it).</summary>
         public bool IsObstacleRemoved(int id)
         {
-            return id >= 0 && id < _removed.Length && _removed[id];
+            return Has(_removed, id);
         }
 
         public bool IsCoinCollected(int id)
         {
-            return id >= 0 && id < _collected.Length && _collected[id];
+            return Has(_collected, id);
         }
 
         /// <summary>Current hitbox height (posture), m.</summary>
@@ -215,10 +217,21 @@ namespace JungleBooze.Gameplay.Movement
             _previous = state;
         }
 
-        /// <summary>Power-up hook: the next Minor or Crash is absorbed (spec 101 §4.2).</summary>
+        /// <summary>Power-up hook: the next Minor or Crash is absorbed (spec 101 §4.2). No time limit.</summary>
         public void GrantShield()
         {
             _state.Shield = true;
+            _state.ShieldUntilTick = 0;
+        }
+
+        /// <summary>
+        /// Shield power-up (spec 103 §9.3): absorbs the next Minor, Bump or Crash (not Fall) and expires after
+        /// <paramref name="durationTicks"/> (emits <see cref="RunEventType.ShieldExpired"/>).
+        /// </summary>
+        public void GrantShield(int durationTicks)
+        {
+            _state.Shield = true;
+            _state.ShieldUntilTick = durationTicks > 0 ? _state.Tick + durationTicks : 0;
         }
 
         /// <summary>FTUE window active (first run, first 60 s).</summary>
@@ -286,14 +299,13 @@ namespace JungleBooze.Gameplay.Movement
             _state.S += ds;
             _state.Distance += ds;
 
-            // (6) Collisions and pickups.
+            // (6) Collisions and pickups. A pickup and a fatal hit on the same tick both count (AC-103-35).
             StepCollisions(t);
+            StepCoins();
             if (_state.Dead)
             {
                 return;
             }
-
-            StepCoins();
 
             // (7) Timers.
             StepTimers(t, ds);
@@ -349,7 +361,7 @@ namespace JungleBooze.Gameplay.Movement
             int n = _path.FindObstacles(s - 1f, s + health.ReviveClearDistance, _ids);
             for (int i = 0; i < n; i++)
             {
-                _removed[_ids[i]] = true;
+                Mark(_removed, _ids[i]);
             }
 
             long t = _state.Tick;
@@ -391,7 +403,7 @@ namespace JungleBooze.Gameplay.Movement
             for (int i = 0; i < n; i++)
             {
                 int id = _ids[i];
-                if (_removed[id])
+                if (Has(_removed, id))
                 {
                     continue;
                 }
@@ -437,6 +449,16 @@ namespace JungleBooze.Gameplay.Movement
             {
                 y0 += hb.HighBottomForgiveness;
             }
+        }
+
+        private static bool Has(int[] stamps, int id)
+        {
+            return id >= 0 && stamps[id % stamps.Length] == id + 1;
+        }
+
+        private static void Mark(int[] stamps, int id)
+        {
+            stamps[id % stamps.Length] = id + 1;
         }
 
         private int ToTicks(float seconds)
@@ -672,10 +694,11 @@ namespace JungleBooze.Gameplay.Movement
                 int side = _state.XTarget > c ? 1 : _state.XTarget < c ? -1 : _state.X > c ? 1 : _state.X < c ? -1 : fork.SafeSide;
                 _state.XTarget = Clamp(c + (side * free), xMin, xMax);
                 _state.DodgeBoostUntilTick = t + _dodgeBoostTicks - 1;
-                if (_state.NudgedFork != i)
+                int forkId = fork.Id >= 0 ? fork.Id : i;
+                if (_state.NudgedFork != forkId)
                 {
-                    _state.NudgedFork = i;
-                    Emit(RunEventType.ForkNudge, i, 0, 0f);
+                    _state.NudgedFork = forkId;
+                    Emit(RunEventType.ForkNudge, forkId, 0, 0f);
                 }
             }
         }
@@ -838,7 +861,7 @@ namespace JungleBooze.Gameplay.Movement
             for (int i = 0; i < n; i++)
             {
                 int id = _ids[i];
-                if (_removed[id])
+                if (Has(_removed, id))
                 {
                     continue;
                 }
@@ -921,7 +944,7 @@ namespace JungleBooze.Gameplay.Movement
             for (int i = 0; i < n; i++)
             {
                 int id = _ids[i];
-                if (_resolved[id] || _removed[id])
+                if (Has(_resolved, id) || Has(_removed, id))
                 {
                     continue;
                 }
@@ -933,7 +956,7 @@ namespace JungleBooze.Gameplay.Movement
                     continue;
                 }
 
-                _resolved[id] = true;
+                Mark(_resolved, id);
 
                 // Walkable top: feet near the top and not rising → it becomes floor.
                 if (box.Class == ObstacleClass.Low && box.WalkableTop && _state.Y >= ey1 - hb.WalkableTopTolerance && _state.Vy <= 0f)
@@ -978,6 +1001,17 @@ namespace JungleBooze.Gameplay.Movement
                 if (_state.Shield)
                 {
                     ConsumeShield(t, majorId, HitKind.Crash);
+                    return;
+                }
+
+                if (HealthFloorActive)
+                {
+                    // [ASSUMED 2026-10-09] First-run FTUE window: "hits never end the run" (GDD §16), so a frontal
+                    // crash is downgraded to a side-clip (pushed to the free side, −1 segment, floored at 1).
+                    ObstacleBox crashed = _path.GetObstacle(majorId);
+                    Mark(_resolved, majorId);
+                    ApplySideClip(t, crashed);
+                    ApplyMinorHit(t, majorId, HitKind.SideClip);
                     return;
                 }
 
@@ -1088,6 +1122,7 @@ namespace JungleBooze.Gameplay.Movement
         private void ConsumeShield(long t, int id, HitKind kind)
         {
             _state.Shield = false;
+            _state.ShieldUntilTick = 0;
             _state.InvulnerableUntilTick = t + _shieldTicks;
             Emit(RunEventType.ShieldConsumed, id, (byte)kind, 0f);
         }
@@ -1140,10 +1175,6 @@ namespace JungleBooze.Gameplay.Movement
 
         private void StepCoins()
         {
-            if (_path.CoinCount == 0)
-            {
-                return;
-            }
 
             HitboxConfig hb = _config.Hitbox;
             float r = hb.CoinPickupRadius;
@@ -1155,7 +1186,7 @@ namespace JungleBooze.Gameplay.Movement
             for (int i = 0; i < n; i++)
             {
                 int id = _ids[i];
-                if (_collected[id])
+                if (Has(_collected, id))
                 {
                     continue;
                 }
@@ -1163,7 +1194,7 @@ namespace JungleBooze.Gameplay.Movement
                 CoinPoint coin = _path.GetCoin(id);
                 if (Math.Abs(coin.X - _state.X) <= halfWidth && coin.Y >= y0 && coin.Y <= y1)
                 {
-                    _collected[id] = true;
+                    Mark(_collected, id);
                     _state.Coins++;
                     Emit(RunEventType.Coin, id, 0, 0f);
                 }
@@ -1183,6 +1214,13 @@ namespace JungleBooze.Gameplay.Movement
                     _state.DroppedInputs++;
                     Emit(RunEventType.InputDropped, -1, (byte)reason, (float)dropped);
                 }
+            }
+
+            if (_state.Shield && _state.ShieldUntilTick > 0 && t >= _state.ShieldUntilTick)
+            {
+                _state.Shield = false;
+                _state.ShieldUntilTick = 0;
+                Emit(RunEventType.ShieldExpired, -1, 0, 0f);
             }
 
             HealthConfig health = _config.Health;

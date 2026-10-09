@@ -1,0 +1,86 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 127402b584390418eb53bb16ddc7cce7, type: 3}
+  m_Name: F_Recovery_Riverbank_01
+  m_EditorClassIdentifier: JungleBooze.Gameplay::JungleBooze.Gameplay.Config.ChunkDefinitionAsset
+  _definition:
+    Id: F_Recovery_Riverbank_01
+    Label: R1
+    Biome: 0
+    Environment: 1
+    Category: 6
+    Length: 120
+    Entry: 0
+    Exit: 0
+    Rating: 1
+    RatingMin: 1
+    RatingMax: 2
+    Dimensions:
+      Reaction: 0
+      Navigation: 0
+      Traversal: 0
+      Risk: 0
+      Complexity: 0
+    PhaseMin: 0
+    PhaseMax: 5
+    RequiredAbilities: 0
+    ShowcaseAbilities: 0
+    Reward: 1
+    SetPiece: 0
+    RunOpener: 0
+    PoolEnabled: 1
+    BaseWeight: 1
+    EventCompatibility: 0
+    Variants:
+    - Name: Default
+      ScriptOnly: 0
+      Length: 0
+      Placeholder: 0
+      PlaceholderNote: 
+      Widths:
+      - S: 0
+        XMin: -3.5
+        XMax: 3.5
+      - S: 120
+        XMin: -3.5
+        XMax: 3.5
+      Floors: []
+      Dividers: []
+      Routes: []
+      Obstacles: []
+      Coins:
+      - Kind: 1
+        S0: 10
+        S1: 110
+        X: 0
+        Step: 4
+        Amp: 2
+        Period: 50
+        Count: 0
+        Y: 0
+      Crystals: []
+      PowerUps:
+      - S: 70
+        X: -2
+        Y: 1
+        OnRisky: 0
+      Discoveries: []
+      Traversal:
+      - Mode: 5
+        SMin: 30
+        SMax: 90
+        XMin: 1.5
+        XMax: 3.5
+        Value: 0
+        Note: Shallow edge on the right
+      Help: []
+    ValidatedMask: 1

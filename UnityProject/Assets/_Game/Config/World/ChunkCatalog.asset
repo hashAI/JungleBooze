@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 05421e9f1218e4adf9cfc0cfe1ae00d2, type: 3}
+  m_Name: ChunkCatalog
+  m_EditorClassIdentifier: JungleBooze.Gameplay::JungleBooze.Gameplay.Config.ChunkCatalogAsset
+  _chunks:
+  - {fileID: 11400000, guid: c9d900c2659914c76b48f343102791b0, type: 2}
+  - {fileID: 11400000, guid: 21b57ac42818b43129765dc76d47ffba, type: 2}
+  - {fileID: 11400000, guid: 1de046bbc635342d3a864e91f6898c35, type: 2}
+  - {fileID: 11400000, guid: 83ff4888b42fb4e7a95cefc3a67f228b, type: 2}
+  - {fileID: 11400000, guid: 56651caff7c1c4700857e2229f384e03, type: 2}
+  - {fileID: 11400000, guid: 8e0a55bcc14b44883bf463e913244309, type: 2}
+  - {fileID: 11400000, guid: 67e2cc25d418543d39d3e4cbe038fa4f, type: 2}
+  - {fileID: 11400000, guid: 62ca3524263f7412199d7d97f84d307e, type: 2}
+  - {fileID: 11400000, guid: d00964e4888fc466da30767debb00adb, type: 2}
+  - {fileID: 11400000, guid: 01e8843a2e1bd4791bfcff25e1ef3107, type: 2}
+  - {fileID: 11400000, guid: b51fdba437acc4e8886630891d892e3d, type: 2}
+  - {fileID: 11400000, guid: 6d818c7629a2e438bb24d7b8879b52bb, type: 2}
+  - {fileID: 11400000, guid: 05b5926b939f14f35896345f69ba9ffa, type: 2}
+  - {fileID: 11400000, guid: d06920c43cf014674b5609a510552fda, type: 2}
+  - {fileID: 11400000, guid: 772f6675488e040f79b32c3515ab0342, type: 2}

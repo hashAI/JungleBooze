@@ -1,0 +1,161 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 127402b584390418eb53bb16ddc7cce7, type: 3}
+  m_Name: F_Start_RootGate_01
+  m_EditorClassIdentifier: JungleBooze.Gameplay::JungleBooze.Gameplay.Config.ChunkDefinitionAsset
+  _definition:
+    Id: F_Start_RootGate_01
+    Label: C1
+    Biome: 0
+    Environment: 0
+    Category: 0
+    Length: 160
+    Entry: 0
+    Exit: 0
+    Rating: 1
+    RatingMin: 1
+    RatingMax: 1
+    Dimensions:
+      Reaction: 0
+      Navigation: 0
+      Traversal: 0
+      Risk: 0
+      Complexity: 0
+    PhaseMin: 0
+    PhaseMax: 1
+    RequiredAbilities: 0
+    ShowcaseAbilities: 0
+    Reward: 1
+    SetPiece: 0
+    RunOpener: 1
+    PoolEnabled: 1
+    BaseWeight: 1
+    EventCompatibility: 0
+    Variants:
+    - Name: Full
+      ScriptOnly: 0
+      Length: 0
+      Placeholder: 0
+      PlaceholderNote: 
+      Widths:
+      - S: 0
+        XMin: -3.5
+        XMax: 3.5
+      - S: 6
+        XMin: -3.5
+        XMax: 3.5
+      - S: 25
+        XMin: -4
+        XMax: 4
+      - S: 148
+        XMin: -4
+        XMax: 4
+      - S: 154
+        XMin: -3.5
+        XMax: 3.5
+      - S: 160
+        XMin: -3.5
+        XMax: 3.5
+      Floors: []
+      Dividers: []
+      Routes: []
+      Obstacles:
+      - Label: Mossy boulder
+        Class: 2
+        SMin: 140
+        SMax: 140.6
+        XMin: -0.7
+        XMax: 0.7
+        YMin: 0
+        YMax: 2.5
+        WalkableTop: 0
+      Coins:
+      - Kind: 0
+        S0: 20
+        S1: 58
+        X: 0
+        Step: 4
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 1
+        S0: 60
+        S1: 130
+        X: 0
+        Step: 2.5
+        Amp: 2.5
+        Period: 35
+        Count: 0
+        Y: 0
+      - Kind: 0
+        S0: 134
+        S1: 146
+        X: -2
+        Step: 3
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      Crystals: []
+      PowerUps: []
+      Discoveries: []
+      Traversal: []
+      Help:
+      - Move: 0
+        S: 140
+        XMin: -0.7
+        XMax: 0.7
+    - Name: Short
+      ScriptOnly: 0
+      Length: 60
+      Placeholder: 0
+      PlaceholderNote: 
+      Widths:
+      - S: 0
+        XMin: -3.5
+        XMax: 3.5
+      - S: 6
+        XMin: -3.5
+        XMax: 3.5
+      - S: 25
+        XMin: -4
+        XMax: 4
+      - S: 44
+        XMin: -4
+        XMax: 4
+      - S: 54
+        XMin: -3.5
+        XMax: 3.5
+      - S: 60
+        XMin: -3.5
+        XMax: 3.5
+      Floors: []
+      Dividers: []
+      Routes: []
+      Obstacles: []
+      Coins:
+      - Kind: 0
+        S0: 12
+        S1: 52
+        X: 0
+        Step: 4
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      Crystals: []
+      PowerUps: []
+      Discoveries: []
+      Traversal: []
+      Help: []
+    ValidatedMask: 3

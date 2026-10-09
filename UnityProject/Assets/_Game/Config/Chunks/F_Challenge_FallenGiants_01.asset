@@ -1,0 +1,400 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 127402b584390418eb53bb16ddc7cce7, type: 3}
+  m_Name: F_Challenge_FallenGiants_01
+  m_EditorClassIdentifier: JungleBooze.Gameplay::JungleBooze.Gameplay.Config.ChunkDefinitionAsset
+  _definition:
+    Id: F_Challenge_FallenGiants_01
+    Label: C12
+    Biome: 0
+    Environment: 0
+    Category: 2
+    Length: 240
+    Entry: 0
+    Exit: 0
+    Rating: 6
+    RatingMin: 5
+    RatingMax: 8
+    Dimensions:
+      Reaction: 3
+      Navigation: 1
+      Traversal: 1
+      Risk: 3
+      Complexity: 2
+    PhaseMin: 3
+    PhaseMax: 5
+    RequiredAbilities: 0
+    ShowcaseAbilities: 0
+    Reward: 1
+    SetPiece: 0
+    RunOpener: 0
+    PoolEnabled: 1
+    BaseWeight: 1
+    EventCompatibility: 0
+    Variants:
+    - Name: Default
+      ScriptOnly: 0
+      Length: 0
+      Placeholder: 0
+      PlaceholderNote: 
+      Widths:
+      - S: 0
+        XMin: -3.5
+        XMax: 3.5
+      - S: 240
+        XMin: -3.5
+        XMax: 3.5
+      Floors:
+      - Kind: 0
+        SMin: 52
+        SMax: 56
+        XMin: -99
+        XMax: 99
+        Y0: 0
+        Y1: 0
+      - Kind: 0
+        SMin: 104
+        SMax: 108
+        XMin: -3.6
+        XMax: 1
+        Y0: 0
+        Y1: 0
+      - Kind: 0
+        SMin: 156
+        SMax: 160.5
+        XMin: -99
+        XMax: 99
+        Y0: 0
+        Y1: 0
+      - Kind: 0
+        SMin: 218
+        SMax: 221.5
+        XMin: -99
+        XMax: 99
+        Y0: 0
+        Y1: 0
+      Dividers: []
+      Routes: []
+      Obstacles:
+      - Label: Fallen trunk
+        Class: 0
+        SMin: 15
+        SMax: 20
+        XMin: -3.5
+        XMax: 3.5
+        YMin: 0
+        YMax: 0.9
+        WalkableTop: 1
+      - Label: Trunk arch
+        Class: 1
+        SMin: 28
+        SMax: 28.6
+        XMin: -3.5
+        XMax: 3.5
+        YMin: 1
+        YMax: 2.5
+        WalkableTop: 0
+      - Label: Low 0.6 @38
+        Class: 0
+        SMin: 38
+        SMax: 38.6
+        XMin: -3.5
+        XMax: 3.5
+        YMin: 0
+        YMax: 0.6
+        WalkableTop: 0
+      - Label: Root pillar
+        Class: 2
+        SMin: 66
+        SMax: 66.6
+        XMin: -2
+        XMax: 0
+        YMin: 0
+        YMax: 2.5
+        WalkableTop: 0
+      - Label: Root pillar
+        Class: 2
+        SMin: 66
+        SMax: 66.6
+        XMin: 1.5
+        XMax: 3.5
+        YMin: 0
+        YMax: 2.5
+        WalkableTop: 0
+      - Label: High @78
+        Class: 1
+        SMin: 78
+        SMax: 78.6
+        XMin: -3.5
+        XMax: 3.5
+        YMin: 1
+        YMax: 2.5
+        WalkableTop: 0
+      - Label: Thorns @90
+        Class: 3
+        SMin: 90
+        SMax: 90.6
+        XMin: -3.5
+        XMax: 0
+        YMin: 0
+        YMax: 0.5
+        WalkableTop: 0
+      - Label: Low 0.5 @90
+        Class: 0
+        SMin: 90
+        SMax: 90.6
+        XMin: 0
+        XMax: 3.5
+        YMin: 0
+        YMax: 0.5
+        WalkableTop: 0
+      - Label: Low 0.6 @118
+        Class: 0
+        SMin: 118
+        SMax: 118.6
+        XMin: -3.5
+        XMax: 3.5
+        YMin: 0
+        YMax: 0.6
+        WalkableTop: 0
+      - Label: High @129
+        Class: 1
+        SMin: 129
+        SMax: 129.6
+        XMin: -3.5
+        XMax: 3.5
+        YMin: 1
+        YMax: 2.5
+        WalkableTop: 0
+      - Label: Rock 1.6 @142
+        Class: 2
+        SMin: 142
+        SMax: 142.6
+        XMin: -0.8
+        XMax: 0.8
+        YMin: 0
+        YMax: 2.5
+        WalkableTop: 0
+      - Label: High @168
+        Class: 1
+        SMin: 168
+        SMax: 168.6
+        XMin: -3.5
+        XMax: 3.5
+        YMin: 1
+        YMax: 2.5
+        WalkableTop: 0
+      - Label: Low 0.6 @178
+        Class: 0
+        SMin: 178
+        SMax: 178.6
+        XMin: -3.5
+        XMax: 3.5
+        YMin: 0
+        YMax: 0.6
+        WalkableTop: 0
+      - Label: Root wall left
+        Class: 2
+        SMin: 192
+        SMax: 192.6
+        XMin: -3.5
+        XMax: 0.5
+        YMin: 0
+        YMax: 2.5
+        WalkableTop: 0
+      - Label: Root wall right
+        Class: 2
+        SMin: 204
+        SMax: 204.6
+        XMin: -0.5
+        XMax: 3.5
+        YMin: 0
+        YMax: 2.5
+        WalkableTop: 0
+      Coins:
+      - Kind: 0
+        S0: 15
+        S1: 20
+        X: 0
+        Step: 1.25
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 3
+        S0: 28
+        S1: 28
+        X: 0
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      - Kind: 2
+        S0: 38
+        S1: 38
+        X: 0
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      - Kind: 2
+        S0: 54
+        S1: 54
+        X: 0
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      - Kind: 0
+        S0: 62
+        S1: 70
+        X: -2.75
+        Step: 2
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 0
+        S0: 62
+        S1: 70
+        X: 0.75
+        Step: 2
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 3
+        S0: 78
+        S1: 78
+        X: 0
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      - Kind: 2
+        S0: 90
+        S1: 90
+        X: 1.75
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      - Kind: 0
+        S0: 100
+        S1: 112
+        X: 2.25
+        Step: 2
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 2
+        S0: 118
+        S1: 118
+        X: 0
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      - Kind: 3
+        S0: 129
+        S1: 129
+        X: 0
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      - Kind: 0
+        S0: 136
+        S1: 148
+        X: -2.2
+        Step: 3
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 0
+        S0: 136
+        S1: 148
+        X: 2.2
+        Step: 3
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 2
+        S0: 158.25
+        S1: 158.25
+        X: 0
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      - Kind: 3
+        S0: 168
+        S1: 168
+        X: 0
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      - Kind: 2
+        S0: 178
+        S1: 178
+        X: 0
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      - Kind: 0
+        S0: 186
+        S1: 196
+        X: 2
+        Step: 2.5
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 0
+        S0: 198
+        S1: 208
+        X: -2
+        Step: 2.5
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 2
+        S0: 219.75
+        S1: 219.75
+        X: 0
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      Crystals: []
+      PowerUps: []
+      Discoveries: []
+      Traversal: []
+      Help: []
+    ValidatedMask: 1

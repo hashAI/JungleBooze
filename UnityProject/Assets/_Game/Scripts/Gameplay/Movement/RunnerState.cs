@@ -78,6 +78,9 @@ namespace JungleBooze.Gameplay.Movement
 
         public bool Shield;
 
+        /// <summary>Tick the shield expires on (0 = no limit).</summary>
+        public long ShieldUntilTick;
+
         public bool Dead;
 
         public DeathCause Cause;

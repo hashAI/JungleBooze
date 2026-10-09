@@ -7,13 +7,22 @@ namespace JungleBooze.Gameplay.Movement
     public readonly struct ForkPoint
     {
         public ForkPoint(float sFront, float sMerge, float dividerCenterX, float dividerHalfWidth, int safeSide)
+            : this(-1, sFront, sMerge, dividerCenterX, dividerHalfWidth, safeSide)
         {
+        }
+
+        public ForkPoint(int id, float sFront, float sMerge, float dividerCenterX, float dividerHalfWidth, int safeSide)
+        {
+            Id = id;
             SFront = sFront;
             SMerge = sMerge;
             DividerCenterX = dividerCenterX;
             DividerHalfWidth = dividerHalfWidth;
             SafeSide = safeSide < 0 ? -1 : 1;
         }
+
+        /// <summary>Stable id for the run (events, nudge memory); −1 = use the index.</summary>
+        public int Id { get; }
 
         public float SFront { get; }
 

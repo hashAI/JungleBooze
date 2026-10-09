@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cedd3764fc1c94c16add0dfe7275beda, type: 3}
+  m_Name: Ability_DoubleJump
+  m_EditorClassIdentifier: JungleBooze.Gameplay::JungleBooze.Gameplay.Config.AbilityDefinitionAsset
+  _values:
+    Ability: 64
+    Name: Double Jump
+    Line: A second jump in the air
+    ObjectiveLine: A second jump in the air
+    Order: 7
+    CostCoins: 7000
+    CostCrystals: 20
+    Implemented: 0
+    Showcase: 1
+    DeepDiveDepth: -2.5
+    DeepDiveTime: 2.4

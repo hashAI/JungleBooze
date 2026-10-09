@@ -46,7 +46,7 @@ namespace JungleBooze.Gameplay.Course
             for (int i = 0; i < _forks.Length; i++)
             {
                 CourseFork f = _forks[i];
-                _forkPoints[i] = new ForkPoint(f.SFront, f.SMerge, f.DividerCenterX, f.DividerHalfWidth, f.SafeSide);
+                _forkPoints[i] = new ForkPoint(i, f.SFront, f.SMerge, f.DividerCenterX, f.DividerHalfWidth, f.SafeSide);
             }
 
             var obstacles = new List<CourseObstacle>(data.Obstacles);
@@ -98,6 +98,10 @@ namespace JungleBooze.Gameplay.Course
         public int ObstacleCount => _obstacles.Length;
 
         public int CoinCount => _coins.Length;
+
+        public int ObstacleSlots => Math.Max(1, _obstacles.Length);
+
+        public int CoinSlots => Math.Max(1, _coins.Length);
 
         public int ForkCount => _forks.Length;
 

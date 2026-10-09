@@ -24,6 +24,7 @@ namespace JungleBooze.Gameplay.Bots
         private const int PlanLead = 90;
         private const float SteerMargin = 0.15f;
         private const float ThreatPassMargin = 0.6f;
+        private const float RouteLockDistance = 30f;
 
         private readonly RunnerSimulation _live;
         private readonly RunnerSimulation _probe;
@@ -43,6 +44,9 @@ namespace JungleBooze.Gameplay.Bots
         }
 
         public bool PreferRiskyBranch { get; set; }
+
+        /// <summary>Optional route choice per split (streamed worlds); overrides <see cref="PreferRiskyBranch"/>.</summary>
+        public IForkPreference ForkPreference { get; set; }
 
         /// <summary>Optional decision log for debugging (allocates only when set).</summary>
         public Action<string> Trace { get; set; }
@@ -219,27 +223,56 @@ namespace JungleBooze.Gameplay.Bots
             float speed = Math.Max(8f, st.Speed);
             float s = st.S;
 
-            // Preferred x: fork branch, then the next coin, else hold.
+            // Preferred x: fork branch, then the next coin, else hold. Close to a split the bot has an explicit
+            // route opinion about, the branch wins over coins (so a chosen route is always taken).
             float preferred = st.XTarget;
+            bool routeLocked = false;
+            bool routeChosen = false;
             for (int i = 0; i < _path.ForkCount; i++)
             {
                 ForkPoint fork = _path.GetFork(i);
                 if (s > fork.SFront - 60f && s < fork.SMerge)
                 {
-                    int side = PreferRiskyBranch ? -fork.SafeSide : fork.SafeSide;
+                    int side = ForkPreference != null ? ForkPreference.PreferredSide(fork) : 0;
+                    if (side == 0)
+                    {
+                        // No opinion about this split: never override a split the bot does have a route for.
+                        if (routeChosen)
+                        {
+                            continue;
+                        }
+
+                        side = PreferRiskyBranch ? -fork.SafeSide : fork.SafeSide;
+                    }
+                    else
+                    {
+                        routeChosen = true;
+                    }
+
                     float probeX = fork.DividerCenterX + (side * (fork.DividerHalfWidth + 1f));
                     if (s >= fork.SFront)
                     {
                         // Inside: stay in the branch we are in.
                         probeX = st.X;
                     }
+                    else
+                    {
+                        // A nested split the runner can no longer reach (another divider separates the lanes now).
+                        _path.GetLateralBounds(s, st.X, out float a0, out float a1);
+                        _path.GetLateralBounds(s, probeX, out float b0, out float b1);
+                        if (a0 != b0 || a1 != b1)
+                        {
+                            continue;
+                        }
+                    }
 
                     _path.GetLateralBounds(Math.Max(s, fork.SFront) + 0.5f, probeX, out float bMin, out float bMax);
                     preferred = (bMin + bMax) * 0.5f;
+                    routeLocked |= ForkPreference != null && s < fork.SFront && s > fork.SFront - RouteLockDistance;
                 }
             }
 
-            int coins = _path.FindCoins(s + 0.5f, s + (speed * 0.9f), _ids);
+            int coins = routeLocked ? 0 : _path.FindCoins(s + 0.5f, s + (speed * 0.9f), _ids);
             for (int i = 0; i < coins; i++)
             {
                 int id = _ids[i];

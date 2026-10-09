@@ -1,0 +1,109 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 127402b584390418eb53bb16ddc7cce7, type: 3}
+  m_Name: D_Discovery_Overlook_01
+  m_EditorClassIdentifier: JungleBooze.Gameplay::JungleBooze.Gameplay.Config.ChunkDefinitionAsset
+  _definition:
+    Id: D_Discovery_Overlook_01
+    Label: C7
+    Biome: 0
+    Environment: 2
+    Category: 3
+    Length: 180
+    Entry: 0
+    Exit: 0
+    Rating: 1
+    RatingMin: 1
+    RatingMax: 3
+    Dimensions:
+      Reaction: 0
+      Navigation: 0
+      Traversal: 0
+      Risk: 0
+      Complexity: 0
+    PhaseMin: 0
+    PhaseMax: 5
+    RequiredAbilities: 0
+    ShowcaseAbilities: 0
+    Reward: 1
+    SetPiece: 0
+    RunOpener: 0
+    PoolEnabled: 1
+    BaseWeight: 1
+    EventCompatibility: 0
+    Variants:
+    - Name: Default
+      ScriptOnly: 0
+      Length: 0
+      Placeholder: 0
+      PlaceholderNote: 
+      Widths:
+      - S: 0
+        XMin: -3.5
+        XMax: 3.5
+      - S: 180
+        XMin: -3.5
+        XMax: 3.5
+      Floors: []
+      Dividers: []
+      Routes: []
+      Obstacles:
+      - Label: Wet rock
+        Class: 0
+        SMin: 130
+        SMax: 130.6
+        XMin: -3.5
+        XMax: 3.5
+        YMin: 0
+        YMax: 0.5
+        WalkableTop: 0
+      Coins:
+      - Kind: 0
+        S0: 10
+        S1: 60
+        X: 0
+        Step: 3
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 0
+        S0: 70
+        S1: 120
+        X: 0
+        Step: 6
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 2
+        S0: 130
+        S1: 130
+        X: 0
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      Crystals: []
+      PowerUps: []
+      Discoveries:
+      - EntryId: D-01
+        S: 90
+        XMin: -99
+        XMax: 99
+        Placeholder: 0
+        RequiredAbility: 0
+        Note: 
+      Traversal: []
+      Help: []
+    ValidatedMask: 1

@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eca222ddfe0e640c797eacf8daf849ed, type: 3}
+  m_Name: WorldPalette
+  m_EditorClassIdentifier: JungleBooze.Gameplay::JungleBooze.Gameplay.Views.World.WorldPalette
+  Path: {fileID: 2100000, guid: fa646918913a8421a8db086f16231378, type: 2}
+  PathSafe: {fileID: 2100000, guid: 2b5d9f06c593541bb8f494d9ea1a84c4, type: 2}
+  PathRisky: {fileID: 2100000, guid: f31c6be2032824c2da1ea782b820bf4b, type: 2}
+  PathSecret: {fileID: 2100000, guid: 468e5b5a36177440788a066adfbc2e18, type: 2}
+  PathSide: {fileID: 2100000, guid: 454da92d9875947eaa941dcc162f27a3, type: 2}
+  Hedge: {fileID: 2100000, guid: c22f031f361d84d42a853cc3fd5a10e8, type: 2}
+  Low: {fileID: 2100000, guid: 32111657fb6f740b4b96d32c33ab6585, type: 2}
+  High: {fileID: 2100000, guid: 0ff7601ab747c4b86b0ecc2fa05ded19, type: 2}
+  Blocker: {fileID: 2100000, guid: 153f6f6a960d544d8952be1443c6bae1, type: 2}
+  Thorns: {fileID: 2100000, guid: 648f6e36bdf5649d893870ce07610b6e, type: 2}
+  Divider: {fileID: 2100000, guid: 1edb9532d1c554f738db3ed021cbdf8d, type: 2}
+  WaterPlaceholder: {fileID: 2100000, guid: c1c16c9e6b62c4cf99e81a9fbfb0a364, type: 2}
+  CanopyPlaceholder: {fileID: 2100000, guid: c3f9b0749ef0e479fb0ea464eeeba5c9, type: 2}
+  ShallowWater: {fileID: 2100000, guid: 950045e2b0f544e17b1c80d8d93e0c5b, type: 2}
+  Curtain: {fileID: 2100000, guid: c2d5c70a916d845289eee06db6b5ce22, type: 2}
+  Marker: {fileID: 2100000, guid: ab74779d26a3a423d9afe8581ed0c33b, type: 2}
+  Ground: {fileID: 2100000, guid: bc24bcab664db4ba99f97fc4d540ca1e, type: 2}
+  Coin: {fileID: 2100000, guid: f53a3274b60fd434681dd318bec6fafb, type: 2}
+  Crystal: {fileID: 2100000, guid: 46be9236e3e074f2488c87fbcea20e95, type: 2}
+  Shield: {fileID: 2100000, guid: cc89be3db3c094cdeb1f7009ef67fd38, type: 2}
+  Discovery: {fileID: 2100000, guid: ab41e30d4b7ad4dab927aa8dd990ca86, type: 2}
+  Runner: {fileID: 2100000, guid: 8b3dcd50a84d94c7aa7112baeff3f579, type: 2}
+  RunnerAccent: {fileID: 2100000, guid: 8d925fd3d98bb41fda5d6cfd1795bd91, type: 2}
+  Leaf: {fileID: 2100000, guid: a2685bada46484ff495da51f4bc38925, type: 2}

@@ -1,0 +1,116 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 056acee690c444a7bbb38297aa84dc08, type: 3}
+  m_Name: WorldDirectorConfig
+  m_EditorClassIdentifier: JungleBooze.Gameplay::JungleBooze.Gameplay.Config.WorldDirectorConfigAsset
+  _values:
+    Phases:
+    - Phase: 0
+      StartDistance: 0
+      RatingMin: 1
+      RatingMax: 2
+      MinActionGap: 1.2
+      MaxActionsPerSecond: 0.8
+      Visibility: 2
+      ForkEveryMin: 3
+      ForkEveryMax: 4
+      MaxForks: 1
+      RecoveryEvery: 3
+    - Phase: 1
+      StartDistance: 500
+      RatingMin: 2
+      RatingMax: 4
+      MinActionGap: 0.8
+      MaxActionsPerSecond: 1.2
+      Visibility: 1.5
+      ForkEveryMin: 4
+      ForkEveryMax: 5
+      MaxForks: -1
+      RecoveryEvery: 4
+    - Phase: 2
+      StartDistance: 1500
+      RatingMin: 3
+      RatingMax: 5
+      MinActionGap: 0.65
+      MaxActionsPerSecond: 1.5
+      Visibility: 1.5
+      ForkEveryMin: 2
+      ForkEveryMax: 3
+      MaxForks: -1
+      RecoveryEvery: 5
+    - Phase: 3
+      StartDistance: 3000
+      RatingMin: 4
+      RatingMax: 7
+      MinActionGap: 0.55
+      MaxActionsPerSecond: 1.8
+      Visibility: 1.5
+      ForkEveryMin: 2
+      ForkEveryMax: 3
+      MaxForks: -1
+      RecoveryEvery: 5
+    - Phase: 4
+      StartDistance: 5000
+      RatingMin: 6
+      RatingMax: 8
+      MinActionGap: 0.5
+      MaxActionsPerSecond: 2
+      Visibility: 1.5
+      ForkEveryMin: 2
+      ForkEveryMax: 2
+      MaxForks: -1
+      RecoveryEvery: 6
+    - Phase: 5
+      StartDistance: 8000
+      RatingMin: 7
+      RatingMax: 10
+      MinActionGap: 0.45
+      MaxActionsPerSecond: 2.2
+      Visibility: 1.5
+      ForkEveryMin: 2
+      ForkEveryMax: 2
+      MaxForks: -1
+      RecoveryEvery: 6
+    NoRepeatWindow: 6
+    MaxSameCategory: 2
+    MaxSameEnvironment: 3
+    VariantSignatureWindow: 3
+    MaxConsecutiveHighDimension: 2
+    FreshnessWindow: 12
+    FreshnessFactor: 0.5
+    DimensionFitFactor: 1.2
+    SkillBiasFactor: 1.3
+    MercyHits: 2
+    MercyWindowSeconds: 15
+    ShowcaseWindow: 5
+    StartSkill: -0.3
+    SkillRate: 0.3
+    SkillMaxStep: 0.2
+    SkillLow: -0.5
+    SkillHigh: 0.5
+    DistanceReference: 1500
+    DistanceLogBase: 4
+    TraversalTarget: 0.85
+    TraversalScale: 0.15
+    CueIntensityLowSkill: 1.3
+    CueIntensityHighSkill: 0.85
+    LowCoinDensity: 0.7
+    RiskyCrystalChance: 0.2
+    RichCrystalFactor: 1.3
+    FlowCrystalMinSpacing: 600
+    FlowCrystalChanceLength: 400
+    PowerUpSpacingMin: 600
+    PowerUpSpacingMax: 900
+    RiskyPowerUpPreference: 0.7
+    StreamAheadDistance: 220
+    StreamAheadChunks: 2
+    RetireBehindDistance: 80

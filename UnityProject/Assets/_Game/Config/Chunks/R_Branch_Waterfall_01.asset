@@ -1,0 +1,508 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 127402b584390418eb53bb16ddc7cce7, type: 3}
+  m_Name: R_Branch_Waterfall_01
+  m_EditorClassIdentifier: JungleBooze.Gameplay::JungleBooze.Gameplay.Config.ChunkDefinitionAsset
+  _definition:
+    Id: R_Branch_Waterfall_01
+    Label: C9
+    Biome: 0
+    Environment: 2
+    Category: 1
+    Length: 240
+    Entry: 0
+    Exit: 0
+    Rating: 4
+    RatingMin: 4
+    RatingMax: 8
+    Dimensions:
+      Reaction: 1
+      Navigation: 2
+      Traversal: 1
+      Risk: 2
+      Complexity: 2
+    PhaseMin: 1
+    PhaseMax: 5
+    RequiredAbilities: 0
+    ShowcaseAbilities: 0
+    Reward: 1
+    SetPiece: 0
+    RunOpener: 0
+    PoolEnabled: 1
+    BaseWeight: 1
+    EventCompatibility: 0
+    Variants:
+    - Name: Slice
+      ScriptOnly: 1
+      Length: 0
+      Placeholder: 0
+      PlaceholderNote: 
+      Widths:
+      - S: 0
+        XMin: -3.5
+        XMax: 3.5
+      - S: 40
+        XMin: -3.5
+        XMax: 3.5
+      - S: 60
+        XMin: -4.5
+        XMax: 4.5
+      - S: 90
+        XMin: -4.5
+        XMax: 4.5
+      - S: 103
+        XMin: -4.5
+        XMax: 5.8
+      - S: 165
+        XMin: -4.5
+        XMax: 5.8
+      - S: 180
+        XMin: -4.5
+        XMax: 4.5
+      - S: 200
+        XMin: -3.5
+        XMax: 3.5
+      - S: 240
+        XMin: -3.5
+        XMax: 3.5
+      Floors:
+      - Kind: 0
+        SMin: 100
+        SMax: 103
+        XMin: -4.6
+        XMax: -2.4
+        Y0: 0
+        Y1: 0
+      - Kind: 0
+        SMin: 125
+        SMax: 128.5
+        XMin: -4.6
+        XMax: -2.4
+        Y0: 0
+        Y1: 0
+      Dividers:
+      - Name: D1 waterfall pillar
+        SFront: 70
+        SMerge: 180
+        CenterX: -1.8000001
+        HalfWidth: 0.6
+        SafeSide: 1
+      - Name: D2 rock pillar
+        SFront: 110
+        SMerge: 165
+        CenterX: 3.1999998
+        HalfWidth: 0.6
+        SafeSide: -1
+      Routes:
+      - Name: Risky stepping rocks
+        Type: 2
+        Steps:
+        - Divider: 0
+          Side: -1
+        RequiredAbility: 0
+        Locked: 0
+        Note: 
+      - Name: Safe pool edge
+        Type: 1
+        Steps:
+        - Divider: 0
+          Side: 1
+        - Divider: 1
+          Side: -1
+        RequiredAbility: 0
+        Locked: 0
+        Note: 
+      - Name: Veil Grotto
+        Type: 3
+        Steps:
+        - Divider: 0
+          Side: 1
+        - Divider: 1
+          Side: 1
+        RequiredAbility: 0
+        Locked: 0
+        Note: 
+      Obstacles:
+      - Label: Low 0.6 @112
+        Class: 0
+        SMin: 112
+        SMax: 112.6
+        XMin: -4.5
+        XMax: -2.4
+        YMin: 0
+        YMax: 0.6
+        WalkableTop: 0
+      - Label: High @145
+        Class: 1
+        SMin: 145
+        SMax: 145.6
+        XMin: -4.5
+        XMax: -2.4
+        YMin: 1
+        YMax: 2.5
+        WalkableTop: 0
+      - Label: Low 0.5 @130
+        Class: 0
+        SMin: 130
+        SMax: 130.6
+        XMin: -1.2
+        XMax: 1
+        YMin: 0
+        YMax: 0.5
+        WalkableTop: 0
+      Coins:
+      - Kind: 0
+        S0: 75
+        S1: 98
+        X: -3.45
+        Step: 1.5
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 2
+        S0: 101.5
+        S1: 101.5
+        X: -3.45
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      - Kind: 0
+        S0: 104
+        S1: 123
+        X: -3.45
+        Step: 1.5
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 2
+        S0: 126.75
+        S1: 126.75
+        X: -3.45
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      - Kind: 0
+        S0: 130
+        S1: 168
+        X: -3.45
+        Step: 1.5
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 0
+        S0: 75
+        S1: 165
+        X: 1.8
+        Step: 3
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 0
+        S0: 125
+        S1: 160
+        X: 4.8
+        Step: 2
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 0
+        S0: 184
+        S1: 200
+        X: 0
+        Step: 4
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      Crystals:
+      - S: 155
+        X: -3.45
+        Y: 1
+        Always: 1
+      - S: 135
+        X: 4.8
+        Y: 1
+        Always: 1
+      - S: 150
+        X: 4.8
+        Y: 1
+        Always: 1
+      PowerUps: []
+      Discoveries:
+      - EntryId: D-03
+        S: 140
+        XMin: 3.8
+        XMax: 5.8
+        Placeholder: 0
+        RequiredAbility: 0
+        Note: 
+      Traversal:
+      - Mode: 6
+        SMin: 118
+        SMax: 121
+        XMin: 3.8
+        XMax: 5.8
+        Value: 0
+        Note: 'Water curtain: no collision, splash burst, 0.25 s droplet overlay'
+      - Mode: 4
+        SMin: 85
+        SMax: 118
+        XMin: 3.2
+        XMax: 3.2
+        Value: 3
+        Note: '[Part B placeholder] C9''s own sailback perched on D2 launches at
+          25 m and glides into the curtain (cue 1)'
+      Help: []
+    - Name: A
+      ScriptOnly: 0
+      Length: 0
+      Placeholder: 0
+      PlaceholderNote: 
+      Widths:
+      - S: 0
+        XMin: -3.5
+        XMax: 3.5
+      - S: 40
+        XMin: -3.5
+        XMax: 3.5
+      - S: 60
+        XMin: -4.5
+        XMax: 4.5
+      - S: 90
+        XMin: -4.5
+        XMax: 4.5
+      - S: 103
+        XMin: -4.5
+        XMax: 5.8
+      - S: 165
+        XMin: -4.5
+        XMax: 5.8
+      - S: 180
+        XMin: -4.5
+        XMax: 4.5
+      - S: 200
+        XMin: -3.5
+        XMax: 3.5
+      - S: 240
+        XMin: -3.5
+        XMax: 3.5
+      Floors:
+      - Kind: 0
+        SMin: 100
+        SMax: 103
+        XMin: -4.6
+        XMax: -2.4
+        Y0: 0
+        Y1: 0
+      - Kind: 0
+        SMin: 125
+        SMax: 128.5
+        XMin: -4.6
+        XMax: -2.4
+        Y0: 0
+        Y1: 0
+      Dividers:
+      - Name: D1 waterfall pillar
+        SFront: 70
+        SMerge: 180
+        CenterX: -1.8000001
+        HalfWidth: 0.6
+        SafeSide: 1
+      - Name: D2 rock pillar
+        SFront: 110
+        SMerge: 165
+        CenterX: 3.1999998
+        HalfWidth: 0.6
+        SafeSide: -1
+      Routes:
+      - Name: Risky stepping rocks
+        Type: 2
+        Steps:
+        - Divider: 0
+          Side: -1
+        RequiredAbility: 0
+        Locked: 0
+        Note: 
+      - Name: Safe pool edge
+        Type: 1
+        Steps:
+        - Divider: 0
+          Side: 1
+        - Divider: 1
+          Side: -1
+        RequiredAbility: 0
+        Locked: 0
+        Note: 
+      - Name: Veil Grotto
+        Type: 3
+        Steps:
+        - Divider: 0
+          Side: 1
+        - Divider: 1
+          Side: 1
+        RequiredAbility: 0
+        Locked: 0
+        Note: 
+      Obstacles:
+      - Label: Low 0.6 @112
+        Class: 0
+        SMin: 112
+        SMax: 112.6
+        XMin: -4.5
+        XMax: -2.4
+        YMin: 0
+        YMax: 0.6
+        WalkableTop: 0
+      - Label: High @145
+        Class: 1
+        SMin: 145
+        SMax: 145.6
+        XMin: -4.5
+        XMax: -2.4
+        YMin: 1
+        YMax: 2.5
+        WalkableTop: 0
+      - Label: Low 0.5 @130
+        Class: 0
+        SMin: 130
+        SMax: 130.6
+        XMin: -1.2
+        XMax: 1
+        YMin: 0
+        YMax: 0.5
+        WalkableTop: 0
+      Coins:
+      - Kind: 0
+        S0: 75
+        S1: 98
+        X: -3.45
+        Step: 1.5
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 2
+        S0: 101.5
+        S1: 101.5
+        X: -3.45
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      - Kind: 0
+        S0: 104
+        S1: 123
+        X: -3.45
+        Step: 1.5
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 2
+        S0: 126.75
+        S1: 126.75
+        X: -3.45
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      - Kind: 0
+        S0: 130
+        S1: 168
+        X: -3.45
+        Step: 1.5
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 0
+        S0: 75
+        S1: 165
+        X: 1.8
+        Step: 3
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 0
+        S0: 125
+        S1: 160
+        X: 4.8
+        Step: 2
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 0
+        S0: 184
+        S1: 200
+        X: 0
+        Step: 4
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      Crystals:
+      - S: 155
+        X: -3.45
+        Y: 1
+        Always: 0
+      - S: 135
+        X: 4.8
+        Y: 1
+        Always: 1
+      - S: 150
+        X: 4.8
+        Y: 1
+        Always: 1
+      PowerUps:
+      - S: 136
+        X: -3.45
+        Y: 0.9
+        OnRisky: 1
+      Discoveries:
+      - EntryId: D-03
+        S: 140
+        XMin: 3.8
+        XMax: 5.8
+        Placeholder: 0
+        RequiredAbility: 0
+        Note: 
+      Traversal:
+      - Mode: 6
+        SMin: 118
+        SMax: 121
+        XMin: 3.8
+        XMax: 5.8
+        Value: 0
+        Note: 'Water curtain: no collision, splash burst, 0.25 s droplet overlay'
+      - Mode: 4
+        SMin: 85
+        SMax: 118
+        XMin: 3.2
+        XMax: 3.2
+        Value: 3
+        Note: '[Part B placeholder] C9''s own sailback perched on D2 launches at
+          25 m and glides into the curtain (cue 1)'
+      Help: []
+    ValidatedMask: 3

@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 718ac794102d447b59f87e7a5c3517e2, type: 3}
+  m_Name: ResultsConfig
+  m_EditorClassIdentifier: JungleBooze.Gameplay::JungleBooze.Gameplay.Config.ResultsConfigAsset
+  _values:
+    CountUpTime: 1.2
+    UnlockMomentTime: 1.2
+    NearBestFraction: 0.1
+    NextAbilityFunded: 0.6
+    NextAbilityFundedFirstRun: 0.5
+    EstablishingShotTime: 4
+    CreatureTotal: 3
+    PlantTotal: 5
+    LocationTotal: 4
+    MysteryTotal: 2

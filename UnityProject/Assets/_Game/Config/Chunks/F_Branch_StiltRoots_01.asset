@@ -1,0 +1,368 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 127402b584390418eb53bb16ddc7cce7, type: 3}
+  m_Name: F_Branch_StiltRoots_01
+  m_EditorClassIdentifier: JungleBooze.Gameplay::JungleBooze.Gameplay.Config.ChunkDefinitionAsset
+  _definition:
+    Id: F_Branch_StiltRoots_01
+    Label: C3
+    Biome: 0
+    Environment: 0
+    Category: 1
+    Length: 220
+    Entry: 0
+    Exit: 0
+    Rating: 3
+    RatingMin: 3
+    RatingMax: 6
+    Dimensions:
+      Reaction: 1
+      Navigation: 2
+      Traversal: 1
+      Risk: 2
+      Complexity: 1
+    PhaseMin: 1
+    PhaseMax: 5
+    RequiredAbilities: 0
+    ShowcaseAbilities: 0
+    Reward: 1
+    SetPiece: 0
+    RunOpener: 0
+    PoolEnabled: 1
+    BaseWeight: 1
+    EventCompatibility: 0
+    Variants:
+    - Name: Slice
+      ScriptOnly: 1
+      Length: 0
+      Placeholder: 0
+      PlaceholderNote: 
+      Widths:
+      - S: 0
+        XMin: -3.5
+        XMax: 3.5
+      - S: 20
+        XMin: -3.5
+        XMax: 3.5
+      - S: 50
+        XMin: -4.5
+        XMax: 4.5
+      - S: 60
+        XMin: -4.5
+        XMax: 4.5
+      - S: 80
+        XMin: -4
+        XMax: 4.5
+      - S: 160
+        XMin: -4
+        XMax: 4.5
+      - S: 170
+        XMin: -4.5
+        XMax: 4.5
+      - S: 200
+        XMin: -3.5
+        XMax: 3.5
+      - S: 220
+        XMin: -3.5
+        XMax: 3.5
+      Floors:
+      - Kind: 1
+        SMin: 62
+        SMax: 72
+        XMin: -4.6
+        XMax: -1.6
+        Y0: 0
+        Y1: 1.2
+      - Kind: 1
+        SMin: 72
+        SMax: 160
+        XMin: -4.6
+        XMax: -1.6
+        Y0: 1.2
+        Y1: 1.2
+      - Kind: 1
+        SMin: 160
+        SMax: 170
+        XMin: -4.6
+        XMax: -1.6
+        Y0: 1.2
+        Y1: 0
+      Dividers:
+      - Name: D1 stiltwood root wall
+        SFront: 60
+        SMerge: 170
+        CenterX: -1
+        HalfWidth: 0.6
+        SafeSide: 1
+      Routes:
+      - Name: Risky ridge
+        Type: 2
+        Steps:
+        - Divider: 0
+          Side: -1
+        RequiredAbility: 0
+        Locked: 0
+        Note: 
+      - Name: Safe
+        Type: 1
+        Steps:
+        - Divider: 0
+          Side: 1
+        RequiredAbility: 0
+        Locked: 0
+        Note: 
+      - Name: Secret (Trail Sense)
+        Type: 3
+        Steps: []
+        RequiredAbility: 4
+        Locked: 1
+        Note: "Veilmoss curtain over a sealed rootstone crack at s 100\u2013130,
+          x > +4.5 (Phase 3)"
+      Obstacles:
+      - Label: Low 0.5 @95
+        Class: 0
+        SMin: 95
+        SMax: 95.6
+        XMin: -4.5
+        XMax: -1.6
+        YMin: 1.2
+        YMax: 1.7
+        WalkableTop: 0
+      - Label: High @120
+        Class: 1
+        SMin: 120
+        SMax: 120.6
+        XMin: -4.5
+        XMax: -1.6
+        YMin: 2.2
+        YMax: 3.7
+        WalkableTop: 0
+      - Label: Low 0.6 @148
+        Class: 0
+        SMin: 148
+        SMax: 148.6
+        XMin: -4.5
+        XMax: -1.6
+        YMin: 1.2
+        YMax: 1.8000001
+        WalkableTop: 0
+      - Label: Low 0.4 @115
+        Class: 0
+        SMin: 115
+        SMax: 115.6
+        XMin: 0.5
+        XMax: 4.5
+        YMin: 0
+        YMax: 0.4
+        WalkableTop: 0
+      Coins:
+      - Kind: 0
+        S0: 75
+        S1: 158
+        X: -2.8
+        Step: 1.5
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 0
+        S0: 65
+        S1: 165
+        X: 1.5
+        Step: 4
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 0
+        S0: 178
+        S1: 196
+        X: 0
+        Step: 3
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      Crystals:
+      - S: 148.3
+        X: -2.8
+        Y: 1.6
+        Always: 1
+      PowerUps: []
+      Discoveries: []
+      Traversal: []
+      Help: []
+    - Name: A
+      ScriptOnly: 0
+      Length: 0
+      Placeholder: 0
+      PlaceholderNote: 
+      Widths:
+      - S: 0
+        XMin: -3.5
+        XMax: 3.5
+      - S: 20
+        XMin: -3.5
+        XMax: 3.5
+      - S: 50
+        XMin: -4.5
+        XMax: 4.5
+      - S: 60
+        XMin: -4.5
+        XMax: 4.5
+      - S: 80
+        XMin: -4
+        XMax: 4.5
+      - S: 160
+        XMin: -4
+        XMax: 4.5
+      - S: 170
+        XMin: -4.5
+        XMax: 4.5
+      - S: 200
+        XMin: -3.5
+        XMax: 3.5
+      - S: 220
+        XMin: -3.5
+        XMax: 3.5
+      Floors:
+      - Kind: 1
+        SMin: 62
+        SMax: 72
+        XMin: -4.6
+        XMax: -1.6
+        Y0: 0
+        Y1: 1.2
+      - Kind: 1
+        SMin: 72
+        SMax: 160
+        XMin: -4.6
+        XMax: -1.6
+        Y0: 1.2
+        Y1: 1.2
+      - Kind: 1
+        SMin: 160
+        SMax: 170
+        XMin: -4.6
+        XMax: -1.6
+        Y0: 1.2
+        Y1: 0
+      Dividers:
+      - Name: D1 stiltwood root wall
+        SFront: 60
+        SMerge: 170
+        CenterX: -1
+        HalfWidth: 0.6
+        SafeSide: 1
+      Routes:
+      - Name: Risky ridge
+        Type: 2
+        Steps:
+        - Divider: 0
+          Side: -1
+        RequiredAbility: 0
+        Locked: 0
+        Note: 
+      - Name: Safe
+        Type: 1
+        Steps:
+        - Divider: 0
+          Side: 1
+        RequiredAbility: 0
+        Locked: 0
+        Note: 
+      - Name: Secret (Trail Sense)
+        Type: 3
+        Steps: []
+        RequiredAbility: 4
+        Locked: 1
+        Note: "Veilmoss curtain over a sealed rootstone crack at s 100\u2013130,
+          x > +4.5 (Phase 3)"
+      Obstacles:
+      - Label: High @95
+        Class: 1
+        SMin: 95
+        SMax: 95.6
+        XMin: -4.5
+        XMax: -1.6
+        YMin: 2.2
+        YMax: 3.7
+        WalkableTop: 0
+      - Label: Low 0.6 @120
+        Class: 0
+        SMin: 120
+        SMax: 120.6
+        XMin: -4.5
+        XMax: -1.6
+        YMin: 1.2
+        YMax: 1.8000001
+        WalkableTop: 0
+      - Label: Low 0.5 @148
+        Class: 0
+        SMin: 148
+        SMax: 148.6
+        XMin: -4.5
+        XMax: -1.6
+        YMin: 1.2
+        YMax: 1.7
+        WalkableTop: 0
+      - Label: Low 0.4 @115
+        Class: 0
+        SMin: 115
+        SMax: 115.6
+        XMin: -0.4
+        XMax: 3
+        YMin: 0
+        YMax: 0.4
+        WalkableTop: 0
+      Coins:
+      - Kind: 0
+        S0: 75
+        S1: 158
+        X: -2.8
+        Step: 1.5
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 0
+        S0: 65
+        S1: 165
+        X: 1.5
+        Step: 4
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 0
+        S0: 178
+        S1: 196
+        X: 0
+        Step: 3
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      Crystals:
+      - S: 148.3
+        X: -2.8
+        Y: 1.6
+        Always: 0
+      PowerUps:
+      - S: 132
+        X: -2.8
+        Y: 0.9
+        OnRisky: 1
+      Discoveries: []
+      Traversal: []
+      Help: []
+    ValidatedMask: 3

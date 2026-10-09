@@ -1,0 +1,97 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3fdc8dbc2908443c687da063074ecf8e, type: 3}
+  m_Name: ExpeditionScript
+  m_EditorClassIdentifier: JungleBooze.Gameplay::JungleBooze.Gameplay.Config.ExpeditionScriptAsset
+  _values:
+    Seed: 1
+    CueIntensity: 1
+    NoGapSeconds: 60
+    Entries:
+    - ChunkId: F_Start_RootGate_01
+      Variant: Full
+      PowerUpSlot: -1
+      PowerUp: 0
+      RulesPhase: 0
+      Beat: C1 Forest, steering
+    - ChunkId: F_Straight_Roots_01
+      Variant: Learn
+      PowerUpSlot: -1
+      PowerUp: 0
+      RulesPhase: 0
+      Beat: 'C2 Obstacles: jump, slide, dodge'
+    - ChunkId: F_Branch_StiltRoots_01
+      Variant: Slice
+      PowerUpSlot: -1
+      PowerUp: 0
+      RulesPhase: 0
+      Beat: C3 First route choice
+    - ChunkId: F_Straight_Glade_01
+      Variant: Slice
+      PowerUpSlot: -1
+      PowerUp: 0
+      RulesPhase: 1
+      Beat: C4 Rhythm, first gap
+    - ChunkId: R_Transition_Ford_01
+      Variant: Default
+      PowerUpSlot: -1
+      PowerUp: 0
+      RulesPhase: 1
+      Beat: C5 River (ford)
+    - ChunkId: R_Swim_Pool_01
+      Variant: Default
+      PowerUpSlot: -1
+      PowerUp: 0
+      RulesPhase: 1
+      Beat: 'C6 Swimming [placeholder]'
+    - ChunkId: D_Discovery_Overlook_01
+      Variant: Default
+      PowerUpSlot: -1
+      PowerUp: 0
+      RulesPhase: 1
+      Beat: C7 Waterfall vista
+    - ChunkId: C_Canopy_VineSpan_01
+      Variant: Default
+      PowerUpSlot: -1
+      PowerUp: 0
+      RulesPhase: 1
+      Beat: 'C8 Vine + canopy + creature [placeholder]'
+    - ChunkId: R_Branch_Waterfall_01
+      Variant: Slice
+      PowerUpSlot: -1
+      PowerUp: 0
+      RulesPhase: 2
+      Beat: C9 Secret behind the falls
+    - ChunkId: F_Straight_Roots_01
+      Variant: B
+      PowerUpSlot: -1
+      PowerUp: 0
+      RulesPhase: 2
+      Beat: C10 Rhythm
+    - ChunkId: F_Recovery_Meadow_01
+      Variant: Default
+      PowerUpSlot: 0
+      PowerUp: 1
+      RulesPhase: 2
+      Beat: C11 Breather + Shield
+    - ChunkId: F_Challenge_FallenGiants_01
+      Variant: Default
+      PowerUpSlot: -1
+      PowerUp: 0
+      RulesPhase: 3
+      Beat: C12 Difficult section, part 1
+    - ChunkId: F_Challenge_ThornRun_01
+      Variant: Default
+      PowerUpSlot: -1
+      PowerUp: 0
+      RulesPhase: 3
+      Beat: C13 Difficult section, part 2

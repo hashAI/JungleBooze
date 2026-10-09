@@ -1,0 +1,347 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 127402b584390418eb53bb16ddc7cce7, type: 3}
+  m_Name: C_Canopy_VineSpan_01
+  m_EditorClassIdentifier: JungleBooze.Gameplay::JungleBooze.Gameplay.Config.ChunkDefinitionAsset
+  _definition:
+    Id: C_Canopy_VineSpan_01
+    Label: C8
+    Biome: 0
+    Environment: 3
+    Category: 1
+    Length: 300
+    Entry: 0
+    Exit: 0
+    Rating: 4
+    RatingMin: 4
+    RatingMax: 7
+    Dimensions:
+      Reaction: 1
+      Navigation: 1
+      Traversal: 3
+      Risk: 2
+      Complexity: 2
+    PhaseMin: 1
+    PhaseMax: 5
+    RequiredAbilities: 0
+    ShowcaseAbilities: 0
+    Reward: 1
+    SetPiece: 1
+    RunOpener: 0
+    PoolEnabled: 1
+    BaseWeight: 1
+    EventCompatibility: 0
+    Variants:
+    - Name: Default
+      ScriptOnly: 0
+      Length: 0
+      Placeholder: 1
+      PlaceholderNote: "Vine swing, canopy beam rules and the sailback creature (spec
+        103 \xA75\u20137) are Part B. Stand-in run on foot: the two vine gorges are
+        bridged, beams are narrow path with jumpable gaps; perfect-column coins sit
+        where only a Perfect release reaches."
+      Widths:
+      - S: 0
+        XMin: -3.5
+        XMax: 3.5
+      - S: 20
+        XMin: -3.5
+        XMax: 3.5
+      - S: 60
+        XMin: -1.5
+        XMax: 1.5
+      - S: 70
+        XMin: -1.2
+        XMax: 1.2
+      - S: 174.9
+        XMin: -1.2
+        XMax: 1.2
+      - S: 175
+        XMin: -1.2
+        XMax: 1.8
+      - S: 178.5
+        XMin: -1.2
+        XMax: 1.8
+      - S: 188.5
+        XMin: -0.2
+        XMax: 1.8
+      - S: 204.9
+        XMin: -0.2
+        XMax: 1.8
+      - S: 205
+        XMin: -1.8
+        XMax: 1.8
+      - S: 208
+        XMin: -1.8
+        XMax: 1.8
+      - S: 220
+        XMin: -1.8
+        XMax: 0.6
+      - S: 240
+        XMin: -1.8
+        XMax: 0.6
+      - S: 290
+        XMin: -3.5
+        XMax: 3.5
+      - S: 300
+        XMin: -3.5
+        XMax: 3.5
+      Floors:
+      - Kind: 1
+        SMin: 20
+        SMax: 70
+        XMin: -99
+        XMax: 99
+        Y0: 0
+        Y1: 9
+      - Kind: 1
+        SMin: 70
+        SMax: 240
+        XMin: -99
+        XMax: 99
+        Y0: 9
+        Y1: 9
+      - Kind: 1
+        SMin: 240
+        SMax: 290
+        XMin: -99
+        XMax: 99
+        Y0: 9
+        Y1: 0
+      - Kind: 0
+        SMin: 175
+        SMax: 178.5
+        XMin: -99
+        XMax: 99
+        Y0: 0
+        Y1: 0
+      - Kind: 0
+        SMin: 205
+        SMax: 208
+        XMin: -99
+        XMax: 99
+        Y0: 0
+        Y1: 0
+      Dividers: []
+      Routes:
+      - Name: Upper vine line (Vine Grip)
+        Type: 2
+        Steps: []
+        RequiredAbility: 2
+        Locked: 1
+        Note: "Gold-lit vines 3 m above reach on the left, s 140\u2013235 (Phase
+          3)"
+      Obstacles:
+      - Label: Hanging moss
+        Class: 1
+        SMin: 160
+        SMax: 160.6
+        XMin: -1.2
+        XMax: 1.2
+        YMin: 10
+        YMax: 11.5
+        WalkableTop: 0
+      - Label: Branch knot
+        Class: 0
+        SMin: 192
+        SMax: 194
+        XMin: -0.2
+        XMax: 1.8
+        YMin: 9
+        YMax: 9.5
+        WalkableTop: 1
+      - Label: Hanging moss
+        Class: 1
+        SMin: 222
+        SMax: 222.6
+        XMin: -1.8
+        XMax: 0.6
+        YMin: 10
+        YMax: 11.5
+        WalkableTop: 0
+      Coins:
+      - Kind: 0
+        S0: 25
+        S1: 65
+        X: 0
+        Step: 4
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 4
+        S0: 109.1
+        S1: 109.1
+        X: 0
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 1
+        Y: 2.6
+      - Kind: 4
+        S0: 109.1
+        S1: 109.1
+        X: 0
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 1
+        Y: 3.4
+      - Kind: 4
+        S0: 109.1
+        S1: 109.1
+        X: 0
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 1
+        Y: 4.2
+      - Kind: 0
+        S0: 112
+        S1: 136
+        X: 0
+        Step: 2
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 4
+        S0: 152.5
+        S1: 152.5
+        X: 0
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 1
+        Y: 2.6
+      - Kind: 4
+        S0: 152.5
+        S1: 152.5
+        X: 0
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 1
+        Y: 4.2
+      - Kind: 3
+        S0: 160
+        S1: 160
+        X: 0
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      - Kind: 0
+        S0: 150
+        S1: 156
+        X: 0
+        Step: 3
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 2
+        S0: 176.75
+        S1: 176.75
+        X: 0.3
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      - Kind: 0
+        S0: 181
+        S1: 190
+        X: 0.8
+        Step: 3
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 2
+        S0: 206.5
+        S1: 206.5
+        X: 0
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      - Kind: 3
+        S0: 222
+        S1: 222
+        X: -0.6
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      - Kind: 0
+        S0: 211
+        S1: 218
+        X: -0.6
+        Step: 3.5
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      Crystals:
+      - S: 152.5
+        X: 0
+        Y: 3.4
+        Always: 1
+      PowerUps: []
+      Discoveries:
+      - EntryId: D-02
+        S: 176
+        XMin: -99
+        XMax: 99
+        Placeholder: 1
+        RequiredAbility: 0
+        Note: 'Stand-in: passing the sailback perch counts as observing it. Part
+          B uses creature observation (0.8 s in view).'
+      Traversal:
+      - Mode: 1
+        SMin: 96
+        SMax: 104
+        XMin: -1.2
+        XMax: 1.2
+        Value: 8
+        Note: '[Part B placeholder] Gorge 8.0 m (not jumpable) with vine V1: anchor
+          s 99, x 0, 8.0 m above the takeoff; bridged in the stand-in'
+      - Mode: 1
+        SMin: 140
+        SMax: 148
+        XMin: -1.2
+        XMax: 1.2
+        Value: 8
+        Note: '[Part B placeholder] Gap with vine V2: anchor s 143; bridged in the
+          stand-in'
+      - Mode: 2
+        SMin: 148
+        SMax: 235
+        XMin: -1.8
+        XMax: 1.8
+        Value: 0.25
+        Note: '[Part B placeholder] Canopy beams A/B/C (landing assist 0.25 m, falls
+          hold the camera 0.8 s)'
+      - Mode: 4
+        SMin: 172
+        SMax: 181
+        XMin: 2.8
+        XMax: 2.8
+        Value: 1.5
+        Note: '[Part B placeholder] Sailback perch: 3 sailbacks at x +2.8, y +1.5
+          (s 172/176/181), flock glides toward Veil Falls'
+      Help: []
+    ValidatedMask: 1
