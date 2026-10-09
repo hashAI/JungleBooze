@@ -19,7 +19,7 @@ animations (approved cap 150 credits). Then import rigged Pista into the LookTes
 `design/aurelia/LOOK_TEST_BRIEF.md`, screenshots to the owner, owner opens it on Mac + iPhone (P0-E).
 
 ## Snapshot / handoff (2026-10-09 ~19:40 IST)
-- **Look gate: owner is choosing the art style.** Hero basin trials: realistic peaked ~64% (4eaf693), painterly v3 ~70% of `F4_f_painterly_openai.jpg` (latest commit; known gaps: arch reads as a flat bridge, white foam blobs on pools, stacked-slab pillars look like discs). Owner then asked for easier styles: concepts in `design/aurelia/keyframes/F4_style_{toon,lowpoly,clay}.jpg` (sheet sent). Coordinator recommends trying **C soft toon/cel-shaded** next (easiest to look great; Pista would need a stylized regen via Meshy ~30–60 credits). Wait for the owner's pick; then run one hero-scene trial in that style, or finish painterly if B is kept.
+- **Owner chose PAINTERLY (B) 2026-10-09**, with cheap tricks for the hard parts; must run at 60 fps on iPhone 12. Earlier context: Hero basin trials: realistic peaked ~64% (4eaf693), painterly v3 ~70% of `F4_f_painterly_openai.jpg` (latest commit; known gaps: arch reads as a flat bridge, white foam blobs on pools, stacked-slab pillars look like discs). Owner then asked for easier styles: concepts in `design/aurelia/keyframes/F4_style_{toon,lowpoly,clay}.jpg` (sheet sent). Coordinator recommends trying **C soft toon/cel-shaded** next (easiest to look great; Pista would need a stylized regen via Meshy ~30–60 credits). Wait for the owner's pick; then run one hero-scene trial in that style, or finish painterly if B is kept.
 - **Gameplay:** vertical slice complete in gray-box (A 9835543, B d58990d, review fixes d1f343b, vine camera fix latest; EditMode 510/510, PlayMode 20/20). Bot videos: /tmp/junglebooze-video/expedition_*.mp4 (regenerate with the Expedition video batch).
 - **UI issues for ui-engineer:** landscape results panel clips the top; coins line overflows; portrait distance overlaps the health bar; chunk debug labels visible in-world.
 - **Running:** asset-pipeline painterly stacked-slab pillars (feedback: look like pillows/discs; needs lush tops, moss, irregular slabs). Pause/redirect if the owner picks another style.
@@ -136,6 +136,7 @@ Meshy: 3 (image edit test) + 30 (Pista 3D v1) = **33 credits used**; balance 2,4
 
 ## Log
 Newest first. One line per event.
+- 2026-10-09: Owner chose painterly (B); tricks for arch/foam/pillars; hard requirement iPhone 12. Launching painterly v4 (tricks) + performance-engineer (iPhone 12 readiness).
 - 2026-10-09: Painterly v3 ~70% sent. Owner asked for easier styles; sent A–E concept sheet (toon, low-poly, clay new; ~$0.22). Vine camera fix committed. Waiting for owner's style pick.
 - 2026-10-09: Painterly v2 (dense dressing) ~65% sent to owner. Launched v3.
 - 2026-10-09: LFS at ~750 MB of 1 GB. Owner: stay free; raw art binaries in art_source/ untracked (148 files, kept on disk) and git-ignored. Painterly kit committed; launched stacked-slab rock generator.
