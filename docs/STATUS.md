@@ -56,7 +56,7 @@ Duko/continue, audio files) compiled clean on the Mac.
 | game-designer | done (2026-10-09) | Spec 103 vertical slice: scripted "Expedition 1", 13 chunks ~4:05, swim/vine/canopy/sailback/Veil Grotto secret/Shield/Deep Breath upgrade, AC-103-01–50 | `design/aurelia/GDD.md`, `design/aurelia/specs/` | Phase 2 chunk catalog detail; FTUE script |
 | balance-simulator | done (A3) | Python reference model, golden traces, S1–S9 report (`archive/pre-aurelia/docs/sim-reports/2026-10-07-spec001.md`) | `tools/sim/`, `docs/sim-reports/` | Phase 1: new movement/chunk model from the AURELIA spec (old model kept as reference) |
 | tech-architect | working (2026-10-09) | Look test: layered waterfalls, mist, roots, P1 scale, water; integration path for Art/Environment assets | `Assets/_Game/Editor/Setup/`, `docs/adr/0003-first-playable-bootstrap.md`, `docs/PLAY_FIRST_BUILD.md` | Add EditMode tests for `ProjectSetupRules`; Roslyn analyzers |
-| gameplay-engineer | working (2026-10-09) | Fix Phase 1 review findings (blocker: swipe after resting thumb), camera framing 19–22%/14–16% [ASSUMED], dodge from current position [ASSUMED], re-record videos | `Scripts/Gameplay/PowerUps`, `Hazards`, `Companion`, `Views`, `App/RunSceneBootstrap.cs` | Wire audio events; then Batch 3 |
+| gameplay-engineer | working (2026-10-09) | Review fixes done (238fbe0, EditMode 357/357, PlayMode 12/12). Now vertical slice part A: chunks, streaming, World Director, Expedition 1 script, collectibles, results, save, Deep Breath upgrade, Expedition scene | `Scripts/Gameplay/PowerUps`, `Hazards`, `Companion`, `Views`, `App/RunSceneBootstrap.cs` | Wire audio events; then Batch 3 |
 | ui-engineer | done (C2) | Track wired into the Run scene with gray-box views and HUD | `Scripts/Gameplay/Views`, `Scripts/App`, `Scripts/UI/Hud` | Fix errors the owner sends from Unity |
 | art-director | done (2026-10-09) | Meshy keyframes F1–F4 + P1 (93 credits) → design/aurelia/keyframes/ | `design/aurelia/ENVIRONMENT_STRATEGY.md` | Store art later |
 | asset-pipeline | working (2026-10-09) | Rootstone Blender kit + hero arch, Meshy stiltwoods ×3 + leaf cards, backdrop layers (cap 450 credits) → Art/Environment/ | `art_source/pista/`, `tools/blender/pista/` | Report → import rigged Pista into LookTest |
@@ -125,6 +125,7 @@ Meshy: 3 (image edit test) + 30 (Pista 3D v1) = **33 credits used**; balance 2,4
 
 ## Log
 Newest first. One line per event.
+- 2026-10-09: Phase 1 review fixes committed (238fbe0). [ASSUMED] high obstacles = thin branch + see-through vine curtain (readability). Launched vertical slice part A (world structure); part B (swim/vine/canopy/creature/secret) follows.
 - 2026-10-09: Owner: gameplay is fine (coordinator improves it autonomously); worried about look quality. Plan: one hero scene first (waterfall basin matching the OpenAI F4 keyframe), side-by-side comparison with honest per-layer gap, then other scenes with the same recipe. Redirected tech-architect and asset-pipeline to the hero scene.
 - 2026-10-09: game-designer done: spec 103 vertical slice. [ASSUMED] Deep Breath first (recommended option A).
 - 2026-10-09: Owner asked for an OpenAI image test: F4 keyframe with gpt-image-2 medium 1536x1024 succeeded and beats Meshy. OpenAI images approved (medium quality; working cap $75). Backdrops/leaf textures switch to OpenAI.
