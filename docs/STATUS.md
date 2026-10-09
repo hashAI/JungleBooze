@@ -63,16 +63,16 @@ Duko/continue, audio files) compiled clean on the Mac.
 | Agent | State | Current / last task | Output | Next for this agent |
 |---|---|---|---|---|
 | producer | not used yet | (the coordinating session does this role for now) | this file | — |
-| game-designer | done (2026-10-09) | Spec 103 vertical slice: scripted "Expedition 1", 13 chunks ~4:05, swim/vine/canopy/sailback/Veil Grotto secret/Shield/Deep Breath upgrade, AC-103-01–50 | `design/aurelia/GDD.md`, `design/aurelia/specs/` | Phase 2 chunk catalog detail; FTUE script |
+| game-designer | working (2026-10-09) | Spec 104 MVP content: 12–15 chunks, 3 creatures, 10–15 discoveries, economy, 5–8 abilities, 3 power-ups | `design/aurelia/GDD.md`, `design/aurelia/specs/` | Phase 2 chunk catalog detail; FTUE script |
 | balance-simulator | done (A3) | Python reference model, golden traces, S1–S9 report (`archive/pre-aurelia/docs/sim-reports/2026-10-07-spec001.md`) | `tools/sim/`, `docs/sim-reports/` | Phase 1: new movement/chunk model from the AURELIA spec (old model kept as reference) |
 | tech-architect | done (2026-10-09) | Painterly v3 ~70% of F4_f (45 draws, 328k tris incl. Pista) | `Assets/_Game/Editor/Setup/`, `docs/adr/0003-first-playable-bootstrap.md`, `docs/PLAY_FIRST_BUILD.md` | Add EditMode tests for `ProjectSetupRules`; Roslyn analyzers |
 | gameplay-engineer | done (2026-10-09) | Vine camera framing fix, spec 103 text, new expedition videos; EditMode 510/510, PlayMode 20/20 | `Scripts/Gameplay/PowerUps`, `Hazards`, `Companion`, `Views`, `App/RunSceneBootstrap.cs` | Wire audio events; then Batch 3 |
-| ui-engineer | done (C2) | Track wired into the Run scene with gray-box views and HUD | `Scripts/Gameplay/Views`, `Scripts/App`, `Scripts/UI/Hud` | Fix errors the owner sends from Unity |
+| ui-engineer | working (2026-10-09) | Real painterly UI: home, HUD, pause/settings, results, toasts, revive; fix layout bugs; both orientations | `Scripts/Gameplay/Views`, `Scripts/App`, `Scripts/UI/Hud` | Fix errors the owner sends from Unity |
 | art-director | done (2026-10-09) | HERO_BASIN_DRESSING.md: 6×4 grid map of F4_f, frame budgets (water ≤10%, sky 10–16%, lawn 0%, foliage 40–50%), dressing counts | `design/aurelia/ENVIRONMENT_STRATEGY.md` | Store art later |
-| asset-pipeline | done (2026-10-09) | Iteration 2 assets (4e959d8): arch v2 14k tris 2×2k ~25 px/m, FP_ArchVines, travertine tiers (weakest; re-pass after seeing cascades), ledge v2, framing clusters, canopy. OpenAI $0.59 | `art_source/pista/`, `tools/blender/pista/` | Report → import rigged Pista into LookTest |
+| asset-pipeline | working (2026-10-09) | Painterly forest kit: obstacles, trail/terrain, stiltwoods, undergrowth, backdrops, sailback creature (caps Meshy 200, OpenAI $10) | `art_source/pista/`, `tools/blender/pista/` | Report → import rigged Pista into LookTest |
 | audio-director | waiting | Old lane-era audio archived (2026-10-09) | — | AURELIA audio after the vertical slice (ElevenLabs needs owner OK) |
 | qa-engineer | waiting | — | — | FP1 stage F: test plan + owner play-test script |
-| performance-engineer | waiting | — | — | Benchmark scene (week 2+) |
+| performance-engineer | working (2026-10-09) | iPhone 12 readiness: device benchmark build + soak, offline GPU/overdraw analysis, quality tiers | — | Benchmark scene (week 2+) |
 | code-reviewer | working (2026-10-09) | Review of vertical slice A+B → docs/reviews/2026-10-09-vertical-slice.md | — | Rerun after the owner's review, if the owner wants it |
 | monetization-engineer | waiting | — | — | Week 4–5 |
 | appstore-compliance | done (2026-10-09) | AURELIA design review: no blocker; 16 ranked risks. High: name "AURELIA" alone is crowded (Kingdom of Aurelia, adult VN Aurelia); Unity `submitAnalytics` must be off for "Data Not Collected"; bundle id/product name still lane-era | `docs/compliance/2026-10-aurelia-design-review.md`, `docs/APP_STORE_CHECKLIST.md` | Privacy manifest when SDKs are chosen; follow-ups: "report an ad" option, Declared Age Range API, CI check for the word "booze" |
@@ -136,6 +136,7 @@ Meshy: 3 (image edit test) + 30 (Pista 3D v1) = **33 credits used**; balance 2,4
 
 ## Log
 Newest first. One line per event.
+- 2026-10-09: Painterly FINAL. Owner: start building the remaining parts. Launched ui-engineer (real UI), asset-pipeline (painterly forest kit + sailback), game-designer (spec 104 MVP content); tech-architect (painterly v4) and performance-engineer (iPhone 12) running.
 - 2026-10-09: Owner chose painterly (B); tricks for arch/foam/pillars; hard requirement iPhone 12. Launching painterly v4 (tricks) + performance-engineer (iPhone 12 readiness).
 - 2026-10-09: Painterly v3 ~70% sent. Owner asked for easier styles; sent A–E concept sheet (toon, low-poly, clay new; ~$0.22). Vine camera fix committed. Waiting for owner's style pick.
 - 2026-10-09: Painterly v2 (dense dressing) ~65% sent to owner. Launched v3.
