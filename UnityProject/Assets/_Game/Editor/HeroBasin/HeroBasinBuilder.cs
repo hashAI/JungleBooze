@@ -70,6 +70,10 @@ namespace JungleBooze.Editor.HeroBasin
             ctx.Waterfall.SetFloat("_Translucency", h.FallTranslucency);
             ctx.Waterfall.SetColor("_WaterColor", h.FallWaterColor);
             ctx.Waterfall.SetFloat("_EdgeBreakup", h.FallEdgeBreakup);
+            ctx.Waterfall.SetFloat("_WhiteBias", h.FallWhiteBias);
+            ctx.Waterfall.SetFloat("_FoamGlow", h.FallFoamGlow);
+            ctx.Waterfall.SetFloat("_Clumping", h.FallClumping);
+            ctx.Waterfall.SetVector("_StreakTiling", new Vector4(h.FallStreakTiling.x, h.FallStreakTiling.y, 0f, 0f));
             ctx.Boulder.SetFloat("_MossAmount", 0.6f);
             ctx.Boulder.SetFloat("_WetSmoothness", 0.5f);
             ctx.Rootstone.SetFloat("_WetSmoothness", 0.5f);
@@ -84,6 +88,9 @@ namespace JungleBooze.Editor.HeroBasin
             EditorUtility.SetDirty(ctx.Leaves);
             EditorUtility.SetDirty(ctx.Pool);
             ctx.MistCard = materials.MistCard(mistTexture);
+            ctx.MistCard.SetFloat("_SunScatter", h.MistSunScatter);
+            ctx.MistCard.SetFloat("_ScatterNeutral", h.MistScatterNeutral);
+            EditorUtility.SetDirty(ctx.MistCard);
             ctx.LightShaft = materials.LightShaft();
             ctx.LightShaft.SetVector("_NearFade", new Vector4(10f, 30f, 0f, 0f));
             ctx.LightShaft.SetVector("_FarFade", new Vector4(260f, 420f, 0f, 0f));
@@ -103,6 +110,8 @@ namespace JungleBooze.Editor.HeroBasin
                 {
                     ctx.Kit.Pieces[i].Material.SetColor("_BaseColor", h.TravertineTint);
                     ctx.Kit.Pieces[i].Material.SetFloat("_MossAmount", h.TravertineMoss);
+                    // Wet but not lacquered: the drop faces sit next to every cascade and caught the sun like plastic.
+                    ctx.Kit.Pieces[i].Material.SetFloat("_WetSmoothness", 0.3f);
                     EditorUtility.SetDirty(ctx.Kit.Pieces[i].Material);
                 }
 

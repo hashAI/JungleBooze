@@ -3,6 +3,8 @@
 // (TEXCOORD0: x in -0.5..0.5, y in 0..1) and its size (TEXCOORD1: width, length, seed). The vertex shader turns the
 // card around its axis to face the camera, so many cards of a segment merge into one mesh and one draw call.
 // TEXCOORD1.w is the card kind for mist: 0 = mist billow, 1 = waterfall spray (brighter, rising, more broken).
+// Beyond that range it is a density gain: w > 1 = spray with (w) x opacity, w < 0 = billow with (1 - w) x opacity
+// (dense plumes at the foot of a big fall).
 // Soft intersections without a depth texture (ADR 0008): mist cards are pulled toward the camera by part of their
 // width (they stand in front of the rock or water they hug), their base fades out (no hard line where a card
 // meets the ground or a pool), and they fade when seen edge-on or from too close.
@@ -18,6 +20,8 @@ Shader "JungleBooze/Atmos Card"
         _Intensity("Intensity", Range(0, 4)) = 1
         _NearFade("Near Fade Start, End (m)", Vector) = (6, 16, 0, 0)
         _FarFade("Far Fade Start, End (m)", Vector) = (400, 900, 0, 0)
+        _SunScatter("Mist: sun in-scatter share (1 = full warm glow toward the sun)", Range(0, 1)) = 1
+        _ScatterNeutral("Mist: neutral (white) share of the sun in-scatter (spray reads white, not gold)", Range(0, 1)) = 0
         [HideInInspector] _SrcBlend("Src Blend", Float) = 1
         [HideInInspector] _DstBlend("Dst Blend", Float) = 1
     }
@@ -49,6 +53,8 @@ Shader "JungleBooze/Atmos Card"
                 half _Intensity;
                 float4 _NearFade;
                 float4 _FarFade;
+                half _SunScatter;
+                half _ScatterNeutral;
                 half _Mist;
                 half _SrcBlend;
                 half _DstBlend;
@@ -115,6 +121,7 @@ Shader "JungleBooze/Atmos Card"
 
             #if defined(_MIST)
                 half spray = saturate(input.kind);
+                half density = 1.0h + max(input.kind - 1.0h, 0.0h) + max(-input.kind, 0.0h);
                 half mask = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, float2(u + 0.5, h)).a;
                 float rise = t * lerp(0.006, 0.05, spray);
                 half noise = SAMPLE_TEXTURE2D(_JBDappleTex, sampler_JBDappleTex, float2(u * lerp(0.7, 1.3, spray) + input.seed + t * 0.01, h * lerp(0.5, 0.9, spray) - rise)).r;
@@ -122,10 +129,10 @@ Shader "JungleBooze/Atmos Card"
                 half billow = saturate(noise * 0.6h + noise2 * 0.6h - 0.1h);
                 half shape = lerp(0.45h + 0.55h * billow, billow * billow * 1.6h, spray);
                 half base = smoothstep(0.0h, lerp(0.35h, 0.15h, spray), h);
-                half alpha = mask * shape * base * _JBMistColor.a * _Intensity * distanceFade * input.fade * lerp(1.0h, 1.35h, spray);
+                half alpha = mask * shape * base * _JBMistColor.a * _Intensity * distanceFade * input.fade * lerp(1.0h, 1.35h, spray) * density;
                 Light mainLight = GetMainLight();
                 half glow = pow(toSun, 3.0h);
-                half3 lit = _JBMistColor.rgb * (SampleSH(half3(0.0h, 1.0h, 0.0h)) * lerp(1.3h, 1.6h, spray) + mainLight.color * (0.15h + 0.75h * glow) * lerp(1.0h, 1.3h, spray));
+                half3 lit = _JBMistColor.rgb * (SampleSH(half3(0.0h, 1.0h, 0.0h)) * lerp(1.3h, 1.6h, spray) + lerp(mainLight.color, dot(mainLight.color, half3(0.3333h, 0.3333h, 0.3333h)).xxx, _ScatterNeutral) * (0.15h + 0.75h * glow) * lerp(1.0h, 1.3h, spray) * _SunScatter);
                 lit = JBApplyFog(lit, input.positionWS);
                 return half4(lit, saturate(alpha));
             #else

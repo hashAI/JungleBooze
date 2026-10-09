@@ -22,6 +22,12 @@ namespace JungleBooze.Tests.EditMode
         [TestCase(Root + "Rootstone/outcrop_02.fbx", EnvironmentRole.Outcrop)]
         [TestCase(Root + "Rootstone/cliff_wall.fbx", EnvironmentRole.Cliff)]
         [TestCase(Root + "Rootstone/random.fbx", EnvironmentRole.Unknown)]
+        [TestCase(Root + "Rootstone/RS_TravertineTiers.fbx", EnvironmentRole.Travertine)]
+        [TestCase(Root + "Rootstone/RS_TravertineTiers_Water.fbx", EnvironmentRole.TravertineWater)]
+        [TestCase(Root + "Plants/FP_CanopyCrown_B.fbx", EnvironmentRole.CanopyCrown)]
+        [TestCase(Root + "Plants/FP_ArchVines.fbx", EnvironmentRole.ArchVines)]
+        [TestCase(Root + "Plants/FP_FrameLeft_Clump.fbx", EnvironmentRole.PlantClump)]
+        [TestCase(Root + "Plants/FP_Notes.fbx", EnvironmentRole.Unknown)]
         [TestCase(Root + "Stiltwoods/stiltwood_b.fbx", EnvironmentRole.Stiltwood)]
         [TestCase(Root + "Stiltwoods/leafcards_canopy.fbx", EnvironmentRole.LeafCards)]
         [TestCase(Root + "Backdrops/backdrop_02_mist_valley.png", EnvironmentRole.Backdrop)]
@@ -92,6 +98,14 @@ namespace JungleBooze.Tests.EditMode
             Assert.That(Vector3.Distance(m.MultiplyPoint3x4(new Vector3(-10f, 0f, 0f)), a), Is.LessThan(1e-3f));
             Assert.That(Vector3.Distance(m.MultiplyPoint3x4(new Vector3(10f, 0f, 0f)), b), Is.LessThan(1e-3f));
             Assert.AreEqual(30f, m.MultiplyPoint3x4(new Vector3(0f, 10f, 0f)).y, 1e-3f);
+        }
+
+        [TestCase("MI_FP_Canopy", "FP_Canopy")]
+        [TestCase("M_RS_Outcrop", "RS_Outcrop")]
+        [TestCase("FP_Fronds", "FP_Fronds")]
+        public void MaterialSetNameDropsTheMaterialPrefix(string material, string set)
+        {
+            Assert.AreEqual(set, EnvironmentAssetRules.MaterialSetName(material));
         }
     }
 }

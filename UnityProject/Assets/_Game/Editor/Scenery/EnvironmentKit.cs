@@ -314,9 +314,10 @@ namespace JungleBooze.Editor.Scenery
 
         /// <summary>
         /// Placement that spans an arch piece (local X between its feet) from <paramref name="footA"/> to
-        /// <paramref name="footB"/> with its top at <paramref name="topY"/>.
+        /// <paramref name="footB"/> with its top at <paramref name="topY"/>. Its depth (local Z) takes the mean of the
+        /// span and height scales times <paramref name="depthScale"/> (below 1 keeps a stretched arch from reading as a dome).
         /// </summary>
-        public static Matrix4x4 Span(Piece piece, Vector3 footA, Vector3 footB, float topY)
+        public static Matrix4x4 Span(Piece piece, Vector3 footA, Vector3 footB, float topY, float depthScale = 1f)
         {
             Bounds b = piece.Bounds;
             Vector3 across = footB - footA;
@@ -325,7 +326,7 @@ namespace JungleBooze.Editor.Scenery
             float baseY = Mathf.Min(footA.y, footB.y);
             float sx = span / Mathf.Max(0.01f, b.size.x);
             float sy = Mathf.Max(0.01f, topY - baseY) / Mathf.Max(0.01f, b.size.y);
-            float sz = 0.5f * (sx + sy);
+            float sz = 0.5f * (sx + sy) * Mathf.Max(0.05f, depthScale);
             Quaternion yaw = Quaternion.FromToRotation(Vector3.right, across / span);
             Vector3 mid = (footA + footB) * 0.5f;
             mid.y = baseY;
@@ -397,6 +398,84 @@ namespace JungleBooze.Editor.Scenery
             }
 
             return slots[slot];
+        }
+
+        /// <summary>
+        /// A copy of <paramref name="mesh"/> with only the islands (groups of triangles that share vertices, for example
+        /// one plant card) whose bounds under <paramref name="matrix"/> pass <paramref name="keep"/>. Editor only.
+        /// </summary>
+        public static Mesh KeepIslands(Mesh mesh, Matrix4x4 matrix, System.Func<Bounds, bool> keep)
+        {
+            Vector3[] vertices = mesh.vertices;
+            int[] triangles = mesh.triangles;
+            var parent = new int[vertices.Length];
+            for (int i = 0; i < parent.Length; i++)
+            {
+                parent[i] = i;
+            }
+
+            int Find(int v)
+            {
+                while (parent[v] != v)
+                {
+                    parent[v] = parent[parent[v]];
+                    v = parent[v];
+                }
+
+                return v;
+            }
+
+            for (int t = 0; t < triangles.Length; t += 3)
+            {
+                int a = Find(triangles[t]);
+                parent[Find(triangles[t + 1])] = a;
+                parent[Find(triangles[t + 2])] = a;
+            }
+
+            var bounds = new Dictionary<int, Bounds>();
+            for (int i = 0; i < vertices.Length; i++)
+            {
+                int root = Find(i);
+                Vector3 p = matrix.MultiplyPoint3x4(vertices[i]);
+                if (bounds.TryGetValue(root, out Bounds b))
+                {
+                    b.Encapsulate(p);
+                    bounds[root] = b;
+                }
+                else
+                {
+                    bounds[root] = new Bounds(p, Vector3.zero);
+                }
+            }
+
+            var kept = new List<int>(triangles.Length);
+            var verdict = new Dictionary<int, bool>();
+            for (int t = 0; t < triangles.Length; t += 3)
+            {
+                int root = Find(triangles[t]);
+                if (!verdict.TryGetValue(root, out bool ok))
+                {
+                    ok = keep(bounds[root]);
+                    verdict[root] = ok;
+                }
+
+                if (ok)
+                {
+                    kept.Add(triangles[t]);
+                    kept.Add(triangles[t + 1]);
+                    kept.Add(triangles[t + 2]);
+                }
+            }
+
+            var copy = new Mesh { name = mesh.name + "_Kept", indexFormat = mesh.indexFormat };
+            copy.vertices = vertices;
+            copy.normals = mesh.normals;
+            copy.tangents = mesh.tangents;
+            copy.uv = mesh.uv;
+            copy.colors = mesh.colors;
+            copy.triangles = kept.ToArray();
+            copy.RecalculateBounds();
+            return copy;
         }
 
         /// <summary>

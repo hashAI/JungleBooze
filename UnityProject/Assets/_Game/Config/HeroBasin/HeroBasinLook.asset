@@ -237,7 +237,7 @@ MonoBehaviour:
   _fallbackGroundAmbient: {r: 0.16, g: 0.15, b: 0.11, a: 1}
   _fogColor: {r: 0.72, g: 0.8, b: 0.84, a: 1}
   _fogSunColor: {r: 1, g: 0.84, b: 0.62, a: 1}
-  _fogDensity: 0.0008
+  _fogDensity: 0.0013
   _fogHeightFalloff: 0.02
   _fogBaseHeightM: -15
   _fogStartM: 60
@@ -249,9 +249,9 @@ MonoBehaviour:
   _canopyAmbient: 0.5
   _canopyTint: {r: 0.88, g: 0.96, b: 0.8, a: 1}
   _shaftColor: {r: 1, g: 0.8, b: 0.5, a: 1}
-  _shaftIntensity: 1.2
+  _shaftIntensity: 1.8
   _mistColor: {r: 0.96, g: 0.95, b: 0.9, a: 1}
-  _mistOpacity: 0.26
+  _mistOpacity: 0.3
   _hdr: 1
   _msaaSamples: 4
   _shadowDistanceM: 45
@@ -275,8 +275,8 @@ MonoBehaviour:
   _bloomScatter: 0.8
   _bloomTint: {r: 1, g: 0.93, b: 0.8, a: 1}
   _vignetteIntensity: 0.36
-  _waterShallowColor: {r: 0.4, g: 1.2, b: 1.1, a: 1}
-  _waterDeepColor: {r: 0.05, g: 0.75, b: 0.78, a: 1}
+  _waterShallowColor: {r: 0.5, g: 0.95, b: 0.85, a: 1}
+  _waterDeepColor: {r: 0.1, g: 0.56, b: 0.55, a: 1}
   _waterOpacity: 0.78
   _waterNormalTilingPerM: 0.35
   _waterShallowOpacity: 0.42

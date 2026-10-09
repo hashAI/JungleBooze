@@ -20,6 +20,9 @@ Shader "JungleBooze/Waterfall"
         _EdgeBreakup("Edge Breakup", Range(0, 1)) = 0.65
         _Translucency("Backlit Glow", Range(0, 2)) = 0.9
         _AmbientBoost("Ambient Boost", Range(0, 3)) = 1.25
+        _WhiteBias("White Water Bias (aerated core)", Range(0, 1)) = 0.3
+        _FoamGlow("Foam Glow (white water lit by scattered sky and spray)", Range(0, 2)) = 0
+        _Clumping("Clumping (slow columns of denser and thinner water across the sheet)", Range(0, 1)) = 0
     }
 
     SubShader
@@ -53,6 +56,9 @@ Shader "JungleBooze/Waterfall"
                 half _EdgeBreakup;
                 half _Translucency;
                 half _AmbientBoost;
+                half _WhiteBias;
+                half _FoamGlow;
+                half _Clumping;
             CBUFFER_END
 
             TEXTURE2D(_FxTex); SAMPLER(sampler_FxTex);
@@ -100,12 +106,17 @@ Shader "JungleBooze/Waterfall"
 
                 half foam = saturate(input.color.r * (0.7h + 0.6h * cells.g) + cells.g * 0.35h * cells.b);
                 // White water where the streaks and foam are, blue-grey water between them and toward the edges.
-                half white = saturate(0.3h * input.color.a + streak * 0.75h - (1.0h - input.color.a) * 0.25h + foam);
+                half white = saturate(_WhiteBias * input.color.a + streak * 0.75h - (1.0h - input.color.a) * 0.25h + foam);
+                // Clumping: broad columns of dense white water with thinner, darker water between them, drifting slowly
+                // (keyframe: a big plunge is ropes of white, never an even sheet).
+                half columns = SAMPLE_TEXTURE2D(_FxTex, sampler_FxTex, float2(uv.x * 0.045 + seed * 0.21, (uv.y + t * speed * 0.5) * 0.006)).b;
+                half clump = lerp(1.0h, saturate(0.35h + columns * 1.3h), _Clumping);
+                white *= clump;
                 half3 albedo = lerp(_WaterColor.rgb, _FoamColor.rgb, white);
 
                 // Ragged edges: coverage thresholded by the streaks.
                 half coverage = input.color.a * (1.0h - _EdgeBreakup + _EdgeBreakup * 1.8h * (streak * 0.7h + cells.b * 0.3h));
-                half alpha = smoothstep(0.12h, 0.5h, coverage) * _Opacity * saturate(0.8h + white);
+                half alpha = smoothstep(0.12h, 0.5h, coverage * lerp(1.0h, 0.6h + 0.6h * clump, _Clumping)) * _Opacity * saturate(0.8h + white);
 
                 half3 viewWS = GetWorldSpaceNormalizeViewDir(input.positionWS);
                 half3 normalWS = normalize(input.normalWS);
@@ -116,6 +127,8 @@ Shader "JungleBooze/Waterfall"
                 half back = pow(saturate(dot(-viewWS, mainLight.direction)), 4.0h) * _Translucency;
                 half3 ambient = (SampleSH(normalWS) * 0.7h + SampleSH(half3(0.0h, 1.0h, 0.0h)) * 0.5h) * _AmbientBoost;
                 half3 lit = albedo * (ambient + mainLight.color * (wrap * 0.55h + back * (0.5h + white)) * shadow);
+                // Aerated water scatters light inside the spray: the white core stays bright even out of the sun.
+                lit += _FoamColor.rgb * white * white * _FoamGlow * (ambient + mainLight.color * 0.25h);
 
                 lit = JBApplyFog(lit, input.positionWS);
                 return half4(lit, saturate(alpha));

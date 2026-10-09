@@ -96,3 +96,21 @@ budget still holds. The real cost is overdraw from the layered sheets and cards,
    texture set, so pieces sharing an atlas share one material and one draw.
 6. Known export mismatch: `RS_TravertineTiers_Water.fbx` keeps Z-up mesh data with an identity node; the builder gives
    it the tiers' axis turn when it stands upright (asset-pipeline to align the export).
+
+## Amendment: hero basin iteration 3 (2026-10-09)
+1. **Vantage and scale** (config only): basin water 7 m lower (-13), so the camera looks down on the basin as in the
+   keyframe; the promontory ends just right of Pista (`_ledge`, `_rightBank` mound for the right framing plants) and
+   Pista stands near the ledge piece's right-front corner (`_ledgeStandOffset`).
+2. **Arch shape**: `EnvironmentKit.Span(..., depthScale)` (default 1, unchanged for the look test) keeps a wide arch
+   from reading as a dome (hero 0.45). Vine curtains hanging into the opening are dropped as whole cards
+   (`EnvironmentKit.KeepIslands`, `_archVineClearing`). Forest in front of the arch stays low (`_forestUnderArchScale`).
+3. **Tall plunge**: five overlapping columns with staggered lips and their own sheet set (wider toward the foot), a
+   coarser streak tiling and `Waterfall.shader` `_Clumping` (slow dense/thin columns), `_WhiteBias`, `_FoamGlow`
+   (defaults keep the look test unchanged). The wide cascade's shelf runs back to the plunge as a raised river terrace
+   with rapids, so the tall fall lands on water.
+4. **Dense spray without new draws**: Atmos Card kind (UV1.w) beyond 0..1 is a density gain (w > 1 spray, w < 0
+   billow); `_SunScatter` / `_ScatterNeutral` let spray read white instead of gold toward the sun.
+5. The LUT was rebuilt from a LUT-free render (strength 0.6). Unused generated materials were deleted.
+
+Measured (editor, M4): landscape 42 draws, 307k tris; portrait 36 draws, 305k tris; shadow pass ≤ 129k. Layer lines
+L2, L3, W are exceeded inside the 350k total (three travertine pieces and the terrace add about 30k).

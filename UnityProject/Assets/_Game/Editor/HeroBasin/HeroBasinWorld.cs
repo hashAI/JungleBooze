@@ -90,11 +90,22 @@ namespace JungleBooze.Editor.HeroBasin
             // The promontory drops steeply a few meters in front of Pista and to her right; the left bank rises.
             float bank = LookTestMath.Smooth(-3f, -ledge.x - 14f, x);
             float front = ledge.y + 9f * bank;
-            float near = 1f - LookTestMath.Smooth(front, front + 7f, z);
+            float near = 1f - LookTestMath.Smooth(front, front + 5f, z);
             float nearY = ledge.z - 0.6f + 0.15f * Mathf.Sin(x * 1.3f) * Mathf.Sin(z * 1.1f);
             nearY += 4f * bank;
-            nearY = Mathf.Lerp(nearY, floor, LookTestMath.Smooth(ledge.x - 2f, ledge.x + 6f, x));
+            // Keyframe: the promontory ends just right of Pista's feet and drops steeply to the basin.
+            nearY = Mathf.Lerp(nearY, floor, LookTestMath.Smooth(ledge.x - 0.5f, ledge.x + 4f, x));
             y = Mathf.Lerp(y, Mathf.Max(y, nearY), near);
+
+            // The near right bank (big mossy rock and bell flowers framing the right edge).
+            Vector4 rb = h.RightBank;
+            if (rb.z > 0f)
+            {
+                float rr = new Vector2(x - rb.x, z - rb.y).magnitude / rb.z;
+                float mound = rb.w - 2.5f * rr * rr + 0.3f * Mathf.Sin(x * 1.7f + z * 0.9f);
+                y = Mathf.Max(y, Mathf.Lerp(mound, y, LookTestMath.Smooth(0.85f, 1.25f, rr)));
+            }
+
             return y;
         }
 
@@ -520,7 +531,7 @@ namespace JungleBooze.Editor.HeroBasin
             LookTestMeshAccumulator canopy = B.Get(Seg, "L3", "Arch canopy", _ctx.Leaves, false, LookTestBatchSet.Group.Trees);
             if (piece != null)
             {
-                Matrix4x4 placement = EnvironmentKit.Span(piece, _h.ArchFootA, _h.ArchFootB, _h.ArchTopY);
+                Matrix4x4 placement = EnvironmentKit.Span(piece, _h.ArchFootA, _h.ArchFootB, _h.ArchTopY, _h.ArchDepthScale);
                 rock.Add(() => _ctx.AppendPiece(piece, placement, stone, Seg, "L2", "Arch", false, LookTestBatchSet.Group.Ground, _ctx.OpenWet));
                 if (piece.Anchors.TryGetValue("WaterfallMouth", out Vector3 mouth))
                 {
@@ -538,7 +549,18 @@ namespace JungleBooze.Editor.HeroBasin
                 List<EnvironmentKit.Piece> kitVines = _ctx.Kit.Of(EnvironmentRole.ArchVines);
                 if (kitVines.Count > 0 && kitVines[0].Material != null)
                 {
-                    _ctx.AppendPiece(kitVines[0], placement, null, Seg, "L1", "Arch vines", false, LookTestBatchSet.Group.Plants, HeroBasinPlants.Open);
+                    // Keyframe: the opening stays clear (sky, far pillars and the tall fall show through it); only
+                    // short curtains hang from the crown's inner edge. Long curtains inside the opening are dropped.
+                    Bounds arch = piece.Bounds;
+                    float halfOpening = arch.size.x * _h.ArchVineClearing.x;
+                    float clearBelow = arch.min.y + arch.size.y * _h.ArchVineClearing.y;
+                    LookTestMeshAccumulator vineBatch = B.Get(Seg, "L1", "Arch vines", kitVines[0].Material, false, LookTestBatchSet.Group.Plants);
+                    foreach (EnvironmentKit.Part part in kitVines[0].Parts)
+                    {
+                        Mesh kept = EnvironmentKit.KeepIslands(part.Mesh, part.Matrix, card =>
+                            Mathf.Abs(card.center.x - arch.center.x) > halfOpening || card.min.y > clearBelow);
+                        vineBatch.Append(kept, placement * part.Matrix, HeroBasinPlants.Open);
+                    }
                 }
                 else if (_plants.Bellcap != null)
                 {
@@ -599,13 +621,15 @@ namespace JungleBooze.Editor.HeroBasin
         {
             HeroFall[] falls = _h.Falls;
             LookTestMeshAccumulator stone = B.Get(Seg, "L2", "Terraces", _ctx.Rootstone, true, LookTestBatchSet.Group.Ground);
+            Vector3? tallFoot = null;
             for (int i = 0; i < falls.Length; i++)
             {
                 HeroFall f = falls[i];
                 if (i == 0 && _mouth.HasValue)
                 {
                     // The tall fall pours from the hero arch's cave mouth (RS_HeroArch_WaterfallMouth).
-                    f.Top = _mouth.Value;
+                    f.Top = _mouth.Value + _h.TallFallOffset;
+                    tallFoot = new Vector3(f.Top.x, f.FootY, f.Top.z);
                 }
 
                 BrokenFall(f.Top, f.FootY, f.WidthM, f.Layers, f.IntoPool);
@@ -620,15 +644,61 @@ namespace JungleBooze.Editor.HeroBasin
                 away.Normalize();
                 float radius = f.WidthM * 0.8f;
                 Vector3 center = f.Top + away * (radius + 1f);
-                Mesh shelf = LookTestLandmarks.Pillar(_rng, new Vector3(center.x, 0f, center.z), _h.BasinFloorY - 2f, f.Top.y - 0.4f, radius, true, 22, 2.5f);
-                rock.Add(() => stone.Append(shelf, Matrix4x4.identity, _ctx.OpenWet));
+                // The shelf the wide cascade pours from. When a tall fall lands behind it, the shelf runs back to that
+                // fall's foot as a raised river terrace (keyframe: plunge pool, rapids, then the wide cascade), built from
+                // overlapping rock discs with water on top.
+                var shelfCenters = new List<Vector3> { center };
+                if (tallFoot.HasValue && i > 0)
+                {
+                    Vector3 run = tallFoot.Value - center;
+                    run.y = 0f;
+                    float length = run.magnitude;
+                    int steps = Mathf.Min(8, Mathf.FloorToInt(length / (radius * 1.2f)));
+                    for (int k = 1; k <= steps; k++)
+                    {
+                        Vector3 sideJitter = Vector3.Cross(Vector3.up, run.normalized) * _rng.NextFloat(-0.25f, 0.25f) * radius;
+                        shelfCenters.Add(center + run * (k / (float)steps) + sideJitter);
+                    }
+                }
+
+                Vector3 brink = f.Top;
+                LookTestMeshAccumulator shelfWater = B.Get(Seg, "W", "Pools", _ctx.Pool, false, LookTestBatchSet.Group.Water);
+                for (int k = 0; k < shelfCenters.Count; k++)
+                {
+                    Vector3 c = shelfCenters[k];
+                    float r = radius * (k == 0 ? 1f : _rng.NextFloat(1.0f, 1.25f));
+                    Mesh shelf = LookTestLandmarks.Pillar(_rng, new Vector3(c.x, 0f, c.z), _h.BasinFloorY - 2f, f.Top.y - 0.4f, r, true, 22, 2.5f);
+                    rock.Add(() => stone.Append(shelf, Matrix4x4.identity, _ctx.OpenWet));
+                    // White rapids toward the brink and around the plunge, clear water between.
+                    shelfWater.Append(LookTestMeshFactory.Pool(r * 1.02f, 0.5f, "ShelfRiver"), Matrix4x4.Translate(new Vector3(c.x, f.Top.y - 0.15f, c.z)), (world, local, source) =>
+                    {
+                        float toBrink = Vector2.Distance(new Vector2(world.x, world.z), new Vector2(brink.x, brink.z));
+                        float toPlunge = tallFoot.HasValue ? Vector2.Distance(new Vector2(world.x, world.z), new Vector2(tallFoot.Value.x, tallFoot.Value.z)) : 999f;
+                        float lines = 0.55f + 0.45f * Mathf.Sin(world.x * 0.7f + 1.3f * Mathf.Sin(world.z * 0.15f));
+                        float rapids = Mathf.Max((1f - LookTestMath.Smooth(radius * 0.4f, radius * 1.4f, toBrink)) * lines, 1f - LookTestMath.Smooth(radius * 0.5f, radius * 1.6f, toPlunge));
+                        return new Color(Mathf.Max(source.r, rapids), 0.25f, 0f, source.a);
+                    });
+                }
             }
         }
 
         /// <summary>
-        /// A hero fall as a broken curtain (keyframe: never one uniform slab): strands of varied width with gaps between
-        /// them and lips at slightly different heights, then one shared foot: impact foam (into a pool), spray, and a
-        /// mist plume that climbs a good part of the fall's height.
+        /// Sheets of the tall plunge: wider toward the foot (the column spreads as it falls), ragged veil and spray
+        /// streaks that fray out at the sides (keyframe F4_e: never a clean rectangle).
+        /// </summary>
+        private static readonly LookTestMeshFactory.FallLayer[] TallSheets =
+        {
+            new LookTestMeshFactory.FallLayer { Width = 0.8f, Lateral = 0f, Forward = 0f, Bulge = 0.9f, Spread = 1.1f, Speed = 0.25f, Seed = 0.13f, Coverage = 1f, EdgeStart = 0.22f, LipFoam = 0.8f },
+            new LookTestMeshFactory.FallLayer { Width = 1.0f, Lateral = 0f, Forward = 0.6f, Bulge = 1.6f, Spread = 1.4f, Speed = 0.75f, Seed = 0.61f, Coverage = 0.8f, EdgeStart = 0.06f, LipFoam = 0.5f },
+            new LookTestMeshFactory.FallLayer { Width = 0.3f, Lateral = -0.5f, Forward = 0.9f, Bulge = 2.2f, Spread = 2.2f, Speed = 1f, Seed = 0.37f, Coverage = 0.6f, EdgeStart = 0.0f, LipFoam = 0f },
+            new LookTestMeshFactory.FallLayer { Width = 0.3f, Lateral = 0.5f, Forward = 0.9f, Bulge = 2.2f, Spread = 2.2f, Speed = 0.9f, Seed = 0.83f, Coverage = 0.6f, EdgeStart = 0.0f, LipFoam = 0f },
+        };
+
+        /// <summary>
+        /// A hero fall. Tall falls (keyframe: the plunge through the arch) are one powerful column: a dense white core,
+        /// side strands overlapping it at slightly different lips and depths (broken, never a clean slab edge), thin
+        /// wisps peeling off the edges, then a spray burst and a mist plume rising a good part of the fall's height.
+        /// Low wide falls are a broken curtain: strands of varied width with rock showing between them.
         /// </summary>
         private void BrokenFall(Vector3 top, float footY, float width, int layers, bool intoPool)
         {
@@ -637,25 +707,44 @@ namespace JungleBooze.Editor.HeroBasin
             toEye.Normalize();
             Vector3 side = Vector3.Cross(Vector3.up, toEye);
             float height = top.y - footY;
-            int strands = Mathf.Clamp(Mathf.RoundToInt(width / 9f), 1, 6);
-            var weights = new float[strands];
-            float total = 0f;
-            for (int i = 0; i < strands; i++)
+            bool tall = height > width * 2f;
+            if (tall)
             {
-                weights[i] = _rng.NextFloat(0.35f, 1.6f);
-                total += weights[i];
+                // Core, two overlapping side columns, two thin wisps: (lateral, width share, lip drop share, depth m).
+                Vector4[] columns =
+                {
+                    new Vector4(0f, 0.62f, 0f, 0f), new Vector4(-0.3f, 0.38f, 0.12f, -0.8f), new Vector4(0.33f, 0.34f, 0.2f, -0.6f),
+                    new Vector4(-0.58f, 0.16f, 0.32f, 0.6f), new Vector4(0.6f, 0.14f, 0.42f, 0.5f),
+                };
+                for (int i = 0; i < columns.Length; i++)
+                {
+                    Vector4 c = columns[i];
+                    Vector3 lip = top + side * c.x * width - Vector3.up * c.z * height + toEye * c.w;
+                    LookTestLandmarks.Fall(_ctx, _rng, Seg, "Falls", lip, footY, width * c.y, _eye, 1.5f + 0.5f * i, LookTestLandmarks.FallFoot.None, i < 3 ? layers : 2, TallSheets);
+                }
             }
-
-            // About a fifth of the width is gaps (rock showing between the strands).
-            float gapShare = strands > 1 ? 0.22f : 0f;
-            float gap = width * gapShare / Mathf.Max(1, strands - 1);
-            float x = -width * 0.5f;
-            for (int i = 0; i < strands; i++)
+            else
             {
-                float w = width * (1f - gapShare) * weights[i] / total;
-                Vector3 lip = top + side * (x + w * 0.5f) + Vector3.up * _rng.NextFloat(-0.08f, 0.04f) * Mathf.Min(height, 20f) + toEye * _rng.NextFloat(-0.6f, 0.6f);
-                LookTestLandmarks.Fall(_ctx, _rng, Seg, "Falls", lip, footY, w, _eye, 1.5f, LookTestLandmarks.FallFoot.None, layers);
-                x += w + gap;
+                int strands = Mathf.Clamp(Mathf.RoundToInt(width / 9f), 1, 6);
+                var weights = new float[strands];
+                float total = 0f;
+                for (int i = 0; i < strands; i++)
+                {
+                    weights[i] = _rng.NextFloat(0.35f, 1.6f);
+                    total += weights[i];
+                }
+
+                // About a fifth of the width is gaps (rock showing between the strands).
+                float gapShare = strands > 1 ? 0.22f : 0f;
+                float gap = width * gapShare / Mathf.Max(1, strands - 1);
+                float x = -width * 0.5f;
+                for (int i = 0; i < strands; i++)
+                {
+                    float w = width * (1f - gapShare) * weights[i] / total;
+                    Vector3 lip = top + side * (x + w * 0.5f) + Vector3.up * _rng.NextFloat(-0.08f, 0.04f) * Mathf.Min(height, 20f) + toEye * _rng.NextFloat(-0.6f, 0.6f);
+                    LookTestLandmarks.Fall(_ctx, _rng, Seg, "Falls", lip, footY, w, _eye, 1.5f, LookTestLandmarks.FallFoot.None, layers);
+                    x += w + gap;
+                }
             }
 
             Vector3 foot = new Vector3(top.x, footY, top.z) + toEye * 1.5f;
@@ -666,21 +755,40 @@ namespace JungleBooze.Editor.HeroBasin
             }
 
             LookTestMeshAccumulator mist = B.Get(Seg, "W", "Mist", _ctx.MistCard, false, LookTestBatchSet.Group.Water);
-            float plume = Mathf.Min(height * 0.85f, width * 2.2f);
-            for (int i = 0; i < 6; i++)
+            // Spray burst at the foot (Atmos Card kind 1: bright, broken; above 1 = denser).
+            int sprays = tall ? 12 : 6;
+            for (int i = 0; i < sprays; i++)
             {
-                float w = width * _rng.NextFloat(0.35f, 0.8f);
-                float l = width * _rng.NextFloat(0.5f, 1.1f);
-                mist.AppendCard(foot + toEye * _rng.NextFloat(0.1f, 0.5f) * width + side * _rng.NextFloat(-0.5f, 0.5f) * width + Vector3.up * l * 0.35f, Vector3.up, w, l, _rng.NextFloat(0f, 10f), 1f);
+                float w = width * _rng.NextFloat(0.45f, tall ? 1.3f : 0.8f);
+                float l = width * _rng.NextFloat(0.5f, tall ? 1.6f : 1.1f);
+                mist.AppendCard(foot + toEye * _rng.NextFloat(0.1f, 0.5f) * width + side * _rng.NextFloat(-0.7f, 0.7f) * width + Vector3.up * l * 0.35f, Vector3.up, w, l, _rng.NextFloat(0f, 10f), tall ? _h.FallSprayDensity : 1f);
             }
 
-            // The plume: soft billows stacked up the face of the fall, widest near the foot.
-            for (int i = 0; i < 5; i++)
+            // The plume: soft billows stacked up the face of the fall, widest near the foot, climbing about half of a
+            // tall fall's height and drifting a little toward the viewer.
+            float plume = tall ? height * 0.55f : Mathf.Min(height * 0.85f, width * 2.2f);
+            int billows = tall ? 16 : 5;
+            for (int i = 0; i < billows; i++)
             {
-                float t = i / 4f;
-                float w = width * Mathf.Lerp(1.5f, 0.8f, t);
-                mist.AppendCard(foot + toEye * width * 0.25f + side * _rng.NextFloat(-0.25f, 0.25f) * width + Vector3.up * plume * Mathf.Lerp(0.2f, 0.7f, t),
-                    Vector3.up, w, plume * Mathf.Lerp(0.6f, 0.45f, t), _rng.NextFloat(0f, 10f));
+                float t = i / (float)(billows - 1);
+                if (tall)
+                {
+                    // Chunky rolling spray (dense spray kind) climbing the lower half of the column, wider at the foot,
+                    // then soft billows (dense mist kind) spreading out over the plunge pool.
+                    float w = width * _rng.NextFloat(0.7f, 1.4f) * Mathf.Lerp(1.6f, 0.8f, t);
+                    float l = w * _rng.NextFloat(0.6f, 0.9f);
+                    bool spray = i % 2 == 0;
+                    float kind = spray ? 1f + _h.FallPlumeDensity * (1f - 0.5f * t) : -_h.FallPlumeDensity * (1f - 0.6f * t);
+                    Vector3 p = foot + toEye * width * _rng.NextFloat(0.2f, 0.7f) + side * _rng.NextFloat(-0.6f, 0.6f) * width * Mathf.Lerp(1.2f, 0.5f, t)
+                        + Vector3.up * plume * t * t;
+                    mist.AppendCard(p, Vector3.up, w, l, _rng.NextFloat(0f, 10f), kind);
+                }
+                else
+                {
+                    float w = width * Mathf.Lerp(1.5f, 0.9f, t);
+                    mist.AppendCard(foot + toEye * width * Mathf.Lerp(0.5f, 0.15f, t) + side * _rng.NextFloat(-0.3f, 0.3f) * width + Vector3.up * plume * Mathf.Lerp(0.15f, 0.8f, t),
+                        Vector3.up, w, plume * Mathf.Lerp(0.5f, 0.35f, t), _rng.NextFloat(0f, 10f));
+                }
             }
         }
 
@@ -695,8 +803,8 @@ namespace JungleBooze.Editor.HeroBasin
             // (x, base y, z, height, footprint radius, yaw)
             var spots = new[]
             {
-                new Vector4(0.2f, -3.1f, 0.4f, 3.1f), new Vector4(3.4f, -9f, 4.5f, 9f), new Vector4(-3.6f, -4f, 3.2f, 4.2f),
-                new Vector4(7.5f, -15f, 9f, 13f), new Vector4(-1.5f, -10f, 9.5f, 9.5f), new Vector4(5.2f, -2.4f, -1.2f, 2.6f),
+                new Vector4(0.2f, -3.1f, 0.4f, 3.1f), new Vector4(3.4f, -15f, 5.5f, 13f), new Vector4(-3.6f, -6f, 3.4f, 5.2f),
+                new Vector4(7.5f, -21f, 10f, 17f), new Vector4(-1.5f, -17f, 10.5f, 13.5f), new Vector4(5.2f, -2.4f, -1.2f, 2.6f),
             };
             float[] footprints = { 2.4f, 5f, 3f, 7f, 6f, 1.8f };
             List<EnvironmentKit.Piece> ledges = _ctx.Kit.Of(EnvironmentRole.Ledge);
@@ -707,13 +815,20 @@ namespace JungleBooze.Editor.HeroBasin
                 // With a Stand anchor (ledge v2) Pista's feet go exactly on it; else the configured pivot position.
                 Vector4 l = _h.LedgePiece;
                 Quaternion turn = Quaternion.Euler(0f, l.w, 0f);
-                Vector3 pivot = ledges[0].Anchors.TryGetValue("Stand", out Vector3 stand) ? _h.PistaPosition - turn * stand : new Vector3(l.x, l.y, l.z);
+                // LedgeStandOffset moves the stand point inside the piece (keyframe: Pista near its right-front corner).
+                Vector3 pivot = ledges[0].Anchors.TryGetValue("Stand", out Vector3 stand) ? _h.PistaPosition - turn * (stand + _h.LedgeStandOffset) : new Vector3(l.x, l.y, l.z);
                 _ctx.AppendPiece(ledges[0], Matrix4x4.TRS(pivot, turn, Vector3.one), stone, Seg, "L2", "Ledge", true, LookTestBatchSet.Group.Ground, LookTestBuildContext.Open);
                 first = 1;
             }
 
             for (int i = first; i < spots.Length; i++)
             {
+                if (first > 0 && i == spots.Length - 1)
+                {
+                    // With the kit ledge, the last spot (a near boulder right of the camera) only blocks the view down.
+                    break;
+                }
+
                 var foot = new Vector3(spots[i].x, spots[i].y, spots[i].z);
                 float height = spots[i].w;
                 float yaw = 37f + 71f * i;
@@ -741,7 +856,7 @@ namespace JungleBooze.Editor.HeroBasin
                 float x = left ? _rng.NextFloat(-200f, -22f) : _rng.NextFloat(40f, 200f);
                 float z = _rng.NextFloat(10f, 290f);
                 float y = Height(x, z);
-                float minDistance = x < 0f ? _h.ForestMinDistanceM * 2.2f : _h.ForestMinDistanceM;
+                float minDistance = x < 0f ? _h.ForestMinDistanceM * _h.ForestLeftDistanceScale : _h.ForestMinDistanceM;
                 if (y < _h.BasinWaterY + 1.5f || Vector3.Distance(new Vector3(x, y, z), _eye) < minDistance)
                 {
                     continue;
@@ -749,6 +864,14 @@ namespace JungleBooze.Editor.HeroBasin
 
                 float distance = Vector3.Distance(new Vector3(x, y, z), _eye);
                 float height = _rng.NextFloat(14f, 30f) * Mathf.Lerp(1f, 1.4f, distance / 300f);
+                // Keyframe: the arch's legs stand clear above the jungle at their base. In front of the arch the
+                // canopy stays low so it never covers the legs.
+                float archMid = 0.5f * (_h.ArchFootA.x + _h.ArchFootB.x);
+                float archHalf = 0.5f * Mathf.Abs(_h.ArchFootB.x - _h.ArchFootA.x);
+                if (Mathf.Abs(x - archMid) < archHalf * 1.1f && z > 40f && z < _h.ArchFootA.z + 20f)
+                {
+                    height *= _h.ForestUnderArchScale;
+                }
                 // Keep the low sun visible (keyframe: it bursts through a gap in the left foliage).
                 if (BlocksSun(new Vector3(x, y + height * 0.6f, z), height * 0.7f))
                 {
@@ -833,6 +956,18 @@ namespace JungleBooze.Editor.HeroBasin
                 if (!KitCrown(foot + Vector3.up * t.z * 0.55f, t.z * 0.75f))
                 {
                     crowns.Append(LookTestMeshFactory.Crown(_rng, t.z, Mathf.RoundToInt(15f * t.w), t.w), Matrix4x4.Translate(foot), Foliage(foot.y + t.z * 0.65f, t.z * 0.4f));
+                }
+            }
+
+            // Palm fronds hanging into the top-left corner, silhouetted against the low sun (keyframe: the sun bursts
+            // through dark fronds; keeps the bright sky from blowing out the whole corner).
+            Vector4[] palms = _h.CornerPalms;
+            if (_plants.Fronds != null && palms != null)
+            {
+                LookTestMeshAccumulator corner = B.Get(Seg, "L1", "Corner palms", _plants.Fronds, false, LookTestBatchSet.Group.Plants);
+                for (int i = 0; i < palms.Length; i++)
+                {
+                    HeroBasinPlants.PalmCrown(corner, _rng, new Vector3(palms[i].x, palms[i].y, palms[i].z), palms[i].w, HeroBasinPlants.Open);
                 }
             }
 

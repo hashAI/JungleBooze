@@ -50,6 +50,9 @@ namespace JungleBooze.App.HeroBasin
         [SerializeField] private float _fogSunPower = 6f;
         [SerializeField] private Color _mistColor = new Color(0.96f, 0.95f, 0.90f, 1f);
         [SerializeField] private float _mistOpacity = 0.24f;
+        [Tooltip("Share of the warm sun in-scatter on mist and spray cards (lower = whiter spray, keyframe falls).")]
+        [SerializeField] private float _mistSunScatter = 1f;
+        [SerializeField] private float _mistScatterNeutral = 0f;
         [SerializeField] private Color _shaftColor = new Color(1f, 0.80f, 0.50f, 1f);
         [SerializeField] private float _shaftIntensity = 0.5f;
         [Tooltip("Light shafts: (x, ground y, z, length m) of the lit end; the card runs toward the sun.")]
@@ -136,6 +139,12 @@ namespace JungleBooze.App.HeroBasin
         [SerializeField] private Vector3 _archFootA = new Vector3(-95f, -22f, 250f);
         [SerializeField] private Vector3 _archFootB = new Vector3(122f, -22f, 236f);
         [SerializeField] private float _archTopY = 128f;
+        [Tooltip("Depth (local Z) of the hero arch relative to the mean of its span and height scales (below 1 = slimmer, "
+            + "keeps a wide arch from reading as a dome).")]
+        [SerializeField] private float _archDepthScale = 1f;
+        [Tooltip("Vine curtains cleared from the arch opening: x = half width of the cleared band (fraction of the arch "
+            + "width), y = curtains reaching below this height (fraction of the arch height) inside the band are dropped.")]
+        [SerializeField] private Vector2 _archVineClearing = new Vector2(0.2f, 0.62f);
         [Tooltip("Albedo tint of the hero arch (keyframe: pale grey stone, warm in the light).")]
         [SerializeField] private Color _archTint = new Color(0.96f, 0.94f, 0.88f, 1f);
         [SerializeField] private float _archMoss = 0.55f;
@@ -144,6 +153,17 @@ namespace JungleBooze.App.HeroBasin
         [SerializeField] private Color _fallWaterColor = new Color(0.52f, 0.74f, 0.74f, 1f);
         [SerializeField] private float _fallTranslucency = 0.45f;
         [SerializeField] private float _fallEdgeBreakup = 0.65f;
+        [Tooltip("Waterfall white water: bias toward aerated white in the sheet core, and glow of the white water out of the sun.")]
+        [SerializeField] private float _fallWhiteBias = 0.3f;
+        [SerializeField] private float _fallFoamGlow = 0f;
+        [Tooltip("Waterfall clumping (0..1: broad dense and thin columns) and streak tiling (x across, y down, per m).")]
+        [SerializeField] private float _fallClumping = 0f;
+        [SerializeField] private Vector2 _fallStreakTiling = new Vector2(0.16f, 0.035f);
+        [Tooltip("Opacity gain of the tall fall's spray burst (>= 1) and mist plume (>= 0, 0 = normal mist).")]
+        [SerializeField] private float _fallSprayDensity = 1f;
+        [SerializeField] private float _fallPlumeDensity = 0f;
+        [Tooltip("Offset (m) of the tall fall from the arch's WaterfallMouth anchor (keyframe: right of the crown's centre).")]
+        [SerializeField] private Vector3 _tallFallOffset = Vector3.zero;
         [Tooltip("Leaf cards: tint and backlight translucency in the hero scene (deeper green than the look test).")]
         [SerializeField] private Color _leafTint = new Color(0.62f, 0.78f, 0.52f, 1f);
         [SerializeField] private float _leafTranslucency = 0.35f;
@@ -151,6 +171,10 @@ namespace JungleBooze.App.HeroBasin
         [SerializeField] private Color _plantTint = Color.white;
         [Tooltip("No forest tree closer to the camera than this (keeps crowns out of Pista's space), m.")]
         [SerializeField] private float _forestMinDistanceM = 32f;
+        [Tooltip("Multiplier on the minimum forest distance on the left (keyframe: the sunlit valley stays open and hazy there).")]
+        [SerializeField] private float _forestLeftDistanceScale = 2.2f;
+        [Tooltip("Height multiplier for forest trees in front of the arch (keeps its legs clear).")]
+        [SerializeField] private float _forestUnderArchScale = 1f;
         [SerializeField] private HeroFall[] _falls =
         {
             new HeroFall(new Vector3(60f, 112f, 330f), -4f, 22f, 4, false),
@@ -165,6 +189,8 @@ namespace JungleBooze.App.HeroBasin
         };
         [Tooltip("Lookout ledge under Pista: position of its pivot (ground level, centre) and yaw.")]
         [SerializeField] private Vector4 _ledgePiece = new Vector4(0.1f, -1.72f, 0.4f, 15f);
+        [Tooltip("Where Pista stands on the ledge relative to its Stand anchor (piece space, m): + x = toward its right edge.")]
+        [SerializeField] private Vector3 _ledgeStandOffset = Vector3.zero;
 
         [Header("Terrain")]
         [SerializeField] private float _basinFloorY = -18f;
@@ -174,9 +200,13 @@ namespace JungleBooze.App.HeroBasin
         [SerializeField] private Vector3 _rightHills = new Vector3(68f, 150f, 26f);
         [Tooltip("Ledge promontory under Pista: half width x, front z (drop), height.")]
         [SerializeField] private Vector3 _ledge = new Vector3(6f, 2.6f, 0f);
+        [Tooltip("Near right bank mound: (x, z, radius, top y); radius 0 = none.")]
+        [SerializeField] private Vector4 _rightBank = Vector4.zero;
         [SerializeField] private int _forestTrees = 420;
         [Tooltip("Framing trees on the left: (x, z, height m, leaf card size m). Keep their crowns off the sun.")]
         [SerializeField] private Vector4[] _heroTrees = { new Vector4(-19f, 4f, 26f, 5f), new Vector4(-30f, 24f, 30f, 9f) };
+        [Tooltip("Palm crowns hanging into the top-left corner: (x, y, z of the crown top, frond size m).")]
+        [SerializeField] private Vector4[] _cornerPalms = new Vector4[0];
 
         [Header("Backdrop layers (far to near)")]
         [SerializeField] private HeroBackdropLayer[] _backdrops =
@@ -232,6 +262,8 @@ namespace JungleBooze.App.HeroBasin
         public float FogSunPower => _fogSunPower;
         public Color MistColor => _mistColor;
         public float MistOpacity => _mistOpacity;
+        public float MistSunScatter => _mistSunScatter;
+        public float MistScatterNeutral => _mistScatterNeutral;
         public Color ShaftColor => _shaftColor;
         public float ShaftIntensity => _shaftIntensity;
         public Vector4[] Shafts => _shafts;
@@ -274,10 +306,19 @@ namespace JungleBooze.App.HeroBasin
         public Color FallWaterColor => _fallWaterColor;
         public float FallTranslucency => _fallTranslucency;
         public float FallEdgeBreakup => _fallEdgeBreakup;
+        public float FallWhiteBias => _fallWhiteBias;
+        public float FallFoamGlow => _fallFoamGlow;
+        public float FallClumping => _fallClumping;
+        public Vector2 FallStreakTiling => _fallStreakTiling;
+        public float FallSprayDensity => _fallSprayDensity;
+        public float FallPlumeDensity => _fallPlumeDensity;
+        public Vector3 TallFallOffset => _tallFallOffset;
         public Color LeafTint => _leafTint;
         public float LeafTranslucency => _leafTranslucency;
         public Color PlantTint => _plantTint;
         public float ForestMinDistanceM => _forestMinDistanceM;
+        public float ForestLeftDistanceScale => _forestLeftDistanceScale;
+        public float ForestUnderArchScale => _forestUnderArchScale;
         public Vector3 BasinWater => _basinWater;
         public Vector4[] Terraces => _terraces;
         public Vector4[] Travertines => _travertines;
@@ -290,16 +331,21 @@ namespace JungleBooze.App.HeroBasin
         public Vector3 ArchFootA => _archFootA;
         public Vector3 ArchFootB => _archFootB;
         public float ArchTopY => _archTopY;
+        public float ArchDepthScale => _archDepthScale;
+        public Vector2 ArchVineClearing => _archVineClearing;
         public HeroFall[] Falls => _falls;
         public float BasinFloorY => _basinFloorY;
         public Vector3 LeftHills => _leftHills;
         public Vector3 RightHills => _rightHills;
         public Vector3 Ledge => _ledge;
+        public Vector4 RightBank => _rightBank;
         public int ForestTrees => _forestTrees;
         public Vector4[] HeroTrees => _heroTrees;
+        public Vector4[] CornerPalms => _cornerPalms;
         public HeroBackdropLayer[] Backdrops => _backdrops;
         public Vector4[] KitPillars => _kitPillars;
         public Vector4 LedgePiece => _ledgePiece;
+        public Vector3 LedgeStandOffset => _ledgeStandOffset;
 
         /// <summary>Direction the sunlight travels (from the sun into the scene).</summary>
         public Vector3 SunLightDirection
