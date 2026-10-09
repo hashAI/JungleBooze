@@ -27,7 +27,7 @@ Keep the coordinator lean (short replies, delegate, hand off at ~40% context; th
 `design/aurelia/keyframes/F4_f_painterly_openai.jpg`); cheap tricks (painted cards/impostors/scrolling foam) for hard parts;
 **60 fps on iPhone 12 is a hard requirement**. Store name "Aurelia: Wildward". Budgets: Meshy 1,000 from 2026-10-09 (~355
 used), OpenAI images $75 (~$4 used); everything else needs the owner's OK. Git LFS free 1 GB (~0.75 used): raw art local-only.
-**Pending owner answers:** (1) audio: ElevenLabs Creator ~$22/month (recommended) vs free CC0; (2) owner's iPhone model + the
+**Pending owner answers:** (1) audio: RESOLVED, ElevenLabs with the owner's existing key/plan (audio-director launched); (2) owner's iPhone model + the
 5-minute device setup for the benchmark build (performance-engineer writes the steps).
 
 **Agents running at handoff time (if a new session starts before they report, check their outputs/files and relaunch):**
