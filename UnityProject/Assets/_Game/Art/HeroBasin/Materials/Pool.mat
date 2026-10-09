@@ -40,16 +40,16 @@ Material:
     - _NormalStrength: 0.3
     - _NormalTiling: 0.35
     - _Opacity: 0.93
-    - _ReflectionStrength: 0.3
+    - _ReflectionStrength: 0.45
     - _ShallowOpacity: 0.65
     - _Smoothness: 0.92
     - _SpecularStrength: 0.3
     m_Colors:
-    - _DeepColor: {r: 0.05, g: 0.75, b: 0.78, a: 1}
+    - _DeepColor: {r: 0.1, g: 0.56, b: 0.55, a: 1}
     - _FlowA: {r: 0.03, g: 0.06, b: 0, a: 0}
     - _FlowB: {r: -0.04, g: 0.03, b: 0, a: 0}
     - _FoamColor: {r: 0.92, g: 0.95, b: 0.93, a: 1}
     - _ReflectionTint: {r: 0.78, g: 0.93, b: 0.96, a: 1}
-    - _ShallowColor: {r: 0.4, g: 1.2, b: 1.1, a: 1}
+    - _ShallowColor: {r: 0.5, g: 0.95, b: 0.85, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

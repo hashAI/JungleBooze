@@ -30,10 +30,10 @@ Material:
     m_Ints: []
     m_Floats:
     - _EdgeFade: 0.08
-    - _Exposure: 1.25
+    - _Exposure: 1.1
     - _FogAmount: 0
     m_Colors:
-    - _SunGlow: {r: 6, g: 300, b: 1, a: 8}
+    - _SunGlow: {r: 5, g: 300, b: 0.6, a: 12}
     - _SunGlowColor: {r: 1, g: 0.86, b: 0.62, a: 1}
     - _Tint: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []

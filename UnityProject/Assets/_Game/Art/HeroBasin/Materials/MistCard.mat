@@ -33,7 +33,9 @@ Material:
     - _DstBlend: 10
     - _Intensity: 1
     - _Mist: 1
+    - _ScatterNeutral: 0.75
     - _SrcBlend: 5
+    - _SunScatter: 1
     m_Colors:
     - _FarFade: {r: 2500, g: 3000, b: 0, a: 0}
     - _NearFade: {r: 3, g: 12, b: 0, a: 0}

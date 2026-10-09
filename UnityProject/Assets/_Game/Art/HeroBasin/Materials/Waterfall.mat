@@ -30,13 +30,16 @@ Material:
     m_Ints: []
     m_Floats:
     - _AmbientBoost: 1
-    - _EdgeBreakup: 0.65
+    - _Clumping: 0.8
+    - _EdgeBreakup: 0.9
     - _FlowSpeed: 9
+    - _FoamGlow: 0.35
     - _Opacity: 0.92
-    - _Translucency: 0.6
+    - _Translucency: 0.35
+    - _WhiteBias: 0.3
     m_Colors:
     - _FoamColor: {r: 0.96, g: 0.96999997, b: 0.96, a: 1}
-    - _StreakTiling: {r: 0.16, g: 0.035, b: 0, a: 0}
-    - _WaterColor: {r: 0.42, g: 0.6, b: 0.62, a: 1}
+    - _StreakTiling: {r: 0.11, g: 0.025, b: 0, a: 0}
+    - _WaterColor: {r: 0.46, g: 0.6, b: 0.66, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

@@ -92,7 +92,7 @@ Material:
     - _VertexAO: 1
     - _WetDarken: 0.45
     - _WetFromVertexG: 1
-    - _WetSmoothness: 0.78
+    - _WetSmoothness: 0.3
     - _Wind: 0
     - _WindHeightScale: 0.15
     - _WindSpeed: 1
