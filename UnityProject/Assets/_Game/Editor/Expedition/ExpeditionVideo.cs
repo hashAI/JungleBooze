@@ -5,7 +5,9 @@ using System.IO;
 using JungleBooze.App.Expedition;
 using JungleBooze.Core.Save;
 using JungleBooze.Gameplay.Movement;
+using JungleBooze.Gameplay.Run;
 using JungleBooze.Gameplay.World;
+using JungleBooze.UI.Expedition;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -30,6 +32,19 @@ namespace JungleBooze.Editor.Expedition
         private const string LogPrefix = "[JungleBooze] ";
         private const int TicksPerFrame = 2;
         private const int MaxTicks = 60 * 60 * 6;
+
+        /// <summary>Ending: max ticks without input before giving up on the results screen.</summary>
+        private const int EndingMaxTicks = 60 * 60;
+
+        /// <summary>Seconds of results screen recorded.</summary>
+        private const int ResultsSeconds = 5;
+
+        /// <summary>Results count-up in the video, s.</summary>
+        private const float ResultsCountUp = 1.5f;
+
+        private static void Noop()
+        {
+        }
 
         public static void Capture()
         {
@@ -134,6 +149,9 @@ namespace JungleBooze.Editor.Expedition
             var log = new System.Text.StringBuilder(1 << 20);
             int frames = 0;
             int ticks = 0;
+            int endTick = -1;
+            ExpeditionHud hud = null;
+            GameObject hudObject = null;
             camera.targetTexture = target;
             camera.Render();
             camera.Render();
@@ -141,11 +159,54 @@ namespace JungleBooze.Editor.Expedition
             using (Process process = Process.Start(info))
             {
                 Stream stdin = process.StandardInput.BaseStream;
-                while (ticks < MaxTicks && root.Simulation.State.Distance < until && !root.Simulation.State.Dead)
+                // Ending: past `until` the bot lets go, Pista runs into the next obstacles, and the results screen
+                // (HUD canvas rendered by the capture camera) is recorded through its count-up.
+                int resultsFrames = -1;
+                while (ticks < MaxTicks && resultsFrames < ResultsSeconds * 30)
                 {
+                    if (root.Simulation.State.Distance >= until && !root.Simulation.State.Dead && endTick < 0)
+                    {
+                        endTick = ticks;
+                        root.SetBotDriving(false);
+                    }
+
+                    if (endTick >= 0 && ticks - endTick > EndingMaxTicks && root.Session.Phase != RunPhase.Results && !root.Simulation.State.Dead)
+                    {
+                        Debug.LogWarning(LogPrefix + "ending: Pista survived " + (EndingMaxTicks / 60) + " s without input; no results screen recorded.");
+                        break;
+                    }
+
+                    if (root.Session.Phase == RunPhase.Results && root.LastResults != null)
+                    {
+                        if (resultsFrames < 0)
+                        {
+                            // The scene builds its HUD only in Play mode: the tool builds one for the ending and
+                            // shows the run's real results through it.
+                            hudObject = new GameObject("VideoResultsHud");
+                            hud = hudObject.AddComponent<ExpeditionHud>();
+                            hud.Build(Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"), 3, Noop, Noop, Noop, Noop, Noop, Noop, Noop);
+                            hud.Canvas.renderMode = RenderMode.ScreenSpaceCamera;
+                            hud.Canvas.worldCamera = camera;
+                            hud.Canvas.planeDistance = camera.nearClipPlane + 0.5f;
+                            hud.ShowResults(root.LastResults, ResultsCountUp);
+                            hud.SetWallet(root.LastResults.WalletCoins, root.LastResults.WalletCrystals);
+                            hud.SetDistance(root.LastResults.Distance);
+                            Debug.Log(LogPrefix + "ending: results screen from frame " + frames);
+                        }
+
+                        hud.Tick(TicksPerFrame / 60f);
+                        resultsFrames++;
+                    }
+
                     root.StepTicks(TicksPerFrame);
                     ticks += TicksPerFrame;
                     camera.targetTexture = target;
+                    if (resultsFrames >= 0)
+                    {
+                        // No player loop in batch mode: rebuild the HUD canvas against the bound target size.
+                        Canvas.ForceUpdateCanvases();
+                    }
+
                     camera.Render();
                     camera.targetTexture = null;
                     Graphics.Blit(target, resolved);
@@ -179,6 +240,10 @@ namespace JungleBooze.Editor.Expedition
             Object.DestroyImmediate(resolved);
             Object.DestroyImmediate(image);
             camera.ResetAspect();
+            if (hudObject != null)
+            {
+                Object.DestroyImmediate(hudObject);
+            }
 
             RunnerState state = root.Simulation.State;
             var stats = root.Session.Stats;

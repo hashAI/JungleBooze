@@ -178,6 +178,102 @@ namespace JungleBooze.Tests.PlayMode
             yield return null;
         }
 
+        /// <summary>
+        /// Vine framing follow-up (2026-10-09): after a release the rope swings back toward the camera, which follows on
+        /// the same line; no rope Pista isn't holding may cross the camera → Pista sight line through the air arc and
+        /// the landing (both orientations).
+        /// </summary>
+        [UnityTest]
+        public IEnumerator VineRelease_NoRopeBlocksTheCameraToPistaSightLine([Values(true, false)] bool landscape)
+        {
+            yield return Load(SaveData.CreateDefault(13L, -0.3f));
+            ExpeditionRoot root = Root();
+            root.SkipEstablishingShot();
+            root.SetCameraProfile(landscape, true);
+            root.SetBotDriving(true);
+            var ropes = new System.Collections.Generic.List<Transform>();
+            foreach (Transform t in Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                if (t.name.StartsWith("Vine") && t.name.Length <= 5)
+                {
+                    ropes.Add(t);
+                }
+            }
+
+            Assert.AreEqual(8, ropes.Count, "vine rope pool");
+            Animator pista = root.GetComponentInChildren<Animator>(true);
+            Assert.IsNotNull(pista);
+            int checkedFrames = 0;
+            int releases = 0;
+            int settle = 0;
+            bool wasAir = false;
+            float closest = float.MaxValue;
+            for (int i = 0; i < 60 * 240 && root.Simulation.State.Distance < 1700f && !root.Simulation.State.Dead; i++)
+            {
+                root.Tick(1f / 60f, Time.realtimeSinceStartupAsDouble);
+                RunnerState s = root.Simulation.State;
+                if (s.VineAir && !wasAir)
+                {
+                    releases++;
+                    settle = 30;
+                }
+
+                wasAir = s.VineAir;
+                if (!s.VineAir && settle-- <= 0)
+                {
+                    continue;
+                }
+
+                Vector3 eye = root.Camera.transform.position;
+                Vector3 body = pista.transform.position + (Vector3.up * 1.0f);
+                foreach (Transform rope in ropes)
+                {
+                    if (!rope.gameObject.activeInHierarchy)
+                    {
+                        continue;
+                    }
+
+                    Vector3 half = rope.up * rope.localScale.y;
+                    float d = SegmentDistance(eye, body, rope.position - half, rope.position + half);
+                    closest = Mathf.Min(closest, d);
+                }
+
+                checkedFrames++;
+            }
+
+            Debug.Log("[JungleBooze] vine occlusion " + (landscape ? "landscape" : "portrait") + ": " + releases + " releases, " + checkedFrames + " frames, closest rope to sight line " + closest.ToString("0.00") + " m");
+            Assert.AreEqual(2, releases, "V1 and V2");
+            Assert.Greater(checkedFrames, 100);
+            Assert.Greater(closest, 0.3f, "a rope crossed the camera → Pista sight line");
+        }
+
+        private static float SegmentDistance(Vector3 p1, Vector3 q1, Vector3 p2, Vector3 q2)
+        {
+            Vector3 d1 = q1 - p1;
+            Vector3 d2 = q2 - p2;
+            Vector3 r = p1 - p2;
+            float a = Vector3.Dot(d1, d1);
+            float e = Vector3.Dot(d2, d2);
+            float f = Vector3.Dot(d2, r);
+            float c = Vector3.Dot(d1, r);
+            float b = Vector3.Dot(d1, d2);
+            float denom = (a * e) - (b * b);
+            float s = denom > 1e-6f ? Mathf.Clamp01(((b * f) - (c * e)) / denom) : 0f;
+            float t = (b * s + f) / e;
+            if (t < 0f)
+            {
+                t = 0f;
+                s = Mathf.Clamp01(-c / a);
+            }
+            else if (t > 1f)
+            {
+                t = 1f;
+                s = Mathf.Clamp01((b - c) / a);
+            }
+
+            return ((p1 + (d1 * s)) - (p2 + (d2 * t))).magnitude;
+        }
+
         [UnityTest]
         public IEnumerator Revive_OfferedFromRun2_PaysACrystal_AndContinues()
         {

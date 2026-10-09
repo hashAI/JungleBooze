@@ -59,6 +59,12 @@ namespace JungleBooze.Gameplay.Views.World
 
         public int ActiveCoinViews => _activeCoins;
 
+        /// <summary>The camera's path s (last frame), for hiding released vine ropes that come near it.</summary>
+        public float CameraS { get; set; } = float.MinValue;
+
+        /// <summary>A vine not being swung is hidden while its rope is closer than this ahead of the camera, m.</summary>
+        public float VineNearHide { get; set; }
+
         public int BoundChunks
         {
             get
@@ -228,6 +234,14 @@ namespace JungleBooze.Gameplay.Views.World
                 Vector3 hand = WorldPoint(v.AnchorS + (v.Length * Mathf.Sin(rad)), v.X, v.AnchorY - (v.Length * Mathf.Cos(rad)));
                 Vector3 axis = hand - anchor;
                 Transform t = _vines[i];
+                bool held = isSwinging && swinging.Id == v.Id;
+                float ropeS = Mathf.Min(v.AnchorS, v.AnchorS + (v.Length * Mathf.Sin(rad)));
+                bool show = held || VineNearHide <= 0f || ropeS - CameraS >= VineNearHide;
+                if (t.gameObject.activeSelf != show)
+                {
+                    t.gameObject.SetActive(show);
+                }
+
                 t.position = (anchor + hand) * 0.5f;
                 t.rotation = Quaternion.FromToRotation(Vector3.up, axis);
                 t.localScale = new Vector3(0.07f, axis.magnitude * 0.5f, 0.07f);

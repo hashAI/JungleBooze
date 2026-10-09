@@ -708,6 +708,8 @@ namespace JungleBooze.App.Expedition
             _runnerView.Sync(alpha, frameSeconds);
             RunnerState shown = _runnerView.Interpolated;
             _worldView.Sync(_session.Simulation, _session.Tracker, shown.S, _paused ? 0f : frameSeconds);
+            _worldView.CameraS = _rig.Pose.S;
+            _worldView.VineNearHide = _rig.Modifiers != null ? _rig.Modifiers.VineNearHide : 0f;
             _worldView.SyncTraversal(_session.Simulation, _session.Creatures, _session.Simulation.Options.DeepBreath, _paused ? 0f : frameSeconds);
             if (!Application.isPlaying)
             {
@@ -922,46 +924,7 @@ namespace JungleBooze.App.Expedition
 
         private CameraTargetInput CameraTarget(in RunnerState s)
         {
-            CameraMode mode = CameraMode.Run;
-            switch (s.Mode)
-            {
-                case MoveMode.Swim:
-                    mode = CameraMode.Swim;
-                    break;
-                case MoveMode.DeepDive:
-                    mode = CameraMode.DeepDive;
-                    break;
-                case MoveMode.Swing:
-                    mode = CameraMode.Swing;
-                    break;
-                default:
-                    if (s.VineAir)
-                    {
-                        mode = CameraMode.Swing;
-                    }
-                    else if (_session != null && _session.Path.IsCanopy(s.S))
-                    {
-                        mode = CameraMode.Canopy;
-                    }
-
-                    break;
-            }
-
-            bool canopyFall = s.Dead && s.Cause == DeathCause.Fall && _session != null && _session.Path.IsCanopy(s.S);
-            return new CameraTargetInput
-            {
-                S = s.S,
-                X = s.X,
-                Y = s.Y,
-                GroundY = s.Mode == MoveMode.Swing ? s.LastGroundY : s.GroundY,
-                VLat = s.VLat,
-                Speed = s.Speed,
-                Sliding = s.Sliding,
-                PathYawDeg = _session != null ? _session.Path.GetFrame(s.S).HeadingDeg : 0f,
-                Mode = mode,
-                VineAir = s.VineAir,
-                FallHold = canopyFall,
-            };
+            return ExpeditionCameraTarget.From(s, _session != null ? _session.Path : null);
         }
 
         private void HandleKeys()

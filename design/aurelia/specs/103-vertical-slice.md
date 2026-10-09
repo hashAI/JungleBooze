@@ -180,7 +180,7 @@ Closed canopy section. Mechanics in §5 (vine) and §6 (canopy). Heights are rel
 | 172–181 | **Sailback perch** (§7): 3 sailbacks on a side branch at `x` +2.8, `y` +1.5, at 172 / 176 / 181. **D-02 Sailback** |
 | 175–178.5 | **Gap 3.5 m** to **Beam B** (2.0 m wide, centred `x` +0.8) |
 | 192 | **Low 0.5 full, Walk** (branch knot) |
-| 205–208 | **Gap 3.0 m** to **Beam C** (2.4 m wide, centred `x` −0.6) |
+| 205–208 | **Gap 3.0 m** to **Beam C** (2.4 m wide, centred `x` −0.2 `[ASSUMED 2026-10-09]`: −0.6 put B (+0.8) → C beyond `maxBeamOffset` 1.0, failing V14) |
 | 222 | **High 1.0 full** |
 | 175–235 | Coins: Line along each beam centre, Arc over each gap ≈ 30 |
 | 140–235 | **Locked upper vine line** (teaser for Vine Grip, Phase 3): vines hanging 3 m above reach on the left, gold-lit |
@@ -305,7 +305,7 @@ depth 0.40 (tuck), height 0.70. Splash-down = landing tick in water.
 | Diving (Down/Under) | Cancel: rise at 2× and leap on surfacing; if a surface obstacle is overhead, held (spec 101 ceiling-hold, 0.35 s) | Restart Under timer | Swim dodge |
 | Diving (Up phase) | Leap on surfacing | Dive again on surfacing | Swim dodge |
 | Leaping (air) | Buffered 150 ms (executes on splash-down) | Dive-in: `vy = −14 m/s`; on splash-down a full dive starts | Swim dodge |
-| Entry tick (from land/air) | A buffered jump becomes a leap | A buffered slide becomes a dive; a fast-fall becomes a dive | — |
+| Entry tick (from land/air) | A buffered jump becomes a leap | A fast-fall becomes a dive (Slide in the air *is* the fast-fall dive, so there is no separate buffered slide in the air) `[ASSUMED 2026-10-09]` | — |
 A slide in progress when the water gets deep ends on the entry tick.
 
 ### 4.5 Deep Breath (first ability; §9.4)
@@ -580,7 +580,7 @@ unless stated and respect Reduced Motion (spec 101 §5).
 | 6 Swim | `sfx.water.enter`, `sfx.swim.stroke`, `sfx.dive`, `sfx.surface`, `sfx.leap`, `sfx.bump.water`, `amb.rapids` | L enter, L leap splash-down, M bump | **Swim profile:** height −0.6 m, pitch −3°, back −0.5 m; lateral follow 0.75; slight bob ±0.05 m at 0.8 Hz (off with Reduced Motion). Dive: camera stays above water, surface ripple overlay |
 | 6b Deep Breath | `sfx.deepDive`, `amb.underwater`, `mus.sting.discovery` | S on D-04 | Camera follows under water along the spline, FOV −4°, blue grade |
 | 7 Vista | `amb.falls.roar` (swells), `mus.reveal.vista` | L on D-01 | **Vista beat:** FOV +4°, pitch up 3° for 2.0 s, then back. No slow-motion |
-| 8 Vine | `sfx.vine.grab`, `sfx.vine.creak` (pitch follows θ), `sfx.vine.window` (soft tick at `perfectStart`), `sfx.release`, `sfx.perfect` | L grab, S Perfect | **Swing:** back +1.0 m, up +0.8 m, FOV +4°, vertical follow 40% of the arc; look-ahead +4 m on release |
+| 8 Vine | `sfx.vine.grab`, `sfx.vine.creak` (pitch follows θ), `sfx.vine.window` (soft tick at `perfectStart`), `sfx.release`, `sfx.perfect` | L grab, S Perfect | **Swing:** back +1.0 m, up +0.8 m, FOV +4°, vertical follow 40% of the arc; look-ahead on release = aim 4 m further ahead (pitch up, capped at 3°; the camera keeps its follow distance), vertical follow leads by `vy` × 0.22 s in the vine air, and a framing guard keeps Pista (feet to raised hands) ≥ 8% of the screen height inside the top and bottom edges during swing and vine air `[ASSUMED 2026-10-09]`. Modifier blends ease in and out (smoothstep) |
 | 8 Canopy | `amb.canopy.wind`, `sfx.branch.creak` | L landing on a beam | **Canopy:** height +0.4 m, lateral follow 0.85; fall: hold 0.8 s |
 | 8 Creature | `sfx.sailback.chirp`, `sfx.sailback.sailFlare`, `mus.sting.discovery` | L on D-02 | No forced framing (discovery while running, Part XIII) |
 | 9 Secret | `amb.secret.dripEcho` (panned), `sfx.curtain.pass`, `amb.grotto`, `sfx.crystal`, `mus.sting.secret` | L curtain, S on D-03, L per crystal | Droplet overlay 0.25 s at screen edges; slight FOV −3° inside |
@@ -665,7 +665,7 @@ Swimming
 - **AC-103-08** Leap apex 1.20 ±0.03 m, airtime 0.55 ±0.03 s, identical at every swim speed.
 - **AC-103-09** Swipe up during Under rises at 2× and leaps on surfacing; under a FloatingLog it is held ≤ 21 ticks, then dropped with `InputDropped(Ceiling)`.
 - **AC-103-10** Swipe down while leaping → `vy ≤ −14 m/s`, a full dive starts on splash-down.
-- **AC-103-11** A buffered jump at water entry becomes a leap on the entry tick; a buffered slide or a fast-fall becomes a dive.
+- **AC-103-11** A buffered jump at water entry becomes a leap on the entry tick; a fast-fall (Slide in the air) becomes a dive. `[ASSUMED 2026-10-09]` (was "a buffered slide or a fast-fall": a slide in the air is the fast-fall).
 - **AC-103-12** No water contact ever produces `Crash` or `Fall`; Rock contact always produces Bump + push to the free side.
 - **AC-103-13** Without Deep Breath, a dive inside a DeepDiveZone is a normal dive; with it, the dive follows the spline for 144 ticks, ignores lateral input and all obstacles, and surfaces at the exit point.
 - **AC-103-14** Underwater coins are collected only while `Submerged`.

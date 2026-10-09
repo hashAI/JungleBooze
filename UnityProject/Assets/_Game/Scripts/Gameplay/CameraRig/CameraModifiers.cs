@@ -32,10 +32,38 @@ namespace JungleBooze.Gameplay.CameraRig
         /// <summary>How much of the body's depth below the surface the deep-dive camera follows (1 = all).</summary>
         public float DeepDiveFollow = 1f;
 
-        /// <summary>Look-ahead after a vine release, m, and its smoothing.</summary>
+        /// <summary>
+        /// Look-ahead after a vine release, m: the camera aims this much further ahead (pitch up), it does not move
+        /// forward (moving it shortened the follow distance and dropped Pista out of the bottom of the frame).
+        /// </summary>
         public float ReleaseLookAhead = 4f;
 
+        /// <summary>Cap on the look-ahead pitch-up, degrees.</summary>
+        public float ReleaseLookAheadMaxPitchDeg = 3f;
+
         public float LookAheadHalfLife = 0.25f;
+
+        /// <summary>
+        /// Vertical follow lead in the vine air, s: the air target leads by vy × this, cancelling the air spring's
+        /// lag so the camera turns down with Pista instead of still rising while she falls.
+        /// </summary>
+        public float VineAirLead = 0.22f;
+
+        /// <summary>
+        /// Swing and vine air framing guard: Pista (feet to <see cref="FrameGuardBodyTop"/>) stays at least this
+        /// fraction of the screen height inside the top and bottom edges. A limit, rarely reached with the lead.
+        /// </summary>
+        public float FrameGuardMargin = 0.08f;
+
+        /// <summary>Raised hands above the feet while hanging, m.</summary>
+        public float FrameGuardBodyTop = 1.95f;
+
+        /// <summary>
+        /// Occlusion: a vine Pista is not holding is hidden once its rope is less than this far ahead of the camera
+        /// (m along the path). After a release the rope swings back toward the camera, which follows on the same
+        /// line, and covered Pista at the top of her arc.
+        /// </summary>
+        public float VineNearHide = 3.5f;
 
         public CameraModifiers Clone()
         {

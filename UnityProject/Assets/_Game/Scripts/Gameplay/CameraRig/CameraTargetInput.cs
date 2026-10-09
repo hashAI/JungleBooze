@@ -10,6 +10,9 @@ namespace JungleBooze.Gameplay.CameraRig
         /// <summary>Floor under her, or the last ground while airborne.</summary>
         public float GroundY;
 
+        /// <summary>Vertical velocity, m/s (vine air follow lead).</summary>
+        public float Vy;
+
         public float VLat;
         public float Speed;
         public bool Sliding;

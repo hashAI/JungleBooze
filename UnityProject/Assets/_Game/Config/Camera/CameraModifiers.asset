@@ -62,4 +62,9 @@ MonoBehaviour:
     VistaDuration: 2
     DeepDiveFollow: 1
     ReleaseLookAhead: 4
+    ReleaseLookAheadMaxPitchDeg: 3
     LookAheadHalfLife: 0.25
+    VineAirLead: 0.22
+    FrameGuardMargin: 0.08
+    FrameGuardBodyTop: 1.95
+    VineNearHide: 3.5

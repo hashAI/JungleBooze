@@ -175,7 +175,8 @@ namespace JungleBooze.Gameplay.CameraRig
                 _vistaWeight = MoveTowards(_vistaWeight, _vistaLeft > 0f ? 1f : 0f, rate);
                 for (int m = 1; m < _weights.Length; m++)
                 {
-                    float mw = _weights[m];
+                    // Smoothstep over the linear blend: no velocity step (camera pop) at the blend's start and end.
+                    float mw = Smooth(_weights[m]);
                     if (mw <= 0f)
                     {
                         continue;
@@ -204,12 +205,13 @@ namespace JungleBooze.Gameplay.CameraRig
 
                 if (_vistaWeight > 0f)
                 {
-                    pitch += _vistaWeight * mods.Vista.PitchDeg;
-                    fovBase += _vistaWeight * mods.Vista.FovDeg * (ReducedMotion ? 0.5f : 1f);
+                    float vw = Smooth(_vistaWeight);
+                    pitch += vw * mods.Vista.PitchDeg;
+                    fovBase += vw * mods.Vista.FovDeg * (ReducedMotion ? 0.5f : 1f);
                 }
 
-                under = _weights[(int)CameraMode.DeepDive] * mods.DeepDiveFollow * Math.Min(0f, target.Y - target.GroundY);
-                lookAheadTarget = target.VineAir ? mods.ReleaseLookAhead : 0f;
+                under = Smooth(_weights[(int)CameraMode.DeepDive]) * mods.DeepDiveFollow * Math.Min(0f, target.Y - target.GroundY);
+                lookAheadTarget = target.VineAir ? 1f : 0f;
             }
 
             float speedT = VMax > V0 ? Clamp01((target.Speed - V0) / (VMax - V0)) : 0f;
@@ -238,24 +240,47 @@ namespace JungleBooze.Gameplay.CameraRig
             }
             else
             {
+                // Vine air: lead the air target by vy × lead so the spring's lag doesn't keep the camera rising
+                // while Pista is already falling toward the landing.
+                float airTarget = airHeight;
+                if (target.VineAir && mods != null)
+                {
+                    airTarget = Math.Max(0f, airHeight + (target.Vy * mods.VineAirLead));
+                }
+
                 ground = _ground.Update(target.GroundY, b.GroundHalfLife, dt);
-                air = _air.Update(airHeight * airFollow, b.AirHalfLife, dt);
+                air = _air.Update(airTarget * airFollow, b.AirHalfLife, dt);
             }
 
+            // Release look-ahead: aim further ahead (pitch up), keeping the follow distance (spec 103 §11).
             float lookAhead = _lookAhead.Update(lookAheadTarget, mods != null ? mods.LookAheadHalfLife : 0.25f, dt);
+            if (mods != null && lookAhead > 0f && offsetBack > 0f)
+            {
+                double aim = Math.Atan2(height, offsetBack) - Math.Atan2(height, offsetBack + mods.ReleaseLookAhead);
+                pitch -= lookAhead * Math.Min(mods.ReleaseLookAheadMaxPitchDeg, (float)(aim * (180.0 / Math.PI)));
+            }
+
             float dip = _dip.Update(target.Sliding ? -slideDip : 0f, b.SlideDipHalfLife, dt);
             float lateral = _lateral.Update(target.X * lateralFollow, b.LateralHalfLife, dt);
             float fov = _fov.Update(fovBase + (fovGain * speedT), b.FovHalfLife, dt);
             float bank = _bank.Update(-bankMax * vLat, b.BankHalfLife, dt);
             float yaw = _yaw.Update(target.PathYawDeg, b.YawHalfLife, dt);
 
-            _pose.S = target.S - offsetBack + lookAhead;
+            _pose.S = target.S - offsetBack;
             _pose.X = lateral;
             _pose.Y = ground + height + air + dip + bob + under;
             _pose.PitchDeg = pitch;
             _pose.YawDeg = yaw;
             _pose.RollDeg = ReducedMotion ? 0f : bank;
             _pose.FovDeg = fov;
+            if (mods != null)
+            {
+                float guard = Smooth(_weights[(int)CameraMode.Swing]);
+                if (guard > 0f)
+                {
+                    _pose.Y += guard * (FrameGuardY(target, _pose, mods) - _pose.Y);
+                }
+            }
 
             float strength = _shake.Update(dt, b.ShakeFrequency, out float nx, out float ny, out float nr);
             if (ReducedMotion || strength <= 0f)
@@ -300,6 +325,41 @@ namespace JungleBooze.Gameplay.CameraRig
             p.SlideDip = Lerp(_from.SlideDip, _to.SlideDip, w);
             p.BankMaxDeg = Lerp(_from.BankMaxDeg, _to.BankMaxDeg, w);
             return p;
+        }
+
+        /// <summary>
+        /// Camera height that keeps Pista's feet and raised hands inside the safe band (path space, straight-path
+        /// approximation over the follow distance): unchanged if already inside; if both edges bind, centred.
+        /// </summary>
+        private static float FrameGuardY(in CameraTargetInput target, in CameraPose pose, CameraModifiers mods)
+        {
+            float dz = target.S - pose.S;
+            if (dz <= 0.1f)
+            {
+                return pose.Y;
+            }
+
+            double rad = Math.PI / 180.0;
+            double tanHalf = Math.Tan(pose.FovDeg * 0.5 * rad);
+            double inner = (1.0 - (2.0 * Clamp01(mods.FrameGuardMargin))) * tanHalf;
+            double pitch = pose.PitchDeg * rad;
+
+            // Screen NDC y of a point = tan(atan2(dy, dz) + pitch) / tanHalf, dy = point − camera.
+            double lowest = Math.Atan(-inner) - pitch;
+            double highest = Math.Atan(inner) - pitch;
+            float maxY = target.Y - (float)(dz * Math.Tan(lowest));
+            float minY = target.Y + mods.FrameGuardBodyTop - (float)(dz * Math.Tan(highest));
+            if (minY > maxY)
+            {
+                return (minY + maxY) * 0.5f;
+            }
+
+            return pose.Y > maxY ? maxY : pose.Y < minY ? minY : pose.Y;
+        }
+
+        private static float Smooth(float t)
+        {
+            return t * t * (3f - (2f * t));
         }
 
         private static float Lerp(float a, float b, float t)
