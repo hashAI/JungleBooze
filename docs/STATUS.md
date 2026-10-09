@@ -64,7 +64,7 @@ Duko/continue, audio files) compiled clean on the Mac.
 | producer | not used yet | (the coordinating session does this role for now) | this file | — |
 | game-designer | done (2026-10-09) | Spec 103 vertical slice: scripted "Expedition 1", 13 chunks ~4:05, swim/vine/canopy/sailback/Veil Grotto secret/Shield/Deep Breath upgrade, AC-103-01–50 | `design/aurelia/GDD.md`, `design/aurelia/specs/` | Phase 2 chunk catalog detail; FTUE script |
 | balance-simulator | done (A3) | Python reference model, golden traces, S1–S9 report (`archive/pre-aurelia/docs/sim-reports/2026-10-07-spec001.md`) | `tools/sim/`, `docs/sim-reports/` | Phase 1: new movement/chunk model from the AURELIA spec (old model kept as reference) |
-| tech-architect | working (2026-10-09) | Painterly hero basin dense set-dressing pass per HERO_BASIN_DRESSING.md → F4_compare_painterly_v2.jpg | `Assets/_Game/Editor/Setup/`, `docs/adr/0003-first-playable-bootstrap.md`, `docs/PLAY_FIRST_BUILD.md` | Add EditMode tests for `ProjectSetupRules`; Roslyn analyzers |
+| tech-architect | working (2026-10-09) | Painterly v2 dressing done (~65%, sent). Now v3: tall arch with sky window, reveal pools/drops, hero framing plants, warm Pista, portrait foliage | `Assets/_Game/Editor/Setup/`, `docs/adr/0003-first-playable-bootstrap.md`, `docs/PLAY_FIRST_BUILD.md` | Add EditMode tests for `ProjectSetupRules`; Roslyn analyzers |
 | gameplay-engineer | working (2026-10-09) | Slice review fixes + clip wiring done (d1f343b, EditMode 495/495, PlayMode 18/18). Now vine camera framing fix + new expedition videos | `Scripts/Gameplay/PowerUps`, `Hazards`, `Companion`, `Views`, `App/RunSceneBootstrap.cs` | Wire audio events; then Batch 3 |
 | ui-engineer | done (C2) | Track wired into the Run scene with gray-box views and HUD | `Scripts/Gameplay/Views`, `Scripts/App`, `Scripts/UI/Hud` | Fix errors the owner sends from Unity |
 | art-director | done (2026-10-09) | HERO_BASIN_DRESSING.md: 6×4 grid map of F4_f, frame budgets (water ≤10%, sky 10–16%, lawn 0%, foliage 40–50%), dressing counts | `design/aurelia/ENVIRONMENT_STRATEGY.md` | Store art later |
@@ -135,6 +135,7 @@ Meshy: 3 (image edit test) + 30 (Pista 3D v1) = **33 credits used**; balance 2,4
 
 ## Log
 Newest first. One line per event.
+- 2026-10-09: Painterly v2 (dense dressing) ~65% sent to owner. Launched v3.
 - 2026-10-09: LFS at ~750 MB of 1 GB. Owner: stay free; raw art binaries in art_source/ untracked (148 files, kept on disk) and git-ignored. Painterly kit committed; launched stacked-slab rock generator.
 - 2026-10-09: Slice review fixes committed (d1f343b). Push hang fixed (git config lfs.ssh.automultiplex false). Dressing map done; launched set-dressing pass.
 - 2026-10-09: Painterly switch committed (~55% of F4_f). Diagnosis: both styles stall on content density/set dressing, not style. Next: dressing map (art-director) → dense set-dressing pass (tech-architect) with asset-pipeline's painted kit.
