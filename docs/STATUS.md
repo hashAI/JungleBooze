@@ -19,6 +19,8 @@ animations (approved cap 150 credits). Then import rigged Pista into the LookTes
 `design/aurelia/LOOK_TEST_BRIEF.md`, screenshots to the owner, owner opens it on Mac + iPhone (P0-E).
 
 ## Current milestone
+**LOOK GATE (owner, 2026-10-09):** no further scenes/environment content until the owner approves the final render of the waterfall-basin hero scene. Gameplay systems continue in gray-box.
+
 **AURELIA, Phase 0: look test** (owner go, 2026-10-08). Source of truth for the direction: `design/aurelia/BLUEPRINT.md` and
 `design/aurelia/vision_board.png`. Pista stays (Duko dropped 2026-10-08); store name "Aurelia: Wildward". Look: **realistic**, AI-made art plus free CC0 assets,
 no paid packs. Quality bar: professional, polished in a small scope (owner wants "the greatest product").

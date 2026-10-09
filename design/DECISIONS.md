@@ -5,6 +5,7 @@ Newest first.
 
 | Date | Gate | Decision | Options considered | Decided by |
 |---|---|---|---|---|
+| 2026-10-09 | G2 | **Look gate:** the owner must see and approve the final rendered image of ONE scene (waterfall basin hero scene vs the OpenAI F4 keyframe) before any other scenes/biomes/environment content are built. Gray-box gameplay systems continue meanwhile [ASSUMED] (owner: gameplay is the coordinator's call) | — | Owner |
 | 2026-10-09 | — | **Deep Breath is ability #1** (150 coins / 0 crystals): the first upgrade opens the Sunken Arch the player already saw in the first run (spec 103 §9.4). Ability order becomes Deep Breath → Vine Grip → Trail Sense → Root Vault → Creature Tracking → Shoulder Charge → Double Jump (GDD §13) [ASSUMED] | A: Deep Breath first / B: Trail Sense first (old GDD) / C: Vine Grip first | Coordinator (delegated) |
 | 2026-10-09 | — | **Don't ask the owner; use your own recommendations** for all decisions (including taste/identity), logged as [ASSUMED] for later review. Money still needs approval | — | Owner |
 | 2026-10-09 | — | All 2D images come from OpenAI only (Meshy for 3D meshes only). Agents choose sizes wisely per use | — | Owner |
