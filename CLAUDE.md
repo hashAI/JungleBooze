@@ -36,7 +36,8 @@ defined in `.claude/agents/`. Read `docs/AGENT_PLAN.md` for the full plan.
      screenshots/previews, play it, and look at the results yourself before calling anything done.
    - **Money needs approval.** Pre-approved: **1,000 Meshy credits** (counted from 2026-10-09, shared, no per-step
      cap); use them wisely (free retries before new paid generations), log every spend with a running total in
-     `docs/STATUS.md`. Anything beyond that, and any other paid service (OpenAI, ElevenLabs, assets, purchases),
+     `docs/STATUS.md`. OpenAI images (gpt-image-2, medium quality) are approved up to $75 total from 2026-10-09; log
+     each call. Anything beyond these, and any other paid service (ElevenLabs, assets, purchases),
      needs the owner's OK with the expected cost. If top quality can't be reached within budget or with free tools,
      ask for more budget (what it buys, cost, why cheaper options fall short). Keep doing free work while waiting.
    - **Never stop.** If a usage limit is hit, wait for the reset and resume automatically (in-session resume

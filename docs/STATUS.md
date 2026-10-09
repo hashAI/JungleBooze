@@ -124,6 +124,7 @@ Meshy: 3 (image edit test) + 30 (Pista 3D v1) = **33 credits used**; balance 2,4
 
 ## Log
 Newest first. One line per event.
+- 2026-10-09: Owner asked for an OpenAI image test: F4 keyframe with gpt-image-2 medium 1536x1024 succeeded and beats Meshy. OpenAI images approved (medium quality; working cap $75). Backdrops/leaf textures switch to OpenAI.
 - 2026-10-09: Launched gameplay-engineer (review fixes), game-designer (spec 103 vertical slice), asset-pipeline (environment kit, cap 450 credits), tech-architect (water/mist/roots + integration). Sent owner gameplay videos, keyframes, look test v2.
 - 2026-10-09: Owner picked store name "Aurelia: Wildward"; focus today = build the game, other work later. Reports in: real Pista + gameplay videos, Phase 1 review (1 blocker), keyframes, look test v2.
 - 2026-10-09: Phase 1 Feel implemented and verified in Unity (dcc0721). Launched gameplay-engineer (real Pista + video), code-reviewer (Phase 1), art-director (Meshy keyframes, cap 100).
