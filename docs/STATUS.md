@@ -18,12 +18,13 @@ Baseline after the archive: all assemblies compile, EditMode 57/57 pass.
 animations (approved cap 150 credits). Then import rigged Pista into the LookTest scene, AI/CC0 environment props from
 `design/aurelia/LOOK_TEST_BRIEF.md`, screenshots to the owner, owner opens it on Mac + iPhone (P0-E).
 
-## Snapshot / handoff (2026-10-09 ~14:30 IST)
-- **Owner: TRY Option D (painterly / stylized-realistic) on the hero basin first (2026-10-09); adopt only if the render convinces.** Look gate target is now `design/aurelia/keyframes/F4_f_painterly_openai.jpg`. Earlier context: hero basin v3 ~64% of the realistic F4 keyframe (sent). Coordinator's rethink: realism stalls on organic density (~70% ceiling with AI + procedural). Options sent to owner: **B** realistic + buy a few pro nature packs (~$50–150, owner must approve; shortlist exact packs first), **D** painterly/stylized-realistic at no cost (OpenAI style test: `design/aurelia/keyframes/F4_f_painterly_openai.jpg`; Pista would need a light shading restyle), A keep going, C freelance artist. Coordinator recommends B. Don't start new environment work until the owner picks.
-- **Gameplay:** vertical slice parts A (9835543) and B (d58990d) committed; Expedition 1 fully playable in gray-box (bot 0 hits). Running: code-reviewer on the slice; asset-pipeline on Pista clips (Swim_Surface, Swim_Dive, Swim_Underwater, Swim_Leap, Vine_Release, Water_Wade, BalanceRun, Death fix, SlideEntry fix; cap 80 Meshy).
-- **Next:** fix review findings; wire new clips into PistaExpedition prefab; creature/vine visuals; then apply the chosen art style to the slice.
-- **Git LFS:** ~0.75 GB of GitHub's free 1 GB used. Owner: stay free; raw art in art_source/ is git-ignored and local-only.
-- Unity process check: `pgrep -x Unity`.
+## Snapshot / handoff (2026-10-09 ~19:40 IST)
+- **Look gate: owner is choosing the art style.** Hero basin trials: realistic peaked ~64% (4eaf693), painterly v3 ~70% of `F4_f_painterly_openai.jpg` (latest commit; known gaps: arch reads as a flat bridge, white foam blobs on pools, stacked-slab pillars look like discs). Owner then asked for easier styles: concepts in `design/aurelia/keyframes/F4_style_{toon,lowpoly,clay}.jpg` (sheet sent). Coordinator recommends trying **C soft toon/cel-shaded** next (easiest to look great; Pista would need a stylized regen via Meshy ~30–60 credits). Wait for the owner's pick; then run one hero-scene trial in that style, or finish painterly if B is kept.
+- **Gameplay:** vertical slice complete in gray-box (A 9835543, B d58990d, review fixes d1f343b, vine camera fix latest; EditMode 510/510, PlayMode 20/20). Bot videos: /tmp/junglebooze-video/expedition_*.mp4 (regenerate with the Expedition video batch).
+- **UI issues for ui-engineer:** landscape results panel clips the top; coins line overflows; portrait distance overlaps the health bar; chunk debug labels visible in-world.
+- **Running:** asset-pipeline painterly stacked-slab pillars (feedback: look like pillows/discs; needs lush tops, moss, irregular slabs). Pause/redirect if the owner picks another style.
+- **Spend:** Meshy ~355 of 1,000 since 2026-10-09; OpenAI ~$3.5 of $75.
+- **Git:** LFS ~0.75 GB of free 1 GB; raw art in art_source/ is local-only. Pushes: run in background; `lfs.ssh.automultiplex=false` fixed hangs.
 
 ## Current milestone
 **LOOK GATE (owner, 2026-10-09):** no further scenes/environment content until the owner approves the final render of the waterfall-basin hero scene. Gameplay systems continue in gray-box.
@@ -64,8 +65,8 @@ Duko/continue, audio files) compiled clean on the Mac.
 | producer | not used yet | (the coordinating session does this role for now) | this file | — |
 | game-designer | done (2026-10-09) | Spec 103 vertical slice: scripted "Expedition 1", 13 chunks ~4:05, swim/vine/canopy/sailback/Veil Grotto secret/Shield/Deep Breath upgrade, AC-103-01–50 | `design/aurelia/GDD.md`, `design/aurelia/specs/` | Phase 2 chunk catalog detail; FTUE script |
 | balance-simulator | done (A3) | Python reference model, golden traces, S1–S9 report (`archive/pre-aurelia/docs/sim-reports/2026-10-07-spec001.md`) | `tools/sim/`, `docs/sim-reports/` | Phase 1: new movement/chunk model from the AURELIA spec (old model kept as reference) |
-| tech-architect | working (2026-10-09) | Painterly v2 dressing done (~65%, sent). Now v3: tall arch with sky window, reveal pools/drops, hero framing plants, warm Pista, portrait foliage | `Assets/_Game/Editor/Setup/`, `docs/adr/0003-first-playable-bootstrap.md`, `docs/PLAY_FIRST_BUILD.md` | Add EditMode tests for `ProjectSetupRules`; Roslyn analyzers |
-| gameplay-engineer | working (2026-10-09) | Slice review fixes + clip wiring done (d1f343b, EditMode 495/495, PlayMode 18/18). Now vine camera framing fix + new expedition videos | `Scripts/Gameplay/PowerUps`, `Hazards`, `Companion`, `Views`, `App/RunSceneBootstrap.cs` | Wire audio events; then Batch 3 |
+| tech-architect | done (2026-10-09) | Painterly v3 ~70% of F4_f (45 draws, 328k tris incl. Pista) | `Assets/_Game/Editor/Setup/`, `docs/adr/0003-first-playable-bootstrap.md`, `docs/PLAY_FIRST_BUILD.md` | Add EditMode tests for `ProjectSetupRules`; Roslyn analyzers |
+| gameplay-engineer | done (2026-10-09) | Vine camera framing fix, spec 103 text, new expedition videos; EditMode 510/510, PlayMode 20/20 | `Scripts/Gameplay/PowerUps`, `Hazards`, `Companion`, `Views`, `App/RunSceneBootstrap.cs` | Wire audio events; then Batch 3 |
 | ui-engineer | done (C2) | Track wired into the Run scene with gray-box views and HUD | `Scripts/Gameplay/Views`, `Scripts/App`, `Scripts/UI/Hud` | Fix errors the owner sends from Unity |
 | art-director | done (2026-10-09) | HERO_BASIN_DRESSING.md: 6×4 grid map of F4_f, frame budgets (water ≤10%, sky 10–16%, lawn 0%, foliage 40–50%), dressing counts | `design/aurelia/ENVIRONMENT_STRATEGY.md` | Store art later |
 | asset-pipeline | done (2026-10-09) | Iteration 2 assets (4e959d8): arch v2 14k tris 2×2k ~25 px/m, FP_ArchVines, travertine tiers (weakest; re-pass after seeing cascades), ledge v2, framing clusters, canopy. OpenAI $0.59 | `art_source/pista/`, `tools/blender/pista/` | Report → import rigged Pista into LookTest |
@@ -135,6 +136,7 @@ Meshy: 3 (image edit test) + 30 (Pista 3D v1) = **33 credits used**; balance 2,4
 
 ## Log
 Newest first. One line per event.
+- 2026-10-09: Painterly v3 ~70% sent. Owner asked for easier styles; sent A–E concept sheet (toon, low-poly, clay new; ~$0.22). Vine camera fix committed. Waiting for owner's style pick.
 - 2026-10-09: Painterly v2 (dense dressing) ~65% sent to owner. Launched v3.
 - 2026-10-09: LFS at ~750 MB of 1 GB. Owner: stay free; raw art binaries in art_source/ untracked (148 files, kept on disk) and git-ignored. Painterly kit committed; launched stacked-slab rock generator.
 - 2026-10-09: Slice review fixes committed (d1f343b). Push hang fixed (git config lfs.ssh.automultiplex false). Dressing map done; launched set-dressing pass.
