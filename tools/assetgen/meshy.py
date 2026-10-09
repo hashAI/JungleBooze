@@ -11,7 +11,9 @@ Usage:
   meshy.py library [search]                         free
   meshy.py rig <model.glb> <height_m> <basecolor.png> <log>
   meshy.py animate <rig_task_id> <log> <action_id> [<action_id> ...]     (1-10 ids, merged into one file)
-  meshy.py wait <rigging|animations> <task_id> <log>
+  meshy.py t2m <prompt_file> <seconds> <log> [prime|swift]                 text to motion (prime 10 / swift 3 credits)
+  meshy.py motion <rig_task_id> <motion_task_id> <log>                    apply a text-to-motion clip to the rig (3)
+  meshy.py wait <rigging|animations|text-to-motion> <task_id> <log>
   meshy.py fetch <rigging|animations> <task_id> <out_dir>                 downloads every result URL
 """
 import base64
@@ -81,7 +83,8 @@ def main():
         print(balance())
     elif cmd == 'library':
         q = f'?search={a[0]}' if a else ''
-        for x in req('GET', '/animations/library' + q).get('result', []):
+        lib = req('GET', '/animations/library' + q)
+        for x in (lib if isinstance(lib, list) else lib.get('result', [])):
             print(x['action_id'], x['category'], x['sub_category'], x['name'], sep='\t')
     elif cmd == 'rig':
         glb, h, tex, logpath = a
@@ -99,6 +102,23 @@ def main():
         body['post_process'] = {'operation_type': 'change_fps', 'fps': 30}
         tid = req('POST', '/animations', body)['result']
         log(logpath, {'event': 'created', 'endpoint': 'animations', 'task': tid, 'rig': rig, 'action_ids': ids,
+                      'balance_before': before})
+        wait('animations', tid, logpath)
+    elif cmd == 't2m':
+        pf, secs, logpath = a[0], float(a[1]), a[2]
+        mode = a[3] if len(a) > 3 else 'prime'
+        prompt = open(pf).read().strip()
+        before = balance()
+        tid = req('POST', '/text-to-motion', {'prompt': prompt, 'duration': secs, 'mode': mode})['result']
+        log(logpath, {'event': 'created', 'endpoint': 'text-to-motion', 'task': tid, 'prompt_file': pf,
+                      'duration_s': secs, 'mode': mode, 'balance_before': before})
+        wait('text-to-motion', tid, logpath)
+    elif cmd == 'motion':
+        rig, mt, logpath = a
+        before = balance()
+        body = {'rig_task_id': rig, 'motion_task_id': mt, 'post_process': {'operation_type': 'change_fps', 'fps': 30}}
+        tid = req('POST', '/animations', body)['result']
+        log(logpath, {'event': 'created', 'endpoint': 'animations', 'task': tid, 'rig': rig, 'motion_task': mt,
                       'balance_before': before})
         wait('animations', tid, logpath)
     elif cmd == 'wait':

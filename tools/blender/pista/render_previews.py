@@ -1,10 +1,12 @@
 """Render review previews of Pista (EEVEE, neutral studio light) and a labelled contact sheet.
 
 Usage:
-  blender -b --python-use-system-env -P render_previews.py -- <input .blend|.glb|.fbx> <out_prefix> [action] [frames]
+  blender -b --python-use-system-env -P render_previews.py -- <input .blend|.glb|.fbx> <out_prefix> [action] [frames] [rows] [target_z]
     - no action: turnaround (front, 3/4, side, back) + face and backpack close-ups -> <out_prefix>_<view>.png + _sheet.jpg
     - action + frames (e.g. "run 8"): that many evenly spaced frames of one cycle, side and 3/4 rows, with a
       ground grid and foot-height markers for sliding checks -> <out_prefix>_contact.jpg
+      rows: comma list of side, 34, back, back34, front (default side,34); target_z: camera aim height in m
+      (default 0.85); 'water' as the last argument adds a translucent water surface at z 0 (swim clips: root = surface)
 Camera framing is fixed in meters (character is 1.65 m, feet at the origin, facing Blender -Y), so sheets from
 different versions are directly comparable.
 """
@@ -22,6 +24,10 @@ a = C.args()
 src, prefix = a[0], a[1]
 action = a[2] if len(a) > 2 else None
 nframes = int(a[3]) if len(a) > 3 else 8
+ROWS = {'side': -90, '34': -35, 'back': 180, 'front': 0, 'back34': 150}
+rows = [(r, ROWS[r]) for r in (a[4].split(',') if len(a) > 4 else ['side', '34'])]
+target_z = float(a[5]) if len(a) > 5 else 0.85
+water = len(a) > 6 and a[6] == 'water'
 RES = 1024
 
 if src.endswith('.blend'):
@@ -133,12 +139,23 @@ else:
     ch = nt.nodes.new('ShaderNodeTexChecker'); ch.inputs['Scale'].default_value = 40
     ch.inputs['Color1'].default_value = (0.25, 0.25, 0.25, 1); ch.inputs['Color2'].default_value = (0.4, 0.4, 0.4, 1)
     nt.links.new(ch.outputs['Color'], bs.inputs['Base Color']); g.data.materials.append(m)
+    if water:
+        g.location.z = -1.6
+        bpy.ops.mesh.primitive_plane_add(size=6)
+        w = bpy.context.active_object
+        wm = bpy.data.materials.new('water'); wm.use_nodes = True
+        wb = wm.node_tree.nodes['Principled BSDF']
+        wb.inputs['Base Color'].default_value = (0.15, 0.45, 0.5, 1)
+        wb.inputs['Alpha'].default_value = 0.45
+        wb.inputs['Roughness'].default_value = 0.1
+        wm.blend_method = 'BLEND'
+        w.data.materials.append(wm)
     paths, labels = [], []
-    for row, yaw in (('side', -90), ('34', -35)):
+    for row, yaw in rows:
         for i in range(nframes):
             f = f0 + (f1 - f0) * i / nframes
             sc.frame_set(int(f), subframe=f - int(f))
-            paths.append(shoot(f'{prefix}_{row}_{i}.png', yaw, (0, 0, 0.85), 4.2, 50, height=1.0))
+            paths.append(shoot(f'{prefix}_{row}_{i}.png', yaw, (0, 0, target_z), 4.2, 50, height=target_z + 0.15))
             labels.append(f'{row} f{f:.1f}')
     sheet(paths, labels, f'{prefix}_contact.jpg', nframes)
     for p in paths:

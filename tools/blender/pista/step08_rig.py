@@ -13,7 +13,9 @@ position. Our mesh keeps its own normals, UVs and material.
      is measured and printed, so Unity can scale playback to the game's run speed.
   5. Export UnityProject/Assets/_Game/Art/Characters/Pista/Pista.fbx (mesh + armature + all clips as takes).
 
-Usage: blender -b --python-use-system-env -P step08_rig.py -- <rig.glb> <anim1.glb> [<anim2.glb> ...]
+Usage: blender -b --python-use-system-env -P step08_rig.py -- <rig.glb> <anim1.glb> [<anim2.glb> ...] [<t2m.glb>=<Name> ...]
+       [--review]   (review: keep unmapped clips, write work/pista_08_review.blend only)
+With the vertical-slice sources (SRC_* clips) the FBX is written by step09_extra_clips.py instead.
 Output: work/pista_08_rigged.blend, the FBX, work/clip_report.json
 """
 import json
@@ -29,6 +31,8 @@ sys.path.insert(0, os.path.dirname(__file__))
 import common as C  # noqa: E402
 
 a = C.args()
+REVIEW = '--review' in a          # keep unmapped clips under their Meshy names, skip the FBX (for clip review)
+a = [x for x in a if x != '--review']
 RIG_GLB, ANIM_GLBS = a[0], a[1:]
 FPS = 30
 UNITY_DIR = os.path.join(C.REPO, 'UnityProject', 'Assets', '_Game', 'Art', 'Characters', 'Pista')
@@ -53,6 +57,17 @@ CLIP_NAMES = {
     'Jump_and_Hang_on_Bar': 'Vine_Grab',                # [485]
     'Rope_Hang_Idle': 'Vine_Hang',                      # [477]
     'Grab_Bar_and_Swing_Forward': 'Vine_Swing',         # [495]
+    # vertical-slice sources (batch C + text-to-motion); step09_extra_clips.py turns them into game clips and
+    # removes them before the FBX export
+    'Swim_Forward': 'SRC_Swim',                         # [569] breaststroke
+    'swimming_to_edge': 'SRC_SwimToEdge',               # [570]
+    'T2M_Balance': 'SRC_Balance',                       # text to motion, motion/balance_run.txt
+    'T2M_Death': 'SRC_DeathTrip',                       # text to motion, motion/death_trip.txt
+    'T2M_Entry': 'SRC_WaterEntry',                      # text to motion, motion/water_entry.txt
+    'T2M_Vine': 'SRC_VineRelease',                      # text to motion, motion/vine_release.txt
+    'T2M_Wade': 'SRC_Wade',                             # text to motion (swift), motion/water_wade.txt
+    # [568] Swim Idle, [366] Falling Down (lands legs-up), [402] Run and Leap, [519] Sliding Stumble,
+    # [494] Swing on Rope to Ground (leans back as if flung off): bought, rejected
 }
 LOOPS = {'Idle', 'Idle_Alt', 'Run', 'Run_Alt', 'Fall', 'Strafe_Left', 'Strafe_Right', 'Vine_Hang'}
 # clips whose lowest toe should touch the ground (Meshy's runs hover ~4 cm)
@@ -198,11 +213,18 @@ print(f'verts limited to 4 influences: {cut}')
 # ------------------------------------------------------------------ 4. clips
 for act in list(bpy.data.actions):
     bpy.data.actions.remove(act)
-for path in ANIM_GLBS:
-    before = set(bpy.data.objects)
+for spec in ANIM_GLBS:
+    # '<file.glb>=<Name>': single text-to-motion clip; Meshy names it 'retarget_clip' plus a 1-frame base layer stub
+    path, _, rename = spec.partition('=')
+    before, acts_before = set(bpy.data.objects), set(bpy.data.actions)
     bpy.ops.import_scene.gltf(filepath=path)
     for o in [o for o in bpy.data.objects if o not in before]:
         bpy.data.objects.remove(o, do_unlink=True)
+    for act in [x for x in bpy.data.actions if x not in acts_before]:
+        if rename and 'retarget_clip' in act.name:
+            act.name = rename + '_Armature'
+        elif rename:
+            bpy.data.actions.remove(act)
 for d in (bpy.data.armatures, bpy.data.meshes):
     for x in list(d):
         if x.users == 0:
@@ -214,11 +236,11 @@ rest = arm.data.bones['Hips'].matrix_local.to_3x3()
 report = {}
 for act in list(bpy.data.actions):
     base = re.sub(r'_Armature(\.\d+)?$', '', act.name)   # glTF importer names actions <clip>_<armature object>
-    if base not in CLIP_NAMES:
+    if base not in CLIP_NAMES and not REVIEW:
         print('unmapped action, removed:', act.name)
         bpy.data.actions.remove(act)
         continue
-    name = CLIP_NAMES[base]
+    name = CLIP_NAMES.get(base, base)
     act.name = name
     act.use_fake_user = True
     scale_location_keys(act, S)
@@ -308,11 +330,17 @@ for act in list(bpy.data.actions):
 
 arm.animation_data.action = bpy.data.actions.get('Idle')
 sc.frame_set(0)
+if REVIEW:
+    C.save_blend(C.work('pista_08_review.blend'))
+    sys.exit(0)
 with open(C.work('clip_report.json'), 'w') as f:
     json.dump(report, f, indent=1)
 C.save_blend(C.work('pista_08_rigged.blend'))
 
 # ------------------------------------------------------------------ 5. FBX for Unity
+if any(a_.name.startswith('SRC_') for a_ in bpy.data.actions):
+    print('SRC_ clips present: the FBX is exported by step09_extra_clips.py')
+    sys.exit(0)
 os.makedirs(UNITY_DIR, exist_ok=True)
 for o in bpy.context.view_layer.objects:
     o.select_set(o in (arm, mesh))

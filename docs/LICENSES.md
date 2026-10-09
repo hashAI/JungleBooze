@@ -40,6 +40,7 @@ outputs belong to the owner. Every call (tokens, estimated cost, prompt file, pu
 | F4 keyframe `design/aurelia/keyframes/F4_e_openai_medium.jpg` (reference) | OpenAI image generation | 2026-10-09 | Owned by owner (OpenAI terms) |
 | Backdrop layers `UnityProject/Assets/_Game/Art/Environment/Backdrops/BD_F4e_*.png` | OpenAI image edits with the F4_e keyframe as reference; cut-out layers generated on a magenta key and unmixed in-house (`tools/art/chroma_unmix.py`) | 2026-10-09 | Owned by owner (OpenAI terms) |
 | Plant atlases `UnityProject/Assets/_Game/Art/Environment/Plants/Textures/FP_*_BaseColor.png` (normals derived in-house) | OpenAI image generation on a magenta key, unmixed in-house | 2026-10-09 | Owned by owner (OpenAI terms) |
+| Iteration 2 atlases `Plants/Textures/FP_ArchVines`, `FP_ElephantEar`, `FP_Bellflower`, `FP_Canopy` (`_BaseColor`; `_Normal` derived in-house) | OpenAI gpt-image-2 (medium, 1024²) on a magenta key, text prompts `art_source/environment/openai/prompts/atlas_{arch_vines,elephant_ear,bellflower_v2,canopy}.txt`, picks c1/c1/c2/c1 of 2 candidates each (`openai/atlases/`, log `openai/calls.jsonl`); unmixed in-house (`tools/art/chroma_unmix.py --nocrop [--foliage]`) | 2026-10-09 | Owned by owner (OpenAI terms) |
 
 ## In-house procedural environment assets (no third-party content except CC0)
 
@@ -47,6 +48,9 @@ outputs belong to the owner. Every call (tokens, estimated cost, prompt file, pu
 |---|---|---|---|
 | Rootstone kit + basin ledges `UnityProject/Assets/_Game/Art/Environment/Rootstone/` (meshes, baked textures) | Procedural Blender scripts `tools/blender/environment/` (rootstone_high, ledges_high, rootstone_bake); albedo grain sampled from CC0 Poly Haven `rock_face_03` | 2026-10-09 | Owned by owner (our work; CC0 input) |
 | Plant card meshes `UnityProject/Assets/_Game/Art/Environment/Plants/*.fbx` | `tools/blender/environment/plants_build.py` on the OpenAI atlases above | 2026-10-09 | Owned by owner |
+| Hero arch v2 `Rootstone/RS_HeroArch.fbx` + `Textures/RS_HeroArch_A_*`, `_B_*` | Procedural Blender scripts `heroarch_v2_high.py`, `heroarch_v2_bake.py`; albedo grain sampled from CC0 Poly Haven `rock_face_03` | 2026-10-09 | Owned by owner (our work; CC0 input) |
+| Travertine tiers `Rootstone/RS_TravertineTiers.fbx`, `RS_TravertineTiers_Water.fbx` + textures; lookout ledge v2 `Rootstone/RS_LedgeLookout.fbx` + textures | Procedural Blender scripts `travertine_high.py`, `travertine_bake.py`, `ledge_v2_high.py` (`bakekit.py`); grain from CC0 `rock_face_03` | 2026-10-09 | Owned by owner (our work; CC0 input) |
+| Iteration 2 card meshes `Plants/FP_FrameLeft_Clump`, `FP_FrameRight_Clump`, `FP_ArchVines`, `FP_Canopy_Clump`, `FP_CanopyCrown_A..D` (.fbx) | `tools/blender/environment/plants_v2_build.py` on the iteration 2 OpenAI atlases | 2026-10-09 | Owned by owner |
 | Mist band `UnityProject/Assets/_Game/Art/Environment/Backdrops/BD_MistBand.png` | `tools/art/mist_band.py` (procedural noise) | 2026-10-09 | Owned by owner |
 
 ## Build and CI tools (not shipped in the app)
