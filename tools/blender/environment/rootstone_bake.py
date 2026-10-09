@@ -19,6 +19,7 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(__file__))
 import envlib as E  # noqa: E402
 from rootstone_high import PIECES  # noqa: E402
+from ledges_high import LEDGES  # noqa: E402
 
 DETAIL_TILE_M = 4.0
 OUT = os.path.join(E.UNITY_ENV, 'Rootstone')
@@ -29,6 +30,9 @@ BUDGET = {
     'RS_PillarB': (4000, 1800, 600, 1024),
     'RS_ArchSmall': (4000, 1800, 600, 1024),
     'RS_Outcrop': (2500, 1100, 400, 1024),
+    'RS_PoolTerrace_A': (2500, 1100, 400, 1024),
+    'RS_PoolTerrace_B': (1800, 800, 300, 1024),
+    'RS_LedgeLookout': (2500, 1100, 400, 1024),
 }
 
 
@@ -113,7 +117,7 @@ def stone_material(scale):
     L.new(seed.outputs[0], fn2.inputs[0])
     band = maprange(fn2.outputs['Fac'], 0.35, 0.65, 0.9, 1.08)    # broad tonal bands along strands
 
-    base = mix(srgb('#B3A48D'), srgb('#9C8E78'), noise(0.08 / scale, 3, 0.5))      # warm pale grey-ochre
+    base = mix(srgb('#C6B79E'), srgb('#AC9C83'), noise(0.08 / scale, 3, 0.5))      # pale warm cream-ochre (F4_e)
     v = node('ShaderNodeMath', operation='MULTIPLY')
     L.new(grain, v.inputs[0]); L.new(strand_var, v.inputs[1])
     v1 = node('ShaderNodeMath', operation='MULTIPLY')
@@ -129,14 +133,18 @@ def stone_material(scale):
     L.new(gray.outputs[0], colm.inputs[7])
     col = colm.outputs[2]
     # lichen mottles: dark grey-brown blotches and pale crust (F4_e)
-    lich_d = maprange(noise(2.2 / scale, 10, 0.7), 0.6, 0.68, 0, 0.55)
+    lich_d = maprange(noise(2.2 / scale, 10, 0.7), 0.57, 0.66, 0, 0.65)
     col = mix(col, srgb('#6B6455'), lich_d)
     lich_p = maprange(noise(0.35 / scale, 6, 0.6, None), 0.6, 0.72, 0, 0.18)
     col = mix(col, srgb('#D2CCBD'), lich_p)
 
+    spk_d = maprange(noise(9.0 / scale, 2, 0.5), 0.66, 0.70, 0, 0.45)
+    col = mix(col, srgb('#5E584A'), spk_d)
+    spk_p = maprange(noise(7.0 / scale, 2, 0.5, None), 0.30, 0.26, 0, 0.35)
+    col = mix(col, srgb('#E2DCCB'), spk_p)
     # cavity darkening (grooves between strands)
     ao = node('ShaderNodeAmbientOcclusion', samples=16, only_local=True, in_1=0.9 * scale)
-    cav = maprange(ao.outputs['AO'], 0.2, 1.0, 0.42, 1.0)
+    cav = maprange(ao.outputs['AO'], 0.25, 1.0, 0.28, 1.0)
     cm = node('ShaderNodeMix', data_type='RGBA', blend_type='MULTIPLY')
     cm.inputs[0].default_value = 1.0
     L.new(col, cm.inputs[6])
@@ -149,16 +157,16 @@ def stone_material(scale):
     # moss: up-facing, broken by noise, thicker in grooves on top
     sepn = node('ShaderNodeSeparateXYZ')
     L.new(geo.outputs['Normal'], sepn.inputs[0])
-    up = maprange(sepn.outputs[2], 0.05, 0.6)
-    patch = maprange(noise(0.12 / scale, 8, 0.68), 0.36, 0.56)
-    groove = maprange(ao.outputs['AO'], 0.85, 0.4, 0, 0.9)
+    up = maprange(sepn.outputs[2], 0.15, 0.7)
+    patch = maprange(noise(0.3 / scale, 8, 0.7), 0.36, 0.55)
+    groove = maprange(ao.outputs['AO'], 0.8, 0.35, 0, 1.0)
     m1 = node('ShaderNodeMath', operation='ADD', use_clamp=True)
     L.new(patch, m1.inputs[0]); L.new(groove, m1.inputs[1])
     moss = node('ShaderNodeMath', operation='MULTIPLY', use_clamp=True)
     L.new(up, moss.inputs[0]); L.new(m1.outputs[0], moss.inputs[1])
     moss_edge = maprange(moss.outputs[0], 0.22, 0.62)
-    moss_a = mix(srgb('#2F421A'), srgb('#4C6524'), noise(0.5 / scale, 6, 0.65))
-    moss_col = mix(moss_a, srgb('#7A8A3A'), maprange(noise(2.4 / scale, 5, 0.7), 0.55, 0.75, 0, 0.7))
+    moss_a = mix(srgb('#28351A'), srgb('#3E5121'), noise(0.5 / scale, 6, 0.65))
+    moss_col = mix(moss_a, srgb('#66703A'), maprange(noise(2.4 / scale, 5, 0.7), 0.55, 0.75, 0, 0.5))
     # moss over stone: thin moss lets the stone through (no flat stickers)
     moss_col = mix(moss_col, srgb('#6E6A50'), maprange(moss_edge, 0.0, 0.5, 0.55, 0.0))
     col = mix(col, moss_col, moss_edge)
@@ -196,8 +204,8 @@ def stone_material(scale):
 
 def build(name):
     lod0, lod1, lod2, res = BUDGET[name]
-    spec = PIECES[name]
-    scale = spec['voxel'] / 0.1
+    spec = PIECES.get(name) or LEDGES[name]
+    scale = spec.get('feature', spec['voxel'] / 0.1)     # texture feature scale (ledges: metres)
     bpy.ops.wm.open_mainfile(filepath=E.work('rootstone', name + '_high.blend'))
     sc = E.gpu_cycles(8)
     high = bpy.data.objects[name + '_high']

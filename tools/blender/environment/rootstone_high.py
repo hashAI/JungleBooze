@@ -25,7 +25,7 @@ PIECES = {
         spine=[(-21, 2, 0), (-21.5, 1.5, 12), (-19, 0.5, 25), (-12, 0, 36), (-2, -0.5, 41.5), (8, 0, 40),
                (16, 0.8, 31), (20, 1.5, 17), (22, 2.5, 0)],
         rb=[(0, 9.0), (0.08, 6.6), (0.25, 5.4), (0.42, 6.4), (0.5, 7.2), (0.6, 6.2), (0.78, 5.3), (0.92, 6.6), (1, 9.0)],
-        n=8, turns=1.4, ground=(0, 1), voxel=0.13, seed=11, secondary=7, peel=0.6, radk=(0.34, 0.6), tail=(1.0, 2.2),
+        n=8, turns=1.4, ground=(0, 1), voxel=0.13, seed=11, secondary=7, peel=0.6, radk=(0.34, 0.6), rock=(8, 0.3, 3, 0.1, 9, 1.2), tail=(1.0, 2.2),
         mouth=dict(c=(-1.0, -0.6, 35.6), r=(5.0, 4.4, 4.6))),
     'RS_PillarA': dict(
         spine=[(0, 0, 0), (0.6, 0.3, 8), (-0.5, -0.4, 17), (0.8, 0.2, 26), (0.2, 0.6, 33)],
@@ -255,9 +255,12 @@ def build(name):
     s = spec['voxel'] / 0.1      # scale weathering with the piece
     E.smooth(ob, 0.5, 1)
     E.displace(ob, E.tex('lumps', 'CLOUDS', noise_scale=3.5 * s, noise_depth=2), 0.18 * s)
-    rockify(ob, 14 * s, 0.8, 0.55, spec['seed'], max_cut=0.22 * s)          # big fracture faces
-    rockify(ob, 5 * s, 1.0, 0.5, spec['seed'] + 1, max_cut=0.08 * s)       # smaller chips
-    cracks(ob, 16 * s, 0.08 * s, 0.09 * s, spec['seed'])
+    c1, m1, c2, m2, cs = spec.get('rock', (14, 0.22, 5, 0.08, 16))[:5]
+    rockify(ob, c1 * s, 0.8, 0.55, spec['seed'], max_cut=m1 * s)            # big fracture faces
+    rockify(ob, c2 * s, 1.0, 0.5, spec['seed'] + 1, max_cut=m2 * s)         # smaller chips
+    if len(spec.get('rock', ())) > 5:
+        rockify(ob, spec['rock'][5] * s, 1.1, 0.5, spec['seed'] + 2, max_cut=0.04 * s)   # fine chipping
+    cracks(ob, cs * s, 0.08 * s, 0.09 * s, spec['seed'])
     crack = E.tex('crack', 'VORONOI', noise_scale=1.2 * s, distance_metric='DISTANCE',
                   weight_1=-1.0, weight_2=1.0, noise_intensity=1.0)
     E.displace(ob, crack, 0.06 * s, mid=0.0)

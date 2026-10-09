@@ -61,7 +61,7 @@ Duko/continue, audio files) compiled clean on the Mac.
 | gameplay-engineer | working (2026-10-09) | Review fixes done (238fbe0, EditMode 357/357, PlayMode 12/12). Now vertical slice part A: chunks, streaming, World Director, Expedition 1 script, collectibles, results, save, Deep Breath upgrade, Expedition scene | `Scripts/Gameplay/PowerUps`, `Hazards`, `Companion`, `Views`, `App/RunSceneBootstrap.cs` | Wire audio events; then Batch 3 |
 | ui-engineer | done (C2) | Track wired into the Run scene with gray-box views and HUD | `Scripts/Gameplay/Views`, `Scripts/App`, `Scripts/UI/Hud` | Fix errors the owner sends from Unity |
 | art-director | done (2026-10-09) | Meshy keyframes F1–F4 + P1 (93 credits) → design/aurelia/keyframes/ | `design/aurelia/ENVIRONMENT_STRATEGY.md` | Store art later |
-| asset-pipeline | working (2026-10-09) | Rootstone Blender kit + hero arch, Meshy stiltwoods ×3 + leaf cards, backdrop layers (cap 450 credits) → Art/Environment/ | `art_source/pista/`, `tools/blender/pista/` | Report → import rigged Pista into LookTest |
+| asset-pipeline | done (2026-10-09) | Hero-basin kit: procedural rootstone (hero arch 10k tris 2k, pillars, small arch, outcrop, pool terraces, ledge), 3 plant clumps (OpenAI atlases), 7 OpenAI backdrop layers. Meshy 121 credits, OpenAI ~$0.65 | `art_source/pista/`, `tools/blender/pista/` | Report → import rigged Pista into LookTest |
 | audio-director | waiting | Old lane-era audio archived (2026-10-09) | — | AURELIA audio after the vertical slice (ElevenLabs needs owner OK) |
 | qa-engineer | waiting | — | — | FP1 stage F: test plan + owner play-test script |
 | performance-engineer | waiting | — | — | Benchmark scene (week 2+) |
@@ -75,7 +75,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Spend log
 Meshy: 3 (image edit test) + 30 (Pista 3D v1) = **33 credits used**; balance 2,432 after the owner's upgrade.
-**From 2026-10-09: 1,000 Meshy credits pre-approved (no per-step cap); ask the owner before going past 1,000 spent since 2026-10-09.** Prefer free retries. Spent since 2026-10-09: 155 (Pista 62, keyframes 93). Lifetime 188; balance 2,277; ~845 of the 1,000 left. OpenAI: 3 draft images (well under $1); account out of credit.
+**From 2026-10-09: 1,000 Meshy credits pre-approved (no per-step cap); ask the owner before going past 1,000 spent since 2026-10-09.** Prefer free retries. Spent since 2026-10-09: 276 (Pista 62, keyframes 93, hero kit 121). Balance 2,156; ~724 of the 1,000 left. OpenAI images since 2026-10-09: ~$0.75 of the $75 cap. OpenAI: 3 draft images (well under $1); account out of credit.
 
 ## Resume watchdog
 - Routine `trig_0125FGkR542RNUbbCvMm3LWX` ("AURELIA resume watchdog") wakes session_01GJ9eWD47NbuMr3AXGv86j8 every 2 hours (minute 52 UTC). **Disabled 2026-10-08 (owner stopped the session).**
@@ -100,6 +100,7 @@ Meshy: 3 (image edit test) + 30 (Pista 3D v1) = **33 credits used**; balance 2,4
 2. Jungle music variation: three loops on disk (A/B/C). Playback is not wired yet; default to A until the owner listens.
 
 ## Assumptions waiting for owner review (`[ASSUMED]`)
+- Rootstone tone: paler/warmer than ART_DIRECTION #A39079 to match the OpenAI F4 keyframe. Hero arch: detail normal first, split into two 2k texture sets (+1 draw) only if close-ups stay soft.
 - Spec 103 (2026-10-09): Deep Breath is ability #1 (150 coins; opens the Sunken Arch), replacing Trail Sense in GDD §13; no drowning/breath meter; no revive offer in the first run; the slice compresses the Blueprint's 10-min first run to ~4 min. Full list in spec 103 §17.
 - AURELIA (spec 101/GDD, 2026-10-09): controls "Steer + Flick" (drag steers 0.040 m/pt, flick = 2.2 m dodge, swipe up/down fire on threshold); speed 10→16 m/s; fixed jump 1.41 m / 0.60 s, coyote 100 ms, buffer 150 ms; frontal crash into a tall blocker ends the run; health +1 per 350 m undamaged; revive 1/2/4 crystals (max 3); rare resource "Crystals"; power-ups Magnet/Shield/Explorer Vision; 7 abilities; rating 9+; first 60 s can't die; analytics on-device (TestFlight upload only); DDA starts −0.3; MVP 14 chunks. Owner confirms controls at the Phase 1 check.
 - Track: seam-fallback breather doesn't reset the breather timer; each breather gets its own pick; mover moves for 30 ticks after its trigger tick; random stream ids TrackGeneration=1…Cosmetic=5.
@@ -127,6 +128,7 @@ Meshy: 3 (image edit test) + 30 (Pista 3D v1) = **33 credits used**; balance 2,4
 
 ## Log
 Newest first. One line per event.
+- 2026-10-09: asset-pipeline done: hero-basin kit exported to Art/Environment (raw Meshy downloads git-ignored).
 - 2026-10-09: Phase 1 review fixes committed (238fbe0). [ASSUMED] high obstacles = thin branch + see-through vine curtain (readability). Launched vertical slice part A (world structure); part B (swim/vine/canopy/creature/secret) follows.
 - 2026-10-09: Owner: gameplay is fine (coordinator improves it autonomously); worried about look quality. Plan: one hero scene first (waterfall basin matching the OpenAI F4 keyframe), side-by-side comparison with honest per-layer gap, then other scenes with the same recipe. Redirected tech-architect and asset-pipeline to the hero scene.
 - 2026-10-09: game-designer done: spec 103 vertical slice. [ASSUMED] Deep Breath first (recommended option A).

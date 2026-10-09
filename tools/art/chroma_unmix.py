@@ -46,8 +46,9 @@ if '--fade-bottom' in a:
 # rim clamp: within 6 px of the cut-out edge the generator tints leaves toward the key (salmon/pink rims).
 # Natural colours here never have B > G or R > 1.2 G, so clamp them (keeps sunlit yellows).
 near = ndimage.distance_transform_edt(alpha > 0.1) <= 6
-F[..., 2] = np.where(near, np.minimum(F[..., 2], F[..., 1] * 0.97), F[..., 2])
-F[..., 0] = np.where(near, np.minimum(F[..., 0], F[..., 1] * 1.2), F[..., 0])
+spillish = near & (F[..., 2] > F[..., 1] * 0.97) & (F[..., 0] > F[..., 1] * 1.05)   # oranges/yellows have B << G
+F[..., 2] = np.where(spillish, F[..., 1] * 0.97, F[..., 2])
+F[..., 0] = np.where(spillish, np.minimum(F[..., 0], F[..., 1] * 1.2), F[..., 0])
 # bleed colour into transparent area (nearest opaque-ish texel)
 solid = alpha > 0.5
 idx = ndimage.distance_transform_edt(~solid, return_distances=False, return_indices=True)
