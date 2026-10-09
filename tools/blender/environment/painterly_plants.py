@@ -115,7 +115,7 @@ def build_canopy():
     print('SUMMARY FP_Canopy_P_Clump', tuple(round(x, 1) for x in objs[0].dimensions), [E.tris(o) for o in objs])
 
 
-def build_vines(count=620, crests=140):
+def build_vines(count=600, crests=330):
     """F4_f: lush leafy curtains under the crown and over the strand sides facing the camera (as FP_ArchVines, on the
     painterly arch), plus leafy crests (slot 1, FP_Canopy_P crowns as small bushes) sitting on the up-facing tops of
     the crown and upper strands, the way F4_f's arch carries shrubs and palms on top.
@@ -141,6 +141,8 @@ def build_vines(count=620, crests=140):
             kind = 1                                     # strand sides facing the camera half: drapes
         elif n.z >= 0.55 and c.z > 14:
             kind = 2                                     # tops of the crown and upper strands: leafy crests
+        elif n.z >= 0.1 and c.z > 30 and n.y > 0.2:
+            kind = 2                                     # upper crown face toward the camera: F4_f's leafy crown
         else:
             continue
         cand.append((c.copy(), n.copy(), kind, f.calc_area()))
@@ -158,7 +160,7 @@ def build_vines(count=620, crests=140):
     for i in order:
         c, n, kind, _ = cand[i]
         if kind == 2:
-            if len(tops) < crests and all((c - p[0]).length > 2.6 for p in tops):
+            if len(tops) < crests and all((c - p[0]).length > 2.0 for p in tops):
                 tops.append((c, n, kind))
             continue
         if abs(c.x - mouth.x) < 2.0 and abs(c.y - mouth.y) < 3.0 and c.z > mouth.z - 3:
@@ -197,7 +199,7 @@ def build_vines(count=620, crests=140):
             q = dict(spc[k % len(spc)])
             if r[0] < 0.5:
                 q['u0'], q['u1'] = q['u1'], q['u0']
-            Wc = 3.4 + 3.6 * r[1]
+            Wc = 3.8 + 4.2 * r[1]
             Hc = Wc / q['aspect']
             yaw = (r[2] - 0.5) * math.radians(50)            # card faces the camera half (+Y)
             base = c - Vector((0, 0, 0.3 * Hc))               # sunk into the strand top

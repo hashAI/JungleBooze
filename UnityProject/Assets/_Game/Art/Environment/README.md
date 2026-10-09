@@ -114,10 +114,11 @@ LOD naming, texture channels (BaseColor sRGB, Normal OpenGL, ARM = AO/rough/0) a
 
 | Asset | Size (m) W×D×H | Tris LOD0 / 1 / 2 | Texture | Notes |
 |---|---|---|---|---|
-| `RS_HeroArch_P` | 84.7 × 43.1 × 49.8 | 14,000 / 6,299 / 2,100 | 2 × 2048 (`RS_HeroArch_P_A_*`, `_B_*`) | Chunky braid: 8 thick strands in three ropes (v2: 14), no weathering, same spine/crown; splays ~6 m wider than v2. Halves split at Blender x = -1 as v2 (`RS_HeroArch_P_A_LODn` / `_B_LODn`). `RS_HeroArch_P_WaterfallMouth` refitted under the new crown (-1.0, -0.6, 33.3 Blender). ~24 px/m |
-| `RS_PillarA_P` / `RS_PillarB_P` | as realistic | 4,000 / 1,800 / 600 | 1024 | Simplified (no chips/grain), painted |
-| `RS_ArchSmall_P` | as realistic | 4,000 / 1,800 / 600 | 1024 | |
-| `RS_Outcrop_P` | as realistic | 2,500 / 1,100 / 400 | 1024 | |
+| `RS_HeroArch_P` | 79.8 × 45.7 × 49.7 | 14,999 / 6,300 / 2,099 | 2 × 2048 (`RS_HeroArch_P_A_*`, `_B_*`) | v2 (`painterly_arch_strands.py`): 8 clean, round, evenly spaced strands (ropes 3/3/2, constant radius, soft ~7 m plate bulges, more twist), built directly as the game mesh (no voxel merge, buried faces culled), paint baked onto itself. Same spine/footprint/root tails; halves split at Blender x = -1. **`RS_HeroArch_P_WaterfallMouth` moved to (-1.0, -0.6, 31.6) Blender** (crown underside 1.7 m lower than v1). ~25 px/m |
+| `RS_PillarA_P` | 13.4 × 10.7 × 35.1 | 4,000 / 1,800 / 600 | 1024 | Stacked-slab generator (`painterly_slabs.py`): 4 columns of tall rounded blocks, bushy crown spilling over the rim. ~21 px/m |
+| `RS_PillarB_P` | 17.2 × 11.1 × 31.7 | 3,860 / 1,800 / 600 | 1024 | Leaning tower, top blocks step out into an overhanging hook (+X), two buttress columns |
+| `RS_ArchSmall_P` | 34.0 × 10.9 × 23.4 | 3,905 / 1,800 / 599 | 1024 | Two stacked-block legs, span of two bent strata bands, bushes on top |
+| `RS_Outcrop_P` | 15.9 × 7.8 × 5.5 | 1,294 / 1,100 / 399 | 1024 | Overlapping soft lozenges with mossy domes (pool rocks / path edges). ~55 px/m |
 | `RS_TravertineTiers_P` | 29.6 × 24.5 × 7.8 | 5,000 / 2,200 / 800 | 1024 | Smoothed only (no remesh), so water levels and all anchors match: use the realistic `RS_TravertineTiers_Water` with it. Anchors renamed `RS_TravertineTiers_P_*` (same suffixes) |
 | `RS_LedgeLookout_P` | 7.6 × 7.6 × 2.0 | 2,500 / 1,100 / 400 | 1024 | `RS_LedgeLookout_P_Stand` copied from v2 (the top is within a few cm). ~96 px/m |
 | `FP_FrameLeft_P_Clump` / `FP_FrameRight_P_Clump` | as realistic | 956 / 236 / 80; 776 / 212 / 72 | slot 0 `FP_BigLeaf_P`, slot 1 `FP_Bellflower_P` | Same layout as the realistic frames, glossy painted leaves (dark core, light tips) |
@@ -125,7 +126,7 @@ LOD naming, texture channels (BaseColor sRGB, Normal OpenGL, ARM = AO/rough/0) a
 | `FP_PalmFern_P_Clump` (new) | 3.9 × 4.1 × 2.0 | 476 / 204 / 80 | `FP_Fronds_P` | Palm fronds over a fern ring |
 | `FP_Fern_P_Clump` | 2.3 × 2.3 × 0.7 | 260 / 96 / 40 | `FP_Fronds_P` | Low fern clump |
 | `FP_Canopy_P_Clump`, `FP_CanopyCrown_P_A..D` | as realistic | 192 / 48 / 8; 24 / 6 / 2 | `FP_Canopy_P` | Painted crown blobs, same layout/facing |
-| `FP_ArchVines_P` | in `RS_HeroArch_P` space | 5,256 / 1,776 / 906 | slot 0 `FP_ArchVines_P`, slot 1 `FP_Canopy_P` | 620 leafy curtains/drapes + 140 leafy crests on the crown tops (F4_f's bushy top). 2 draws (v2: 1); ~800 tris over v2 |
+| `FP_ArchVines_P` | in `RS_HeroArch_P` space | 5,212 / 1,690 / 824 | slot 0 `FP_ArchVines_P`, slot 1 `FP_Canopy_P` | 600 leafy curtains/drapes + 246 bigger leafy crests on the crown tops and the crown face toward the camera (v1: 140). Arch + vines LOD0 20,211 tris (v1 19,256, +5 %) |
 
 Backdrops (straight alpha, same import rules as the F4_e set): `BD_F4f_Sky` 1536×1024 (no alpha), `BD_F4f_FarRange`
 1536×813, `BD_F4f_FarFalls` 795×1453, `BD_F4f_MidPillars` 1536×973, `BD_F4f_JungleWall` 1536×689, `BD_F4f_Plate`
@@ -144,10 +145,11 @@ previews use neutral light and Principled shading; the painterly look depends on
 teal shadows, warm terminator), which is tech-architect's.
 
 ## Not delivered (yet)
-- Painterly pillars (`RS_PillarA_P`/`B_P`), `RS_ArchSmall_P`, `RS_Outcrop_P` are the realistic shapes simplified and
-  repainted; AD_PAINTERLY s2 asks pillars to be stacked rounded slabs with flat mossy tops. Needs a new generator.
-- Painterly hero arch: strands are chunkier and clean, but F4_f's ropes are rounder and more evenly separated and its
-  crown is far leafier than `FP_ArchVines_P` covers; judge in Unity with the AD s4 shader before another pass.
+- Slab pieces: tops are lumpy painted bush shells, not leaf cards; from near they read as mossy mounds. For F4_f's
+  tree crowns on the towers, place `FP_CanopyCrown_P_*` on the pillar tops in the scene. Texel density is low for a
+  near view (~20 px/m at 1024): they are mid/far pieces.
+- Hero arch: strands are now round, even and cleanly seamed, crown leafier; F4_f still shows more (thinner) strands
+  and more crossings and a fully green crown face. AD s2 caps strands at 5–8; judge in Unity with the AD s4 shader.
 - Stiltwoods: Meshy meshes exist (`art_source/environment/meshy/models/stilt_A/B/C.glb`), not cleaned/baked
   (the coordinator paused them on 2026-10-09).
 - Palm frond clump: built and dropped (below the bar). Waterfall sheets, mist and water shading are tech-architect's.
@@ -168,7 +170,10 @@ teal shadows, warm terminator), which is tech-architect's.
   `art_source/environment/openai/prompts/p_*.txt` → `chroma_unmix.py` (atlases `--nocrop [--foliage]`) →
   `tools/art/painterly_finish.py [atlases|backdrops|swatches]` (kit textures, mist despill, tileable bake swatches) →
   `painterly_arch_high.py` (hero arch high) → `painterly_rock.py <piece|all>` (simplify, paint, bake, LODs, FBX) →
-  `painterly_plants.py [frames|clumps|canopy|vines]` (vines need the painterly arch) → `tools/art/painterly_stack.py`
+  `painterly_plants.py [frames|clumps|canopy|vines]` (vines need the painterly arch). Since 2026-10-09 the painterly
+  arch is `painterly_arch_strands.py` and the pillars/small arch/outcrop are `painterly_slabs.py <piece|all>` (both
+  build the game mesh directly and bake the paint onto it; `painterly_rock.py` still makes the travertine and ledge);
+  compare sheet `previews/RS_Slabs_P_compare_F4f.jpg` → `tools/art/painterly_stack.py`
   (backdrop composite, atlas sheet). Previews: `HV_KEYFRAME=design/aurelia/keyframes/F4_f_painterly_openai.jpg
   hero_view.py ...`; `PV_SAMPLES=20` speeds up `preview_render.py` / `travertine_view.py` drafts.
 - Images: `tools/assetgen/openai_images.py`, cut-outs with `tools/art/chroma_unmix.py` (`--nocrop`, `--foliage` for

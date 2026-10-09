@@ -5,6 +5,7 @@ valid), but 8 thick strands instead of 14 (three ropes of 3/3/2, wider ropes), o
 three, and no weathering: no chips, cracks or grain, only the broad lumps. Rounded, pillowy strands with clean
 seams between them; the paint (painterly_rock.py) carries the rest.
 Output: work/rootstone/RS_HeroArch_P_high.blend (object RS_HeroArch_P_high). Then painterly_rock.py RS_HeroArch.
+SUPERSEDED 2026-10-09 by painterly_arch_strands.py (the shipped RS_HeroArch_P); kept for reference.
 Usage: blender ... -P painterly_arch_high.py
 """
 import os
