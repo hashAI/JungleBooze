@@ -82,7 +82,7 @@ If a new session finds an agent marked **working** but no matching output or com
 
 ## Spend log
 Meshy: 3 (image edit test) + 30 (Pista 3D v1) = **33 credits used**; balance 2,432 after the owner's upgrade.
-**From 2026-10-09: 1,000 Meshy credits pre-approved (no per-step cap); ask the owner before going past 1,000 spent since 2026-10-09.** Prefer free retries. Spent since 2026-10-09: 276 (Pista 62, keyframes 93, hero kit 121). Balance 2,156; ~724 of the 1,000 left. OpenAI images since 2026-10-09: ~$0.75 of the $75 cap. OpenAI: 3 draft images (well under $1); account out of credit.
+**From 2026-10-09: 1,000 Meshy credits pre-approved (no per-step cap); ask the owner before going past 1,000 spent since 2026-10-09.** Prefer free retries. Spent since 2026-10-09: 355 (Pista 62, keyframes 93, hero kit 121, Pista clips 79). ~645 of the 1,000 left. OpenAI images since 2026-10-09: ~$0.75 of the $75 cap. OpenAI: 3 draft images (well under $1); account out of credit.
 
 ## Resume watchdog
 - Routine `trig_0125FGkR542RNUbbCvMm3LWX` ("AURELIA resume watchdog") wakes session_01GJ9eWD47NbuMr3AXGv86j8 every 2 hours (minute 52 UTC). **Disabled 2026-10-08 (owner stopped the session).**
@@ -135,6 +135,7 @@ Meshy: 3 (image edit test) + 30 (Pista 3D v1) = **33 credits used**; balance 2,4
 
 ## Log
 Newest first. One line per event.
+- 2026-10-09: Pista +11 clips (swim/dive/underwater/leap, vine release, wade, balance run, water entry/exit, Death_Stumble, Slide_Clean), 79 Meshy credits. Swim is breaststroke (no crawl in Meshy).
 - 2026-10-09: Owner: try painterly (D) on the hero scene first. Launched art-director (rules), tech-architect (shading + grade), asset-pipeline #2 (hand-painted kit, caps OpenAI $10, Meshy 100). Gameplay-engineer fixing slice review; asset-pipeline #1 on Pista clips.
 - 2026-10-09: Owner chose art style D: painterly / stylized-realistic. Launching art direction update, stylized shading, hand-painted re-texture of the hero kit.
 - 2026-10-09: Hero basin v3 ~64% sent; style options B/D presented with an OpenAI painterly test. Vertical slice part B committed. Launched slice code review.

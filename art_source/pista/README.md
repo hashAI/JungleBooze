@@ -8,6 +8,10 @@ torso covered (`design/DECISIONS.md`, `design/aurelia/ART_DIRECTION.md` section 
   turnaround (`pistaB_*.png`), task in `meshy/task.json` (30 credits, 2026-10-08).
 - `meshy/rig/pista_rigged.glb`: Meshy auto-rig of our clean mesh (5 credits, 2026-10-09).
 - `meshy/anim/pista_anim_A.glb`, `pista_anim_B.glb`: Meshy library animations on that rig (57 credits).
+- `meshy/anim/pista_anim_C.glb`: library batch C for the vertical slice (#569 Swim Forward, #570 Swimming to Edge used;
+  #568, #366, #402, #494, #519 rejected in review), 21 credits.
+- `meshy/motion/`: Meshy Text to Motion prompts (`*.txt`) and the motions applied to our rig (`pista_*.glb`): balance_run,
+  death_trip, water_entry (prime), water_wade (swift) used; vine_release (prime) rejected (never lets go). 58 credits.
 - `meshy/calls.jsonl`: every paid Meshy call with credits and balance. Licenses: `docs/LICENSES.md`.
 
 ## Pipeline (headless Blender 4.2 LTS, `tools/blender/pista/`)
@@ -28,8 +32,13 @@ Run every step as
 | 6 | `step06_bake.py` | bake 4k from the Meshy surface, rope/seam clone, roughness zones, then 2k + 1k maps |
 | 7 | `step07_export.py` | join into one mesh/material, validate, `clean/pista_clean.glb` + Meshy upload GLB |
 | – | `tools/assetgen/meshy.py rig/animate/fetch` | Meshy rig + clips (key from `~/.config/junglebooze/secrets.env`) |
-| 8 | `step08_rig.py -- <rig.glb> <anim A.glb> <anim B.glb>` | weights onto our mesh, ponytail chain, in-place/grounded/looped clips, `Pista.fbx` |
-| – | `render_previews.py -- <file> <out_prefix> [clip frames]` | turnaround sheet or 8-frame clip contact sheet |
+| 8 | `step08_rig.py -- <rig.glb> <anim A.glb> <anim B.glb> <anim C.glb> <motion.glb>=<T2M_Name> ...` | weights onto our mesh, ponytail chain, in-place/grounded/looped clips (writes `Pista.fbx` only when no `SRC_*` sources are loaded); `--review` keeps every clip for review |
+| 9 | `step09_extra_clips.py [-- --no-fbx]` | vertical-slice clips (swim, dive, underwater, leap, wade, entry/exit, balance run, vine release, stumble death, clean slide) from the `SRC_*` sources + authored ones, then `Pista.fbx` with all 27 clips |
+| – | `render_previews.py -- <file> <out_prefix> [clip frames rows aim_z water]` | turnaround sheet or clip contact sheet (rows side/34/back/back34/front; `water` adds a surface plane at z 0) |
+
+Step 8 arguments used for the current FBX: `meshy/rig/pista_rigged.glb meshy/anim/pista_anim_A.glb meshy/anim/pista_anim_B.glb
+meshy/anim/pista_anim_C.glb meshy/motion/pista_balance_run.glb=T2M_Balance meshy/motion/pista_death_trip.glb=T2M_Death
+meshy/motion/pista_water_entry.glb=T2M_Entry meshy/motion/pista_vine_release.glb=T2M_Vine meshy/motion/pista_water_wade.glb=T2M_Wade`.
 
 ## Result and budgets
 | | Value | Budget |
@@ -46,7 +55,7 @@ Budget note: `docs/ARCHITECTURE.md` 10.2 says 15k tris / 1024² for the hero, bu
 ADR 0004 replaced the texture size (2048) and has no triangle number for the hero, so 20k is used `[ASSUMED]`.
 
 Previews: `previews/pista_3d_v2_sheet.jpg` (+ `_front/_34/_side/_back/_face/_backpack.png`) and
-`previews/pista_run_contact.jpg`. Clip table and Unity settings: `UnityProject/Assets/_Game/Art/Characters/Pista/IMPORT_NOTES.md`.
+`previews/pista_run_contact.jpg`, plus one contact sheet per vertical-slice clip (`previews/pista_<clip>_contact.jpg`). Clip table and Unity settings: `UnityProject/Assets/_Game/Art/Characters/Pista/IMPORT_NOTES.md`.
 
 ## Self-review (ART_DIRECTION 10.3), 2026-10-09
 - A1 pass: high ponytail, white/orange/charcoal, torso covered, harness, belt pouches, fingerless gloves, boots,
