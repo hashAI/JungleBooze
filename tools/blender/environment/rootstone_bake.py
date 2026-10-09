@@ -23,16 +23,15 @@ from ledges_high import LEDGES  # noqa: E402
 
 DETAIL_TILE_M = 4.0
 OUT = os.path.join(E.UNITY_ENV, 'Rootstone')
-# piece: (LOD0 tris, LOD1, LOD2, texture size)
+# piece: (LOD0 tris, LOD1, LOD2, texture size). RS_HeroArch (v2) and RS_LedgeLookout (v2) have their own scripts:
+# heroarch_v2_high/_bake.py and ledge_v2_high.py
 BUDGET = {
-    'RS_HeroArch': (10000, 4500, 1500, 2048),
     'RS_PillarA': (4000, 1800, 600, 1024),
     'RS_PillarB': (4000, 1800, 600, 1024),
     'RS_ArchSmall': (4000, 1800, 600, 1024),
     'RS_Outcrop': (2500, 1100, 400, 1024),
     'RS_PoolTerrace_A': (2500, 1100, 400, 1024),
     'RS_PoolTerrace_B': (1800, 800, 300, 1024),
-    'RS_LedgeLookout': (2500, 1100, 400, 1024),
 }
 
 
@@ -42,8 +41,10 @@ def srgb(h):
     return tuple(((x + 0.055) / 1.055) ** 2.4 if x > 0.04045 else x / 12.92 for x in c) + (1.0,)
 
 
-def stone_material(scale):
-    """Bake-source material on the high poly. scale ~ size of the piece (1 = 10 cm voxel pieces)."""
+def stone_material(scale, crevice=1.0, streak=1.0, moss=1.0):
+    """Bake-source material on the high poly. scale ~ size of the piece (1 = 10 cm voxel pieces).
+    crevice / streak / moss > 1 deepen cavity darkening, strengthen fibre streaks and spread moss (hero arch v2);
+    the defaults keep the v1 kit look."""
     m = bpy.data.materials.new('rootstone_src')
     m.use_nodes = True
     nt = m.node_tree
@@ -112,7 +113,7 @@ def stone_material(scale):
     fn = node('ShaderNodeTexNoise', in_2=4.0, in_3=3.0, in_4=0.5)
     L.new(seed.outputs[0], fn.inputs[0])
     fibre = maprange(fn.outputs['Fac'], 0.38, 0.62)            # 0 = groove line, 1 = ridge
-    streak = maprange(fibre, 0.0, 1.0, 0.9, 1.03)
+    streak = maprange(fibre, 0.0, 1.0, 1.0 - 0.1 * streak, 1.03)
     fn2 = node('ShaderNodeTexNoise', in_2=1.6, in_3=4.0, in_4=0.5)
     L.new(seed.outputs[0], fn2.inputs[0])
     band = maprange(fn2.outputs['Fac'], 0.35, 0.65, 0.9, 1.08)    # broad tonal bands along strands
@@ -144,7 +145,7 @@ def stone_material(scale):
     col = mix(col, srgb('#E2DCCB'), spk_p)
     # cavity darkening (grooves between strands)
     ao = node('ShaderNodeAmbientOcclusion', samples=16, only_local=True, in_1=0.9 * scale)
-    cav = maprange(ao.outputs['AO'], 0.25, 1.0, 0.28, 1.0)
+    cav = maprange(ao.outputs['AO'], 0.25 + 0.1 * (crevice - 1), 1.0, 0.28 / crevice, 1.0)
     cm = node('ShaderNodeMix', data_type='RGBA', blend_type='MULTIPLY')
     cm.inputs[0].default_value = 1.0
     L.new(col, cm.inputs[6])
@@ -157,8 +158,8 @@ def stone_material(scale):
     # moss: up-facing, broken by noise, thicker in grooves on top
     sepn = node('ShaderNodeSeparateXYZ')
     L.new(geo.outputs['Normal'], sepn.inputs[0])
-    up = maprange(sepn.outputs[2], 0.15, 0.7)
-    patch = maprange(noise(0.3 / scale, 8, 0.7), 0.36, 0.55)
+    up = maprange(sepn.outputs[2], 0.15 - 0.15 * (moss - 1), 0.7 - 0.15 * (moss - 1))
+    patch = maprange(noise(0.3 / scale, 8, 0.7), 0.36 - 0.08 * (moss - 1), 0.55 - 0.08 * (moss - 1))
     groove = maprange(ao.outputs['AO'], 0.8, 0.35, 0, 1.0)
     m1 = node('ShaderNodeMath', operation='ADD', use_clamp=True)
     L.new(patch, m1.inputs[0]); L.new(groove, m1.inputs[1])

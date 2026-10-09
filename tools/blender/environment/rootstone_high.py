@@ -21,12 +21,7 @@ import envlib as E  # noqa: E402
 # rb: (u, radius) keys of the bundle radius; n: main strands; turns: twist turns over the length
 # ground: which ends are planted (0 = start, 1 = end); voxel: remesh size (m); mouth: cavity ellipsoid
 PIECES = {
-    'RS_HeroArch': dict(
-        spine=[(-21, 2, 0), (-21.5, 1.5, 12), (-19, 0.5, 25), (-12, 0, 36), (-2, -0.5, 41.5), (8, 0, 40),
-               (16, 0.8, 31), (20, 1.5, 17), (22, 2.5, 0)],
-        rb=[(0, 9.0), (0.08, 6.6), (0.25, 5.4), (0.42, 6.4), (0.5, 7.2), (0.6, 6.2), (0.78, 5.3), (0.92, 6.6), (1, 9.0)],
-        n=8, turns=1.4, ground=(0, 1), voxel=0.13, seed=11, secondary=7, peel=0.6, radk=(0.34, 0.6), rock=(8, 0.3, 3, 0.1, 9, 1.2), tail=(1.0, 2.2),
-        mouth=dict(c=(-1.0, -0.6, 35.6), r=(5.0, 4.4, 4.6))),
+    # RS_HeroArch moved to heroarch_v2_high.py (v2: braided strands with gaps); v1 is in git history
     'RS_PillarA': dict(
         spine=[(0, 0, 0), (0.6, 0.3, 8), (-0.5, -0.4, 17), (0.8, 0.2, 26), (0.2, 0.6, 33)],
         rb=[(0, 6.2), (0.1, 4.4), (0.3, 3.9), (0.45, 4.5), (0.6, 3.7), (0.8, 4.2), (0.95, 3.8), (1, 3.0)],

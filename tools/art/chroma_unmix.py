@@ -2,7 +2,7 @@
 """Magenta chroma-key unmix for AI backdrop layers (gpt-image-2 has no transparent output).
 alpha from how magenta a pixel is (min(R,B) - G against the measured key), colour unmixed as
 F = (C - (1 - a) K) / a, then colour bled into transparent texels (no fringes in mips/ASTC) and cropped to content.
-Usage: python3 chroma_unmix.py <in_key.png> <out.png> [--pad 8] [--fade-bottom N] [--nocrop]   (needs numpy, Pillow, scipy)
+Usage: python3 chroma_unmix.py <in_key.png> <out.png> [--pad 8] [--fade-bottom N] [--nocrop] [--foliage]   (needs numpy, Pillow, scipy)
 """
 import sys
 import numpy as np
@@ -49,6 +49,11 @@ near = ndimage.distance_transform_edt(alpha > 0.1) <= 6
 spillish = near & (F[..., 2] > F[..., 1] * 0.97) & (F[..., 0] > F[..., 1] * 1.05)   # oranges/yellows have B << G
 F[..., 2] = np.where(spillish, F[..., 1] * 0.97, F[..., 2])
 F[..., 0] = np.where(spillish, np.minimum(F[..., 0], F[..., 1] * 1.2), F[..., 0])
+# --foliage: green/brown-only sheets (vines, moss, canopy). Thin strands are mostly semi-transparent and keep a pink
+# cast, so clamp every texel: B never above 0.9 G, R never above 1.25 G (browns stay brown, pink becomes olive).
+if '--foliage' in a:
+    F[..., 2] = np.minimum(F[..., 2], F[..., 1] * 0.9)
+    F[..., 0] = np.minimum(F[..., 0], F[..., 1] * 1.25)
 # bleed colour into transparent area (nearest opaque-ish texel)
 solid = alpha > 0.5
 idx = ndimage.distance_transform_edt(~solid, return_distances=False, return_indices=True)

@@ -23,7 +23,7 @@ LEDGES = {
                              seed=61),
     'RS_PoolTerrace_B': dict(kind='terrace', W=6.5, D=3.2, h=0.9, bulge=1.1, rim=0.55, basin=0.28, voxel=0.03, feature=1.0,
                              seed=62),
-    'RS_LedgeLookout': dict(kind='lookout', W=4.6, D=3.4, h=1.3, voxel=0.03, feature=1.0, seed=63),
+    # RS_LedgeLookout v2 is ledge_v2_high.py (angular rocky ledge); outline_lookout/prism are reused there
 }
 
 

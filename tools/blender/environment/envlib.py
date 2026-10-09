@@ -321,6 +321,70 @@ def xatlas_uv(ob, padding_px=4, res=1024, name='UVMap'):
           f'~{res * math.sqrt(max(atlas.utilization if not hasattr(atlas.utilization, "__len__") else atlas.utilization[0], 1e-3) / area):.0f} px/m')
 
 
+def xatlas_faces(ob, faces, res, padding_px=4, weights=None, rect=(0.0, 0.0, 1.0, 1.0), name='UVMap',
+                 fill=0.85):
+    """Unique UVs for a subset of a triangulated mesh's faces, packed into `rect` (u0, v0, u1, v1) of layer `name`.
+    weights: per-face texel-density multiplier (1 = full). Faces are charted on copies scaled by their weight, so a
+    face with weight 0.5 gets half the texels per metre; faces of different weight never share a chart.
+    Returns the unique density (px/m) of weight-1 faces for a `res` texture."""
+    import xatlas
+    me = ob.data
+    if name not in me.uv_layers:
+        me.uv_layers.new(name=name)
+    uvd = me.uv_layers[name].data
+    co = np.array([v.co[:] for v in me.vertices], np.float64)
+    w = np.ones(len(faces)) if weights is None else np.asarray(weights, float)
+    key, pos, idx = {}, [], []
+    for fi, f in enumerate(faces):
+        p = me.polygons[f]
+        assert len(p.vertices) == 3, 'triangulate first'
+        tri = []
+        for vi in p.vertices:
+            k = (vi, round(float(w[fi]), 3))
+            if k not in key:
+                key[k] = len(pos)
+                pos.append(co[vi] * w[fi])
+            tri.append(key[k])
+        idx.append(tri)
+    pos = np.array(pos, np.float32)
+    idx = np.array(idx, np.uint32)
+    atlas = xatlas.Atlas()
+    atlas.add_mesh(pos, idx)
+    copt = xatlas.ChartOptions()
+    copt.max_iterations = 4
+    copt.max_cost = 16
+    copt.normal_seam_weight = 4
+    pk = xatlas.PackOptions()
+    pk.resolution = 0
+    pk.padding = padding_px
+    pk.bilinear = True
+    pk.rotate_charts = True
+    rw, rh = rect[2] - rect[0], rect[3] - rect[1]
+    area = sum(me.polygons[f].area * w[i] ** 2 for i, f in enumerate(faces))
+    pk.texels_per_unit = res * math.sqrt(rw * rh) * fill / math.sqrt(area)
+    atlas.generate(copt, pk)
+    assert atlas.atlas_count == 1, atlas.atlas_count
+    vmap, tri, uvs = atlas[0]
+    big = max(atlas.width / rw, atlas.height / rh)       # texels of the atlas sheet per unit of the full texture
+    for t, f in enumerate(faces):
+        for k, li in enumerate(me.polygons[f].loop_indices):
+            u_, v_ = uvs[tri[t][k]]
+            uvd[li].uv = (rect[0] + u_ * atlas.width / big, rect[1] + v_ * atlas.height / big)
+    dens = pk.texels_per_unit * res / big
+    util = atlas.utilization[0] if hasattr(atlas.utilization, '__len__') else atlas.utilization
+    print(f'{ob.name}: xatlas {len(faces)} faces, {atlas.chart_count} charts, sheet {atlas.width}x{atlas.height}, '
+          f'util {util:.2f}, {dens:.1f} px/m at weight 1 ({res} px)')
+    return dens
+
+
+def triangulate(ob):
+    bm = bmesh.new()
+    bm.from_mesh(ob.data)
+    bmesh.ops.triangulate(bm, faces=bm.faces[:])
+    bm.to_mesh(ob.data)
+    bm.free()
+
+
 def box_uv2(ob, tile_m, name='UV1_Detail'):
     """Second UV set: world-scale box projection (1 unit = tile_m metres) for a tiling detail texture."""
     me = ob.data
@@ -357,8 +421,16 @@ def bake_target(low, img):
         nt.nodes.active = node
 
 
+def rays_off(ob):
+    """The bake target must not occlude: with selected-to-active, AO rays start on the high surface, and wherever
+    the low mesh lies outside it they hit the low mesh at once (AO 0 in patches). Hide it from every ray type."""
+    for k in ('visible_diffuse', 'visible_glossy', 'visible_transmission', 'visible_volume_scatter', 'visible_shadow'):
+        setattr(ob, k, False)
+
+
 def bake(high, low, kind, img, extrusion, ray, samples=8, pass_filter=None, normal_space='TANGENT'):
     sc = bpy.context.scene
+    rays_off(low)
     sc.cycles.samples = samples
     bake_target(low, img)
     sc.render.bake.use_selected_to_active = high is not None
