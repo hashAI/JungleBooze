@@ -207,6 +207,20 @@ MonoBehaviour:
         S: 45
         XMin: -99
         XMax: 99
+      Water: []
+      Currents: []
+      DeepDives: []
+      Vines: []
+      Creatures: []
+      Curve:
+      - S: 55
+        Curvature: 0
+      - S: 62
+        Curvature: -0.0055555557
+      - S: 95
+        Curvature: -0.0055555557
+      - S: 104
+        Curvature: 0
     - Name: A
       ScriptOnly: 0
       Length: 0
@@ -373,4 +387,18 @@ MonoBehaviour:
       Discoveries: []
       Traversal: []
       Help: []
+      Water: []
+      Currents: []
+      DeepDives: []
+      Vines: []
+      Creatures: []
+      Curve:
+      - S: 55
+        Curvature: 0
+      - S: 62
+        Curvature: -0.0055555557
+      - S: 95
+        Curvature: -0.0055555557
+      - S: 104
+        Curvature: 0
     ValidatedMask: 3

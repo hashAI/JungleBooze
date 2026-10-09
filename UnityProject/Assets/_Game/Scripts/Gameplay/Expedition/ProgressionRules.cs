@@ -71,7 +71,7 @@ namespace JungleBooze.Gameplay.Expedition
                 PerfectCoins = stats.PerfectCoins,
                 DiscoveryCoins = stats.DiscoveryCoins,
                 TotalCoins = stats.TotalCoins,
-                Crystals = stats.TotalCrystals,
+                Crystals = stats.TotalCrystals - stats.ReviveCrystals,
                 DeathLabel = stats.DeathLabel,
             };
 
@@ -81,7 +81,8 @@ namespace JungleBooze.Gameplay.Expedition
             results.Best = profile.bestDistance;
 
             profile.coins += stats.TotalCoins;
-            profile.crystals += stats.TotalCrystals;
+            // Revive crystals come out of this run's crystals and the wallet (never below 0).
+            profile.crystals = Math.Max(0, profile.crystals + stats.TotalCrystals - stats.ReviveCrystals);
             profile.totalDistance += (long)stats.Distance;
             profile.runsCompleted++;
             profile.pendingShowcase &= ~(int)showcased;

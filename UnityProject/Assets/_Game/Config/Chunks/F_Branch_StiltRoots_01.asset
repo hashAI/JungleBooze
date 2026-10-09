@@ -201,6 +201,12 @@ MonoBehaviour:
       Discoveries: []
       Traversal: []
       Help: []
+      Water: []
+      Currents: []
+      DeepDives: []
+      Vines: []
+      Creatures: []
+      Curve: []
     - Name: A
       ScriptOnly: 0
       Length: 0
@@ -365,4 +371,10 @@ MonoBehaviour:
       Discoveries: []
       Traversal: []
       Help: []
+      Water: []
+      Currents: []
+      DeepDives: []
+      Vines: []
+      Creatures: []
+      Curve: []
     ValidatedMask: 3

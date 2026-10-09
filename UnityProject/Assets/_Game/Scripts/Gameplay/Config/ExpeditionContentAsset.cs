@@ -20,6 +20,7 @@ namespace JungleBooze.Gameplay.Config
         public ResultsConfigAsset Results;
         public List<DiscoveryEntryAsset> Discoveries = new List<DiscoveryEntryAsset>();
         public List<AbilityDefinitionAsset> Abilities = new List<AbilityDefinitionAsset>();
+        public SailbackConfigAsset Sailback;
 
         public bool IsComplete => Catalog != null && Script != null && Director != null && Pickups != null && Results != null;
 
@@ -48,7 +49,7 @@ namespace JungleBooze.Gameplay.Config
                 }
             }
 
-            return new ExpeditionContent(Catalog.Definitions(), Script.Values, Director.Values, Pickups.Values, Results.Values, discoveries, abilities);
+            return new ExpeditionContent(Catalog.Definitions(), Script.Values, Director.Values, Pickups.Values, Results.Values, discoveries, abilities, Sailback != null ? Sailback.Values : null);
         }
 
         /// <summary>Stable hash of the content (replay header), FNV-1a over the JSON.</summary>

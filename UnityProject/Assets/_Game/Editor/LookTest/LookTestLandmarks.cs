@@ -133,6 +133,12 @@ namespace JungleBooze.Editor.LookTest
         /// </summary>
         internal static void Fall(LookTestBuildContext ctx, IRandom rng, int segment, string label, Vector3 top, float footY, float width, Vector3 viewer, float setback, FallFoot foot, int layers)
         {
+            Fall(ctx, rng, segment, label, top, footY, width, viewer, setback, foot, layers, LookTestMeshFactory.FallLayers);
+        }
+
+        /// <summary>As above with a custom sheet set (for example the hero basin's tall plunge, which widens and frays).</summary>
+        internal static void Fall(LookTestBuildContext ctx, IRandom rng, int segment, string label, Vector3 top, float footY, float width, Vector3 viewer, float setback, FallFoot foot, int layers, LookTestMeshFactory.FallLayer[] sheetSet)
+        {
             Vector3 toViewer = viewer - top;
             toViewer.y = 0f;
             toViewer.Normalize();
@@ -141,10 +147,10 @@ namespace JungleBooze.Editor.LookTest
             Vector3 footPoint = new Vector3(top.x, footY, top.z) + toViewer * setback;
             Quaternion facing = FaceViewer(toViewer);
             LookTestMeshAccumulator falls = ctx.Batches.Get(segment, "W", label, ctx.Waterfall, false, LookTestBatchSet.Group.Water);
-            int count = Mathf.Clamp(layers, 1, LookTestMeshFactory.FallLayers.Length);
+            int count = Mathf.Clamp(layers, 1, sheetSet.Length);
             for (int i = 0; i < count; i++)
             {
-                falls.Append(LookTestMeshFactory.Waterfall(width, height, setback, LookTestMeshFactory.FallLayers[i]), Matrix4x4.TRS(footPoint, facing, Vector3.one), null);
+                falls.Append(LookTestMeshFactory.Waterfall(width, height, setback, sheetSet[i]), Matrix4x4.TRS(footPoint, facing, Vector3.one), null);
             }
 
             ctx.Falls.Add(new LookTestBuildContext.FallSpan { Top = top, Foot = footPoint, Width = width });

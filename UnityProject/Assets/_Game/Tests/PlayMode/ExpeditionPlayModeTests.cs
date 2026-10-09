@@ -1,6 +1,8 @@
 using System.Collections;
 using JungleBooze.App.Expedition;
 using JungleBooze.Core.Save;
+using JungleBooze.Gameplay.Analytics;
+using JungleBooze.Gameplay.Movement;
 using JungleBooze.Gameplay.Run;
 using NUnit.Framework;
 using UnityEngine;
@@ -89,6 +91,15 @@ namespace JungleBooze.Tests.PlayMode
             {
                 root.Tick(1f / 60f, Time.realtimeSinceStartupAsDouble);
                 float t = frame / 60f;
+                if (root.ReviveOfferSeconds > 0f)
+                {
+                    // Run 2 may offer "Continue?" (crystals picked up this run): the player skips it; the death
+                    // fade then runs and the results follow.
+                    root.DeclineRevive();
+                    deathAt = t;
+                    continue;
+                }
+
                 if (deathAt < 0f && root.Simulation.State.Dead)
                 {
                     deathAt = t;
@@ -130,6 +141,91 @@ namespace JungleBooze.Tests.PlayMode
             Assert.Greater(control, 0f);
             Assert.LessOrEqual(control, 1.5f);
             Assert.IsFalse(root.Hud.ResultsVisible);
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator AC103_49_TraversalFrames_SwimVineCanopyCreatures_AllocateNothing()
+        {
+            yield return Load(SaveData.CreateDefault(13L, -0.3f));
+            ExpeditionRoot root = Root();
+            root.SkipEstablishingShot();
+            root.SetBotDriving(true);
+
+            // Warm-up pass through the whole traversal stretch (first-use UI text, toasts, pools), then the same
+            // Expedition 1 again: frames from the river to the canopy's end must allocate nothing.
+            for (int i = 0; i < 60 * 240 && root.Simulation.State.Distance < 1900f && !root.Simulation.State.Dead; i++)
+            {
+                root.Tick(1f / 60f, Time.realtimeSinceStartupAsDouble);
+            }
+
+            root.BeginRun(new JungleBooze.Gameplay.Expedition.ExpeditionRunSetup { FirstExpedition = true, Skill = -0.3f, Discovered = id => false });
+            for (int i = 0; i < 60 * 200 && root.Simulation.State.Distance < 940f && !root.Simulation.State.Dead; i++)
+            {
+                root.Tick(1f / 60f, Time.realtimeSinceStartupAsDouble);
+            }
+
+            Assert.That(() =>
+            {
+                for (int i = 0; i < 60 * 130 && root.Simulation.State.Distance < 1900f; i++)
+                {
+                    root.Tick(1f / 60f, Time.realtimeSinceStartupAsDouble);
+                }
+            }, Is.Not.AllocatingGCMemory());
+            Assert.GreaterOrEqual(root.Simulation.State.Distance, 1850f, "measured through C6–C8");
+            Assert.AreEqual(0, root.Simulation.State.Hits);
+            Assert.AreEqual(2, root.Session.Stats.PerfectReleases);
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator Revive_OfferedFromRun2_PaysACrystal_AndContinues()
+        {
+            SaveData veteran = SaveData.CreateDefault(19L, -0.3f);
+            veteran.runsCompleted = 1;
+            veteran.crystals = 3;
+            yield return Load(veteran);
+            ExpeditionRoot root = Root();
+            for (int frame = 0; frame < 60 * 120 && root.ReviveOfferSeconds <= 0f; frame++)
+            {
+                root.Tick(1f / 60f, Time.realtimeSinceStartupAsDouble);
+            }
+
+            Assert.Greater(root.ReviveOfferSeconds, 0f, "the offer shows on the first death of run 2");
+            Assert.IsTrue(root.Hud.ReviveVisible);
+            Assert.IsTrue(root.Hud.ReviveInteractable);
+            root.Tick(1f / 60f, Time.realtimeSinceStartupAsDouble);
+            Assert.IsTrue(root.Simulation.State.Dead, "the run waits on the offer");
+            Assert.IsTrue(root.AcceptRevive());
+            Assert.IsFalse(root.Simulation.State.Dead);
+            Assert.AreEqual(1, root.Session.Stats.ReviveCrystals);
+            Assert.AreEqual(RunPhase.Running, root.Session.Phase);
+            root.Tick(1f / 60f, Time.realtimeSinceStartupAsDouble);
+            Assert.IsFalse(root.Hud.ReviveVisible);
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator AC103_50_AnalyticsEvents_OnDeviceOnly()
+        {
+            yield return Load(SaveData.CreateDefault(17L, -0.3f));
+            ExpeditionRoot root = Root();
+            root.SkipEstablishingShot();
+            root.SetBotDriving(true);
+            for (int i = 0; i < 60 * 200 && root.Simulation.State.Distance < 2080f && !root.Simulation.State.Dead; i++)
+            {
+                root.StepTicks(4);
+            }
+
+            AnalyticsRecorder a = root.Analytics;
+            Assert.GreaterOrEqual(a.CountOf(AnalyticsEventType.TraversalResult), 6, "swim dives/leaps, vine releases, beam gaps");
+            Assert.GreaterOrEqual(a.CountOf(AnalyticsEventType.CreatureFound), 1);
+            Assert.GreaterOrEqual(a.CountOf(AnalyticsEventType.SecretFound), 1);
+            Assert.AreEqual(1, a.CountOf(AnalyticsEventType.RunStarted));
+            Assert.IsNull(root.AnalyticsLog.FilePath, "tests keep the log in memory; nothing leaves the device");
+            int flushed = a.Flush(root.AnalyticsLog);
+            Assert.AreEqual(flushed, root.AnalyticsLog.Lines.Count);
+            StringAssert.StartsWith("{\"event\":\"run_started\"", root.AnalyticsLog.Lines[0]);
             yield return null;
         }
 

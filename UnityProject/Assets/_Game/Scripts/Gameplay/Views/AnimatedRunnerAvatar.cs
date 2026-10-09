@@ -21,8 +21,14 @@ namespace JungleBooze.Gameplay.Views
         private static readonly int StateRateId = Animator.StringToHash("StateRate");
         private static readonly int LocomotionHash = Animator.StringToHash("Locomotion");
 
-        private static readonly string[] StateNames = { "Idle", "Locomotion", "Jump", "Fall", "Slide", "Stumble", "LandHard", "Death" };
-        private static readonly string[] StateClips = { "Idle", "Run_Alt", "Jump", "Fall", "Slide", "Stumble", "Land_Run", "Death_Backward" };
+        private static readonly string[] StateNames = { "Idle", "Locomotion", "Jump", "Fall", "Slide", "Stumble", "LandHard", "Death", "Swim", "Dive", "Grab", "Hang" };
+        private static readonly string[] StateClips = { "Idle", "Run_Alt", "Jump", "Fall", "Slide", "Stumble", "Land_Run", "Death_Backward", "Run", "Fall", "Vine_Grab", "Vine_Hang" };
+
+        /// <summary>Fallback when a controller predates the traversal states: Swim → Locomotion, Dive → Fall, Grab → Jump, Hang → Fall.</summary>
+        private static readonly int[] Fallback = { 0, 1, 2, 3, 4, 5, 6, 7, 1, 3, 2, 3 };
+
+        /// <summary>Hip height above the feet (pivot of the procedural body pitch), m.</summary>
+        private const float HipHeight = 0.95f;
         private static readonly string[] HairBones = { "Ponytail01", "Ponytail02", "Ponytail03" };
 
         [SerializeField] private Animator _animator;
@@ -30,6 +36,7 @@ namespace JungleBooze.Gameplay.Views
         [SerializeField] private RunnerAnimationConfigAsset _config;
 
         private readonly int[] _stateHashes = new int[StateNames.Length];
+        private readonly bool[] _hasState = new bool[StateNames.Length];
         private readonly float[] _stateLengths = new float[StateNames.Length];
         private readonly Vector3[] _hairTargets = new Vector3[3];
         private readonly Transform[] _hair = new Transform[3];
@@ -92,7 +99,7 @@ namespace JungleBooze.Gameplay.Views
             ref readonly RunnerAnimationOutput o = ref _model.Output;
             if (o.Changed)
             {
-                int index = (int)o.State;
+                int index = Resolve((int)o.State);
                 float offset = o.StartNormalized * _stateLengths[index];
                 if (o.Fade <= 0f)
                 {
@@ -108,7 +115,17 @@ namespace JungleBooze.Gameplay.Views
             _animator.SetFloat(RunRateId, o.RunRate);
             _animator.SetFloat(StateRateId, o.StateRate);
 
-            transform.SetPositionAndRotation(state.Position, state.Facing * Quaternion.Euler(0f, o.YawDeg, -o.RollDeg));
+            Quaternion rotation = state.Facing * Quaternion.Euler(0f, o.YawDeg, -o.RollDeg);
+            Vector3 position = state.Position;
+            if (Mathf.Abs(o.BodyPitchDeg) > 0.01f || o.SwimWeight > 0.001f)
+            {
+                // Pitch about the hips; in water the position is the body line, so the hips sit on it (spec 103 §4).
+                Vector3 pivot = position + (Vector3.up * (HipHeight * (1f - o.SwimWeight)));
+                rotation = Quaternion.AngleAxis(o.BodyPitchDeg, rotation * Vector3.right) * rotation;
+                position = pivot - (rotation * new Vector3(0f, HipHeight, 0f));
+            }
+
+            transform.SetPositionAndRotation(position, rotation);
             RestoreHair();
             _animator.Update(dt);
 
@@ -186,6 +203,7 @@ namespace JungleBooze.Gameplay.Views
             {
                 _stateHashes[i] = Animator.StringToHash(StateNames[i]);
                 _stateLengths[i] = 1f;
+                _hasState[i] = i < 8;
             }
 
             if (_animator == null)
@@ -230,11 +248,50 @@ namespace JungleBooze.Gameplay.Views
             }
 
             _hairTipLength = _hair[1] != null && _hair[2] != null ? Vector3.Distance(_hair[1].position, _hair[2].position) : 0.1f;
+            for (int i = 8; i < StateNames.Length; i++)
+            {
+                _hasState[i] = _animator.runtimeAnimatorController != null && HasControllerState(StateNames[i]);
+            }
             _spring.Stiffness = _values.HairStiffness;
             _spring.Damping = _values.HairDamping;
             _spring.Gravity = _values.HairGravity;
             _spring.MaxAngleDeg = _values.HairMaxAngleDeg;
             _animator.Rebind();
+        }
+
+        private int Resolve(int index)
+        {
+            return index < _hasState.Length && _hasState[index] ? index : Fallback[index];
+        }
+
+        private bool HasControllerState(string state)
+        {
+            // Setup time: the controller's clip list names the traversal clips only if the states exist.
+            AnimationClip[] clips = _animator.runtimeAnimatorController.animationClips;
+            string clip = null;
+            for (int i = 0; i < StateNames.Length; i++)
+            {
+                if (StateNames[i] == state)
+                {
+                    clip = StateClips[i];
+                }
+            }
+
+            if (state == "Swim" || state == "Dive")
+            {
+                // Swim/Dive reuse Run/Fall: they exist when the traversal clips (Vine_Hang) are in the controller.
+                clip = "Vine_Hang";
+            }
+
+            for (int i = 0; i < clips.Length; i++)
+            {
+                if (clips[i].name == clip)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private float LocomotionPhase()

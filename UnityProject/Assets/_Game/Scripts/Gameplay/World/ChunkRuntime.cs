@@ -33,6 +33,16 @@ namespace JungleBooze.Gameplay.World
         private readonly DiscoveryTrigger[] _discoveries;
         private readonly TraversalZone[] _traversal;
         private readonly HelpMarker[] _help;
+        private readonly WaterVolume[] _water;
+        private readonly WaterCurrent[] _currents;
+        private readonly DeepDiveZone[] _deepDives;
+        private readonly VineAnchor[] _vines;
+        private readonly float[] _vineTakeoffY;
+        private readonly CreatureSpawn[] _creatures;
+        private readonly TraversalZone[] _canopy;
+
+        /// <summary>Per-chunk id stride for vines, deep-dive zones and creature spawns (id = serial × stride + index).</summary>
+        public const int LocalIdStride = 8;
 
         public ChunkRuntime(ChunkDefinition definition, int definitionIndex, int variantIndex, int libraryIndex)
         {
@@ -62,6 +72,27 @@ namespace JungleBooze.Gameplay.World
             _traversal = Variant.Traversal.ToArray();
             _help = Variant.Help.ToArray();
             _discoveries = Variant.Discoveries.ToArray();
+            _water = (Variant.Water ?? new List<WaterVolume>()).ToArray();
+            _currents = (Variant.Currents ?? new List<WaterCurrent>()).ToArray();
+            _deepDives = (Variant.DeepDives ?? new List<DeepDiveZone>()).ToArray();
+            _vines = (Variant.Vines ?? new List<VineAnchor>()).ToArray();
+            _creatures = (Variant.Creatures ?? new List<CreatureSpawn>()).ToArray();
+            if (_vines.Length > LocalIdStride || _deepDives.Length > LocalIdStride || _creatures.Length > LocalIdStride)
+            {
+                throw new ArgumentException(definition.Id + "/" + Variant.Name + ": at most " + LocalIdStride + " vines, deep-dive zones and creature spawns per chunk.");
+            }
+
+            var canopy = new List<TraversalZone>();
+            for (int i = 0; i < _traversal.Length; i++)
+            {
+                if (_traversal[i].Mode == TraversalMode.Canopy)
+                {
+                    canopy.Add(_traversal[i]);
+                }
+            }
+
+            _canopy = canopy.ToArray();
+            Curve = new PathCurve(Variant.Curve, Length);
 
             // Obstacles: stable sort by SMin, ids = local index.
             List<CourseObstacle> source = Variant.Obstacles;
@@ -108,6 +139,12 @@ namespace JungleBooze.Gameplay.World
             }
 
             MaxObstacleLength = maxLength;
+            _vineTakeoffY = new float[_vines.Length];
+            for (int i = 0; i < _vines.Length; i++)
+            {
+                TryGetFloor(_vines[i].LipS - 0.5f, _vines[i].X, out _vineTakeoffY[i]);
+            }
+
             _coins = ExpandCoins();
 
             _crystals = Variant.Crystals.ToArray();
@@ -200,6 +237,104 @@ namespace JungleBooze.Gameplay.World
 
         public HelpMarker GetHelp(int i) => _help[i];
 
+        /// <summary>The centreline's view-side curve (local frame).</summary>
+        public PathCurve Curve { get; }
+
+        public int WaterCount => _water.Length;
+
+        public int CurrentCount => _currents.Length;
+
+        public int DeepDiveCount => _deepDives.Length;
+
+        public int VineCount => _vines.Length;
+
+        public int CreatureCount => _creatures.Length;
+
+        public WaterVolume GetWater(int i) => _water[i];
+
+        public WaterCurrent GetCurrent(int i) => _currents[i];
+
+        public DeepDiveZone GetDeepDive(int i) => _deepDives[i];
+
+        public VineAnchor GetVine(int i) => _vines[i];
+
+        /// <summary>Floor height of the vine's takeoff (just before the lip).</summary>
+        public float GetVineTakeoffY(int i) => _vineTakeoffY[i];
+
+        public CreatureSpawn GetCreature(int i) => _creatures[i];
+
+        /// <summary>Water surface at local (s, x), if inside a water volume.</summary>
+        public bool TryGetWater(float s, float x, out float surfaceY)
+        {
+            for (int i = 0; i < _water.Length; i++)
+            {
+                if (_water[i].Contains(s, x))
+                {
+                    surfaceY = _water[i].SurfaceY;
+                    return true;
+                }
+            }
+
+            surfaceY = 0f;
+            return false;
+        }
+
+        /// <summary>Sum of the currents active at local s.</summary>
+        public void GetCurrentAt(float s, out float lateral, out float forward)
+        {
+            lateral = 0f;
+            forward = 0f;
+            for (int i = 0; i < _currents.Length; i++)
+            {
+                if (s >= _currents[i].SMin && s < _currents[i].SMax)
+                {
+                    lateral += _currents[i].Lateral;
+                    forward += _currents[i].Forward;
+                }
+            }
+        }
+
+        public int FindDeepDive(float s, float x)
+        {
+            for (int i = 0; i < _deepDives.Length; i++)
+            {
+                DeepDiveZone z = _deepDives[i];
+                if (s >= z.SMin && s <= z.SMax && x >= z.XMin && x <= z.XMax)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        /// <summary>Index of the vine whose grab window [lip − before, lip + after] contains local s, or −1.</summary>
+        public int FindVine(float s, float before, float after)
+        {
+            for (int i = 0; i < _vines.Length; i++)
+            {
+                if (s >= _vines[i].LipS - before && s <= _vines[i].LipS + after)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        public bool IsCanopy(float s)
+        {
+            for (int i = 0; i < _canopy.Length; i++)
+            {
+                if (s >= _canopy[i].SMin && s < _canopy[i].SMax)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         /// <summary>Outer path edges (ignoring dividers).</summary>
         public void GetOuterBounds(float s, out float xMin, out float xMax)
         {
@@ -291,28 +426,43 @@ namespace JungleBooze.Gameplay.World
             return true;
         }
 
+        /// <summary>
+        /// From a point over a gap: the nearest s in (s, s + reach] where floor starts again at x (the end of a gap
+        /// patch or the start of a floor patch laid over open air, e.g. a canopy beam), and its height.
+        /// </summary>
         public bool TryFindFloorAhead(float s, float x, float reach, out float lipS, out float lipY)
         {
-            for (int i = _floors.Length - 1; i >= 0; i--)
+            lipS = 0f;
+            lipY = 0f;
+            if (TryGetFloor(s, x, out _))
+            {
+                return false;
+            }
+
+            float best = float.MaxValue;
+            for (int i = 0; i < _floors.Length; i++)
             {
                 CourseFloorPatch patch = _floors[i];
-                if (patch.Kind != CourseFloorKind.Gap || !patch.Contains(s, x))
+                if (x < patch.XMin || x > patch.XMax)
                 {
                     continue;
                 }
 
-                if (patch.SMax - s <= reach && TryGetFloor(patch.SMax, x, out lipY))
+                float candidate = patch.Kind == CourseFloorKind.Gap ? patch.SMax : patch.SMin;
+                if (candidate > s && candidate <= s + reach && candidate < best && TryGetFloor(candidate, x, out _))
                 {
-                    lipS = patch.SMax;
-                    return true;
+                    best = candidate;
                 }
-
-                break;
             }
 
-            lipS = 0f;
-            lipY = 0f;
-            return false;
+            if (best == float.MaxValue)
+            {
+                return false;
+            }
+
+            lipS = best;
+            TryGetFloor(best, x, out lipY);
+            return true;
         }
 
         /// <summary>
@@ -414,10 +564,32 @@ namespace JungleBooze.Gameplay.World
             return true;
         }
 
-        /// <summary>Floor (or walkable top) height under a point; gaps count as 0 (setup only).</summary>
+        /// <summary>
+        /// Floor (or walkable top) height under a point; gaps count as 0; inside a water volume the water surface
+        /// (pickups float on it; underwater items use a negative height). Setup only.
+        /// </summary>
         public float BaseHeight(float s, float x)
         {
-            float y = TryGetFloor(s, x, out float floor) ? floor : 0f;
+            if (TryGetWater(s, x, out float surface))
+            {
+                return surface;
+            }
+
+            float y;
+            if (!TryGetFloor(s, x, out y))
+            {
+                // Over a gap: the height of the floor before it (arcs over canopy gaps sit at beam height).
+                y = 0f;
+                for (float back = 0.5f; back <= 12f; back += 0.5f)
+                {
+                    if (TryGetFloor(s - back, x, out float before) || TryGetFloor(s - back, 0f, out before))
+                    {
+                        y = before;
+                        break;
+                    }
+                }
+            }
+
             for (int i = 0; i < _obstacles.Length; i++)
             {
                 ObstacleBox o = _obstacles[i];
@@ -442,7 +614,7 @@ namespace JungleBooze.Gameplay.World
                     case CoinPatternKind.Weave:
                     {
                         float step = c.Step > 0f ? c.Step : c.Kind == CoinPatternKind.Line ? DefaultLineStep : DefaultWeaveStep;
-                        float height = c.Y > 0f ? c.Y : DefaultCoinHeight;
+                        float height = c.Y != 0f ? c.Y : DefaultCoinHeight;
                         int count = Math.Max(1, (int)Math.Floor(((c.S1 - c.S0) / step) + 1e-3) + 1);
                         for (int i = 0; i < count; i++)
                         {
@@ -467,7 +639,7 @@ namespace JungleBooze.Gameplay.World
                             float o = (i - ((n - 1) * 0.5f)) * ArcSpacing;
                             float u = o / ArcHalfSpan;
                             float lift = ArcRise * Math.Max(0f, 1f - (u * u));
-                            Add(points, c.S0 + o, c.X, (c.Y > 0f ? c.Y : ArcBase) + lift);
+                            Add(points, c.S0 + o, c.X, (c.Y != 0f ? c.Y : ArcBase) + lift);
                         }
 
                         break;
@@ -479,14 +651,14 @@ namespace JungleBooze.Gameplay.World
                         for (int i = 0; i < n; i++)
                         {
                             float o = (i - ((n - 1) * 0.5f)) * 1.0f;
-                            Add(points, c.S0 + 0.3f + o, c.X, c.Y > 0f ? c.Y : UnderCoinHeight);
+                            Add(points, c.S0 + 0.3f + o, c.X, c.Y != 0f ? c.Y : UnderCoinHeight);
                         }
 
                         break;
                     }
 
                     default:
-                        Add(points, c.S0, c.X, c.Y > 0f ? c.Y : DefaultCoinHeight);
+                        Add(points, c.S0, c.X, c.Y != 0f ? c.Y : DefaultCoinHeight);
                         break;
                 }
             }

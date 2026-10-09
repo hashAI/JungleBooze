@@ -98,12 +98,41 @@ namespace JungleBooze.Editor.Expedition
             return validation;
         }
 
+        /// <summary>The movement assets of the Expedition: the feel-test set plus swim, vine and canopy (spec 103 §14).</summary>
+        public static MovementConfigAssets MovementAssets()
+        {
+            MovementConfigAssets set = FeelTestSetup.EnsureMovementAssets();
+            set.Swim = Ensure<SwimConfigAsset>(ExpeditionPaths.Swim, a => a.SetValues(new Gameplay.Movement.SwimConfig()), false);
+            set.Vine = Ensure<VineConfigAsset>(ExpeditionPaths.Vine, a => a.SetValues(new Gameplay.Movement.VineConfig()), false);
+            set.Canopy = Ensure<CanopyConfigAsset>(ExpeditionPaths.Canopy, a => a.SetValues(new Gameplay.Movement.CanopyConfig()), false);
+            return set;
+        }
+
+        /// <summary>Camera profiles for V7 (landscape first, then portrait).</summary>
+        public static List<CameraProfile> CameraProfiles()
+        {
+            var landscape = AssetDatabase.LoadAssetAtPath<CameraProfileAsset>(FeelTestPaths.CameraLandscape);
+            var portrait = AssetDatabase.LoadAssetAtPath<CameraProfileAsset>(FeelTestPaths.CameraPortrait);
+            var list = new List<CameraProfile>();
+            if (landscape != null)
+            {
+                list.Add(landscape.Values);
+            }
+
+            if (portrait != null)
+            {
+                list.Add(portrait.Values);
+            }
+
+            return list;
+        }
+
         public static CatalogValidation.Result Validate(ExpeditionContentAsset content)
         {
             ExpeditionContent built = content.Build();
-            var movement = FeelTestSetup.EnsureMovementAssets().Build();
+            var movement = MovementAssets().Build();
             var timer = System.Diagnostics.Stopwatch.StartNew();
-            CatalogValidation.Result result = CatalogValidation.Run(built.Library, built.Script, movement, built.Director);
+            CatalogValidation.Result result = CatalogValidation.Run(built.Library, built.Script, movement, built.Director, CameraProfiles(), built.Pickups.CrystalPad);
             timer.Stop();
 
             // The built library shares the asset's definition objects: write the masks there and save.
@@ -117,7 +146,7 @@ namespace JungleBooze.Editor.Expedition
 
             var report = new StringBuilder();
             report.AppendLine("Chunk validation (spec 102 §4) — " + System.DateTime.Now.ToString("yyyy-MM-dd HH:mm") + ", " + result.BotRuns + " bot runs, " + timer.Elapsed.TotalSeconds.ToString("0.0") + " s");
-            report.AppendLine("Checked: V1 (Perfect bot, every open route, speed extremes / script speeds ±0.5 m/s and 0.8×), V2, V4, V5, V6, V8, V9, V10, V12. Not checked: V3 margin, V7 visibility, V11 (director), V13/V14, W1–W5 (Part B).");
+            report.AppendLine("Checked: V1 (Perfect bot, every open route and the Deep Breath passage, speed extremes / script speeds ±0.5 m/s and 0.8×), V2, V3, V4, V5, V6, V7 (landscape 16:9 + portrait 9:19.5), V8 (incl. curvature), V9, V10, V12, V13 (every release tick, both speeds), V14, W1–W5. V11 is checked by the director at pick time.");
             for (int i = 0; i < result.Reports.Count; i++)
             {
                 report.AppendLine(result.Reports[i].ToString());
@@ -171,6 +200,8 @@ namespace JungleBooze.Editor.Expedition
             EnsureFolder(ExpeditionPaths.ConfigRoot, "Discovery");
             EnsureFolder(ExpeditionPaths.ConfigRoot, "Progression");
             EnsureFolder(ExpeditionPaths.ConfigRoot, "UI");
+            EnsureFolder(ExpeditionPaths.ConfigRoot, "Creatures");
+            EnsureFolder(ExpeditionPaths.ConfigRoot, "Camera");
             EnsureFolder("Assets/_Game/Art", "Expedition");
             EnsureFolder("Assets/_Game", "Scenes");
         }
@@ -236,7 +267,9 @@ namespace JungleBooze.Editor.Expedition
                 abilities.Add(Ensure<AbilityDefinitionAsset>(ExpeditionPaths.Ability(ability.Name), a => a.SetValues(a0), reset));
             }
 
+            SailbackConfigAsset sailback = Ensure<SailbackConfigAsset>(ExpeditionPaths.Sailback, a => a.SetValues(new SailbackConfig()), false);
             ExpeditionContentAsset content = Ensure<ExpeditionContentAsset>(ExpeditionPaths.Content, null, false);
+            content.Sailback = sailback;
             content.Catalog = catalog;
             content.Script = script;
             content.Director = director;
@@ -262,9 +295,9 @@ namespace JungleBooze.Editor.Expedition
             p.Blocker = Lit("EX_Blocker", Hex(0x4A4A4E), 0.25f);
             p.Thorns = Lit("EX_Thorns", Hex(0x9E2238), 0.3f);
             p.Divider = Lit("EX_Divider", Hex(0x55555B), 0.2f);
-            p.WaterPlaceholder = Lit("EX_WaterPlaceholder", Hex(0x3C8FC4), 0.6f);
+            p.WaterPlaceholder = Transparent("EX_WaterPlaceholder", new Color(0.24f, 0.62f, 0.72f, 0.55f));
             p.CanopyPlaceholder = Lit("EX_CanopyPlaceholder", Hex(0x8A6A44), 0.15f);
-            p.ShallowWater = Lit("EX_ShallowWater", Hex(0x8FC3C6), 0.55f);
+            p.ShallowWater = Lit("EX_ShallowWater", Hex(0x7FA9A2), 0.4f);
             p.Curtain = Transparent("EX_Curtain", new Color(0.75f, 0.9f, 1f, 0.45f));
             p.Marker = Lit("EX_Marker", Hex(0xEDE6D2), 0.1f);
             p.Ground = Lit("EX_Ground", Hex(0x3E5A34), 0.05f);
@@ -390,13 +423,16 @@ namespace JungleBooze.Editor.Expedition
 
             var rootObject = new GameObject("ExpeditionRoot");
             ExpeditionRoot root = rootObject.AddComponent<ExpeditionRoot>();
-            root.Configure(FeelTestSetup.EnsureMovementAssets(), gestures, landscape, portrait, content, palette, camera);
+            root.Configure(MovementAssets(), gestures, landscape, portrait, content, palette, camera);
+            root.SetCameraModifiers(Ensure<CameraModifiersAsset>(ExpeditionPaths.CameraModifiers, a => a.SetValues(new CameraModifiers()), false));
             if (File.Exists(PistaPaths.Model))
             {
-                GameObject pista = AssetDatabase.LoadAssetAtPath<GameObject>(PistaPaths.Prefab);
+                // The Expedition uses its own Pista prefab with the traversal states (swim, dive, vine grab/hang);
+                // the shared Pista.prefab used by the look test is left as it is.
+                GameObject pista = AssetDatabase.LoadAssetAtPath<GameObject>(PistaPaths.ExpeditionPrefab);
                 if (pista == null)
                 {
-                    pista = PistaPrefabSetup.BuildAll();
+                    pista = PistaPrefabSetup.BuildExpeditionPrefab();
                 }
 
                 root.SetAvatarPrefab(pista != null ? pista.GetComponent<RunnerAvatar>() : null);

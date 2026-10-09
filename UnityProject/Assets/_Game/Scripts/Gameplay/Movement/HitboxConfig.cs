@@ -40,6 +40,9 @@ namespace JungleBooze.Gameplay.Movement
         /// <summary>Coin pickup radius around the coin centre, added to the runner box, m.</summary>
         public float CoinPickupRadius = 0.35f;
 
+        /// <summary>Coin pad in height (spec 103 §9.1: 0.35 m in x and s, 0.25 m in y), m.</summary>
+        public float CoinPickupPadY = 0.25f;
+
         public HitboxConfig Clone()
         {
             return (HitboxConfig)MemberwiseClone();

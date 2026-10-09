@@ -253,6 +253,8 @@ MonoBehaviour:
         XMax: 5.8
         Placeholder: 0
         RequiredAbility: 0
+        RequireDeepDive: 0
+        Vista: 0
         Note: 
       Traversal:
       - Mode: 6
@@ -262,15 +264,38 @@ MonoBehaviour:
         XMax: 5.8
         Value: 0
         Note: 'Water curtain: no collision, splash burst, 0.25 s droplet overlay'
-      - Mode: 4
-        SMin: 85
-        SMax: 118
-        XMin: 3.2
-        XMax: 3.2
-        Value: 3
-        Note: '[Part B placeholder] C9''s own sailback perched on D2 launches at
-          25 m and glides into the curtain (cue 1)'
       Help: []
+      Water: []
+      Currents: []
+      DeepDives: []
+      Vines: []
+      Creatures:
+      - EntryId: D-02
+        S: 108
+        X: 3.2
+        Y: 3
+        Count: 1
+        Spacing: 0
+        EndDS: 11.5
+        EndX: 4.8
+        EndY: 2.7
+        LaunchDistance: 25
+        Ambient: 0
+        Note: C9's own sailback perched on D2 launches at 25 m and glides into the
+          curtain (cue 1)
+      - EntryId: D-02
+        S: 143
+        X: 5.3
+        Y: 2.8
+        Count: 2
+        Spacing: 4
+        EndDS: 0
+        EndX: 5.3
+        EndY: 2.8
+        LaunchDistance: -1
+        Ambient: 0
+        Note: Roosting sailbacks inside the grotto (seen-again flavour)
+      Curve: []
     - Name: A
       ScriptOnly: 0
       Length: 0
@@ -487,6 +512,8 @@ MonoBehaviour:
         XMax: 5.8
         Placeholder: 0
         RequiredAbility: 0
+        RequireDeepDive: 0
+        Vista: 0
         Note: 
       Traversal:
       - Mode: 6
@@ -496,13 +523,36 @@ MonoBehaviour:
         XMax: 5.8
         Value: 0
         Note: 'Water curtain: no collision, splash burst, 0.25 s droplet overlay'
-      - Mode: 4
-        SMin: 85
-        SMax: 118
-        XMin: 3.2
-        XMax: 3.2
-        Value: 3
-        Note: '[Part B placeholder] C9''s own sailback perched on D2 launches at
-          25 m and glides into the curtain (cue 1)'
       Help: []
+      Water: []
+      Currents: []
+      DeepDives: []
+      Vines: []
+      Creatures:
+      - EntryId: D-02
+        S: 108
+        X: 3.2
+        Y: 3
+        Count: 1
+        Spacing: 0
+        EndDS: 11.5
+        EndX: 4.8
+        EndY: 2.7
+        LaunchDistance: 25
+        Ambient: 0
+        Note: C9's own sailback perched on D2 launches at 25 m and glides into the
+          curtain (cue 1)
+      - EntryId: D-02
+        S: 143
+        X: 5.3
+        Y: 2.8
+        Count: 2
+        Spacing: 4
+        EndDS: 0
+        EndX: 5.3
+        EndY: 2.8
+        LaunchDistance: -1
+        Ambient: 0
+        Note: Roosting sailbacks inside the grotto (seen-again flavour)
+      Curve: []
     ValidatedMask: 3

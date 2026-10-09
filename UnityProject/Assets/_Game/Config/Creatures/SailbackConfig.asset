@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e6e142e4bec314e62ae333b54893569d, type: 3}
+  m_Name: SailbackConfig
+  m_EditorClassIdentifier: JungleBooze.Gameplay::JungleBooze.Gameplay.Config.SailbackConfigAsset
+  _values:
+    HeadTrackDistance: 30
+    AlertDistance: 22
+    LaunchDistance: 14
+    StartleLateral: 2
+    AlertTime: 0.4
+    LaunchTime: 0.3
+    LaunchDrop: 0.6
+    GlideSpeedBonus: 2
+    FlockOffsetTime: 0.25
+    MinHeightOverPath: 2.5
+    ObserveMinDs: 2
+    ObserveMaxDs: 35
+    ObserveMaxDx: 10
+    ObserveTime: 0.8

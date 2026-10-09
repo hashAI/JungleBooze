@@ -6,6 +6,7 @@ using JungleBooze.App.FeelTest;
 using JungleBooze.Core;
 using JungleBooze.Core.Save;
 using JungleBooze.Core.Settings;
+using JungleBooze.Gameplay.Analytics;
 using JungleBooze.Gameplay.Bots;
 using JungleBooze.Gameplay.CameraRig;
 using JungleBooze.Gameplay.Config;
@@ -56,6 +57,7 @@ namespace JungleBooze.App.Expedition
         [SerializeField] private CameraProfileAsset _landscape;
         [SerializeField] private CameraProfileAsset _portrait;
         [SerializeField] private ExpeditionContentAsset _content;
+        [SerializeField] private CameraModifiersAsset _cameraModifiers;
         [SerializeField] private WorldPalette _palette;
         [SerializeField] private Camera _camera;
 
@@ -108,6 +110,13 @@ namespace JungleBooze.App.Expedition
         private float _debugRefresh;
         private int _runsThisSession;
         private float _resultsShownAt;
+        private AnalyticsRecorder _analytics;
+        private LocalAnalyticsLog _analyticsLog;
+        private float _reviveOffer;
+        private long _reviveHandledTick = -1;
+        private float _curtainFlash;
+        private static readonly Color UnderwaterTint = new Color(0.08f, 0.32f, 0.5f, 1f);
+        private static readonly Color CurtainTint = new Color(0.8f, 0.92f, 1f, 1f);
 
         public ExpeditionSession Session => _session;
 
@@ -145,6 +154,14 @@ namespace JungleBooze.App.Expedition
         /// <summary>Unscaled seconds the results have been visible for (tests).</summary>
         public float ResultsShownAt => _resultsShownAt;
 
+        /// <summary>On-device analytics (AC-103-50).</summary>
+        public AnalyticsRecorder Analytics => _analytics;
+
+        public LocalAnalyticsLog AnalyticsLog => _analyticsLog;
+
+        /// <summary>Seconds left on the revive offer (0 = none).</summary>
+        public float ReviveOfferSeconds => _reviveOffer;
+
         public void Configure(MovementConfigAssets movement, GestureConfigAsset gestures, CameraProfileAsset landscape, CameraProfileAsset portrait, ExpeditionContentAsset content, WorldPalette palette, Camera targetCamera)
         {
             _movement = movement;
@@ -154,6 +171,11 @@ namespace JungleBooze.App.Expedition
             _content = content;
             _palette = palette;
             _camera = targetCamera;
+        }
+
+        public void SetCameraModifiers(CameraModifiersAsset modifiers)
+        {
+            _cameraModifiers = modifiers;
         }
 
         public void SetAvatarPrefab(RunnerAvatar prefab)
@@ -216,7 +238,7 @@ namespace JungleBooze.App.Expedition
 
             RunnerAvatar avatar = _avatarPrefab != null ? Instantiate(_avatarPrefab, transform) : CapsuleRunnerAvatar.Create(transform, _palette.Runner, _palette.RunnerAccent);
             avatar.Bind(_config);
-            _runnerView = new RunnerView(_session.Simulation, avatar);
+            _runnerView = new RunnerView(_session.Simulation, avatar) { Frames = _session.Path };
 
             var brush = new GameObject("EdgeBrushLeaves");
             brush.transform.SetParent(transform, false);
@@ -234,7 +256,12 @@ namespace JungleBooze.App.Expedition
             _rig = new CameraRigModel(_landscapeActive ? _landscape.Values : _portrait.Values, _config.Speed.V0, _config.Speed.VMax, _config.Lateral.VLatMax)
             {
                 ReducedMotion = _reducedMotion,
+                Modifiers = _cameraModifiers != null ? _cameraModifiers.Values.Clone() : new CameraModifiers(),
             };
+
+            // Analytics: on-device log only (memory for tools and tests); no network.
+            _analytics = new AnalyticsRecorder(_expedition) { Build = Application.version, SessionId = Guid.NewGuid().ToString("N") };
+            _analyticsLog = new LocalAnalyticsLog(_memorySave || !Application.isPlaying ? null : Application.persistentDataPath);
 
             if (Application.isPlaying)
             {
@@ -242,7 +269,7 @@ namespace JungleBooze.App.Expedition
                 var hudObject = new GameObject("ExpeditionHud");
                 hudObject.transform.SetParent(transform, false);
                 _hud = hudObject.AddComponent<ExpeditionHud>();
-                _hud.Build(font, _config.Health.MaxHealth, TogglePause, RunAgain, OpenObjective, () => Learn(), CloseUpgrade);
+                _hud.Build(font, _config.Health.MaxHealth, TogglePause, RunAgain, OpenObjective, () => Learn(), CloseUpgrade, () => AcceptRevive(), DeclineRevive);
                 _hud.SetHint(Application.isMobilePlatform ? string.Empty : "drag/A D steer · W/Space jump · S slide · Q/E dodge · Esc pause · R restart · F1 debug · O camera · B bot");
                 _pointer.IsOverUi = (id, pixel) => _hud != null && _hud.HitsControl(pixel);
                 _pointer.Enable();
@@ -290,12 +317,18 @@ namespace JungleBooze.App.Expedition
             _results = null;
             _unlockMoment = 0f;
             _establishing = 0f;
+            _reviveOffer = 0f;
+            _reviveHandledTick = -1;
+            _curtainFlash = 0f;
+            _analytics.BeginRun(_profile.runsCompleted, setup.Seed, (int)setup.Owned, setup.Skill, _landscapeActive);
             _runnerView.Sync(1f, 0f);
             _rig.Snap(CameraTarget(_runnerView.Interpolated));
             ApplyCamera(_rig.Pose);
             if (_hud != null)
             {
                 _hud.HideResults();
+                _hud.HideRevive();
+                _hud.SetOverlay(Color.clear, 0f);
                 _hud.HideToast();
                 _hud.SetHelp(null);
                 _hud.SetCenter(ReadyText);
@@ -371,6 +404,11 @@ namespace JungleBooze.App.Expedition
             for (int i = 0; i < ticks; i++)
             {
                 StepOnce();
+                MaybeOfferRevive();
+                if (_reviveOffer > 0f)
+                {
+                    break;
+                }
             }
 
             Present(1f, ticks / (float)StepsPerSecond);
@@ -410,6 +448,8 @@ namespace JungleBooze.App.Expedition
             }
 
             _save.Save(_profile);
+            _analytics.RecordAbilityUnlocked(_upgradeAbility, _profile.runsCompleted);
+            _analytics.Flush(_analyticsLog);
             Debug.Log("[JungleBooze] Learned " + _upgradeAbility.Name + "; wallet " + _profile.coins + " coins, " + _profile.crystals + " crystals.");
             if (_hud != null)
             {
@@ -424,6 +464,58 @@ namespace JungleBooze.App.Expedition
         public void CloseUpgrade()
         {
             _hud?.HideUpgrade(true);
+        }
+
+        /// <summary>Revive "Continue?" (GDD §11): pays crystals and continues from the safe point. False if not possible.</summary>
+        public bool AcceptRevive()
+        {
+            if (_reviveOffer <= 0f)
+            {
+                return false;
+            }
+
+            int cost = ReviveRules.Cost(_expedition.Results, _session.Stats.Revives);
+            int index = _session.Stats.Revives;
+            if (!ReviveRules.TryRevive(_session, _expedition.Results, _profile))
+            {
+                return false;
+            }
+
+            _analytics.RecordRevive(true, cost, index, _session.Simulation.State.Tick * 1000L / StepsPerSecond);
+            _reviveOffer = 0f;
+            _time.ClearAccumulator();
+            _dispatcher.Clear();
+            _gestureRecognizer.IgnoreActiveTouches();
+            _hud?.HideRevive();
+            Debug.Log("[JungleBooze] Revived for " + cost + " crystal(s) (" + _session.Stats.Revives + "/" + _expedition.Results.MaxRevives + ").");
+            return true;
+        }
+
+        public void DeclineRevive()
+        {
+            _reviveOffer = 0f;
+            _hud?.HideRevive();
+        }
+
+        private void MaybeOfferRevive()
+        {
+            ref readonly RunnerState s = ref _session.Simulation.State;
+            if (!s.Dead || s.DeathTick == _reviveHandledTick)
+            {
+                return;
+            }
+
+            _reviveHandledTick = s.DeathTick;
+            RunStats stats = _session.Stats;
+            ResultsConfig cfg = _expedition.Results;
+            if (_botDriving || !Application.isPlaying || !ReviveRules.CanOffer(cfg, _session.FirstExpedition, stats) || !ReviveRules.CanAfford(cfg, _profile, stats))
+            {
+                return;
+            }
+
+            _reviveOffer = cfg.ReviveOfferTime;
+            _analytics.RecordRevive(false, ReviveRules.Cost(cfg, stats.Revives), stats.Revives, s.Tick * 1000L / StepsPerSecond);
+            _hud?.ShowRevive(ReviveRules.Cost(cfg, stats.Revives), true, _reviveOffer);
         }
 
         private void Start()
@@ -513,14 +605,31 @@ namespace JungleBooze.App.Expedition
                     }
                 }
             }
+            else if (_reviveOffer > 0f)
+            {
+                // The run waits on the "Continue?" offer (4 s, skip always visible).
+                _dispatcher.BeginFrame(0);
+                _reviveOffer -= frame;
+                if (_hud != null)
+                {
+                    ResultsConfig cfg = _expedition.Results;
+                    _hud.ShowRevive(ReviveRules.Cost(cfg, _session.Stats.Revives), ReviveRules.CanAfford(cfg, _profile, _session.Stats), _reviveOffer);
+                }
+
+                if (_reviveOffer <= 0f)
+                {
+                    DeclineRevive();
+                }
+            }
             else
             {
-                float scale = _help.Active ? HelpTracker.TimeScale : 1f;
+                float scale = _help.Active ? _help.Scale : 1f;
                 int steps = _time.Accumulate(frame * scale);
                 _dispatcher.BeginFrame(steps);
-                for (int i = 0; i < steps; i++)
+                for (int i = 0; i < steps && _reviveOffer <= 0f; i++)
                 {
                     StepOnce();
+                    MaybeOfferRevive();
                 }
             }
 
@@ -561,8 +670,15 @@ namespace JungleBooze.App.Expedition
                 _runnerView.OnRunEvent(e);
                 _worldView.OnRunEvent(e);
                 _feedback.OnRunEvent(e);
+                _analytics.OnRunEvent(e, _session);
                 switch (e.Type)
                 {
+                    case RunEventType.Vista:
+                        _rig.TriggerVista();
+                        break;
+                    case RunEventType.CurtainPass:
+                        _curtainFlash = 0.25f;
+                        break;
                     case RunEventType.Land:
                         if (e.Reason == (byte)LandingKind.Hard)
                         {
@@ -599,6 +715,7 @@ namespace JungleBooze.App.Expedition
             _runnerView.Sync(alpha, frameSeconds);
             RunnerState shown = _runnerView.Interpolated;
             _worldView.Sync(_session.Simulation, _session.Tracker, shown.S, _paused ? 0f : frameSeconds);
+            _worldView.SyncTraversal(_session.Simulation, _session.Creatures, _session.Simulation.Options.DeepBreath, _paused ? 0f : frameSeconds);
             if (!Application.isPlaying)
             {
                 _edgeBrush.ManualTick(frameSeconds);
@@ -625,6 +742,26 @@ namespace JungleBooze.App.Expedition
 
             ref readonly RunnerState s = ref _session.Simulation.State;
             RunStats stats = _session.Stats;
+            if (_curtainFlash > 0f)
+            {
+                _curtainFlash -= frameSeconds;
+            }
+
+            float underwater = s.Mode == MoveMode.DeepDive ? 0.32f : s.Submerged ? 0.12f : 0f;
+            if (_curtainFlash > 0f)
+            {
+                _hud.SetOverlay(CurtainTint, 0.35f * (_curtainFlash / 0.25f));
+            }
+            else
+            {
+                _hud.SetOverlay(UnderwaterTint, underwater);
+            }
+
+            if (_reviveOffer <= 0f && _hud.ReviveVisible)
+            {
+                _hud.HideRevive();
+            }
+
             _hud.SetDistance(s.Distance);
             if (_results == null)
             {
@@ -676,6 +813,8 @@ namespace JungleBooze.App.Expedition
             bool first = _session.FirstExpedition;
             _results = ProgressionRules.ApplyRun(_profile, stats, _expedition, first, _session.Director.ShowcasedAbilities);
             bool saved = _save.Save(_profile);
+            _analytics.RecordRunEnded(stats, _session.Run.RunSeconds, stats.Revives);
+            _analytics.Flush(_analyticsLog);
             _resultsShownAt = Time.realtimeSinceStartup;
             if (_hud != null)
             {
@@ -729,7 +868,9 @@ namespace JungleBooze.App.Expedition
             float total = _expedition.Results.EstablishingShotTime;
             float t = total > 0f ? Mathf.Clamp01(1f - (_establishing / total)) : 1f;
             float e = t * t * (3f - (2f * t));
-            Vector3 endPos = CameraMath.Position(target);
+            PathFrame f = _session.Path.GetFrame(target.S);
+            f.Offset(target.X, out float ex, out float ez);
+            var endPos = new Vector3(ex, target.Y, ez);
             Quaternion endRot = CameraMath.Rotation(target);
             var startPos = new Vector3(6f, 14f, -18f);
             Quaternion startRot = Quaternion.LookRotation(new Vector3(0f, 3f, 60f) - startPos);
@@ -765,23 +906,57 @@ namespace JungleBooze.App.Expedition
                 return;
             }
 
-            _camera.transform.SetPositionAndRotation(CameraMath.Position(pose), CameraMath.Rotation(pose));
+            // Path space → the curved world (spec 102 §2.1): position through the centreline frame at the camera's s,
+            // yaw from the rig (it follows the path heading at Pista).
+            PathFrame f = _session.Path.GetFrame(pose.S);
+            f.Offset(pose.X + pose.ShakeX, out float wx, out float wz);
+            _camera.transform.SetPositionAndRotation(new Vector3(wx, pose.Y + pose.ShakeY, wz), CameraMath.Rotation(pose));
             _camera.fieldOfView = pose.FovDeg;
             _camera.nearClipPlane = _rig.Profile.NearClip;
             _camera.farClipPlane = _rig.Profile.FarClip;
         }
 
-        private static CameraTargetInput CameraTarget(in RunnerState s)
+        private CameraTargetInput CameraTarget(in RunnerState s)
         {
+            CameraMode mode = CameraMode.Run;
+            switch (s.Mode)
+            {
+                case MoveMode.Swim:
+                    mode = CameraMode.Swim;
+                    break;
+                case MoveMode.DeepDive:
+                    mode = CameraMode.DeepDive;
+                    break;
+                case MoveMode.Swing:
+                    mode = CameraMode.Swing;
+                    break;
+                default:
+                    if (s.VineAir)
+                    {
+                        mode = CameraMode.Swing;
+                    }
+                    else if (_session != null && _session.Path.IsCanopy(s.S))
+                    {
+                        mode = CameraMode.Canopy;
+                    }
+
+                    break;
+            }
+
+            bool canopyFall = s.Dead && s.Cause == DeathCause.Fall && _session != null && _session.Path.IsCanopy(s.S);
             return new CameraTargetInput
             {
                 S = s.S,
                 X = s.X,
                 Y = s.Y,
-                GroundY = s.GroundY,
+                GroundY = s.Mode == MoveMode.Swing ? s.LastGroundY : s.GroundY,
                 VLat = s.VLat,
                 Speed = s.Speed,
                 Sliding = s.Sliding,
+                PathYawDeg = _session != null ? _session.Path.GetFrame(s.S).HeadingDeg : 0f,
+                Mode = mode,
+                VineAir = s.VineAir,
+                FallHold = canopyFall,
             };
         }
 
@@ -890,7 +1065,7 @@ namespace JungleBooze.App.Expedition
             RunnerState s = _runnerView.Interpolated;
             _session.Path.GetLateralBounds(s.S, s.X, out float xMin, out float xMax);
             float edge = side > 0 ? xMax : xMin;
-            _edgeBrush.Burst(new Vector3(edge, s.GroundY, s.S), side, s.Speed, started ? 6 : 3);
+            _edgeBrush.Burst(_runnerView.WorldPoint(s.S, edge, s.GroundY), side, s.Speed, started ? 6 : 3);
         }
 
         public void OnJump()

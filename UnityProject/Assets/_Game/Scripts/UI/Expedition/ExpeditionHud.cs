@@ -63,6 +63,16 @@ namespace JungleBooze.UI.Expedition
         private Text _learned;
         private Text _debug;
         private Text _hint;
+        private Image _overlay;
+        private Color _overlayColor;
+        private GameObject _revive;
+        private RectTransform _reviveRect;
+        private Text _reviveTitle;
+        private Text _reviveTimer;
+        private Button _reviveButton;
+        private Text _reviveLabel;
+        private int _shownReviveCost = -1;
+        private int _shownReviveSeconds = -1;
         private int _shownDistance = -1;
         private int _shownCoins = -1;
         private int _shownCrystals = -1;
@@ -96,7 +106,18 @@ namespace JungleBooze.UI.Expedition
 
         public Canvas Canvas => _canvas;
 
+        public bool ReviveVisible => _revive != null && _revive.activeSelf;
+
+        public bool ReviveInteractable => _reviveButton != null && _reviveButton.interactable;
+
+        public float OverlayAlpha => _overlay != null && _overlay.gameObject.activeSelf ? _overlay.color.a : 0f;
+
         public void Build(Font font, int maxHealth, Action onPause, Action onRunAgain, Action onObjective, Action onLearn, Action onUpgradeBack)
+        {
+            Build(font, maxHealth, onPause, onRunAgain, onObjective, onLearn, onUpgradeBack, null, null);
+        }
+
+        public void Build(Font font, int maxHealth, Action onPause, Action onRunAgain, Action onObjective, Action onLearn, Action onUpgradeBack, Action onRevive, Action onSkipRevive)
         {
             _canvas = gameObject.AddComponent<Canvas>();
             _canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -106,6 +127,12 @@ namespace JungleBooze.UI.Expedition
             _scaler.matchWidthOrHeight = 0.5f;
             gameObject.AddComponent<GraphicRaycaster>();
             SetOrientation(Screen.width >= Screen.height);
+
+            // Full-screen tint (under water during a deep dive, droplets at a water curtain), below every control.
+            _overlay = HudFactory.CreateImage(transform, "Overlay", Color.clear, false);
+            HudFactory.Stretch(_overlay.rectTransform, 0f);
+            _overlay.raycastTarget = false;
+            _overlay.gameObject.SetActive(false);
 
             _safe = HudFactory.CreateRect(transform, "SafeArea");
             HudFactory.Stretch(_safe, 0f);
@@ -162,6 +189,7 @@ namespace JungleBooze.UI.Expedition
             HudFactory.Place(_help.rectTransform, new Vector2(0.5f, 0.35f), new Vector2(300f, 100f), Vector2.zero);
             _help.gameObject.SetActive(false);
 
+            BuildRevive(font, onRevive, onSkipRevive);
             BuildResults(font, onRunAgain, onObjective);
             BuildUpgrade(font, onLearn, onUpgradeBack);
 
@@ -173,6 +201,81 @@ namespace JungleBooze.UI.Expedition
             _hint = HudFactory.CreateText(_safe, "Hint", font, 14, new Color(1f, 1f, 1f, 0.85f), Ink, TextAnchor.LowerCenter);
             _hint.fontStyle = FontStyle.Normal;
             HudFactory.Place(_hint.rectTransform, new Vector2(0.5f, 0f), new Vector2(800f, 24f), new Vector2(0f, 8f));
+        }
+
+        private void BuildRevive(Font font, Action onRevive, Action onSkip)
+        {
+            // GDD §11 "Continue?": 4 s offer, skip always visible, never mandatory (spec 103 §9.2: from run 2).
+            Image panel = HudFactory.CreatePanel(_safe, "Revive", Parchment, new Vector2(0.5f, 0.5f), new Vector2(320f, 200f), Vector2.zero);
+            _revive = panel.transform.parent.gameObject;
+            _reviveRect = (RectTransform)_revive.transform;
+            _reviveTitle = HudFactory.CreateText(panel.transform, "Title", font, 30, Ink, Color.clear, TextAnchor.UpperCenter);
+            HudFactory.Place(_reviveTitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(300f, 40f), new Vector2(0f, -12f));
+            _reviveTitle.text = "CONTINUE?";
+            _reviveTimer = HudFactory.CreateText(panel.transform, "Timer", font, 20, Violet, Color.clear, TextAnchor.UpperCenter);
+            HudFactory.Place(_reviveTimer.rectTransform, new Vector2(0.5f, 1f), new Vector2(300f, 28f), new Vector2(0f, -52f));
+            _reviveButton = HudFactory.CreateButton(panel.transform, "Continue", Cyan, new Vector2(0.5f, 0f), new Vector2(220f, 56f), new Vector2(0f, 70f), font, "Revive", 24, Ink, Color.clear, () => onRevive?.Invoke());
+            _reviveLabel = _reviveButton.GetComponentInChildren<Text>();
+            HudFactory.CreateButton(panel.transform, "Skip", Parchment, new Vector2(0.5f, 0f), new Vector2(120f, 44f), new Vector2(0f, 16f), font, "Skip", 20, Ink, Color.clear, () => onSkip?.Invoke());
+            _revive.SetActive(false);
+        }
+
+        /// <summary>Shows or updates the revive offer (cost in crystals, seconds left). Only touches UI on changes.</summary>
+        public void ShowRevive(int cost, bool affordable, float secondsLeft)
+        {
+            if (!_revive.activeSelf)
+            {
+                _revive.SetActive(true);
+                _shownReviveCost = -1;
+                _shownReviveSeconds = -1;
+            }
+
+            if (cost != _shownReviveCost)
+            {
+                _shownReviveCost = cost;
+                _reviveLabel.text = "Revive · " + cost.ToString(Invariant) + (cost == 1 ? " crystal" : " crystals");
+            }
+
+            _reviveButton.interactable = affordable;
+            int seconds = Mathf.CeilToInt(Mathf.Max(0f, secondsLeft));
+            if (seconds != _shownReviveSeconds)
+            {
+                _shownReviveSeconds = seconds;
+                _reviveTimer.text = _numbers.Get(seconds);
+            }
+        }
+
+        public void HideRevive()
+        {
+            if (_revive != null)
+            {
+                _revive.SetActive(false);
+            }
+        }
+
+        /// <summary>Full-screen tint (alpha 0 hides it). No allocation.</summary>
+        public void SetOverlay(Color color, float alpha)
+        {
+            if (_overlay == null)
+            {
+                return;
+            }
+
+            bool show = alpha > 0.005f;
+            if (_overlay.gameObject.activeSelf != show)
+            {
+                _overlay.gameObject.SetActive(show);
+            }
+
+            if (show)
+            {
+                color.a = alpha;
+                if (color != _overlayColor)
+                {
+                    _overlayColor = color;
+                    _overlay.color = color;
+                }
+            }
         }
 
         private void BuildResults(Font font, Action onRunAgain, Action onObjective)
@@ -454,6 +557,11 @@ namespace JungleBooze.UI.Expedition
             }
 
             if (UpgradeVisible && RectTransformUtility.RectangleContainsScreenPoint(_upgradeRect, screenPixel, null))
+            {
+                return true;
+            }
+
+            if (ReviveVisible && RectTransformUtility.RectangleContainsScreenPoint(_reviveRect, screenPixel, null))
             {
                 return true;
             }

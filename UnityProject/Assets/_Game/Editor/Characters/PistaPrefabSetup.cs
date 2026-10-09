@@ -30,7 +30,7 @@ namespace JungleBooze.Editor.Characters
             config.Values.StanceSpeedTable = BuildStanceSpeedTable("Run", RunCycleOffset, 64);
             EditorUtility.SetDirty(config);
             AnimatorController controller = BuildController();
-            return BuildPrefab(controller, config);
+            return BuildPrefab(controller, config, PistaPaths.Prefab);
         }
 
         /// <summary>Batch: tools/ci/unity.sh method JungleBooze.Editor.Characters.PistaPrefabSetup.Batch -nographics</summary>
@@ -137,14 +137,37 @@ namespace JungleBooze.Editor.Characters
             }
         }
 
-        public static AnimatorController BuildController()
+        /// <summary>
+        /// The Expedition's Pista (spec 103): same model and tuning, a controller with the traversal states too
+        /// (Swim = Run, Dive = Fall, Grab = Vine_Grab, Hang = Vine_Hang; procedural body pitch on top). Written next to
+        /// Pista.prefab; the shared prefab and controller are not touched.
+        /// </summary>
+        [MenuItem("JungleBooze/Characters/Build Pista Expedition Prefab", false, 32)]
+        public static GameObject BuildExpeditionPrefab()
         {
-            if (AssetDatabase.LoadAssetAtPath<AnimatorController>(PistaPaths.Controller) != null)
+            if (AssetDatabase.LoadAssetAtPath<Avatar>(PistaPaths.Model) == null || !AssetDatabase.LoadAssetAtPath<Avatar>(PistaPaths.Model).isHuman)
             {
-                AssetDatabase.DeleteAsset(PistaPaths.Controller);
+                PistaImportSetup.ConfigureAll();
             }
 
-            AnimatorController controller = AnimatorController.CreateAnimatorControllerAtPath(PistaPaths.Controller);
+            RunnerAnimationConfigAsset config = EnsureConfig();
+            AnimatorController controller = BuildController(PistaPaths.ExpeditionController, true);
+            return BuildPrefab(controller, config, PistaPaths.ExpeditionPrefab);
+        }
+
+        public static AnimatorController BuildController()
+        {
+            return BuildController(PistaPaths.Controller, false);
+        }
+
+        public static AnimatorController BuildController(string path, bool traversal)
+        {
+            if (AssetDatabase.LoadAssetAtPath<AnimatorController>(path) != null)
+            {
+                AssetDatabase.DeleteAsset(path);
+            }
+
+            AnimatorController controller = AnimatorController.CreateAnimatorControllerAtPath(path);
             controller.AddParameter(new AnimatorControllerParameter { name = "LocoBlend", type = AnimatorControllerParameterType.Float, defaultFloat = 1f });
             controller.AddParameter(new AnimatorControllerParameter { name = "RunRate", type = AnimatorControllerParameterType.Float, defaultFloat = 1f });
             controller.AddParameter(new AnimatorControllerParameter { name = "StateRate", type = AnimatorControllerParameterType.Float, defaultFloat = 1f });
@@ -176,6 +199,14 @@ namespace JungleBooze.Editor.Characters
             AddState(machine, "Stumble", Clip("Stumble"), "StateRate", new Vector3(250f, 160f));
             AddState(machine, "LandHard", Clip(PistaImportSetup.LandRunClip), "StateRate", new Vector3(500f, 240f));
             AddState(machine, "Death", Clip("Death_Backward"), "StateRate", new Vector3(250f, 240f));
+            if (traversal)
+            {
+                AddState(machine, "Swim", Clip("Run"), "StateRate", new Vector3(750f, 0f));
+                AddState(machine, "Dive", Clip("Fall"), "StateRate", new Vector3(750f, 80f));
+                AddState(machine, "Grab", Clip("Vine_Grab"), "StateRate", new Vector3(750f, 160f));
+                AddState(machine, "Hang", Clip("Vine_Hang"), "StateRate", new Vector3(750f, 240f));
+            }
+
             machine.defaultState = idle;
             EditorUtility.SetDirty(controller);
             AssetDatabase.SaveAssets();
@@ -210,7 +241,7 @@ namespace JungleBooze.Editor.Characters
             throw new System.InvalidOperationException("Clip '" + name + "' not found in " + PistaPaths.Model + " (run Configure Pista Import).");
         }
 
-        private static GameObject BuildPrefab(AnimatorController controller, RunnerAnimationConfigAsset config)
+        private static GameObject BuildPrefab(AnimatorController controller, RunnerAnimationConfigAsset config, string prefabPath)
         {
             if (!AssetDatabase.IsValidFolder(PistaPaths.PrefabFolder))
             {
@@ -249,8 +280,8 @@ namespace JungleBooze.Editor.Characters
 
                 AnimatedRunnerAvatar avatar = root.AddComponent<AnimatedRunnerAvatar>();
                 avatar.Configure(animator, model.transform, config);
-                GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, PistaPaths.Prefab);
-                Debug.Log("[JungleBooze] Pista prefab written: " + PistaPaths.Prefab);
+                GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
+                Debug.Log("[JungleBooze] Pista prefab written: " + prefabPath);
                 return prefab;
             }
             finally

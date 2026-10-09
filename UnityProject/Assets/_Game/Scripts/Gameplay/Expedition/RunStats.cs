@@ -35,6 +35,14 @@ namespace JungleBooze.Gameplay.Expedition
         public int ChunksEntered;
         public int TraversalAttempts;
         public int TraversalSuccesses;
+        public int VineReleases;
+        public int PerfectReleases;
+        public int PerfectSpans;
+
+        /// <summary>Crystals spent on revives this run (spec 103 §9.2, GDD §11), taken from the run's and the wallet's crystals at banking.</summary>
+        public int ReviveCrystals;
+
+        public int Revives;
 
         public bool Dead;
         public DeathCause Cause;
@@ -73,6 +81,8 @@ namespace JungleBooze.Gameplay.Expedition
             RiskyRoutes = SafeRoutes = SecretRoutes = CleanLines = 0;
             ChunksEntered = 0;
             TraversalAttempts = TraversalSuccesses = 0;
+            VineReleases = PerfectReleases = PerfectSpans = 0;
+            ReviveCrystals = Revives = 0;
             Dead = false;
             Cause = DeathCause.None;
             DeathLabel = string.Empty;

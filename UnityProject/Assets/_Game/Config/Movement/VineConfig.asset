@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6e9c166f5907f4487b9117e4e9d4ee66, type: 3}
+  m_Name: VineConfig
+  m_EditorClassIdentifier: JungleBooze.Gameplay::JungleBooze.Gameplay.Config.VineConfigAsset
+  _values:
+    GrabBefore: 1.5
+    GrabAfter: 1
+    GrabHalfWidth: 1.2
+    GrabFeetBelow: 1
+    GrabFeetAbove: 2
+    HandToFeet: 1.9
+    Theta0Deg: -35
+    ThetaEndDeg: 55
+    SwingTime: 1
+    GrabSnapTime: 0.1
+    ReleaseOpen: 0.6
+    PerfectStart: 0.75
+    PerfectEnd: 0.9
+    ReleaseSpeed: 10
+    PerfectBoost: 1.35
+    LandBlendTime: 0.3
+    DefaultLength: 6
+    DefaultAnchorHeight: 8
+    MinLandingOffset: 5
+    FunnelMaxWidth: 2.4
+    SwingCorridor: 1
+    ReviveBeforeLip: 8

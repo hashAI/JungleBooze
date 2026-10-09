@@ -16,6 +16,14 @@ namespace JungleBooze.Gameplay.Movement
 
         public float StartX;
 
+        /// <summary>Owns Deep Breath: a dive started in a Deep Breath zone follows its passage (spec 103 §4.5).</summary>
+        public bool DeepBreath;
+
+        /// <summary>Deep dive depth below the swim line (m, negative) and duration (s), from the ability definition.</summary>
+        public float DeepDiveDepth;
+
+        public float DeepDiveTime;
+
         public static RunOptions Default => default;
     }
 }

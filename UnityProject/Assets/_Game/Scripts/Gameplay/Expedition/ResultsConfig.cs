@@ -31,9 +31,18 @@ namespace JungleBooze.Gameplay.Expedition
         public int LocationTotal = 4;
         public int MysteryTotal = 2;
 
+        /// <summary>Revive "Continue?" (GDD §11): crystal cost per revive in a run, the limit and the offer time, s.</summary>
+        public int[] ReviveCosts = { 1, 2, 4 };
+
+        public int MaxRevives = 3;
+
+        public float ReviveOfferTime = 4f;
+
         public ResultsConfig Clone()
         {
-            return (ResultsConfig)MemberwiseClone();
+            var copy = (ResultsConfig)MemberwiseClone();
+            copy.ReviveCosts = ReviveCosts != null ? (int[])ReviveCosts.Clone() : new[] { 1, 2, 4 };
+            return copy;
         }
     }
 }

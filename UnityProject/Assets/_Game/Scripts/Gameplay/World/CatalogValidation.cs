@@ -47,9 +47,9 @@ namespace JungleBooze.Gameplay.World
             }
         }
 
-        public static Result Run(ChunkLibrary library, ExpeditionScript script, MovementConfig movement, WorldDirectorConfig director)
+        public static Result Run(ChunkLibrary library, ExpeditionScript script, MovementConfig movement, WorldDirectorConfig director, IList<CameraRig.CameraProfile> cameras = null, float crystalPad = 0.4f)
         {
-            var validator = new ChunkValidator(movement, director);
+            var validator = new ChunkValidator(movement, director, cameras, crystalPad);
             var result = new Result { Masks = new int[library.DefinitionCount] };
             var scriptPassed = new Dictionary<int, bool>();
 

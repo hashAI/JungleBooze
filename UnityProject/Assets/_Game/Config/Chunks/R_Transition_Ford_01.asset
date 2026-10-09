@@ -133,13 +133,32 @@ MonoBehaviour:
         Value: 0
         Note: "Ankle-deep ford: ground with splash footsteps, no speed change. The
           1.0 m descent to river level (6\u201360) is visual only"
-      - Mode: 4
-        SMin: 90
-        SMax: 130
-        XMin: -20
-        XMax: 20
-        Value: 8
-        Note: "[Part B placeholder] Ambient sailback crossing 45\u201360 m ahead
-          at y \u2265 8 m (foreshadowing; outside the discovery volume)"
       Help: []
+      Water: []
+      Currents: []
+      DeepDives: []
+      Vines: []
+      Creatures:
+      - EntryId: D-02
+        S: 150
+        X: -22
+        Y: 8
+        Count: 2
+        Spacing: 2.5
+        EndDS: 15
+        EndX: 26
+        EndY: 9
+        LaunchDistance: 52
+        Ambient: 1
+        Note: "Ambient sailback crossing 45\u201360 m ahead at y \u2265 8 m (foreshadowing;
+          outside the discovery volume)"
+      Curve:
+      - S: 10
+        Curvature: 0
+      - S: 25
+        Curvature: 0.007142857
+      - S: 55
+        Curvature: 0.007142857
+      - S: 70
+        Curvature: 0
     ValidatedMask: 1

@@ -6,5 +6,8 @@ namespace JungleBooze.Gameplay.Movement
         None = 0,
         Buffer,
         Ceiling,
+
+        /// <summary>Swipe down or flick during a vine swing (spec 103 §5.4).</summary>
+        Swing,
     }
 }

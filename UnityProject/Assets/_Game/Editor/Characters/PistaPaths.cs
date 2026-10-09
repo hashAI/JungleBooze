@@ -13,6 +13,10 @@ namespace JungleBooze.Editor.Characters
         public const string Controller = Folder + "/Pista.controller";
         public const string PrefabFolder = "Assets/_Game/Prefabs/Characters";
         public const string Prefab = PrefabFolder + "/Pista.prefab";
+
+        /// <summary>Expedition variant with the traversal states (swim, dive, vine), its own controller (spec 103).</summary>
+        public const string ExpeditionPrefab = PrefabFolder + "/PistaExpedition.prefab";
+        public const string ExpeditionController = PrefabFolder + "/PistaExpedition.controller";
         public const string AnimationConfig = "Assets/_Game/Config/Movement/RunnerAnimationConfig.asset";
     }
 }

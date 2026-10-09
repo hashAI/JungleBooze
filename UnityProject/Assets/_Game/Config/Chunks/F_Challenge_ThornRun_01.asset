@@ -296,4 +296,10 @@ MonoBehaviour:
       Discoveries: []
       Traversal: []
       Help: []
+      Water: []
+      Currents: []
+      DeepDives: []
+      Vines: []
+      Creatures: []
+      Curve: []
     ValidatedMask: 1

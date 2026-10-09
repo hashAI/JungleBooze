@@ -20,6 +20,13 @@ namespace JungleBooze.Editor.Expedition
         public const string Palette = MaterialFolder + "/WorldPalette.asset";
         public const string Scene = "Assets/_Game/Scenes/Expedition.unity";
         public const string ValidationReport = "Assets/_Game/Config/World/ChunkValidation.txt";
+        public const string Swim = ConfigRoot + "/Movement/SwimConfig.asset";
+        public const string Vine = ConfigRoot + "/Movement/VineConfig.asset";
+        public const string Canopy = ConfigRoot + "/Movement/CanopyConfig.asset";
+        public const string CreaturesFolder = ConfigRoot + "/Creatures";
+        public const string Sailback = CreaturesFolder + "/SailbackConfig.asset";
+        public const string CameraFolder = ConfigRoot + "/Camera";
+        public const string CameraModifiers = CameraFolder + "/CameraModifiers.asset";
 
         public static string Chunk(string id)
         {

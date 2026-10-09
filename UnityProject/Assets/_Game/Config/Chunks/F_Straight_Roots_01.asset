@@ -255,6 +255,12 @@ MonoBehaviour:
         S: 160
         XMin: -3.5
         XMax: 0.5
+      Water: []
+      Currents: []
+      DeepDives: []
+      Vines: []
+      Creatures: []
+      Curve: []
     - Name: B
       ScriptOnly: 0
       Length: 200
@@ -441,4 +447,18 @@ MonoBehaviour:
       Discoveries: []
       Traversal: []
       Help: []
+      Water: []
+      Currents: []
+      DeepDives: []
+      Vines: []
+      Creatures: []
+      Curve:
+      - S: 25
+        Curvature: 0
+      - S: 40
+        Curvature: 0.005
+      - S: 100
+        Curvature: 0.005
+      - S: 112
+        Curvature: 0
     ValidatedMask: 3

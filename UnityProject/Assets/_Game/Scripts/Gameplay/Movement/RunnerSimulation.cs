@@ -12,8 +12,12 @@ namespace JungleBooze.Gameplay.Movement
     /// ceiling hold), (3) lateral, (4) vertical and ground/ledge, (5) forward, (6) collisions and coins,
     /// (7) timers, (8) events. Timers are tick stamps; a slide that started on tick T is active on ticks
     /// T … T + slideTicks − 1 and its expiry is evaluated at the start of the next tick.
+    ///
+    /// Traversal (spec 103 §4–6, path implements <see cref="ITraversalQuery"/>): swimming with dives, leaps and
+    /// currents, the Deep Breath passage, the vine swing and canopy beam landing assist live in the partial files
+    /// <c>RunnerSimulation.Swim.cs</c> and <c>RunnerSimulation.Vine.cs</c>.
     /// </summary>
-    public sealed class RunnerSimulation
+    public sealed partial class RunnerSimulation
     {
         private const int QueryCapacity = 32;
         private const int SafeRingSize = 64;
@@ -21,6 +25,7 @@ namespace JungleBooze.Gameplay.Movement
 
         private readonly MovementConfig _config;
         private readonly IPathQuery _path;
+        private readonly ITraversalQuery _traversal;
         private readonly SpeedCurve _speedCurve;
         private readonly float _dt;
         private readonly int[] _ids = new int[QueryCapacity];
@@ -46,6 +51,19 @@ namespace JungleBooze.Gameplay.Movement
         private readonly int _reviveRampTicks;
         private readonly int _ftueTicks;
         private readonly int _crashStopTicks;
+        private readonly int _swimDodgeBoostTicks;
+        private readonly int _swimEnterBlendTicks;
+        private readonly int _swimExitBlendTicks;
+        private readonly int _diveDownTicks;
+        private readonly int _diveUnderTicks;
+        private readonly int _diveUpTicks;
+        private readonly int _swingTicks;
+        private readonly int _grabSnapTicks;
+        private readonly int _releaseOpenTick;
+        private readonly int _perfectStartTick;
+        private readonly int _perfectEndTick;
+        private readonly int _vineLandBlendTicks;
+        private readonly int _beamSnapTicks;
 
         private RunnerState _state;
         private RunnerState _previous;
@@ -57,6 +75,7 @@ namespace JungleBooze.Gameplay.Movement
         {
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _path = path ?? throw new ArgumentNullException(nameof(path));
+            _traversal = path as ITraversalQuery;
             if (!(stepSeconds > 0f))
             {
                 throw new ArgumentOutOfRangeException(nameof(stepSeconds));
@@ -83,6 +102,21 @@ namespace JungleBooze.Gameplay.Movement
             _reviveRampTicks = ToTicks(config.Speed.ReviveRampTime);
             _ftueTicks = ToTicks(config.Health.FtueHealthFloorTime);
             _crashStopTicks = Math.Max(1, ToTicks(config.Health.CrashStopTime));
+            SwimConfig sw = config.Swim;
+            _swimDodgeBoostTicks = ToTicks(sw.DodgeBoostTime);
+            _swimEnterBlendTicks = ToTicks(sw.EnterBlendTime);
+            _swimExitBlendTicks = ToTicks(sw.ExitBlendTime);
+            _diveDownTicks = Math.Max(1, ToTicks(sw.DiveDownTime));
+            _diveUnderTicks = Math.Max(1, ToTicks(sw.DiveUnderTime));
+            _diveUpTicks = Math.Max(1, ToTicks(sw.DiveUpTime));
+            VineConfig vine = config.Vine;
+            _swingTicks = Math.Max(1, ToTicks(vine.SwingTime));
+            _grabSnapTicks = ToTicks(vine.GrabSnapTime);
+            _releaseOpenTick = (int)Math.Ceiling((vine.ReleaseOpen * _swingTicks) - 1e-4);
+            _perfectStartTick = (int)Math.Ceiling((vine.PerfectStart * _swingTicks) - 1e-4);
+            _perfectEndTick = (int)Math.Floor((vine.PerfectEnd * _swingTicks) + 1e-4);
+            _vineLandBlendTicks = ToTicks(vine.LandBlendTime);
+            _beamSnapTicks = Math.Max(1, ToTicks(config.Canopy.SnapTime));
             Reset(RunOptions.Default);
         }
 
@@ -119,6 +153,24 @@ namespace JungleBooze.Gameplay.Movement
 
         public int StumbleTicks => _stumbleTicks;
 
+        /// <summary>The path's traversal data, or null (no water, vines or canopy).</summary>
+        public ITraversalQuery Traversal => _traversal;
+
+        /// <summary>Vine swing length in ticks and the release window (inclusive tick indices since the grab).</summary>
+        public int SwingTicks => _swingTicks;
+
+        public int ReleaseOpenTick => _releaseOpenTick;
+
+        public int PerfectStartTick => _perfectStartTick;
+
+        public int PerfectEndTick => _perfectEndTick;
+
+        public int DiveDownTicks => _diveDownTicks;
+
+        public int DiveUnderTicks => _diveUnderTicks;
+
+        public int DiveUpTicks => _diveUpTicks;
+
         public bool IsObstacleResolved(int id)
         {
             return Has(_resolved, id);
@@ -152,6 +204,38 @@ namespace JungleBooze.Gameplay.Movement
 
         public float HitboxDepth => _state.Sliding ? _config.Hitbox.SlideDepth : _config.Hitbox.RunDepth;
 
+        /// <summary>
+        /// The current hitbox in path space for the current mode (spec 101 §2.6; swim/leap boxes spec 103 §4.2–4.3,
+        /// centred on the body line in water; feet-based on land and on the vine).
+        /// </summary>
+        public void GetHitbox(out float s0, out float s1, out float x0, out float x1, out float y0, out float y1)
+        {
+            float halfDepth;
+            float halfWidth;
+            if (_state.Mode == MoveMode.Swim || _state.Mode == MoveMode.DeepDive)
+            {
+                SwimConfig sw = _config.Swim;
+                bool leap = _state.Leaping;
+                halfDepth = (leap ? sw.LeapHitboxDepth : sw.HitboxDepth) * 0.5f;
+                halfWidth = (leap ? sw.LeapHitboxWidth : sw.HitboxWidth) * 0.5f;
+                float halfHeight = (leap ? sw.LeapHitboxHeight : sw.HitboxHeight) * 0.5f;
+                y0 = _state.Y - halfHeight;
+                y1 = _state.Y + halfHeight;
+            }
+            else
+            {
+                halfDepth = HitboxDepth * 0.5f;
+                halfWidth = _config.Hitbox.Width * 0.5f;
+                y0 = _state.Y;
+                y1 = _state.Y + HitboxHeight;
+            }
+
+            s0 = _state.S - halfDepth;
+            s1 = _state.S + halfDepth;
+            x0 = _state.X - halfWidth;
+            x1 = _state.X + halfWidth;
+        }
+
         /// <summary>Starts a new run. Allocation-free.</summary>
         public void Reset(RunOptions options)
         {
@@ -177,6 +261,11 @@ namespace JungleBooze.Gameplay.Movement
             _state.DeathObstacle = -1;
             _state.LastHitObstacle = -1;
             _state.NudgedFork = -1;
+            _state.VineId = -1;
+            _state.DeepZone = -1;
+            _state.BlendTick = Never;
+            _state.SnapTick = Never;
+            _state.SnapUntilTick = Never;
             if (_path.TryGetFloor(_state.S, _state.X, out float floor))
             {
                 _state.Y = floor;
@@ -260,6 +349,12 @@ namespace JungleBooze.Gameplay.Movement
                 Emit(RunEventType.RunStarted, -1, 0, 0f);
             }
 
+            if (_state.Mode != MoveMode.Run)
+            {
+                StepTraversal(t, frame);
+                return;
+            }
+
             // Slide timer expiry (with the ceiling guard) takes effect at the start of the tick.
             if (_state.Sliding && t >= _state.SlideEndTick && !CeilingOverStanding())
             {
@@ -284,7 +379,7 @@ namespace JungleBooze.Gameplay.Movement
             int dodgeDir = discrete == InputCommand.DodgeLeft ? -1 : discrete == InputCommand.DodgeRight ? 1 : 0;
             StepLateral(t, frame.LateralDeltaM, dodgeDir);
 
-            // (4) Vertical, ground and ledge.
+            // (4) Vertical, ground and ledge; water entry (spec 103 §4.2).
             StepVertical(t);
             if (_state.Dead)
             {
@@ -292,12 +387,20 @@ namespace JungleBooze.Gameplay.Movement
                 return;
             }
 
+            TryEnterWater(t);
+
             // (5) Forward.
             float speed = CurrentSpeed(t);
             _state.Speed = speed;
             float ds = speed * _dt;
             _state.S += ds;
             _state.Distance += ds;
+
+            // Vine grab: the first tick inside a grab zone (spec 103 §5.2).
+            if (_state.Mode == MoveMode.Run)
+            {
+                TryGrabVine(t);
+            }
 
             // (6) Collisions and pickups. A pickup and a fatal hit on the same tick both count (AC-103-35).
             StepCollisions(t);
@@ -330,8 +433,14 @@ namespace JungleBooze.Gameplay.Movement
                 hazardS = Math.Min(hazardS, LastGroundedS());
             }
 
-            // The most recent safe point far enough back whose (clamped) spot still has floor.
+            // The most recent safe point far enough back whose (clamped) spot still has floor. Near a vine the
+            // revive point is the takeoff funnel, so the swing starts over (spec 103 §5.5).
             float limit = hazardS - health.ReviveBackDistance;
+            if (_traversal != null && _state.VineId >= 0 && _traversal.TryGetVine(_state.VineId, out VinePoint vine) &&
+                hazardS >= vine.LipS - _config.Vine.GrabBefore && hazardS <= vine.LandingS + 10f)
+            {
+                limit = Math.Min(limit, vine.LipS - _config.Vine.ReviveBeforeLip);
+            }
             float s = Math.Max(0f, limit);
             float x = 0f;
             float y = 0f;
@@ -388,8 +497,24 @@ namespace JungleBooze.Gameplay.Movement
             _state.ReviveTick = t;
             _state.StumbleTick = Never;
             _state.Revives++;
+            _state.VineId = -1;
+            _state.DeepZone = -1;
+            _state.OverGap = false;
+            _state.Mode = MoveMode.Run;
+            _state.Dive = DivePhase.None;
+            _state.Leaping = false;
+            _state.OnSurface = InputCommand.None;
+            _state.VineAir = false;
+            _state.ReleaseHeld = false;
+            _state.SnapUntilTick = Never;
+            _state.BlendTick = Never;
+            _state.Speed = BaseSpeed();
             _previous = _state;
             Emit(RunEventType.Revived, -1, 0, 0f);
+
+            // Revived in water (last surface position): swim from the first tick.
+            TryEnterWater(t);
+            _previous = _state;
             return true;
         }
 
@@ -441,14 +566,28 @@ namespace JungleBooze.Gameplay.Movement
 
             y0 = box.YMin;
             y1 = box.YMax;
-            if (box.Class == ObstacleClass.Low)
+            switch (box.Class)
             {
-                y1 -= hb.LowTopForgiveness;
+                case ObstacleClass.Low:
+                case ObstacleClass.Snag:
+                    y1 -= hb.LowTopForgiveness;
+                    break;
+                case ObstacleClass.High:
+                case ObstacleClass.LowBranch:
+                    y0 += hb.HighBottomForgiveness;
+                    break;
+                case ObstacleClass.FloatingLog:
+                    // Spec 103 §4.6: tops −0.10, bottoms +0.10.
+                    y1 -= hb.LowTopForgiveness;
+                    y0 += hb.HighBottomForgiveness;
+                    break;
             }
-            else if (box.Class == ObstacleClass.High)
-            {
-                y0 += hb.HighBottomForgiveness;
-            }
+        }
+
+        /// <summary>Water obstacle classes (spec 103 §4.6).</summary>
+        public static bool IsWaterClass(ObstacleClass kind)
+        {
+            return kind >= ObstacleClass.FloatingLog;
         }
 
         private static bool Has(int[] stamps, int id)
@@ -575,6 +714,8 @@ namespace JungleBooze.Gameplay.Movement
         private void StepLateral(long t, float delta, int dodgeDir)
         {
             LateralMovementConfig lat = _config.Lateral;
+            bool swim = _state.Mode == MoveMode.Swim;
+            SwimConfig sw = _config.Swim;
             _path.GetLateralBounds(_state.S, _state.X, out float bMin, out float bMax);
             float xMin = bMin + lat.EdgeMargin;
             float xMax = bMax - lat.EdgeMargin;
@@ -585,26 +726,56 @@ namespace JungleBooze.Gameplay.Movement
                 xMax = mid;
             }
 
-            // 1. Target (clamped itself: no debt past the edge).
+            // Canopy (spec 103 §6): airborne she keeps her x (no inward push), so landing beside a beam is a Fall.
+            bool canopyAir = !_state.Grounded && _traversal != null && _traversal.IsCanopy(_state.S);
+            if (canopyAir)
+            {
+                xMin = Math.Min(xMin, _state.X);
+                xMax = Math.Max(xMax, _state.X);
+            }
+
+            // Beam landing assist: x is pulled onto the beam over a few ticks; steering waits.
+            if (_state.SnapUntilTick != Never && t <= _state.SnapUntilTick)
+            {
+                float u = Clamp01((float)(t - _state.SnapTick) / Math.Max(1L, _state.SnapUntilTick - _state.SnapTick));
+                _state.X = _state.SnapFromX + ((_state.SnapToX - _state.SnapFromX) * u);
+                _state.XTarget = _state.SnapToX;
+                _state.VLat = 0f;
+                return;
+            }
+
+            // 1. Target (clamped itself: no debt past the edge). In water the lateral current drifts the target
+            // (spec 103 §4.2), so the player must drag against it.
             _state.XTarget = Clamp(_state.XTarget + delta, xMin, xMax);
+            if (swim && _traversal != null)
+            {
+                _traversal.GetCurrent(_state.S, _state.X, out float cx, out _);
+                if (cx != 0f)
+                {
+                    _state.XTarget = Clamp(_state.XTarget + (cx * _dt), xMin, xMax);
+                }
+            }
+
             ApplyForkNudge(t, xMin, xMax);
 
+            float dodgeDistance = swim ? sw.DodgeDistance : lat.DodgeDistance;
             if (dodgeDir != 0)
             {
                 // [ASSUMED 2026-10-09] The dodge moves dodgeDistance from where Pista is now and replaces any steering
                 // target still pending (in either direction), so a flick after a drag never throws her further.
-                _state.XTarget = Clamp(_state.X + (dodgeDir * lat.DodgeDistance), xMin, xMax);
-                _state.DodgeBoostUntilTick = t + _dodgeBoostTicks - 1;
+                _state.XTarget = Clamp(_state.X + (dodgeDir * dodgeDistance), xMin, xMax);
+                _state.DodgeBoostUntilTick = t + (swim ? _swimDodgeBoostTicks : _dodgeBoostTicks) - 1;
                 Emit(RunEventType.Dodge, -1, (byte)(dodgeDir > 0 ? 1 : 0), 0f);
             }
 
             // 2–3. Servo.
             bool boost = t <= _state.DodgeBoostUntilTick;
-            float factor = _state.Grounded ? (_state.Sliding ? lat.SlideLateralFactor : 1f) : lat.AirLateralFactor;
-            float vMax = (boost ? lat.DodgeVLatMax : lat.VLatMax) * factor;
-            float accel = (boost ? lat.DodgeAccel : lat.AccelLat) * factor;
-            float decel = lat.DecelLat * factor;
-            float vDes = Clamp((_state.XTarget - _state.X) / lat.Tau, -vMax, vMax);
+            float factor = swim ? 1f : _state.Grounded ? (_state.Sliding ? lat.SlideLateralFactor : 1f) : lat.AirLateralFactor;
+            float vMax = (boost ? (swim ? sw.DodgeVLatMax : lat.DodgeVLatMax) : (swim ? sw.VLatMax : lat.VLatMax)) * factor;
+            float accel = (boost ? (swim ? sw.DodgeAccel : lat.DodgeAccel) : (swim ? sw.AccelLat : lat.AccelLat)) * factor;
+            float decel = (swim ? sw.DecelLat : lat.DecelLat) * factor;
+            float tau = swim ? sw.Tau : lat.Tau;
+            float vDes = Clamp((_state.XTarget - _state.X) / tau, -vMax, vMax);
             float v = _state.VLat;
             float rate;
             if (v == 0f || (v > 0f) == (vDes > 0f))
@@ -753,6 +924,11 @@ namespace JungleBooze.Gameplay.Movement
             if (!_state.BelowLip)
             {
                 hasFloor = TryGetSupport(_state.S, _state.X, yPrev, vy <= 0f, out float floor);
+                if (!hasFloor && !_state.OverGap && _traversal != null && _traversal.IsCanopy(_state.S))
+                {
+                    _state.OverGap = true;
+                }
+
                 if (hasFloor)
                 {
                     if (y <= floor)
@@ -765,6 +941,10 @@ namespace JungleBooze.Gameplay.Movement
 
                         _state.BelowLip = true;
                     }
+                }
+                else if (vy <= 0f && TryBeamAssist(t, yPrev, y))
+                {
+                    return;
                 }
                 else if (vy <= 0f && _path.TryFindFloorAhead(_state.S, _state.X, js.LedgeAssistReach, out float lipS, out float lipY))
                 {
@@ -814,6 +994,19 @@ namespace JungleBooze.Gameplay.Movement
             _state.BelowLip = false;
             _state.GroundY = floor;
             _state.LastGroundY = floor;
+            if (_state.VineAir)
+            {
+                // Spec 103 §5.4: forward speed blends from the launch's s component to v(d).
+                _state.VineAir = false;
+                StartBlend(t, _state.LaunchSpeed, _vineLandBlendTicks);
+            }
+
+            if (_state.OverGap)
+            {
+                _state.OverGap = false;
+                EmitTraversal(TraversalKind.BeamGap, true);
+            }
+
             LandingKind kind = fall >= js.HardLandingFall ? LandingKind.Hard : fall >= js.SoftLandingFall ? LandingKind.Soft : LandingKind.Light;
             Emit(RunEventType.Land, -1, (byte)kind, fall);
 
@@ -891,7 +1084,34 @@ namespace JungleBooze.Gameplay.Movement
         private float CurrentSpeed(long t)
         {
             RunSpeedConfig cfg = _config.Speed;
+            if (_state.VineAir)
+            {
+                return _state.LaunchSpeed;
+            }
+
             float speed = BaseSpeed();
+            if (_state.Mode == MoveMode.Swim)
+            {
+                // vSwim = swimSpeedFactor · v(d) + cs(s) (spec 103 §4.2).
+                float cs = 0f;
+                if (_traversal != null)
+                {
+                    _traversal.GetCurrent(_state.S, _state.X, out _, out cs);
+                }
+
+                speed = (_config.Swim.SpeedFactor * speed) + cs;
+            }
+
+            if (_state.BlendTick != Never && _state.BlendTicks > 0)
+            {
+                long k = t - _state.BlendTick;
+                if (k < _state.BlendTicks)
+                {
+                    float u = k <= 0 ? 0f : (float)k / _state.BlendTicks;
+                    speed = _state.BlendFromSpeed + ((speed - _state.BlendFromSpeed) * u);
+                }
+            }
+
             if (!_options.SkipStartRamp && _startRampTicks > 0 && t < _startRampTicks)
             {
                 float u = 1f - ((float)t / _startRampTicks);
@@ -924,15 +1144,13 @@ namespace JungleBooze.Gameplay.Movement
         private void StepCollisions(long t)
         {
             HitboxConfig hb = _config.Hitbox;
-            float halfDepth = HitboxDepth * 0.5f;
-            float height = HitboxHeight;
-            float halfWidth = hb.Width * 0.5f;
-            float s0 = _state.S - halfDepth;
-            float s1 = _state.S + halfDepth;
-            float x0 = _state.X - halfWidth;
-            float x1 = _state.X + halfWidth;
-            float y0 = _state.Y;
-            float y1 = _state.Y + height;
+            if (_state.Mode == MoveMode.DeepDive)
+            {
+                return;
+            }
+
+            bool water = _state.Mode == MoveMode.Swim;
+            GetHitbox(out float s0, out float s1, out float x0, out float x1, out float y0, out float y1);
 
             int majorId = -1;
             int minorId = -1;
@@ -959,7 +1177,7 @@ namespace JungleBooze.Gameplay.Movement
                 Mark(_resolved, id);
 
                 // Walkable top: feet near the top and not rising → it becomes floor.
-                if (box.Class == ObstacleClass.Low && box.WalkableTop && _state.Y >= ey1 - hb.WalkableTopTolerance && _state.Vy <= 0f)
+                if (!water && box.Class == ObstacleClass.Low && box.WalkableTop && _state.Y >= ey1 - hb.WalkableTopTolerance && _state.Vy <= 0f)
                 {
                     if (_state.Grounded)
                     {
@@ -980,7 +1198,7 @@ namespace JungleBooze.Gameplay.Movement
                     continue;
                 }
 
-                HitKind kind = Classify(box, ex0, ex1);
+                HitKind kind = water || IsWaterClass(box.Class) ? HitKind.Bump : Classify(box, ex0, ex1);
                 if (kind == HitKind.Crash)
                 {
                     if (majorId < 0)
@@ -1028,8 +1246,10 @@ namespace JungleBooze.Gameplay.Movement
                 return;
             }
 
-            if (minorKind == HitKind.SideClip)
+            if (minorKind == HitKind.SideClip ||
+                (minorKind == HitKind.Bump && (minorBox.Class == ObstacleClass.Rock || minorBox.Class == ObstacleClass.Blocker)))
             {
+                // Rock contact: Bump + pushed to the near free side (spec 103 §4.6).
                 ApplySideClip(t, minorBox);
             }
 
@@ -1129,6 +1349,12 @@ namespace JungleBooze.Gameplay.Movement
 
         private void Die(long t, DeathCause cause, int obstacleId)
         {
+            if (_state.OverGap && cause == DeathCause.Fall)
+            {
+                _state.OverGap = false;
+                EmitTraversal(TraversalKind.BeamGap, false);
+            }
+
             _state.Dead = true;
             _state.Cause = cause;
             _state.DeathObstacle = obstacleId;
@@ -1175,14 +1401,17 @@ namespace JungleBooze.Gameplay.Movement
 
         private void StepCoins()
         {
-
             HitboxConfig hb = _config.Hitbox;
             float r = hb.CoinPickupRadius;
-            float halfDepth = (HitboxDepth * 0.5f) + r;
-            float halfWidth = (hb.Width * 0.5f) + r;
-            float y0 = _state.Y - r;
-            float y1 = _state.Y + HitboxHeight + r;
-            int n = _path.FindCoins(_state.S - halfDepth, _state.S + halfDepth, _ids);
+            GetHitbox(out float bs0, out float bs1, out float bx0, out float bx1, out float by0, out float by1);
+            float s0 = bs0 - r;
+            float s1 = bs1 + r;
+            float x0 = bx0 - r;
+            float x1 = bx1 + r;
+            float y0 = by0 - hb.CoinPickupPadY;
+            float y1 = by1 + hb.CoinPickupPadY;
+            bool submerged = _state.Submerged;
+            int n = _path.FindCoins(s0, s1, _ids);
             for (int i = 0; i < n; i++)
             {
                 int id = _ids[i];
@@ -1192,7 +1421,7 @@ namespace JungleBooze.Gameplay.Movement
                 }
 
                 CoinPoint coin = _path.GetCoin(id);
-                if (Math.Abs(coin.X - _state.X) <= halfWidth && coin.Y >= y0 && coin.Y <= y1)
+                if (coin.X >= x0 && coin.X <= x1 && coin.Y >= y0 && coin.Y <= y1 && (submerged || !IsUnderwater(coin.S, coin.X, coin.Y)))
                 {
                     Mark(_collected, id);
                     _state.Coins++;

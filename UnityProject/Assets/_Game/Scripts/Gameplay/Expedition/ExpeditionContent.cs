@@ -18,7 +18,8 @@ namespace JungleBooze.Gameplay.Expedition
             PickupConfig pickups,
             ResultsConfig results,
             IList<DiscoveryEntry> discoveries,
-            IList<AbilityDefinition> abilities)
+            IList<AbilityDefinition> abilities,
+            SailbackConfig sailback = null)
         {
             Library = new ChunkLibrary(chunks ?? throw new ArgumentNullException(nameof(chunks)));
             Script = script ?? throw new ArgumentNullException(nameof(script));
@@ -29,7 +30,11 @@ namespace JungleBooze.Gameplay.Expedition
             var ordered = new List<AbilityDefinition>(abilities ?? throw new ArgumentNullException(nameof(abilities)));
             ordered.Sort((a, b) => a.Order.CompareTo(b.Order));
             Abilities = ordered;
+            Sailback = (sailback ?? new SailbackConfig()).Clone();
         }
+
+        /// <summary>The slice creature (spec 103 §7).</summary>
+        public SailbackConfig Sailback { get; }
 
         public ChunkLibrary Library { get; }
 

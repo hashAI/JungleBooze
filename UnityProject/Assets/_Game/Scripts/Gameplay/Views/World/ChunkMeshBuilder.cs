@@ -10,7 +10,10 @@ namespace JungleBooze.Gameplay.Views.World
     /// Bakes the gray-box geometry of one chunk variant into a single mesh in chunk-local space (x lateral, y up,
     /// z = s): path slab per lane with route tints (safe green, risky amber, secret violet), Part B placeholder
     /// tints (water blue, canopy brown), shallow-water ford, side skirts, gap lips, edge hedges, obstacle boxes,
-    /// dividers, water curtains and a seam stripe. Setup time only (allocates); placed chunks reuse the mesh.
+    /// dividers, water curtains and a seam stripe. Part B: riverbeds under a translucent water surface, open air
+    /// under canopy beams, vine anchor branches, and the chunk's view-side bend (every vertex (x, y, s) is mapped
+    /// through the chunk's <see cref="PathCurve"/>, so a placed chunk only needs its entry pose). Setup time only
+    /// (allocates); placed chunks reuse the mesh.
     /// </summary>
     public static class ChunkMeshBuilder
     {
@@ -40,11 +43,13 @@ namespace JungleBooze.Gameplay.Views.World
 
         public static Mesh Build(ChunkRuntime chunk)
         {
-            var mesh = new Builder();
+            var mesh = new Builder(chunk.Curve);
             BuildFloor(mesh, chunk);
             BuildObstacles(mesh, chunk);
             BuildDividers(mesh, chunk);
             BuildZones(mesh, chunk);
+            BuildWater(mesh, chunk);
+            BuildVines(mesh, chunk);
 
             // Seam stripe at the entry.
             chunk.GetOuterBounds(0f, out float x0, out float x1);
@@ -219,6 +224,12 @@ namespace JungleBooze.Gameplay.Views.World
 
         private static int Tint(ChunkRuntime c, float s, float x)
         {
+            if (c.TryGetWater(s, x, out _))
+            {
+                // Riverbed under the translucent water surface.
+                return SubShallow;
+            }
+
             for (int i = 0; i < c.TraversalCount; i++)
             {
                 TraversalZone z = c.GetTraversal(i);
@@ -301,8 +312,21 @@ namespace JungleBooze.Gameplay.Views.World
                     }
 
                     case ObstacleClass.Blocker:
+                    case ObstacleClass.Rock:
                         mesh.Box(SubBlocker, new Vector3(o.XMin, o.YMin, o.SMin), new Vector3(o.XMax, o.YMax, o.SMax));
                         break;
+                    case ObstacleClass.FloatingLog:
+                    case ObstacleClass.Snag:
+                        // A log floating across the river / a snag of branches rising from the bed.
+                        mesh.Box(SubLow, new Vector3(o.XMin, o.YMin, o.SMin), new Vector3(o.XMax, o.YMax, o.SMax));
+                        break;
+                    case ObstacleClass.LowBranch:
+                    {
+                        float top = Mathf.Min(o.YMax, o.YMin + 0.3f);
+                        mesh.Box(SubHigh, new Vector3(o.XMin, o.YMin, o.SMin), new Vector3(o.XMax, top, o.SMax));
+                        mesh.Box(SubHigh, new Vector3(o.XMin - 0.3f, o.YMin - 2.5f, o.SMin + 0.1f), new Vector3(o.XMin, o.YMax, o.SMax - 0.1f));
+                        break;
+                    }
                     default:
                         mesh.Box(SubThorns, new Vector3(o.XMin, o.YMin, o.SMin), new Vector3(o.XMax, o.YMin + 0.12f, o.SMax));
                         for (float s = o.SMin + 0.25f; s < o.SMax; s += 0.5f)
@@ -344,6 +368,43 @@ namespace JungleBooze.Gameplay.Views.World
             }
         }
 
+        private static void BuildWater(Builder mesh, ChunkRuntime c)
+        {
+            for (int i = 0; i < c.WaterCount; i++)
+            {
+                WaterVolume w = c.GetWater(i);
+                for (float s = w.SMin; s < w.SMax - 0.01f; s += StripStep)
+                {
+                    float s1 = Mathf.Min(w.SMax, s + StripStep);
+                    c.GetOuterBounds(s, out float a0, out float a1);
+                    c.GetOuterBounds(s1, out float b0, out float b1);
+                    float y = w.SurfaceY;
+                    mesh.Quad(SubWater, new Vector3(a0 - 0.6f, y, s), new Vector3(b0 - 0.6f, y, s1), new Vector3(b1 + 0.6f, y, s1), new Vector3(a1 + 0.6f, y, s));
+                }
+            }
+
+            for (int i = 0; i < c.DeepDiveCount; i++)
+            {
+                // The Sunken Arch: a dark rootstone arch over the deep passage (visible from the surface).
+                DeepDiveZone z = c.GetDeepDive(i);
+                c.TryGetWater(z.SMin, z.XMin, out float surface);
+                mesh.Box(SubDivider, new Vector3(z.XMin - 1.2f, surface - 3.2f, z.SMax), new Vector3(z.XMin - 0.4f, surface + 2.5f, z.SMax + 1.2f));
+                mesh.Box(SubDivider, new Vector3(z.XMax + 0.4f, surface - 3.2f, z.SMax), new Vector3(z.XMax + 1.2f, surface + 2.5f, z.SMax + 1.2f));
+                mesh.Box(SubDivider, new Vector3(z.XMin - 1.2f, surface + 2.5f, z.SMax), new Vector3(z.XMax + 1.2f, surface + 3.3f, z.SMax + 1.2f));
+            }
+        }
+
+        private static void BuildVines(Builder mesh, ChunkRuntime c)
+        {
+            for (int i = 0; i < c.VineCount; i++)
+            {
+                // A branch across the gorge carries the vine anchor.
+                VineAnchor v = c.GetVine(i);
+                float y = c.GetVineTakeoffY(i) + v.AnchorHeight;
+                mesh.Box(SubHigh, new Vector3(v.X - 4f, y, v.AnchorS - 0.25f), new Vector3(v.X + 4f, y + 0.5f, v.AnchorS + 0.25f));
+            }
+        }
+
         /// <summary>Mesh builder with fixed submeshes (setup only).</summary>
         private sealed class Builder
         {
@@ -351,9 +412,11 @@ namespace JungleBooze.Gameplay.Views.World
             private readonly List<Vector3> _normals = new List<Vector3>();
             private readonly List<Vector2> _uvs = new List<Vector2>();
             private readonly List<int>[] _indices = new List<int>[SubmeshCount];
+            private readonly PathCurve _curve;
 
-            public Builder()
+            public Builder(PathCurve curve)
             {
+                _curve = curve;
                 for (int i = 0; i < SubmeshCount; i++)
                 {
                     _indices[i] = new List<int>();
@@ -362,6 +425,14 @@ namespace JungleBooze.Gameplay.Views.World
 
             public void Quad(int submesh, Vector3 a, Vector3 b, Vector3 c, Vector3 d)
             {
+                Vector3 ua = a;
+                Vector3 ub = b;
+                Vector3 uc = c;
+                Vector3 ud = d;
+                a = Bend(a);
+                b = Bend(b);
+                c = Bend(c);
+                d = Bend(d);
                 Vector3 normal = Vector3.Cross(b - a, d - a).normalized;
                 int start = _vertices.Count;
                 _vertices.Add(a);
@@ -373,10 +444,10 @@ namespace JungleBooze.Gameplay.Views.World
                     _normals.Add(normal);
                 }
 
-                _uvs.Add(new Vector2(a.x, a.z));
-                _uvs.Add(new Vector2(b.x, b.z));
-                _uvs.Add(new Vector2(c.x, c.z));
-                _uvs.Add(new Vector2(d.x, d.z));
+                _uvs.Add(new Vector2(ua.x, ua.z));
+                _uvs.Add(new Vector2(ub.x, ub.z));
+                _uvs.Add(new Vector2(uc.x, uc.z));
+                _uvs.Add(new Vector2(ud.x, ud.z));
                 List<int> target = _indices[submesh];
                 target.Add(start);
                 target.Add(start + 1);
@@ -384,6 +455,20 @@ namespace JungleBooze.Gameplay.Views.World
                 target.Add(start);
                 target.Add(start + 2);
                 target.Add(start + 3);
+            }
+
+            /// <summary>Chunk-local path space (x, y, s) → the chunk's curved local frame.</summary>
+            private Vector3 Bend(Vector3 p)
+            {
+                if (_curve == null || _curve.Straight)
+                {
+                    return p;
+                }
+
+                _curve.Evaluate(p.z, out float cx, out float cz, out float h);
+                float cos = Mathf.Cos(h);
+                float sin = Mathf.Sin(h);
+                return new Vector3(cx + (cos * p.x), p.y, cz - (sin * p.x));
             }
 
             public void Box(int submesh, Vector3 min, Vector3 max)

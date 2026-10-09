@@ -44,11 +44,8 @@ MonoBehaviour:
     - Name: Default
       ScriptOnly: 0
       Length: 0
-      Placeholder: 1
-      PlaceholderNote: "Vine swing, canopy beam rules and the sailback creature (spec
-        103 \xA75\u20137) are Part B. Stand-in run on foot: the two vine gorges are
-        bridged, beams are narrow path with jumpable gaps; perfect-column coins sit
-        where only a Perfect release reaches."
+      Placeholder: 0
+      PlaceholderNote: 
       Widths:
       - S: 0
         XMin: -3.5
@@ -62,33 +59,33 @@ MonoBehaviour:
       - S: 70
         XMin: -1.2
         XMax: 1.2
-      - S: 174.9
+      - S: 174.99
         XMin: -1.2
         XMax: 1.2
       - S: 175
         XMin: -1.2
         XMax: 1.8
-      - S: 178.5
+      - S: 178.49
         XMin: -1.2
         XMax: 1.8
-      - S: 188.5
+      - S: 178.5
         XMin: -0.2
         XMax: 1.8
-      - S: 204.9
+      - S: 204.99
         XMin: -0.2
         XMax: 1.8
       - S: 205
-        XMin: -1.8
+        XMin: -1.4
+        XMax: 1.8
+      - S: 207.99
+        XMin: -1.4
         XMax: 1.8
       - S: 208
-        XMin: -1.8
-        XMax: 1.8
-      - S: 220
-        XMin: -1.8
-        XMax: 0.6
+        XMin: -1.4
+        XMax: 1
       - S: 240
-        XMin: -1.8
-        XMax: 0.6
+        XMin: -1.4
+        XMax: 1
       - S: 290
         XMin: -3.5
         XMax: 3.5
@@ -103,11 +100,46 @@ MonoBehaviour:
         XMax: 99
         Y0: 0
         Y1: 9
-      - Kind: 1
+      - Kind: 0
         SMin: 70
         SMax: 240
         XMin: -99
         XMax: 99
+        Y0: 0
+        Y1: 0
+      - Kind: 1
+        SMin: 70
+        SMax: 96
+        XMin: -1.2
+        XMax: 1.2
+        Y0: 9
+        Y1: 9
+      - Kind: 1
+        SMin: 104
+        SMax: 140
+        XMin: -1.2
+        XMax: 1.2
+        Y0: 9
+        Y1: 9
+      - Kind: 1
+        SMin: 148
+        SMax: 175
+        XMin: -1.2
+        XMax: 1.2
+        Y0: 9
+        Y1: 9
+      - Kind: 1
+        SMin: 178.5
+        SMax: 205
+        XMin: -0.2
+        XMax: 1.8
+        Y0: 9
+        Y1: 9
+      - Kind: 1
+        SMin: 208
+        SMax: 240
+        XMin: -1.4
+        XMax: 1
         Y0: 9
         Y1: 9
       - Kind: 1
@@ -116,20 +148,6 @@ MonoBehaviour:
         XMin: -99
         XMax: 99
         Y0: 9
-        Y1: 0
-      - Kind: 0
-        SMin: 175
-        SMax: 178.5
-        XMin: -99
-        XMax: 99
-        Y0: 0
-        Y1: 0
-      - Kind: 0
-        SMin: 205
-        SMax: 208
-        XMin: -99
-        XMax: 99
-        Y0: 0
         Y1: 0
       Dividers: []
       Routes:
@@ -163,8 +181,8 @@ MonoBehaviour:
         Class: 1
         SMin: 222
         SMax: 222.6
-        XMin: -1.8
-        XMax: 0.6
+        XMin: -1.4
+        XMax: 1
         YMin: 10
         YMax: 11.5
         WalkableTop: 0
@@ -178,9 +196,18 @@ MonoBehaviour:
         Period: 0
         Count: 0
         Y: 0
+      - Kind: 0
+        S0: 72
+        S1: 92
+        X: 0
+        Step: 4
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
       - Kind: 4
-        S0: 109.1
-        S1: 109.1
+        S0: 108.8
+        S1: 108.8
         X: 0
         Step: 0
         Amp: 0
@@ -188,8 +215,8 @@ MonoBehaviour:
         Count: 1
         Y: 2.6
       - Kind: 4
-        S0: 109.1
-        S1: 109.1
+        S0: 108.8
+        S1: 108.8
         X: 0
         Step: 0
         Amp: 0
@@ -197,8 +224,8 @@ MonoBehaviour:
         Count: 1
         Y: 3.4
       - Kind: 4
-        S0: 109.1
-        S1: 109.1
+        S0: 108.8
+        S1: 108.8
         X: 0
         Step: 0
         Amp: 0
@@ -215,8 +242,8 @@ MonoBehaviour:
         Count: 0
         Y: 0
       - Kind: 4
-        S0: 152.5
-        S1: 152.5
+        S0: 152.6
+        S1: 152.6
         X: 0
         Step: 0
         Amp: 0
@@ -224,14 +251,23 @@ MonoBehaviour:
         Count: 1
         Y: 2.6
       - Kind: 4
-        S0: 152.5
-        S1: 152.5
+        S0: 152.6
+        S1: 152.6
         X: 0
         Step: 0
         Amp: 0
         Period: 0
         Count: 1
         Y: 4.2
+      - Kind: 0
+        S0: 156
+        S1: 157.5
+        X: 0
+        Step: 1.5
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
       - Kind: 3
         S0: 160
         S1: 160
@@ -242,10 +278,10 @@ MonoBehaviour:
         Count: 3
         Y: 0
       - Kind: 0
-        S0: 150
-        S1: 156
+        S0: 164
+        S1: 172
         X: 0
-        Step: 3
+        Step: 2
         Amp: 0
         Period: 0
         Count: 0
@@ -253,7 +289,7 @@ MonoBehaviour:
       - Kind: 2
         S0: 176.75
         S1: 176.75
-        X: 0.3
+        X: 0.8
         Step: 0
         Amp: 0
         Period: 0
@@ -261,9 +297,27 @@ MonoBehaviour:
         Y: 0
       - Kind: 0
         S0: 181
-        S1: 190
+        S1: 189
         X: 0.8
-        Step: 3
+        Step: 2
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 0
+        S0: 192
+        S1: 194
+        X: 0.8
+        Step: 1
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 0
+        S0: 197
+        S1: 202
+        X: 0.8
+        Step: 2.5
         Amp: 0
         Period: 0
         Count: 0
@@ -271,16 +325,7 @@ MonoBehaviour:
       - Kind: 2
         S0: 206.5
         S1: 206.5
-        X: 0
-        Step: 0
-        Amp: 0
-        Period: 0
-        Count: 3
-        Y: 0
-      - Kind: 3
-        S0: 222
-        S1: 222
-        X: -0.6
+        X: -0.2
         Step: 0
         Amp: 0
         Period: 0
@@ -289,59 +334,99 @@ MonoBehaviour:
       - Kind: 0
         S0: 211
         S1: 218
-        X: -0.6
+        X: -0.2
         Step: 3.5
         Amp: 0
         Period: 0
         Count: 0
         Y: 0
+      - Kind: 3
+        S0: 222
+        S1: 222
+        X: -0.2
+        Step: 0
+        Amp: 0
+        Period: 0
+        Count: 3
+        Y: 0
+      - Kind: 0
+        S0: 228
+        S1: 238
+        X: -0.2
+        Step: 2.5
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
+      - Kind: 0
+        S0: 250
+        S1: 285
+        X: 0
+        Step: 5
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0
       Crystals:
-      - S: 152.5
+      - S: 152.6
         X: 0
         Y: 3.4
         Always: 1
       PowerUps: []
-      Discoveries:
-      - EntryId: D-02
-        S: 176
-        XMin: -99
-        XMax: 99
-        Placeholder: 1
-        RequiredAbility: 0
-        Note: 'Stand-in: passing the sailback perch counts as observing it. Part
-          B uses creature observation (0.8 s in view).'
+      Discoveries: []
       Traversal:
-      - Mode: 1
-        SMin: 96
-        SMax: 104
-        XMin: -1.2
-        XMax: 1.2
-        Value: 8
-        Note: '[Part B placeholder] Gorge 8.0 m (not jumpable) with vine V1: anchor
-          s 99, x 0, 8.0 m above the takeoff; bridged in the stand-in'
-      - Mode: 1
-        SMin: 140
-        SMax: 148
-        XMin: -1.2
-        XMax: 1.2
-        Value: 8
-        Note: '[Part B placeholder] Gap with vine V2: anchor s 143; bridged in the
-          stand-in'
       - Mode: 2
         SMin: 148
-        SMax: 235
-        XMin: -1.8
+        SMax: 240
+        XMin: -1.4
         XMax: 1.8
         Value: 0.25
-        Note: '[Part B placeholder] Canopy beams A/B/C (landing assist 0.25 m, falls
-          hold the camera 0.8 s)'
-      - Mode: 4
-        SMin: 172
-        SMax: 181
-        XMin: 2.8
-        XMax: 2.8
-        Value: 1.5
-        Note: '[Part B placeholder] Sailback perch: 3 sailbacks at x +2.8, y +1.5
-          (s 172/176/181), flock glides toward Veil Falls'
+        Note: 'Canopy beams A/B/C: landing assist 0.25 m; falls hold the camera 0.8
+          s'
       Help: []
+      Water: []
+      Currents: []
+      DeepDives: []
+      Vines:
+      - AnchorS: 99
+        X: 0
+        AnchorHeight: 8
+        Length: 6
+        LipS: 96
+        LandingS: 104
+        ColumnS0: 108.6
+        ColumnS1: 109.6
+        ReleaseHelp: 1
+      - AnchorS: 143
+        X: 0
+        AnchorHeight: 8
+        Length: 6
+        LipS: 140
+        LandingS: 148
+        ColumnS0: 152
+        ColumnS1: 153
+        ReleaseHelp: 0
+      Creatures:
+      - EntryId: D-02
+        S: 172
+        X: 2.8
+        Y: 1.5
+        Count: 3
+        Spacing: 4.5
+        EndDS: 243
+        EndX: 4.8
+        EndY: -6
+        LaunchDistance: 0
+        Ambient: 0
+        Note: Sailback perch on a side branch; the flock glides ahead and right,
+          into Veil Falls (C9 s 119)
+      Curve:
+      - S: 240
+        Curvature: 0
+      - S: 250
+        Curvature: 0.016666668
+      - S: 280
+        Curvature: 0.016666668
+      - S: 290
+        Curvature: 0
     ValidatedMask: 1

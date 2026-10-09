@@ -17,12 +17,17 @@ namespace JungleBooze.Gameplay.Expedition
         public const float LeadSeconds = 0.6f;
         public const float TimeScale = 0.35f;
 
+        /// <summary>Vine V1 release help: time runs at 50 % across the release window (spec 103 §10.1).</summary>
+        public const float ReleaseTimeScale = 0.5f;
+
         private readonly WorldPath _path;
         private readonly RunnerSimulation _sim;
         private readonly bool[] _usedMove = new bool[8];
         private bool _enabled;
         private int _activeId = -1;
         private int _lastHandledId = -1;
+        private bool _releaseActive;
+        private bool _releaseUsed;
 
         public HelpTracker(WorldPath path, RunnerSimulation sim)
         {
@@ -30,7 +35,10 @@ namespace JungleBooze.Gameplay.Expedition
             _sim = sim ?? throw new ArgumentNullException(nameof(sim));
         }
 
-        public bool Active => _activeId >= 0;
+        public bool Active => _activeId >= 0 || _releaseActive;
+
+        /// <summary>Simulation rate while help is active (slow-time markers 35 %, the vine release window 50 %).</summary>
+        public float Scale => _releaseActive ? ReleaseTimeScale : TimeScale;
 
         public HelpMove ActiveMove { get; private set; }
 
@@ -42,6 +50,8 @@ namespace JungleBooze.Gameplay.Expedition
             _enabled = enabled;
             _activeId = -1;
             _lastHandledId = -1;
+            _releaseActive = false;
+            _releaseUsed = false;
             Prompts = 0;
             Array.Clear(_usedMove, 0, _usedMove.Length);
         }
@@ -50,6 +60,7 @@ namespace JungleBooze.Gameplay.Expedition
         {
             _enabled = false;
             _activeId = -1;
+            _releaseActive = false;
         }
 
         /// <summary>Call after every simulation step.</summary>
@@ -64,7 +75,28 @@ namespace JungleBooze.Gameplay.Expedition
             if (st.Dead)
             {
                 _activeId = -1;
+                _releaseActive = false;
                 return;
+            }
+
+            // Vine release help (V1 only, once): across the release window, never waits for input.
+            if (st.Mode == MoveMode.Swing)
+            {
+                if (!_releaseUsed && _sim.SwingTick >= _sim.ReleaseOpenTick - 1 && IsHelpVine(st.VineId))
+                {
+                    _releaseUsed = true;
+                    _releaseActive = true;
+                    _activeId = -1;
+                    ActiveMove = HelpMove.Release;
+                    Prompts++;
+                }
+
+                return;
+            }
+
+            if (_releaseActive)
+            {
+                _releaseActive = false;
             }
 
             if (_activeId >= 0)
@@ -116,6 +148,19 @@ namespace JungleBooze.Gameplay.Expedition
             }
         }
 
+        private bool IsHelpVine(int vineId)
+        {
+            int serial = vineId / ChunkRuntime.LocalIdStride;
+            int local = vineId % ChunkRuntime.LocalIdStride;
+            if (vineId < 0 || !_path.IsLive(serial))
+            {
+                return false;
+            }
+
+            ChunkRuntime chunk = _path.Chunk(serial).Chunk;
+            return local < chunk.VineCount && chunk.GetVine(local).ReleaseHelp;
+        }
+
         private bool Satisfied(in HelpPoint h, in RunnerState st)
         {
             switch (h.Move)
@@ -125,8 +170,9 @@ namespace JungleBooze.Gameplay.Expedition
                 case HelpMove.Leap:
                     return !st.Grounded || st.Buffered == InputCommand.Jump;
                 case HelpMove.Slide:
-                case HelpMove.Dive:
                     return st.Sliding;
+                case HelpMove.Dive:
+                    return st.Sliding || st.Dive != DivePhase.None || st.Mode == MoveMode.DeepDive;
                 default:
                     float half = _sim.Config.Hitbox.Width * 0.5f;
                     return st.XTarget + half < h.XMin || st.XTarget - half > h.XMax;

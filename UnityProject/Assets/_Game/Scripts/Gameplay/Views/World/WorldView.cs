@@ -11,7 +11,10 @@ namespace JungleBooze.Gameplay.Views.World
     /// variant's pre-baked mesh (<see cref="ChunkMeshBuilder"/>, built once at setup), pooled coins, crystals,
     /// Shield pickups and discovery posts bound to the ids of placed chunks, chunk signs (Part B placeholders say so),
     /// and a forest floor that follows the runner. Polls the path's revision once per frame; binding and unbinding
-    /// reuse pooled objects, so a run allocates nothing after warm-up.
+    /// reuse pooled objects, so a run allocates nothing after warm-up. Part B: placed chunks sit at their entry pose
+    /// on the curved centreline (spec 102 §2.1), pickups are placed through it, vines hang from their anchors and
+    /// follow the swing, sailbacks are pooled gray-box gliders, and Deep Breath zones show a pulsing "ability-ready"
+    /// ring when the player owns the ability (spec 103 §9.4).
     /// </summary>
     public sealed class WorldView : MonoBehaviour
     {
@@ -19,6 +22,8 @@ namespace JungleBooze.Gameplay.Views.World
         public const int CrystalPool = 48;
         public const int PowerUpPool = 12;
         public const int DiscoveryPool = 16;
+        public const int VinePool = 8;
+        public const int CueRingPool = 4;
         private const float CoinRadius = 0.28f;
         private const float SpinDegPerSecond = 180f;
 
@@ -39,6 +44,15 @@ namespace JungleBooze.Gameplay.Views.World
         private Pool _powerUps;
         private Pool _discoveries;
         private Transform _ground;
+        private readonly Transform[] _vines = new Transform[VinePool];
+        private readonly int[] _vineIds = new int[VinePool];
+        private readonly float[] _vineTheta = new float[VinePool];
+        private readonly float[] _vineSpeed = new float[VinePool];
+        private readonly Transform[] _cueRings = new Transform[CueRingPool];
+        private readonly int[] _cueZone = new int[CueRingPool];
+        private Transform[] _creatures;
+        private Transform[] _creatureSails;
+        private float _clock;
         private int _revision = -1;
         private float _spin;
         private int _activeCoins;
@@ -128,6 +142,141 @@ namespace JungleBooze.Gameplay.Views.World
 
             _ground = ViewUtil.Box("ForestFloor", transform, palette.Ground, new Vector3(-90f, -4.2f, -150f), new Vector3(90f, -4f, 450f), false);
             _ground.GetComponent<Renderer>().receiveShadows = true;
+
+            var traversal = new GameObject("Traversal").transform;
+            traversal.SetParent(transform, false);
+            for (int i = 0; i < VinePool; i++)
+            {
+                _vines[i] = ViewUtil.Primitive(PrimitiveType.Cylinder, "Vine" + i, traversal, palette.Hedge, true);
+                _vines[i].gameObject.SetActive(false);
+                _vineIds[i] = -1;
+            }
+
+            for (int i = 0; i < CueRingPool; i++)
+            {
+                _cueRings[i] = ViewUtil.Primitive(PrimitiveType.Cylinder, "DeepBreathCue" + i, traversal, palette.Crystal, false);
+                _cueRings[i].gameObject.SetActive(false);
+                _cueZone[i] = -1;
+            }
+
+            _creatures = new Transform[SailbackSystem.Capacity];
+            _creatureSails = new Transform[SailbackSystem.Capacity];
+            for (int i = 0; i < SailbackSystem.Capacity; i++)
+            {
+                // Gray-box sailback: a slim body and a translucent-looking sail (spec 103 §7.1; final model from art).
+                var root = new GameObject("Sailback" + i).transform;
+                root.SetParent(traversal, false);
+                Transform body = ViewUtil.Primitive(PrimitiveType.Capsule, "Body", root, palette.Low, true);
+                body.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                body.localScale = new Vector3(0.14f, 0.28f, 0.14f);
+                Transform sail = ViewUtil.Primitive(PrimitiveType.Cube, "Sail", root, palette.Crystal, false);
+                sail.localScale = new Vector3(0.9f, 0.02f, 0.38f);
+                sail.localPosition = new Vector3(0f, 0.05f, -0.02f);
+                _creatures[i] = root;
+                _creatureSails[i] = sail;
+                root.gameObject.SetActive(false);
+            }
+        }
+
+        /// <summary>World position of a path-space point on the curved centreline.</summary>
+        public Vector3 WorldPoint(float s, float x, float y)
+        {
+            PathFrame f = _path.GetFrame(s);
+            f.Offset(x, out float wx, out float wz);
+            return new Vector3(wx, y, wz);
+        }
+
+        /// <summary>
+        /// Per frame: vines (rest, swing, release sway), sailbacks and the Deep Breath cue rings. Allocation-free.
+        /// </summary>
+        public void SyncTraversal(RunnerSimulation sim, SailbackSystem creatures, bool deepBreath, float frameSeconds)
+        {
+            _clock += frameSeconds;
+            sim.TryGetSwing(out VinePoint swinging, out float swingTheta);
+            bool isSwinging = sim.State.Mode == MoveMode.Swing;
+            for (int i = 0; i < VinePool; i++)
+            {
+                if (_vineIds[i] < 0)
+                {
+                    continue;
+                }
+
+                if (!_path.TryGetVine(_vineIds[i], out VinePoint v))
+                {
+                    _vineIds[i] = -1;
+                    _vines[i].gameObject.SetActive(false);
+                    continue;
+                }
+
+                float theta;
+                if (isSwinging && swinging.Id == v.Id)
+                {
+                    theta = swingTheta;
+                    _vineSpeed[i] = 0f;
+                }
+                else
+                {
+                    // Free pendulum back to rest after a release (presentation only).
+                    float acc = -9.81f / Mathf.Max(1f, v.Length) * Mathf.Sin(_vineTheta[i] * Mathf.Deg2Rad) * Mathf.Rad2Deg;
+                    _vineSpeed[i] = (_vineSpeed[i] + (acc * frameSeconds)) * Mathf.Pow(0.6f, frameSeconds);
+                    theta = _vineTheta[i] + (_vineSpeed[i] * frameSeconds) + (Mathf.Sin((_clock * 0.9f) + i) * 0.4f);
+                }
+
+                _vineTheta[i] = theta;
+                float rad = theta * Mathf.Deg2Rad;
+                Vector3 anchor = WorldPoint(v.AnchorS, v.X, v.AnchorY);
+                Vector3 hand = WorldPoint(v.AnchorS + (v.Length * Mathf.Sin(rad)), v.X, v.AnchorY - (v.Length * Mathf.Cos(rad)));
+                Vector3 axis = hand - anchor;
+                Transform t = _vines[i];
+                t.position = (anchor + hand) * 0.5f;
+                t.rotation = Quaternion.FromToRotation(Vector3.up, axis);
+                t.localScale = new Vector3(0.07f, axis.magnitude * 0.5f, 0.07f);
+            }
+
+            for (int i = 0; i < CueRingPool; i++)
+            {
+                if (_cueZone[i] < 0)
+                {
+                    continue;
+                }
+
+                bool show = deepBreath && _path.IsLive(_cueZone[i] / ChunkRuntime.LocalIdStride);
+                Transform ring = _cueRings[i];
+                ring.gameObject.SetActive(show);
+                if (show)
+                {
+                    float pulse = 1f + (0.15f * Mathf.Sin(_clock * (2f * Mathf.PI / 1.6f)));
+                    ring.localScale = new Vector3(2.6f * pulse, 0.02f, 2.6f * pulse);
+                }
+            }
+
+            if (creatures == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < SailbackSystem.Capacity; i++)
+            {
+                ref readonly Sailback a = ref creatures.Get(i);
+                bool visible = a.State != CreatureState.Inactive && !(a.State == CreatureState.Gone && a.S < sim.State.S - 20f);
+                Transform t = _creatures[i];
+                if (t.gameObject.activeSelf != visible)
+                {
+                    t.gameObject.SetActive(visible);
+                }
+
+                if (!visible)
+                {
+                    continue;
+                }
+
+                PathFrame f = _path.GetFrame(a.S);
+                t.position = WorldPoint(a.S, a.X, a.Y);
+                float bank = a.State == CreatureState.Glide ? Mathf.Sin((_clock * 1.7f) + i) * 12f : 0f;
+                t.rotation = Quaternion.Euler(a.State == CreatureState.Launch ? 18f : 0f, f.HeadingDeg, bank);
+                float sail = a.State == CreatureState.Perched ? 0.5f : 1f;
+                _creatureSails[i].localScale = new Vector3(0.9f * sail, 0.02f, 0.38f);
+            }
         }
 
         /// <summary>Unbinds everything (new run).</summary>
@@ -190,7 +339,9 @@ namespace JungleBooze.Gameplay.Views.World
                 }
             }
 
-            _ground.localPosition = new Vector3(0f, -4.1f, runnerS + 150f);
+            PathFrame gf = _path.GetFrame(runnerS);
+            _ground.localPosition = new Vector3(gf.X + (gf.ForwardX * 150f), -4.1f, gf.Z + (gf.ForwardZ * 150f));
+            _ground.localRotation = Quaternion.Euler(0f, gf.HeadingDeg, 0f);
             if (frameSeconds > 0f)
             {
                 _spin = Mathf.Repeat(_spin + (frameSeconds * SpinDegPerSecond), 360f);
@@ -207,7 +358,8 @@ namespace JungleBooze.Gameplay.Views.World
             _boundSerial[slot] = serial;
             MeshFilter filter = _chunkFilters[slot];
             filter.sharedMesh = _meshes[p.Chunk.LibraryIndex];
-            filter.transform.localPosition = new Vector3(0f, 0f, p.StartS);
+            filter.transform.localPosition = new Vector3(p.Start.X, 0f, p.Start.Z);
+            filter.transform.localRotation = Quaternion.Euler(0f, p.Start.HeadingDeg, 0f);
             filter.gameObject.SetActive(true);
             if (_signs[slot] != null)
             {
@@ -233,7 +385,7 @@ namespace JungleBooze.Gameplay.Views.World
                     break;
                 }
 
-                go.transform.localPosition = new Vector3(c.X, c.Y, c.S);
+                go.transform.localPosition = WorldPoint(c.S, c.X, c.Y);
                 _coinBySlot[id % _coinBySlot.Length] = go;
                 _activeCoins++;
             }
@@ -249,7 +401,7 @@ namespace JungleBooze.Gameplay.Views.World
                 GameObject go = _crystals.Take();
                 if (go != null)
                 {
-                    go.transform.localPosition = new Vector3(c.X, c.Y, c.S);
+                    go.transform.localPosition = WorldPoint(c.S, c.X, c.Y);
                     _crystalBySlot[id % _crystalBySlot.Length] = go;
                 }
             }
@@ -260,8 +412,34 @@ namespace JungleBooze.Gameplay.Views.World
                 GameObject go = _powerUps.Take();
                 if (go != null)
                 {
-                    go.transform.localPosition = new Vector3(u.X, u.Y, u.S);
+                    go.transform.localPosition = WorldPoint(u.S, u.X, u.Y);
                     _powerUpBySlot[id % _powerUpBySlot.Length] = go;
+                }
+            }
+
+            for (int k = 0; k < p.Chunk.VineCount; k++)
+            {
+                int slot2 = FreeIndex(_vineIds);
+                if (slot2 >= 0)
+                {
+                    _vineIds[slot2] = (serial * ChunkRuntime.LocalIdStride) + k;
+                    _vineTheta[slot2] = 0f;
+                    _vineSpeed[slot2] = 0f;
+                    _vines[slot2].gameObject.SetActive(true);
+                }
+            }
+
+            for (int k = 0; k < p.Chunk.DeepDiveCount; k++)
+            {
+                int ring = FreeIndex(_cueZone);
+                if (ring >= 0)
+                {
+                    DeepDiveZone z = p.Chunk.GetDeepDive(k);
+                    float cs = p.StartS + ((z.SMin + z.SMax) * 0.5f);
+                    float cx = (z.XMin + z.XMax) * 0.5f;
+                    p.Chunk.TryGetWater(cs - p.StartS, cx, out float surface);
+                    _cueZone[ring] = (serial * ChunkRuntime.LocalIdStride) + k;
+                    _cueRings[ring].position = WorldPoint(cs, cx, surface + 0.03f);
                 }
             }
 
@@ -277,10 +455,23 @@ namespace JungleBooze.Gameplay.Views.World
                     bool full = d.XMax - d.XMin >= 20f;
                     float x = full ? x1 + 0.8f : (d.XMin + d.XMax) >= 0f ? Mathf.Max(x1, d.XMax) + 0.8f : Mathf.Min(x0, d.XMin) - 0.8f;
                     p.Chunk.TryGetFloor(local, Mathf.Clamp(x, x0, x1), out float y);
-                    go.transform.localPosition = new Vector3(x, y + 1.6f, d.S);
+                    go.transform.localPosition = WorldPoint(d.S, x, y + 1.6f);
                     _discoveryBySlot[id % _discoveryBySlot.Length] = go;
                 }
             }
+        }
+
+        private static int FreeIndex(int[] ids)
+        {
+            for (int i = 0; i < ids.Length; i++)
+            {
+                if (ids[i] < 0)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
         }
 
         private void Unbind(int slot)
@@ -291,6 +482,24 @@ namespace JungleBooze.Gameplay.Views.World
             if (serial < 0)
             {
                 return;
+            }
+
+            for (int i = 0; i < VinePool; i++)
+            {
+                if (_vineIds[i] >= 0 && _vineIds[i] / ChunkRuntime.LocalIdStride == serial)
+                {
+                    _vineIds[i] = -1;
+                    _vines[i].gameObject.SetActive(false);
+                }
+            }
+
+            for (int i = 0; i < CueRingPool; i++)
+            {
+                if (_cueZone[i] >= 0 && _cueZone[i] / ChunkRuntime.LocalIdStride == serial)
+                {
+                    _cueZone[i] = -1;
+                    _cueRings[i].gameObject.SetActive(false);
+                }
             }
 
             ref readonly PlacedChunk p = ref _path.Chunk(serial);
@@ -365,7 +574,7 @@ namespace JungleBooze.Gameplay.Views.World
         {
             ChunkDefinition d = chunk.Definition;
             string label = string.IsNullOrEmpty(d.Label) ? string.Empty : d.Label + " ";
-            return chunk.Placeholder ? label + d.Id + " · " + chunk.VariantName + "\n[PLACEHOLDER: Part B traversal]" : label + d.Id + " · " + chunk.VariantName;
+            return chunk.Placeholder ? label + d.Id + " · " + chunk.VariantName + "\n[PLACEHOLDER]" : label + d.Id + " · " + chunk.VariantName;
         }
 
         /// <summary>A fixed pool of inactive GameObjects under one parent.</summary>

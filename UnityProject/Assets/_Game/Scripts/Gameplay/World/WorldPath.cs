@@ -9,8 +9,11 @@ namespace JungleBooze.Gameplay.World
     /// discovery triggers and help markers of the placed chunks live in fixed-size rings with increasing ids
     /// (slot = id % capacity), so <see cref="Append"/> and <see cref="Retire"/> never allocate and the simulation's
     /// per-item state survives slot reuse (<see cref="IPathQuery"/> id rules). Queries are allocation-free.
+    /// Traversal (<see cref="ITraversalQuery"/>, spec 103) is answered from the chunk at s; vines and deep-dive zones
+    /// get ids serial × <see cref="ChunkRuntime.LocalIdStride"/> + index. The view-side centreline is the chain of
+    /// chunk curves (<see cref="GetFrame"/>), tangent-continuous across seams.
     /// </summary>
-    public sealed class WorldPath : IPathQuery
+    public sealed class WorldPath : IPathQuery, ITraversalQuery
     {
         public const int ChunkCapacity = 16;
         public const int ObstacleCapacity = 512;
@@ -149,11 +152,20 @@ namespace JungleBooze.Gameplay.World
 
             float start = EndS;
             int serial = _nextChunk;
+            PathFrame frame = default;
+            if (ChunkCount > 0)
+            {
+                ref readonly PlacedChunk last = ref Chunk(_nextChunk - 1);
+                PathCurve c = last.Chunk.Curve;
+                frame = PathFrame.Compose(last.Start, c.EndX, c.EndZ, c.EndHeading);
+            }
+
             ref PlacedChunk placed = ref _chunks[serial % ChunkCapacity];
             placed.Chunk = chunk;
             placed.Pick = pick;
             placed.Serial = serial;
             placed.StartS = start;
+            placed.Start = frame;
 
             placed.ObstacleBase = _obstacleNext;
             for (int i = 0; i < chunk.ObstacleCount; i++)
@@ -506,6 +518,130 @@ namespace JungleBooze.Gameplay.World
         public HelpPoint GetHelp(int id)
         {
             return _help[id % HelpCapacity];
+        }
+
+        // ---- View-side centreline (spec 102 §2.1) ----
+
+        /// <summary>World centreline point and heading at s (straight extrapolation before the first / after the last chunk).</summary>
+        public PathFrame GetFrame(float s)
+        {
+            int c = ChunkAt(s);
+            if (c < 0)
+            {
+                return new PathFrame { X = 0f, Z = s, Heading = 0f };
+            }
+
+            ref readonly PlacedChunk p = ref Chunk(c);
+            p.Chunk.Curve.Evaluate(s - p.StartS, out float lx, out float lz, out float lh);
+            return PathFrame.Compose(p.Start, lx, lz, lh);
+        }
+
+        // ---- ITraversalQuery (spec 103) ----
+
+        public bool TryGetWater(float s, float x, out float surfaceY)
+        {
+            int c = ChunkAt(s);
+            if (c < 0)
+            {
+                surfaceY = 0f;
+                return false;
+            }
+
+            ref readonly PlacedChunk p = ref Chunk(c);
+            return p.Chunk.TryGetWater(s - p.StartS, x, out surfaceY);
+        }
+
+        public void GetCurrent(float s, float x, out float lateral, out float forward)
+        {
+            int c = ChunkAt(s);
+            if (c < 0)
+            {
+                lateral = 0f;
+                forward = 0f;
+                return;
+            }
+
+            ref readonly PlacedChunk p = ref Chunk(c);
+            if (!p.Chunk.TryGetWater(s - p.StartS, x, out _))
+            {
+                lateral = 0f;
+                forward = 0f;
+                return;
+            }
+
+            p.Chunk.GetCurrentAt(s - p.StartS, out lateral, out forward);
+        }
+
+        public bool TryFindVine(float s, float before, float after, out VinePoint vine)
+        {
+            int c = ChunkAt(s);
+            if (c >= 0)
+            {
+                ref readonly PlacedChunk p = ref Chunk(c);
+                int i = p.Chunk.FindVine(s - p.StartS, before, after);
+                if (i >= 0)
+                {
+                    vine = MakeVine(p, i);
+                    return true;
+                }
+            }
+
+            vine = default;
+            return false;
+        }
+
+        public bool TryGetVine(int id, out VinePoint vine)
+        {
+            int serial = id >= 0 ? id / ChunkRuntime.LocalIdStride : -1;
+            int i = id >= 0 ? id % ChunkRuntime.LocalIdStride : -1;
+            if (serial < 0 || !IsLive(serial) || i >= Chunk(serial).Chunk.VineCount)
+            {
+                vine = default;
+                return false;
+            }
+
+            vine = MakeVine(Chunk(serial), i);
+            return true;
+        }
+
+        public bool TryFindDeepDive(float s, float x, out DeepDivePoint zone)
+        {
+            int c = ChunkAt(s);
+            if (c >= 0)
+            {
+                ref readonly PlacedChunk p = ref Chunk(c);
+                float local = s - p.StartS;
+                int i = p.Chunk.FindDeepDive(local, x);
+                if (i >= 0)
+                {
+                    DeepDiveZone z = p.Chunk.GetDeepDive(i);
+                    p.Chunk.TryGetWater(local, x, out float surface);
+                    zone = new DeepDivePoint((p.Serial * ChunkRuntime.LocalIdStride) + i, z.SMin + p.StartS, z.SMax + p.StartS, z.XMin, z.XMax, z.ExitS + p.StartS, z.ExitX, surface);
+                    return true;
+                }
+            }
+
+            zone = default;
+            return false;
+        }
+
+        public bool IsCanopy(float s)
+        {
+            int c = ChunkAt(s);
+            if (c < 0)
+            {
+                return false;
+            }
+
+            ref readonly PlacedChunk p = ref Chunk(c);
+            return p.Chunk.IsCanopy(s - p.StartS);
+        }
+
+        private static VinePoint MakeVine(in PlacedChunk p, int i)
+        {
+            VineAnchor a = p.Chunk.GetVine(i);
+            float takeoff = p.Chunk.GetVineTakeoffY(i);
+            return new VinePoint((p.Serial * ChunkRuntime.LocalIdStride) + i, a.AnchorS + p.StartS, a.X, takeoff + a.AnchorHeight, a.Length, a.LipS + p.StartS, a.LandingS + p.StartS, takeoff, p.Serial);
         }
 
         /// <summary>Label of a live obstacle id ("C12 Low @90"), for death reports.</summary>

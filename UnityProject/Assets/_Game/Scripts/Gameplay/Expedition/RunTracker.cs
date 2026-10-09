@@ -8,9 +8,11 @@ namespace JungleBooze.Gameplay.Expedition
     /// Everything per tick that is not movement (spec 102–103), run after each simulation step: crystals and the
     /// Shield (pads of spec 103 §9.1), discovery triggers (first time → reward, else a sighting), route choice at
     /// every divider front, the Clean Line bonus at the merge, chunk entry, hits for the director's mercy rule, and
-    /// the death report. Appends world events to the run's event buffer. Allocation-free per tick.
+    /// the death report. Part B: Perfect release and Perfect Span coins, traversal counters (DDA), creature
+    /// observations from <see cref="SailbackSystem"/> (discovery or sighting), Deep-Breath-only triggers, the vista
+    /// beat and water-curtain passes. Appends world events to the run's event buffer. Allocation-free per tick.
     /// </summary>
-    public sealed class RunTracker
+    public sealed class RunTracker : ICreatureDiscoverySink
     {
         private readonly WorldPath _path;
         private readonly RunnerSimulation _sim;
@@ -30,6 +32,8 @@ namespace JungleBooze.Gameplay.Expedition
         private int _cleanLineCoins;
         private int _cleanLineHits;
         private int _cleanLineChunk;
+        private int _spanChunk;
+        private int _spanPerfects;
 
         public RunTracker(WorldPath path, RunnerSimulation sim, WorldDirector director, ExpeditionContent content, RunEventBuffer events)
         {
@@ -66,6 +70,8 @@ namespace JungleBooze.Gameplay.Expedition
 
             _currentChunk = -1;
             _cleanLineActive = false;
+            _spanChunk = -1;
+            _spanPerfects = 0;
         }
 
         public bool IsCrystalCollected(int id)
@@ -106,6 +112,8 @@ namespace JungleBooze.Gameplay.Expedition
                 Stats.Hits = now.Hits;
             }
 
+            Stats.TraversalAttempts = now.TraversalAttempts;
+            Stats.TraversalSuccesses = now.TraversalSuccesses;
             bool aliveBefore = !before.Dead;
             if (aliveBefore)
             {
@@ -113,7 +121,9 @@ namespace JungleBooze.Gameplay.Expedition
                 StepRoutes(before, now);
                 StepPickups(now);
                 StepDiscoveries(before, now);
+                StepCurtains(before, now);
                 StepCleanLine(now);
+                StepReleases(before, now);
             }
 
             if (now.Dead && !before.Dead)
@@ -191,12 +201,102 @@ namespace JungleBooze.Gameplay.Expedition
             Emit(RunEventType.CleanLine, _cleanLineChunk, 0, bonus, now.Tick);
         }
 
+        /// <summary>Perfect release coins and the Perfect Span bonus (spec 103 §5.4, §9.1).</summary>
+        private void StepReleases(in RunnerState before, in RunnerState now)
+        {
+            if (now.Releases == before.Releases)
+            {
+                return;
+            }
+
+            int chunk = now.VineId >= 0 ? now.VineId / ChunkRuntime.LocalIdStride : -1;
+            if (chunk != _spanChunk)
+            {
+                _spanChunk = chunk;
+                _spanPerfects = 0;
+            }
+
+            Stats.VineReleases++;
+            if (now.Perfects == before.Perfects)
+            {
+                return;
+            }
+
+            Stats.PerfectReleases++;
+            int coins = _content.Pickups.PerfectReleaseCoins;
+            Stats.PerfectCoins += coins;
+            Emit(RunEventType.PerfectRelease, now.VineId, 0, coins, now.Tick);
+            _spanPerfects++;
+            if (_spanPerfects == 2)
+            {
+                int bonus = _content.Pickups.PerfectSpanBonusCoins;
+                Stats.PerfectCoins += bonus;
+                Stats.PerfectSpans++;
+                Emit(RunEventType.PerfectSpan, chunk, 0, bonus, now.Tick);
+            }
+        }
+
+        private void StepCurtains(in RunnerState before, in RunnerState now)
+        {
+            int serial = _path.ChunkAt(now.S);
+            if (serial < 0)
+            {
+                return;
+            }
+
+            ref readonly PlacedChunk p = ref _path.Chunk(serial);
+            ChunkRuntime c = p.Chunk;
+            for (int i = 0; i < c.TraversalCount; i++)
+            {
+                TraversalZone z = c.GetTraversal(i);
+                float s = z.SMin + p.StartS;
+                if (z.Mode == TraversalMode.Curtain && before.S < s && now.S >= s && now.X >= z.XMin && now.X <= z.XMax)
+                {
+                    Emit(RunEventType.CurtainPass, serial, 0, 0f, now.Tick);
+                }
+            }
+        }
+
+        /// <summary>From <see cref="SailbackSystem"/>: a spawn group was observed long enough (spec 103 §7.3).</summary>
+        public void OnCreatureObserved(string entryId, int chunkSerial, long tick)
+        {
+            int entry = _content.FindDiscovery(entryId);
+            if (entry >= 0)
+            {
+                Discover(entry, tick);
+            }
+        }
+
+        private void Discover(int entry, long tick)
+        {
+            if (entry < 32)
+            {
+                Stats.MissedDiscoveries &= ~(1 << entry);
+            }
+
+            if (IsDiscovered(entry))
+            {
+                Stats.Sightings++;
+                Emit(RunEventType.Discovery, entry, 0, 0f, tick);
+                return;
+            }
+
+            _foundThisRun[entry] = true;
+            DiscoveryEntry e = _content.Discoveries[entry];
+            Stats.AddNewDiscovery(entry);
+            Stats.DiscoveryCoins += e.RewardCoins;
+            Stats.DiscoveryCrystals += e.RewardCrystals;
+            Emit(RunEventType.Discovery, entry, 1, 0f, tick);
+        }
+
         private void StepPickups(in RunnerState now)
         {
-            HitboxConfig hb = _sim.Config.Hitbox;
-            float halfDepth = _sim.HitboxDepth * 0.5f;
-            float height = _sim.HitboxHeight;
-            float halfWidth = hb.Width * 0.5f;
+            _sim.GetHitbox(out float hs0, out float hs1, out float hx0, out float hx1, out float hy0, out float hy1);
+            float halfDepth = (hs1 - hs0) * 0.5f;
+            float halfWidth = (hx1 - hx0) * 0.5f;
+            float height = hy1 - hy0;
+            float centreS = (hs0 + hs1) * 0.5f;
+            float centreX = (hx0 + hx1) * 0.5f;
 
             float pad = _content.Pickups.CrystalPad;
             for (int id = _path.FirstCrystalId; id < _path.NextCrystalId; id++)
@@ -207,7 +307,7 @@ namespace JungleBooze.Gameplay.Expedition
                 }
 
                 CoinPoint c = _path.GetCrystal(id);
-                if (Overlaps(now, c.S, c.X, c.Y, halfDepth + pad, halfWidth + pad, height, pad))
+                if (Overlaps(centreS, centreX, hy0, c.S, c.X, c.Y, halfDepth + pad, halfWidth + pad, height, pad))
                 {
                     _crystalTaken[id % _crystalTaken.Length] = id + 1;
                     Stats.Crystals++;
@@ -224,7 +324,7 @@ namespace JungleBooze.Gameplay.Expedition
                 }
 
                 PowerUpPoint p = _path.GetPowerUp(id);
-                if (!Overlaps(now, p.S, p.X, p.Y, halfDepth + pad, halfWidth + pad, height, pad))
+                if (!Overlaps(centreS, centreX, hy0, p.S, p.X, p.Y, halfDepth + pad, halfWidth + pad, height, pad))
                 {
                     continue;
                 }
@@ -267,7 +367,8 @@ namespace JungleBooze.Gameplay.Expedition
                     continue;
                 }
 
-                if (now.X < d.XMin || now.X > d.XMax)
+                bool deepOnly = trigger.RequireDeepDive && now.Mode != MoveMode.DeepDive && before.Mode != MoveMode.DeepDive;
+                if (now.X < d.XMin || now.X > d.XMax || deepOnly)
                 {
                     if (!IsDiscovered(entry) && entry < 32)
                     {
@@ -277,30 +378,18 @@ namespace JungleBooze.Gameplay.Expedition
                     continue;
                 }
 
-                if (entry < 32)
+                if (trigger.Vista)
                 {
-                    Stats.MissedDiscoveries &= ~(1 << entry);
+                    Emit(RunEventType.Vista, entry, 0, 0f, now.Tick);
                 }
 
-                if (IsDiscovered(entry))
-                {
-                    Stats.Sightings++;
-                    Emit(RunEventType.Discovery, entry, 0, 0f, now.Tick);
-                    continue;
-                }
-
-                _foundThisRun[entry] = true;
-                DiscoveryEntry e = _content.Discoveries[entry];
-                Stats.AddNewDiscovery(entry);
-                Stats.DiscoveryCoins += e.RewardCoins;
-                Stats.DiscoveryCrystals += e.RewardCrystals;
-                Emit(RunEventType.Discovery, entry, 1, 0f, now.Tick);
+                Discover(entry, now.Tick);
             }
         }
 
-        private static bool Overlaps(in RunnerState r, float s, float x, float y, float halfDepth, float halfWidth, float height, float padY)
+        private static bool Overlaps(float rs, float rx, float ry0, float s, float x, float y, float halfDepth, float halfWidth, float height, float padY)
         {
-            return Math.Abs(s - r.S) <= halfDepth && Math.Abs(x - r.X) <= halfWidth && y >= r.Y - padY && y <= r.Y + height + padY;
+            return Math.Abs(s - rs) <= halfDepth && Math.Abs(x - rx) <= halfWidth && y >= ry0 - padY && y <= ry0 + height + padY;
         }
 
         private void Emit(RunEventType type, int id, byte reason, float value, long tick)

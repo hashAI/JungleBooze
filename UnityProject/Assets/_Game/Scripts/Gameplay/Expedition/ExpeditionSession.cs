@@ -30,7 +30,11 @@ namespace JungleBooze.Gameplay.Expedition
             Streamer = new WorldStreamer(Path, Director);
             Run = new RunSession(movement, Path, time, Events);
             Tracker = new RunTracker(Path, Run.Simulation, Director, content, Events);
+            Creatures = new SailbackSystem(Path, content.Sailback, time.DeltaTime, Events) { Sink = Tracker };
         }
+
+        /// <summary>The slice creature (spec 103 §7), ticked after the tracker.</summary>
+        public SailbackSystem Creatures { get; }
 
         public ExpeditionContent Content => _content;
 
@@ -71,13 +75,18 @@ namespace JungleBooze.Gameplay.Expedition
                 Skill = setup.Skill,
             };
             Streamer.BeginRun(director);
+            AbilityDefinition deepBreath = _content.FindAbility(AbilityFlags.DeepBreath);
             Run.Restart(new RunOptions
             {
                 FirstRun = setup.FirstExpedition,
                 ForcedSpeed = setup.ForcedSpeed,
                 SkipStartRamp = setup.ForcedSpeed > 0f,
+                DeepBreath = (setup.Owned & AbilityFlags.DeepBreath) != 0,
+                DeepDiveDepth = deepBreath != null ? deepBreath.DeepDiveDepth : -2.5f,
+                DeepDiveTime = deepBreath != null ? deepBreath.DeepDiveTime : 2.4f,
             });
             Tracker.BeginRun(setup.Owned, setup.Discovered);
+            Creatures.BeginRun();
         }
 
         public void Step(InputFrame frame)
@@ -86,6 +95,11 @@ namespace JungleBooze.Gameplay.Expedition
             Run.Step(frame);
             ref readonly RunnerState now = ref Run.Simulation.State;
             Tracker.AfterStep(before, now);
+            if (now.Tick != before.Tick)
+            {
+                Creatures.Step(now);
+            }
+
             Streamer.Update(now.S);
         }
     }

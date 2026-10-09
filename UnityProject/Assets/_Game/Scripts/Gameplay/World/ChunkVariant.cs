@@ -19,8 +19,8 @@ namespace JungleBooze.Gameplay.World
         public float Length;
 
         /// <summary>
-        /// Gray-box stand-in for a Part B traversal set piece (swim, vine, canopy): passable on foot, flagged in the
-        /// scene and in reports.
+        /// Gray-box stand-in for a traversal set piece that is not implemented yet: flagged in the scene and in reports.
+        /// (Part B implemented swim, vine and canopy; no shipped chunk uses it now.)
         /// </summary>
         public bool Placeholder;
 
@@ -37,5 +37,15 @@ namespace JungleBooze.Gameplay.World
         public List<DiscoveryTrigger> Discoveries = new List<DiscoveryTrigger>();
         public List<TraversalZone> Traversal = new List<TraversalZone>();
         public List<HelpMarker> Help = new List<HelpMarker>();
+
+        // ---- Spec 103 §10.3 traversal data ----
+        public List<WaterVolume> Water = new List<WaterVolume>();
+        public List<WaterCurrent> Currents = new List<WaterCurrent>();
+        public List<DeepDiveZone> DeepDives = new List<DeepDiveZone>();
+        public List<VineAnchor> Vines = new List<VineAnchor>();
+        public List<CreatureSpawn> Creatures = new List<CreatureSpawn>();
+
+        /// <summary>View-side curvature of the centreline (spec 102 §2.1).</summary>
+        public List<CurveKey> Curve = new List<CurveKey>();
     }
 }

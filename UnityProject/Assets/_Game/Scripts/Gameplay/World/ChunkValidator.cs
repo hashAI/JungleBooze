@@ -10,13 +10,15 @@ namespace JungleBooze.Gameplay.World
 {
     /// <summary>
     /// Offline chunk validator (spec 102 §4; editor setup and CI, never at runtime). Static rules: V2 (action gaps),
-    /// V4 (gap lengths, clear run-up), V5 (jump↔slide spacing), V6 (free corridor), V8 (seams, widths, narrowing),
-    /// V9 (dividers), V10 (secret entrances). V1: the Perfect bot drives the real simulation through every open route
-    /// at each requested speed and must take 0 hits. Not checked here (yet): V3 human-margin lateral rate (the bot
-    /// proves feasibility, not the 73% margin), V7 camera visibility, V11 (the director checks it at pick time),
-    /// V12 beyond "locked routes have no path", V13/V14 and W1–W5 (Part B traversal). Allocates; tools only.
+    /// V3 (human-margin lateral rate), V4 (gap lengths, clear run-up), V5 (jump↔slide spacing), V6 (free corridor),
+    /// V7 (camera visibility, both profiles, curved frame), V8 (seams, widths, narrowing, curvature), V9 (dividers),
+    /// V10 (secret entrances), V12 (locked routes have no path), V14 (canopy beams), W1–W5 (swim). V1: the Perfect
+    /// bot drives the real simulation through every open route (and the Deep Breath passage) at each requested speed
+    /// and must take 0 hits. V13 (vines): every release tick at both speeds lands on the platform with 0 hits, keeps
+    /// the 1 m corridor, and only Perfect arcs reach the perfect column. V11 is the director's (pick time).
+    /// Allocates; tools only.
     /// </summary>
-    public sealed class ChunkValidator
+    public sealed partial class ChunkValidator
     {
         public const float SeamZone = 6f;
         public const float SeamHalfWidth = 3.5f;
@@ -28,12 +30,16 @@ namespace JungleBooze.Gameplay.World
         private readonly MovementConfig _movement;
         private readonly WorldDirectorConfig _director;
         private readonly SpeedCurve _speed;
+        private readonly List<CameraRig.CameraProfile> _cameras;
+        private readonly float _crystalPad;
 
-        public ChunkValidator(MovementConfig movement, WorldDirectorConfig director)
+        public ChunkValidator(MovementConfig movement, WorldDirectorConfig director, IList<CameraRig.CameraProfile> cameras = null, float crystalPad = 0.4f)
         {
             _movement = movement ?? throw new ArgumentNullException(nameof(movement));
             _director = director ?? throw new ArgumentNullException(nameof(director));
             _speed = new SpeedCurve(movement.Speed);
+            _cameras = cameras != null ? new List<CameraRig.CameraProfile>(cameras) : new List<CameraRig.CameraProfile>();
+            _crystalPad = crystalPad;
         }
 
         /// <summary>Lowest and highest speed of a phase range (spec 102 §4.1).</summary>
@@ -64,8 +70,11 @@ namespace JungleBooze.Gameplay.World
             }
 
             SpeedExtremes(def.PhaseMin, def.PhaseMax, out float vLow, out float vHigh);
+            CheckVisibility(chunk, _director.RuleFor(def.PhaseMin), vLow, vHigh, report);
             CheckBot(chunk, vLow, report);
             CheckBot(chunk, vHigh, report);
+            CheckVines(chunk, vLow, vHigh, report);
+            CheckDeepDives(chunk, vLow, report);
             return report;
         }
 
@@ -79,9 +88,12 @@ namespace JungleBooze.Gameplay.World
             float vStart = _speed.Evaluate(startDistance);
             float vEnd = _speed.Evaluate(startDistance + chunk.Length);
             CheckStatic(chunk, _director.RuleFor(rules), Math.Max(1f, vStart - 0.5f), vEnd + 0.5f, report);
+            CheckVisibility(chunk, _director.RuleFor(rules), Math.Max(1f, vStart - 0.5f), vEnd + 0.5f, report);
             CheckBot(chunk, Math.Max(1f, vStart - 0.5f), report);
             CheckBot(chunk, vEnd + 0.5f, report);
             CheckBot(chunk, 0.8f * vStart, report);
+            CheckVines(chunk, Math.Max(1f, vStart - 0.5f), vEnd + 0.5f, report);
+            CheckDeepDives(chunk, vStart, report);
             return report;
         }
 
@@ -96,6 +108,11 @@ namespace JungleBooze.Gameplay.World
             CheckCorridors(chunk, rule, report);
             CheckSecrets(chunk, report);
             CheckCoins(chunk, report);
+            CheckLateral(chunk, vHigh, report);
+            CheckWater(chunk, rule, vLow, vHigh, report);
+            CheckBeams(chunk, rule, vLow, vHigh, report);
+            CheckVineLayout(chunk, report);
+            CheckCurve(chunk, report);
         }
 
         /// <summary>Content check: no coin inside a blocker (a coin there lures players into a crash).</summary>
@@ -161,7 +178,13 @@ namespace JungleBooze.Gameplay.World
                     continue;
                 }
 
-                // Narrowing only (widening is free): xMin moving right or xMax moving left.
+                // Narrowing only (widening is free): xMin moving right or xMax moving left. Canopy beam starts are
+                // exempt (V14 governs beams).
+                if (c.IsCanopy(a.S) || c.IsCanopy(b.S))
+                {
+                    continue;
+                }
+
                 if ((b.XMin - a.XMin) / ds > MaxNarrowing + 1e-3f || (a.XMax - b.XMax) / ds > MaxNarrowing + 1e-3f)
                 {
                     report.Add("V8", a.S, "path narrows faster than 0.10 m/m per side");
@@ -232,11 +255,13 @@ namespace JungleBooze.Gameplay.World
         private void CheckGaps(ChunkRuntime c, float vLow, float vHigh, ValidationReport report)
         {
             float maxLength = 0.75f * 0.60f * vLow;
-            for (int i = 0; i < c.FloorCount; i++)
+            List<CourseFloorPatch> gaps = EffectiveGaps(c);
+            for (int i = 0; i < gaps.Count; i++)
             {
-                CourseFloorPatch p = c.GetFloor(i);
-                if (p.Kind != CourseFloorKind.Gap)
+                CourseFloorPatch p = gaps[i];
+                if (IsVineGap(c, p))
                 {
+                    // Vine gaps are exempt from V4; V13 governs them.
                     continue;
                 }
 
@@ -299,6 +324,7 @@ namespace JungleBooze.Gameplay.World
         private void CheckCorridors(ChunkRuntime c, in PhaseRule rule, ValidationReport report)
         {
             float minCorridor = rule.Phase == DifficultyPhase.Learning ? 1.6f : 1.2f;
+            float waterCorridor = 1.6f;
             var blockers = new List<float>(16);
             var all = new List<float>(16);
             for (int i = 0; i < c.ObstacleCount; i++)
@@ -323,21 +349,26 @@ namespace JungleBooze.Gameplay.World
                     float x1 = Math.Min(laneMax, other.XMax);
                     all.Add(x0);
                     all.Add(x1);
-                    if (other.Class == ObstacleClass.Blocker)
+                    if (other.Class == ObstacleClass.Blocker || other.Class == ObstacleClass.Rock)
                     {
                         anyBlocker = true;
                         blockers.Add(x0);
                         blockers.Add(x1);
                     }
 
-                    allJump &= other.Class == ObstacleClass.Low || other.Class == ObstacleClass.Thorns;
-                    allSlide &= other.Class == ObstacleClass.High;
+                    allJump &= other.Class == ObstacleClass.Low || other.Class == ObstacleClass.Thorns || other.Class == ObstacleClass.Snag || other.Class == ObstacleClass.FloatingLog;
+                    allSlide &= other.Class == ObstacleClass.High || other.Class == ObstacleClass.LowBranch || other.Class == ObstacleClass.FloatingLog;
                 }
 
                 if (anyBlocker)
                 {
                     float free = LargestFree(blockers, laneMin, laneMax);
-                    if (free + 1e-3f < minCorridor)
+                    bool inWater = c.TryGetWater(s, o.CenterX, out _);
+                    if (inWater && free + 1e-3f < waterCorridor)
+                    {
+                        report.Add("W5", o.SMin, "free corridor " + F(free) + " m (< 1.6) at " + c.GetLabel(i));
+                    }
+                    else if (free + 1e-3f < minCorridor)
                     {
                         report.Add("V6", o.SMin, "free corridor " + F(free) + " m (< " + F(minCorridor) + ") at " + c.GetLabel(i));
                     }
@@ -361,10 +392,11 @@ namespace JungleBooze.Gameplay.World
                 }
             }
 
-            for (int i = 0; i < c.FloorCount; i++)
+            List<CourseFloorPatch> gaps = EffectiveGaps(c);
+            for (int i = 0; i < gaps.Count; i++)
             {
-                CourseFloorPatch p = c.GetFloor(i);
-                if (p.Kind == CourseFloorKind.Gap && c.RouteAt(p.SMin + 0.01f, (p.XMin + p.XMax) * 0.5f) == RouteType.Secret)
+                CourseFloorPatch p = gaps[i];
+                if (c.RouteAt(p.SMin + 0.01f, (p.XMin + p.XMax) * 0.5f) == RouteType.Secret)
                 {
                     report.Add("V10", p.SMin, "gap in a secret entrance");
                 }
@@ -394,18 +426,20 @@ namespace JungleBooze.Gameplay.World
         }
 
         /// <summary>Runs the bot over a single-chunk path. Returns the final state.</summary>
-        public RunnerState RunBot(ChunkRuntime c, int route, float speed, ValidationReport report)
+        public RunnerState RunBot(ChunkRuntime c, int route, float speed, ValidationReport report, bool deepBreath = false)
         {
             var path = new WorldPath();
             path.Append(c, new ChunkPick { Entry = c.LibraryIndex, CoinDensity = 1f, FlowCrystalCoin = -1, PowerUpSlot = -1 });
             var sim = new RunnerSimulation(_movement, path, 1f / 60f, new RunEventBuffer(16)) { MuteEvents = true };
-            sim.Reset(new RunOptions { ForcedSpeed = speed, SkipStartRamp = true });
+            sim.Reset(new RunOptions { ForcedSpeed = speed, SkipStartRamp = true, DeepBreath = deepBreath, DeepDiveDepth = -2.5f, DeepDiveTime = 2.4f });
             var bot = new PerfectBot(sim, false)
             {
                 ForkPreference = new WorldRoutePreference(path) { FixedRoute = route },
+                StrictWaterAnswers = true,
+                UseDeepDives = deepBreath,
             };
 
-            string label = route >= 0 ? c.GetRoute(route).Name : "main";
+            string label = (route >= 0 ? c.GetRoute(route).Name : "main") + (deepBreath ? " + Deep Breath" : string.Empty);
             int maxTicks = (int)((c.Length + 20f) / Math.Max(1f, speed) * 60f * 1.5f) + 120;
             bool wrongSide = false;
             for (int t = 0; t < maxTicks && sim.State.S < c.Length + 5f && !sim.State.Dead; t++)
@@ -459,8 +493,9 @@ namespace JungleBooze.Gameplay.World
             for (int i = 0; i < c.ObstacleCount; i++)
             {
                 ObstacleBox o = c.GetObstacle(i);
-                if (o.Class == ObstacleClass.Blocker)
+                if (o.Class == ObstacleClass.Blocker || RunnerSimulation.IsWaterClass(o.Class))
                 {
+                    // Steer-only; water obstacles are W1's.
                     continue;
                 }
 
@@ -472,10 +507,11 @@ namespace JungleBooze.Gameplay.World
                 }
             }
 
-            for (int i = 0; i < c.FloorCount; i++)
+            List<CourseFloorPatch> gaps = EffectiveGaps(c);
+            for (int i = 0; i < gaps.Count; i++)
             {
-                CourseFloorPatch p = c.GetFloor(i);
-                if (p.Kind != CourseFloorKind.Gap)
+                CourseFloorPatch p = gaps[i];
+                if (IsVineGap(c, p))
                 {
                     continue;
                 }
@@ -516,7 +552,7 @@ namespace JungleBooze.Gameplay.World
                 for (int k = 0; k < c.ObstacleCount; k++)
                 {
                     ObstacleBox o = c.GetObstacle(k);
-                    if (o.SMin > s || o.SMax < s || o.Class == ObstacleClass.Blocker)
+                    if (o.SMin > s || o.SMax < s || o.Class == ObstacleClass.Blocker || o.Class == ObstacleClass.Rock)
                     {
                         continue;
                     }

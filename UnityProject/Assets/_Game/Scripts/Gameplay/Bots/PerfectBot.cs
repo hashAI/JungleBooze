@@ -15,6 +15,12 @@ namespace JungleBooze.Gameplay.Bots
     /// first window that passes the threat cleanly (maximum timing margin). Allocation-free after construction.
     /// Cost: one planning tick can run up to ~90 × 240 probe steps, so a frame where the bot (re)plans can spike on a
     /// phone. It is a test/tool driver (CI, videos, the B key): keep it out of frame-pacing measurements (M7).
+    ///
+    /// Traversal (spec 103): in water a swipe up is a leap and a swipe down a dive, so the same search finds them
+    /// (with <see cref="StrictWaterAnswers"/> it only tries each water obstacle's named answer, validator W3); rocks
+    /// are steered around like blockers; on a vine it releases on <see cref="VineReleaseTick"/> (the middle of the
+    /// Perfect window by default); in the canopy it lines up with the next beam; with <see cref="UseDeepDives"/> and
+    /// Deep Breath it steers into a Deep Breath zone and dives.
     /// </summary>
     public sealed class PerfectBot : IInputProvider
     {
@@ -45,6 +51,15 @@ namespace JungleBooze.Gameplay.Bots
 
         public bool PreferRiskyBranch { get; set; }
 
+        /// <summary>Swing tick to release a vine on (default: middle of the Perfect window; −1 = never, auto-release).</summary>
+        public int VineReleaseTick { get; set; } = int.MinValue;
+
+        /// <summary>Validator W3: for a water obstacle only its named answer (FloatingLog/LowBranch: dive, Snag: leap).</summary>
+        public bool StrictWaterAnswers { get; set; }
+
+        /// <summary>Take Deep Breath zones when the run owns the ability.</summary>
+        public bool UseDeepDives { get; set; } = true;
+
         /// <summary>Optional route choice per split (streamed worlds); overrides <see cref="PreferRiskyBranch"/>.</summary>
         public IForkPreference ForkPreference { get; set; }
 
@@ -74,8 +89,30 @@ namespace JungleBooze.Gameplay.Bots
             }
 
             long next = state.Tick + 1;
+            if (state.Mode == MoveMode.Swing)
+            {
+                // Grab is automatic; the only decision is the release tick (spec 103 §5.4).
+                _scheduledTick = -1;
+                int release = VineReleaseTick == int.MinValue ? (_live.PerfectStartTick + _live.PerfectEndTick) / 2 : VineReleaseTick;
+                return new InputFrame(release >= 0 && _live.SwingTick + 1 == release ? InputCommand.Jump : InputCommand.None, 0);
+            }
+
+            if (state.Mode == MoveMode.DeepDive)
+            {
+                _scheduledTick = -1;
+                return InputFrame.Empty;
+            }
+
             short mm = SteerDelta(_live);
             InputCommand command = InputCommand.None;
+            if (UseDeepDives && _live.Options.DeepBreath && state.Mode == MoveMode.Swim && state.Dive == DivePhase.None && !state.Leaping &&
+                _live.Traversal != null && _live.Traversal.TryFindDeepDive(state.S + (state.Speed / 60f), state.X, out DeepDivePoint zone) &&
+                state.S + (state.Speed / 60f) >= ((zone.SMin + zone.SMax) * 0.5f) - 1f)
+            {
+                _scheduledTick = -1;
+                return new InputFrame(InputCommand.Slide, mm);
+            }
+
             if (_scheduledTick >= 0)
             {
                 if (next >= _scheduledTick)
@@ -100,9 +137,10 @@ namespace JungleBooze.Gameplay.Bots
                 return InputCommand.None;
             }
 
-            InputCommand first = !isFall && threatClass == ObstacleClass.High ? InputCommand.Slide : InputCommand.Jump;
+            InputCommand first = !isFall && (threatClass == ObstacleClass.High || threatClass == ObstacleClass.LowBranch || threatClass == ObstacleClass.FloatingLog) ? InputCommand.Slide : InputCommand.Jump;
             InputCommand second = first == InputCommand.Jump ? InputCommand.Slide : InputCommand.Jump;
-            if (TryWindow(first, failAt, threatEnd, out int delay) || TryWindow(second, failAt, threatEnd, out delay))
+            bool strict = StrictWaterAnswers && !isFall && RunnerSimulation.IsWaterClass(threatClass);
+            if (TryWindow(first, failAt, threatEnd, out int delay) || (!strict && TryWindow(second, failAt, threatEnd, out delay)))
             {
                 InputCommand action = _scheduled;
                 Trace?.Invoke("plan at s " + _live.State.S + ": " + action + " in " + delay + " ticks (failAt " + failAt + ", fall " + isFall + ", end " + threatEnd + ")");
@@ -219,7 +257,7 @@ namespace JungleBooze.Gameplay.Bots
         {
             ref readonly RunnerState st = ref sim.State;
             float margin = sim.Config.Lateral.EdgeMargin;
-            float halfWidth = sim.Config.Hitbox.Width * 0.5f;
+            float halfWidth = (st.Mode == MoveMode.Swim ? sim.Config.Swim.HitboxWidth : sim.Config.Hitbox.Width) * 0.5f;
             float speed = Math.Max(8f, st.Speed);
             float s = st.S;
 
@@ -272,7 +310,46 @@ namespace JungleBooze.Gameplay.Bots
                 }
             }
 
-            int coins = routeLocked ? 0 : _path.FindCoins(s + 0.5f, s + (speed * 0.9f), _ids);
+            // Deep Breath zone ahead: line up with its centre.
+            bool deepLock = false;
+            if (UseDeepDives && sim.Options.DeepBreath && sim.Traversal != null)
+            {
+                for (float ahead = 0f; ahead <= 40f; ahead += 2f)
+                {
+                    if (sim.Traversal.TryFindDeepDive(s + ahead, -2f, out DeepDivePoint zone) || sim.Traversal.TryFindDeepDive(s + ahead, -1f, out zone) ||
+                        sim.Traversal.TryFindDeepDive(s + ahead, -3f, out zone))
+                    {
+                        preferred = (zone.XMin + zone.XMax) * 0.5f;
+                        deepLock = true;
+                        break;
+                    }
+                }
+            }
+
+            // Canopy: aim for the centre of the floor ahead (the next beam) while it differs from here.
+            if (!deepLock && sim.Traversal != null && sim.Traversal.IsCanopy(s))
+            {
+                float look = s + Math.Max(4f, speed * 0.7f);
+                if (!_path.TryGetFloor(look, st.X, out _) || !_path.TryGetFloor(s, st.X, out _))
+                {
+                    float far = look;
+                    for (float ahead = 0.5f; ahead <= 8f; ahead += 0.5f)
+                    {
+                        _path.GetLateralBounds(look + ahead, st.X, out float b0, out float b1);
+                        if (_path.TryGetFloor(look + ahead, (b0 + b1) * 0.5f, out _))
+                        {
+                            far = look + ahead;
+                            break;
+                        }
+                    }
+
+                    _path.GetLateralBounds(far + 0.5f, st.X, out float fMin, out float fMax);
+                    preferred = (fMin + fMax) * 0.5f;
+                    deepLock = true;
+                }
+            }
+
+            int coins = routeLocked || deepLock ? 0 : _path.FindCoins(s + 0.5f, s + (speed * 0.9f), _ids);
             for (int i = 0; i < coins; i++)
             {
                 int id = _ids[i];
@@ -305,7 +382,7 @@ namespace JungleBooze.Gameplay.Bots
                     continue;
                 }
 
-                if ((box.Class == ObstacleClass.Blocker || box.Class == ObstacleClass.Thorns) && box.SMin < nearestS)
+                if ((box.Class == ObstacleClass.Blocker || box.Class == ObstacleClass.Thorns || box.Class == ObstacleClass.Rock) && box.SMin < nearestS)
                 {
                     nearestS = box.SMin;
                     nearest = box.Id;
@@ -328,7 +405,7 @@ namespace JungleBooze.Gameplay.Bots
             for (int i = 0; i < n; i++)
             {
                 ObstacleBox box = _path.GetObstacle(_ids[i]);
-                if (!Overlaps(box, target) || (box.Class != ObstacleClass.Blocker && box.Class != ObstacleClass.Thorns))
+                if (!Overlaps(box, target) || (box.Class != ObstacleClass.Blocker && box.Class != ObstacleClass.Thorns && box.Class != ObstacleClass.Rock))
                 {
                     continue;
                 }
@@ -354,7 +431,7 @@ namespace JungleBooze.Gameplay.Bots
             for (int i = 0; i < n; i++)
             {
                 ObstacleBox box = _path.GetObstacle(_overlapIds[i]);
-                if (box.Class != ObstacleClass.Blocker && box.Class != ObstacleClass.Thorns)
+                if (box.Class != ObstacleClass.Blocker && box.Class != ObstacleClass.Thorns && box.Class != ObstacleClass.Rock)
                 {
                     continue;
                 }

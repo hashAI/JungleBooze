@@ -18,6 +18,11 @@ namespace JungleBooze.Gameplay.Config
         public HealthConfigAsset Health;
         public RunFlowConfigAsset Flow;
 
+        /// <summary>Spec 103 traversal tuning; null = code defaults (the feel test has no traversal).</summary>
+        public SwimConfigAsset Swim;
+        public VineConfigAsset Vine;
+        public CanopyConfigAsset Canopy;
+
         public bool IsComplete => Speed != null && Lateral != null && JumpSlide != null && Hitbox != null && Health != null && Flow != null;
 
         public MovementConfig Build()
@@ -27,7 +32,8 @@ namespace JungleBooze.Gameplay.Config
                 throw new InvalidOperationException("Movement config assets are missing (run JungleBooze > Feel Test > Build Scene).");
             }
 
-            return new MovementConfig(Speed.Values, Lateral.Values, JumpSlide.Values, Hitbox.Values, Health.Values, Flow.Values);
+            return new MovementConfig(Speed.Values, Lateral.Values, JumpSlide.Values, Hitbox.Values, Health.Values, Flow.Values,
+                Swim != null ? Swim.Values : null, Vine != null ? Vine.Values : null, Canopy != null ? Canopy.Values : null);
         }
 
         /// <summary>Stable 64-bit FNV-1a hash of the serialized values (replay header).</summary>
@@ -40,6 +46,21 @@ namespace JungleBooze.Gameplay.Config
             hash = Mix(hash, JsonUtility.ToJson(Hitbox.Values));
             hash = Mix(hash, JsonUtility.ToJson(Health.Values));
             hash = Mix(hash, JsonUtility.ToJson(Flow.Values));
+            if (Swim != null)
+            {
+                hash = Mix(hash, JsonUtility.ToJson(Swim.Values));
+            }
+
+            if (Vine != null)
+            {
+                hash = Mix(hash, JsonUtility.ToJson(Vine.Values));
+            }
+
+            if (Canopy != null)
+            {
+                hash = Mix(hash, JsonUtility.ToJson(Canopy.Values));
+            }
+
             return hash;
         }
 

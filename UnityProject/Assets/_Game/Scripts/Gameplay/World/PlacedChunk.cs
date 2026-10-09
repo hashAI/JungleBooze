@@ -18,6 +18,9 @@ namespace JungleBooze.Gameplay.World
         public int DiscoveryBase;
         public int HelpBase;
 
+        /// <summary>View-side pose of the entry seam (world x/z, heading in radians; spec 102 §2.1).</summary>
+        public PathFrame Start;
+
         public float EndS => StartS + Chunk.Length;
     }
 }

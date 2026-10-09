@@ -12,5 +12,8 @@ namespace JungleBooze.Gameplay.Movement
 
         /// <summary>Floor rise above <c>stepUpHeight</c> met on the ground (minor; Pista clambers up).</summary>
         Wall,
+
+        /// <summary>Water contact (spec 103 §4.6): −1 health, stumble, i-frames; never Crash or Fall.</summary>
+        Bump,
     }
 }

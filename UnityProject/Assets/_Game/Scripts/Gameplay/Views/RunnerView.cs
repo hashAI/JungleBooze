@@ -1,4 +1,5 @@
 using JungleBooze.Gameplay.Movement;
+using JungleBooze.Gameplay.World;
 using UnityEngine;
 
 namespace JungleBooze.Gameplay.Views
@@ -24,6 +25,28 @@ namespace JungleBooze.Gameplay.Views
         }
 
         public RunnerAvatar Avatar => _avatar;
+
+        /// <summary>View-side centreline (curved worlds); null = straight path (world = (x, y, s)).</summary>
+        public WorldPath Frames { get; set; }
+
+        /// <summary>World position of a path-space point through <see cref="Frames"/>.</summary>
+        public Vector3 WorldPoint(float s, float x, float y)
+        {
+            if (Frames == null)
+            {
+                return new Vector3(x, y, s);
+            }
+
+            PathFrame f = Frames.GetFrame(s);
+            f.Offset(x, out float wx, out float wz);
+            return new Vector3(wx, y, wz);
+        }
+
+        /// <summary>Path heading at s, degrees.</summary>
+        public float HeadingDeg(float s)
+        {
+            return Frames == null ? 0f : Frames.GetFrame(s).HeadingDeg;
+        }
 
         /// <summary>Last interpolated state (camera input, debug).</summary>
         public RunnerState Interpolated { get; private set; }
@@ -83,10 +106,25 @@ namespace JungleBooze.Gameplay.Views
                 return;
             }
 
+            Vector3 hand = Vector3.zero;
+            float swingDeg = 0f;
+            if (_sim.TryGetSwing(out VinePoint vine, out float theta))
+            {
+                swingDeg = theta;
+                float rad = theta * Mathf.Deg2Rad;
+                hand = WorldPoint(vine.AnchorS + (vine.Length * Mathf.Sin(rad)), vine.X, vine.AnchorY - (vine.Length * Mathf.Cos(rad)));
+            }
+
             var visual = new RunnerVisualState
             {
-                Position = new Vector3(s.X, s.Y, s.S),
-                Facing = Quaternion.identity,
+                Position = WorldPoint(s.S, s.X, s.Y),
+                Facing = Quaternion.Euler(0f, HeadingDeg(s.S), 0f),
+                Mode = b.Mode,
+                Dive = b.Dive,
+                Leaping = b.Leaping,
+                Submerged = b.Submerged,
+                SwingDeg = swingDeg,
+                Hand = hand,
                 Speed = s.Speed,
                 VLat = s.VLat,
                 VLatMax = _sim.Config.Lateral.VLatMax,

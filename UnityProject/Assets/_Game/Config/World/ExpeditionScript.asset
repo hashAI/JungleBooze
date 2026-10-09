@@ -52,7 +52,7 @@ MonoBehaviour:
       PowerUpSlot: -1
       PowerUp: 0
       RulesPhase: 1
-      Beat: 'C6 Swimming [placeholder]'
+      Beat: C6 Swimming
     - ChunkId: D_Discovery_Overlook_01
       Variant: Default
       PowerUpSlot: -1
@@ -64,7 +64,7 @@ MonoBehaviour:
       PowerUpSlot: -1
       PowerUp: 0
       RulesPhase: 1
-      Beat: 'C8 Vine + canopy + creature [placeholder]'
+      Beat: C8 Vine + canopy + creature
     - ChunkId: R_Branch_Waterfall_01
       Variant: Slice
       PowerUpSlot: -1

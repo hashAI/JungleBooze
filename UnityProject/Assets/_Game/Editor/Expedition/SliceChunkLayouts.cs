@@ -6,9 +6,10 @@ namespace JungleBooze.Editor.Expedition
 {
     /// <summary>
     /// The 15 MVP chunks (spec 102 §9) with the vertical-slice layouts of spec 103 §3, the Expedition 1 script
-    /// (§2, §10.1), journal entries D-01…D-04 (§7.3) and the seven abilities (GDD §13). Land beats are complete;
-    /// the swim pool (C6) and the vine/canopy span (C8) are gray-box stand-ins run on foot and flagged
-    /// <see cref="ChunkVariant.Placeholder"/>, with their Part B traversal data kept as <see cref="TraversalZone"/>s.
+    /// (§2, §10.1), journal entries D-01…D-04 (§7.3) and the seven abilities (GDD §13), with Part B traversal:
+    /// the swim pool (C6: water, currents, water obstacles, the Sunken Arch deep dive), the vine/canopy span (C8:
+    /// vines V1/V2 with perfect columns, beams A/B/C) and sailback spawns (C5 ambient, C8 flock, C9 and the grotto).
+    /// View-side bends (spec 102 §2.1) on straight chunks.
     /// Layouts not given by spec 103 (pool variants of C3/C4/C9, F_Recovery_Riverbank_01, F_Branch_Ravine_01,
     /// D_Discovery_Grotto_01) are [ASSUMED 2026-10-09, gameplay-engineer] and follow the same rules.
     /// </summary>
@@ -60,9 +61,9 @@ namespace JungleBooze.Editor.Expedition
             Add(script, StiltRoots, "Slice", DifficultyPhase.Learning, "C3 First route choice");
             Add(script, Glade, "Slice", DifficultyPhase.Rhythm, "C4 Rhythm, first gap");
             Add(script, Ford, "Default", DifficultyPhase.Rhythm, "C5 River (ford)");
-            Add(script, Swim, "Default", DifficultyPhase.Rhythm, "C6 Swimming [placeholder]");
+            Add(script, Swim, "Default", DifficultyPhase.Rhythm, "C6 Swimming");
             Add(script, Overlook, "Default", DifficultyPhase.Rhythm, "C7 Waterfall vista");
-            Add(script, Canopy, "Default", DifficultyPhase.Rhythm, "C8 Vine + canopy + creature [placeholder]");
+            Add(script, Canopy, "Default", DifficultyPhase.Rhythm, "C8 Vine + canopy + creature");
             Add(script, Waterfall, "Slice", DifficultyPhase.Decision, "C9 Secret behind the falls");
             Add(script, Roots, "B", DifficultyPhase.Decision, "C10 Rhythm");
             script.Entries.Add(new ExpeditionScriptEntry { ChunkId = Meadow, Variant = "Default", RulesPhase = DifficultyPhase.Decision, PowerUpSlot = 0, PowerUp = PowerUpKind.Shield, Beat = "C11 Breather + Shield" });
@@ -135,13 +136,16 @@ namespace JungleBooze.Editor.Expedition
                 .Weave(60f, 130f, 2.5f, 35f)
                 .Blk(140f, 1.4f, 0f, "Mossy boulder")
                 .Help(HelpMove.Steer, 140f, -0.7f, 0.7f)
-                .Line(134f, 146f, -2f, 3f);
+                .Line(134f, 146f, -2f, 3f)
+                // The curving trail of keyframe F1 (view-side only).
+                .Bend(20f, 0f).Bend(35f, -1f / 120f).Bend(70f, -1f / 120f).Bend(85f, 0f).Bend(95f, 1f / 150f).Bend(125f, 1f / 150f).Bend(138f, 0f);
             d.Variants.Add(full.Variant);
 
             // Run 2+: 60 m, the arch and a coin line, no blocker (spec 103 §3.1, §10.2).
             var shortStart = new ChunkLayoutBuilder("Short", 160f, false, 60f);
             shortStart.Width(6f, -3.5f, 3.5f).Width(25f, -4f, 4f).Width(44f, -4f, 4f).Width(54f, -3.5f, 3.5f)
-                .Line(12f, 52f, 0f, 4f);
+                .Line(12f, 52f, 0f, 4f)
+                .Bend(12f, 0f).Bend(22f, -1f / 150f).Bend(42f, -1f / 150f).Bend(52f, 0f);
             d.Variants.Add(shortStart.Variant);
             return d;
         }
@@ -175,7 +179,8 @@ namespace JungleBooze.Editor.Expedition
                 .Gap(115f, 118.5f).Arc(116.75f)
                 .Blk(135f, 1.4f, -1.5f).Blk(150f, 1.4f, 1.5f).Blk(165f, 1.4f, -1f).Weave(128f, 172f, 1.6f, 30f, 0.2f)
                 .Low(185f, 0.5f).Arc(185f)
-                .PowerUp(100f, 0f, 1.0f, false);
+                .PowerUp(100f, 0f, 1.0f, false)
+                .Bend(25f, 0f).Bend(40f, 1f / 200f).Bend(100f, 1f / 200f).Bend(112f, 0f);
             d.Variants.Add(b.Variant);
             return d;
         }
@@ -246,7 +251,8 @@ namespace JungleBooze.Editor.Expedition
                 .Low(lowAfterHigh, 0.6f).Arc(lowAfterHigh)
                 .Blk(105f, 1.2f, 1.0f).Blk(120f, 1.2f, -1.5f).Weave(95f, 130f, -1.8f, 30f)
                 .Thorns(145f, 150f, -3.5f, -1.0f).Line(140f, 165f, 1.5f, 2.5f)
-                .Gap(170f, 173f).Arc(171.5f);
+                .Gap(170f, 173f).Arc(171.5f)
+                .Bend(55f, 0f).Bend(62f, -1f / 180f).Bend(95f, -1f / 180f).Bend(104f, 0f);
             if (script)
             {
                 v.Help(HelpMove.Gap, 45f);
@@ -264,34 +270,39 @@ namespace JungleBooze.Editor.Expedition
                 .Blk(80f, 1.4f, -1.5f, "Boulder").Blk(100f, 1.4f, 1.8f, "Boulder").Blk(120f, 1.6f, -0.5f, "Boulder")
                 .Weave(70f, 135f, 2.0f, 40f)
                 .Low(140f, 0.5f, walk: true, label: "Driftwood").Line(140f, 142f, 0f, 1f)
-                .Zone(TraversalMode.Creature, 90f, 130f, -20f, 20f, 8f, true, "Ambient sailback crossing 45–60 m ahead at y ≥ 8 m (foreshadowing; outside the discovery volume)")
-                .Line(185f, 205f, 0f, 5f);
+                .Creature("D-02", 150f, -22f, 8f, 2, 2.5f, 15f, 26f, 9f, 52f, true, "Ambient sailback crossing 45–60 m ahead at y ≥ 8 m (foreshadowing; outside the discovery volume)")
+                .Line(185f, 205f, 0f, 5f)
+                .Bend(10f, 0f).Bend(25f, 1f / 140f).Bend(55f, 1f / 140f).Bend(70f, 0f);
             d.Variants.Add(v.Variant);
             return d;
         }
 
-        // ---- C6 · spec 103 §3.6 (placeholder) ----
+        // ---- C6 · spec 103 §3.6 ----
         private static ChunkDefinition SwimChunk()
         {
             ChunkDefinition d = Def(Swim, "C6", ChunkCategory.Straight, EnvironmentSet.River, 320f, 3, 3, 6, DifficultyPhase.Learning, DifficultyPhase.Mastery, new ChunkDimensions(1, 1, 3, 1, 1));
             d.ShowcaseAbilities = AbilityFlags.DeepBreath;
             var v = new ChunkLayoutBuilder("Default", 320f);
-            v.Placeholder("Swim section (spec 103 §4) is Part B. Stand-in run on foot: FloatingLog/Snag → Low, LowBranch → High, Rock → Blocker; currents, dive/leap, underwater coins and the Sunken Arch deep dive are data only.")
-                .Width(6f, -3.5f, 3.5f).Width(30f, -4.5f, 4.5f).Width(290f, -4.5f, 4.5f).Width(314f, -3.5f, 3.5f)
-                .Zone(TraversalMode.Swim, 30f, 290f, -4.5f, 4.5f, 0f, true, "Water volume: swimEnterDepth reached at 30, wade out 290–305")
-                .Zone(TraversalMode.Swim, 40f, 120f, -4.5f, 4.5f, 1.5f, true, "Lateral current +1.5 m/s (pushes right)")
-                .Zone(TraversalMode.Swim, 140f, 200f, -4.5f, 4.5f, 3.0f, true, "Rapids: forward current +3.0 m/s")
-                .Zone(TraversalMode.DeepDive, 214f, 222f, -3.5f, -0.5f, -2.5f, true, "DeepDiveZone → Sunken Arch (needs Deep Breath); path 222–262, surfaces at x −2.0; 2 crystals")
-                .LockedRoute("Sunken Arch (Deep Breath)", RouteType.Secret, AbilityFlags.DeepBreath, "Deep dive at 214–222, x −3.5…−0.5 (Part B)")
-                .Line(45f, 115f, -2.5f, 2f)
-                .Low(60f, 0.5f, label: "FloatingLog (stand-in)")
-                .Low(90f, 0.5f, -4.5f, 0.5f, label: "Debris mat (stand-in)")
-                .Low(115f, 0.4f, label: "Snag (stand-in)")
-                .Blk(150f, 1.4f, 1.5f, "Rock").Blk(165f, 1.4f, -1.5f, "Rock").Blk(180f, 1.4f, 0.5f, "Rock").Weave(140f, 200f, -1.6f, 30f)
-                .Line(230f, 240f, 0f, 1.5f)
-                .High(255f, 1.0f, -1.0f, 4.5f, "LowBranch (stand-in)")
-                .Low(270f, 0.5f, label: "FloatingLog (stand-in)")
-                .Discovery("D-04", 262f, -3.5f, -0.5f, true, AbilityFlags.DeepBreath, "Stand-in: with Deep Breath, pass x −3.5…−0.5 at s 262 (the deep-dive exit). Part B replaces it with the real deep dive.");
+            v.Width(6f, -3.5f, 3.5f).Width(30f, -4.5f, 4.5f).Width(290f, -4.5f, 4.5f).Width(314f, -3.5f, 3.5f)
+                // Riverbed (the depth profile): bank 6–30 to −0.9 (swim from 30), deep −1.8 from 45, rises 290–306 (wade out ≈ 300).
+                .Floor(6f, 30f, 0f, -0.9f).Floor(30f, 45f, -0.9f, -1.8f).Floor(45f, 290f, -1.8f, -1.8f).Floor(290f, 306f, -1.8f, 0f)
+                .Water(6f, 312f, -4.5f, 4.5f)
+                .Current(40f, 120f, 1.5f, 0f)
+                .Current(140f, 200f, 0f, 3.0f)
+                .Line(45f, 115f, -2.5f, 2f, 0.4f)
+                .FloatingLog(60f, label: "FloatingLog").Help(HelpMove.Dive, 60f)
+                .FloatingLog(90f, -4.5f, 0.5f, "Debris mat")
+                .Snag(115f, label: "Snag").Help(HelpMove.Leap, 115f)
+                .Rock(150f, 1.4f, 1.5f).Rock(165f, 1.4f, -1.5f).Rock(180f, 1.4f, 0.5f)
+                .Weave(140f, 200f, -1.6f, 30f, 0f, 2.5f)
+                .Line(230f, 240f, 0f, 1.5f, -1.1f)
+                .DeepDive(214f, 222f, -3.5f, -0.5f, 262f, -2.0f, "Sunken Arch: 2.5 m down under the rootstone arch; surfaces at s 262, x −2.0")
+                .Crystal(235f, -2.0f, -1.9f, true).Crystal(248f, -2.0f, -1.75f, true)
+                .LockedRoute("Sunken Arch (Deep Breath)", RouteType.Secret, AbilityFlags.DeepBreath, "Deep dive at 214–222, x −3.5…−0.5 (spec 103 §4.5)")
+                .Discovery("D-04", 255f, -3.5f, -0.5f, false, AbilityFlags.DeepBreath, "Crossed during the Deep Breath dive (spec 103 §3.6)", deepDiveOnly: true)
+                .LowBranch(255f, -1.0f, 4.5f, "LowBranch")
+                .FloatingLog(270f, label: "FloatingLog")
+                .Line(276f, 286f, 0f, 2.5f, 0.4f);
             d.Variants.Add(v.Variant);
             return d;
         }
@@ -302,42 +313,60 @@ namespace JungleBooze.Editor.Expedition
             ChunkDefinition d = Def(Overlook, "C7", ChunkCategory.Discovery, EnvironmentSet.Waterfall, 180f, 1, 1, 3, DifficultyPhase.Learning, DifficultyPhase.Mastery, new ChunkDimensions(0, 0, 0, 0, 0));
             var v = new ChunkLayoutBuilder("Default", 180f);
             v.Line(10f, 60f, 0f, 3f)
-                .Discovery("D-01", 90f)
+                .Discovery("D-01", 90f, vista: true)
                 .Line(70f, 120f, 0f, 6f)
-                .Low(130f, 0.5f, label: "Wet rock").Arc(130f);
+                .Low(130f, 0.5f, label: "Wet rock").Arc(130f)
+                // 150–174: the path turns toward the giant stiltwood beside the falls (view-side).
+                .Bend(140f, 0f).Bend(150f, 1f / 80f).Bend(166f, 1f / 80f).Bend(173f, 0f);
             d.Variants.Add(v.Variant);
             return d;
         }
 
-        // ---- C8 · spec 103 §3.8 (placeholder) ----
+        // ---- C8 · spec 103 §3.8 ----
         private static ChunkDefinition CanopyChunk()
         {
             ChunkDefinition d = Def(Canopy, "C8", ChunkCategory.Branch, EnvironmentSet.Canopy, 300f, 4, 4, 7, DifficultyPhase.Rhythm, DifficultyPhase.Mastery, new ChunkDimensions(1, 1, 3, 2, 2));
             d.SetPiece = true;
             const float top = 9f;
             var v = new ChunkLayoutBuilder("Default", 300f);
-            v.Placeholder("Vine swing, canopy beam rules and the sailback creature (spec 103 §5–7) are Part B. Stand-in run on foot: the two vine gorges are bridged, beams are narrow path with jumpable gaps; perfect-column coins sit where only a Perfect release reaches.")
-                .Width(20f, -3.5f, 3.5f).Width(60f, -1.5f, 1.5f).Width(70f, -1.2f, 1.2f)
-                .Width(174.9f, -1.2f, 1.2f).Width(175f, -1.2f, 1.8f).Width(178.5f, -1.2f, 1.8f).Width(188.5f, -0.2f, 1.8f)
-                .Width(204.9f, -0.2f, 1.8f).Width(205f, -1.8f, 1.8f).Width(208f, -1.8f, 1.8f).Width(220f, -1.8f, 0.6f)
-                .Width(240f, -1.8f, 0.6f).Width(290f, -3.5f, 3.5f)
-                .Floor(20f, 70f, 0f, top).Floor(70f, 240f, top, top).Floor(240f, 290f, top, 0f)
-                .Zone(TraversalMode.Vine, 96f, 104f, -1.2f, 1.2f, 8f, true, "Gorge 8.0 m (not jumpable) with vine V1: anchor s 99, x 0, 8.0 m above the takeoff; bridged in the stand-in")
-                .Zone(TraversalMode.Vine, 140f, 148f, -1.2f, 1.2f, 8f, true, "Gap with vine V2: anchor s 143; bridged in the stand-in")
-                .Zone(TraversalMode.Canopy, 148f, 235f, -1.8f, 1.8f, 0.25f, true, "Canopy beams A/B/C (landing assist 0.25 m, falls hold the camera 0.8 s)")
-                .Zone(TraversalMode.Creature, 172f, 181f, 2.8f, 2.8f, 1.5f, true, "Sailback perch: 3 sailbacks at x +2.8, y +1.5 (s 172/176/181), flock glides toward Veil Falls")
+
+            // [ASSUMED 2026-10-09] Beam C centred at x −0.2 (spec §3.8 says −0.6): B (+0.8) → C must be ≤ maxBeamOffset 1.0 (V14).
+            v.Width(20f, -3.5f, 3.5f).Width(60f, -1.5f, 1.5f).Width(70f, -1.2f, 1.2f)
+                .Width(174.99f, -1.2f, 1.2f).Width(175f, -1.2f, 1.8f).Width(178.49f, -1.2f, 1.8f).Width(178.5f, -0.2f, 1.8f)
+                .Width(204.99f, -0.2f, 1.8f).Width(205f, -1.4f, 1.8f).Width(207.99f, -1.4f, 1.8f).Width(208f, -1.4f, 1.0f)
+                .Width(240f, -1.4f, 1.0f).Width(290f, -3.5f, 3.5f)
+                // Floors: root ramp up, open air from 70 to 240, then the takeoff funnel, landing branch and beams A/B/C.
+                .Floor(20f, 70f, 0f, top).Gap(70f, 240f)
+                .Floor(70f, 96f, top, top, -1.2f, 1.2f)
+                .Floor(104f, 140f, top, top, -1.2f, 1.2f)
+                .Floor(148f, 175f, top, top, -1.2f, 1.2f)
+                .Floor(178.5f, 205f, top, top, -0.2f, 1.8f)
+                .Floor(208f, 240f, top, top, -1.4f, 1.0f)
+                .Floor(240f, 290f, top, 0f)
+                .Zone(TraversalMode.Canopy, 148f, 240f, -1.4f, 1.8f, 0.25f, false, "Canopy beams A/B/C: landing assist 0.25 m; falls hold the camera 0.8 s")
+                .Vine(99f, 0f, 96f, 104f, 108.6f, 109.6f, true)
+                .Vine(143f, 0f, 140f, 148f, 152f, 153f, false)
                 .LockedRoute("Upper vine line (Vine Grip)", RouteType.Risky, AbilityFlags.VineGrip, "Gold-lit vines 3 m above reach on the left, s 140–235 (Phase 3)")
                 .Line(25f, 65f, 0f, 4f)
-                .Point(109.1f, 0f, 2.6f).Point(109.1f, 0f, 3.4f).Point(109.1f, 0f, 4.2f)
+                .Line(72f, 92f, 0f, 4f)
+                .Point(108.8f, 0f, 2.6f).Point(108.8f, 0f, 3.4f).Point(108.8f, 0f, 4.2f)
                 .Line(112f, 136f, 0f, 2f)
-                .Point(152.5f, 0f, 2.6f).Point(152.5f, 0f, 4.2f).Crystal(152.5f, 0f, 3.4f, true)
+                .Point(152.6f, 0f, 2.6f).Point(152.6f, 0f, 4.2f).Crystal(152.6f, 0f, 3.4f, true)
+                .Line(156f, 157.5f, 0f, 1.5f)
                 .High(160f, 1.0f, label: "Hanging moss").Under(160f)
-                .Line(150f, 156f, 0f, 3f)
-                .Gap(175f, 178.5f).Arc(176.75f, 0.3f)
-                .Low(192f, 0.5f, walk: true, label: "Branch knot").Line(181f, 190f, 0.8f, 3f)
-                .Gap(205f, 208f).Arc(206.5f, 0f)
-                .High(222f, 1.0f, label: "Hanging moss").Under(222f, 3, -0.6f).Line(211f, 218f, -0.6f, 3.5f)
-                .Discovery("D-02", 176f, -99f, 99f, true, AbilityFlags.None, "Stand-in: passing the sailback perch counts as observing it. Part B uses creature observation (0.8 s in view).");
+                .Line(164f, 172f, 0f, 2f)
+                .Arc(176.75f, 0.8f, 3)
+                .Line(181f, 189f, 0.8f, 2f)
+                .Low(192f, 0.5f, walk: true, label: "Branch knot").Line(192f, 194f, 0.8f, 1f)
+                .Line(197f, 202f, 0.8f, 2.5f)
+                .Arc(206.5f, -0.2f, 3)
+                .Line(211f, 218f, -0.2f, 3.5f)
+                .High(222f, 1.0f, label: "Hanging moss").Under(222f, 3, -0.2f)
+                .Line(228f, 238f, -0.2f, 2.5f)
+                .Line(250f, 285f, 0f, 5f)
+                .Creature("D-02", 172f, 2.8f, 1.5f, 3, 4.5f, 243f, 4.8f, -6.0f, 0f, false, "Sailback perch on a side branch; the flock glides ahead and right, into Veil Falls (C9 s 119)")
+                // The descent spirals down the trunk (view-side bend).
+                .Bend(240f, 0f).Bend(250f, 1f / 60f).Bend(280f, 1f / 60f).Bend(290f, 0f);
             d.Variants.Add(v.Variant);
             return d;
         }
@@ -370,7 +399,8 @@ namespace JungleBooze.Editor.Expedition
                 .Low(130f, 0.5f, -1.2f, 1.0f).Line(75f, 165f, 1.8f, 3f)
                 // Secret: Veil Grotto behind the water curtain (observation only).
                 .Zone(TraversalMode.Curtain, 118f, 121f, 3.8f, 5.8f, 0f, false, "Water curtain: no collision, splash burst, 0.25 s droplet overlay")
-                .Zone(TraversalMode.Creature, 85f, 118f, 3.2f, 3.2f, 3f, true, "C9's own sailback perched on D2 launches at 25 m and glides into the curtain (cue 1)")
+                .Creature("D-02", 108f, 3.2f, 3.0f, 1, 0f, 11.5f, 4.8f, 2.7f, 25f, false, "C9's own sailback perched on D2 launches at 25 m and glides into the curtain (cue 1)")
+                .Creature("D-02", 143f, 5.3f, 2.8f, 2, 4f, 0f, 5.3f, 2.8f, -1f, false, "Roosting sailbacks inside the grotto (seen-again flavour)")
                 .Crystal(135f, 4.8f, 1.0f, true).Crystal(150f, 4.8f, 1.0f, true)
                 .Discovery("D-03", 140f, 3.8f, 5.8f)
                 .Line(125f, 160f, 4.8f, 2f)

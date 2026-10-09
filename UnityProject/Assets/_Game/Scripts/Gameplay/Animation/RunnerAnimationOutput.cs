@@ -35,5 +35,11 @@ namespace JungleBooze.Gameplay.Animation
 
         /// <summary>0…1: how much the in-air foot anchor applies.</summary>
         public float AnchorWeight;
+
+        /// <summary>Procedural whole-body pitch about the hips, degrees (+ = forward/head down): swim, dive, swing.</summary>
+        public float BodyPitchDeg;
+
+        /// <summary>0…1: how much the body sits in the water (swim posture offsets).</summary>
+        public float SwimWeight;
     }
 }

@@ -82,20 +82,26 @@ namespace JungleBooze.Tests.EditMode.World
         }
 
         [Test]
-        public void Placeholders_AreExactlyTheSwimAndCanopyBeats()
+        public void NoPlaceholdersLeft_SwimAndCanopyCarryTheirTraversalData()
         {
             ChunkLibrary lib = ShippedContent.Shared.Library;
             for (int i = 0; i < lib.EntryCount; i++)
             {
                 ChunkRuntime e = lib.GetEntry(i);
-                bool expected = e.Id == "R_Swim_Pool_01" || e.Id == "C_Canopy_VineSpan_01";
-                Assert.AreEqual(expected, e.Placeholder, e.Id);
-                if (expected)
-                {
-                    Assert.IsNotEmpty(e.Variant.PlaceholderNote);
-                    Assert.Greater(e.TraversalCount, 0, "Part B data kept");
-                }
+                Assert.IsFalse(e.Placeholder, e.Id + " is still a stand-in");
             }
+
+            ChunkRuntime swim = Entry("R_Swim_Pool_01", "Default");
+            Assert.AreEqual(1, swim.WaterCount);
+            Assert.AreEqual(2, swim.CurrentCount);
+            Assert.AreEqual(1, swim.DeepDiveCount);
+            ChunkRuntime canopy = Entry("C_Canopy_VineSpan_01", "Default");
+            Assert.AreEqual(2, canopy.VineCount);
+            Assert.AreEqual(1, canopy.CreatureCount);
+            Assert.IsTrue(canopy.IsCanopy(180f));
+            Assert.IsFalse(canopy.TryGetFloor(176f, 0f, out _), "beam gap is open air");
+            Assert.IsTrue(canopy.TryGetFloor(190f, 0.8f, out float top));
+            Assert.AreEqual(9f, top, 1e-3f);
         }
 
         [Test]
@@ -184,7 +190,8 @@ namespace JungleBooze.Tests.EditMode.World
         public void AC102_01_40_ShippedCatalog_PassesTheValidator_AndMasksMatch()
         {
             ExpeditionContent content = ShippedContent.Build();
-            CatalogValidation.Result result = CatalogValidation.Run(content.Library, content.Script, ShippedAssets.Config(), content.Director);
+            CatalogValidation.Result result = CatalogValidation.Run(content.Library, content.Script, ShippedAssets.Config(), content.Director,
+                JungleBooze.Editor.Expedition.ExpeditionSetup.CameraProfiles(), content.Pickups.CrystalPad);
             var failures = new List<string>();
             foreach (ValidationReport r in result.Reports)
             {

@@ -1,0 +1,65 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0138433f6413145b09b208f54fb52fc4, type: 3}
+  m_Name: CameraModifiers
+  m_EditorClassIdentifier: JungleBooze.Gameplay::JungleBooze.Gameplay.Config.CameraModifiersAsset
+  _values:
+    BlendTime: 0.4
+    Swim:
+      Back: -0.5
+      Height: -0.6
+      PitchDeg: -3
+      FovDeg: 0
+      LateralFollow: 0.75
+      AirFollow: -1
+      BobAmplitude: 0.05
+      BobHz: 0.8
+    DeepDive:
+      Back: -1
+      Height: -0.4
+      PitchDeg: -4
+      FovDeg: -4
+      LateralFollow: -1
+      AirFollow: -1
+      BobAmplitude: 0
+      BobHz: 0
+    Swing:
+      Back: 1
+      Height: 0.8
+      PitchDeg: 0
+      FovDeg: 4
+      LateralFollow: -1
+      AirFollow: 0.4
+      BobAmplitude: 0
+      BobHz: 0
+    Canopy:
+      Back: 0
+      Height: 0.4
+      PitchDeg: 0
+      FovDeg: 0
+      LateralFollow: 0.85
+      AirFollow: -1
+      BobAmplitude: 0
+      BobHz: 0
+    Vista:
+      Back: 0
+      Height: 0
+      PitchDeg: -3
+      FovDeg: 4
+      LateralFollow: -1
+      AirFollow: -1
+      BobAmplitude: 0
+      BobHz: 0
+    VistaDuration: 2
+    DeepDiveFollow: 1
+    ReleaseLookAhead: 4
+    LookAheadHalfLife: 0.25

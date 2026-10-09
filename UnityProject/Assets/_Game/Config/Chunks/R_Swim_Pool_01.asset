@@ -44,11 +44,8 @@ MonoBehaviour:
     - Name: Default
       ScriptOnly: 0
       Length: 0
-      Placeholder: 1
-      PlaceholderNote: "Swim section (spec 103 \xA74) is Part B. Stand-in run on
-        foot: FloatingLog/Snag \u2192 Low, LowBranch \u2192 High, Rock \u2192 Blocker;
-        currents, dive/leap, underwater coins and the Sunken Arch deep dive are data
-        only."
+      Placeholder: 0
+      PlaceholderNote: 
       Widths:
       - S: 0
         XMin: -3.5
@@ -68,7 +65,35 @@ MonoBehaviour:
       - S: 320
         XMin: -3.5
         XMax: 3.5
-      Floors: []
+      Floors:
+      - Kind: 1
+        SMin: 6
+        SMax: 30
+        XMin: -99
+        XMax: 99
+        Y0: 0
+        Y1: -0.9
+      - Kind: 1
+        SMin: 30
+        SMax: 45
+        XMin: -99
+        XMax: 99
+        Y0: -0.9
+        Y1: -1.8
+      - Kind: 1
+        SMin: 45
+        SMax: 290
+        XMin: -99
+        XMax: 99
+        Y0: -1.8
+        Y1: -1.8
+      - Kind: 1
+        SMin: 290
+        SMax: 306
+        XMin: -99
+        XMax: 99
+        Y0: -1.8
+        Y1: 0
       Dividers: []
       Routes:
       - Name: Sunken Arch (Deep Breath)
@@ -76,79 +101,79 @@ MonoBehaviour:
         Steps: []
         RequiredAbility: 1
         Locked: 1
-        Note: "Deep dive at 214\u2013222, x \u22123.5\u2026\u22120.5 (Part B)"
+        Note: "Deep dive at 214\u2013222, x \u22123.5\u2026\u22120.5 (spec 103 \xA74.5)"
       Obstacles:
-      - Label: FloatingLog (stand-in)
-        Class: 0
+      - Label: FloatingLog
+        Class: 4
         SMin: 60
         SMax: 60.6
         XMin: -4.5
         XMax: 4.5
-        YMin: 0
-        YMax: 0.5
+        YMin: -0.4
+        YMax: 0.4
         WalkableTop: 0
-      - Label: Debris mat (stand-in)
-        Class: 0
+      - Label: Debris mat
+        Class: 4
         SMin: 90
         SMax: 90.6
         XMin: -4.5
         XMax: 0.5
-        YMin: 0
-        YMax: 0.5
+        YMin: -0.4
+        YMax: 0.4
         WalkableTop: 0
-      - Label: Snag (stand-in)
-        Class: 0
+      - Label: Snag
+        Class: 6
         SMin: 115
         SMax: 115.6
         XMin: -4.5
         XMax: 4.5
-        YMin: 0
-        YMax: 0.4
+        YMin: -1.8
+        YMax: 0.3
         WalkableTop: 0
-      - Label: Rock
-        Class: 2
+      - Label: Rock 1.4 @150
+        Class: 7
         SMin: 150
         SMax: 150.6
         XMin: 0.8
         XMax: 2.2
-        YMin: 0
-        YMax: 2.5
+        YMin: -1.8
+        YMax: 2
         WalkableTop: 0
-      - Label: Rock
-        Class: 2
+      - Label: Rock 1.4 @165
+        Class: 7
         SMin: 165
         SMax: 165.6
         XMin: -2.2
         XMax: -0.8
-        YMin: 0
-        YMax: 2.5
+        YMin: -1.8
+        YMax: 2
         WalkableTop: 0
-      - Label: Rock
-        Class: 2
+      - Label: Rock 1.4 @180
+        Class: 7
         SMin: 180
         SMax: 180.6
         XMin: -0.19999999
         XMax: 1.2
-        YMin: 0
-        YMax: 2.5
+        YMin: -1.8
+        YMax: 2
         WalkableTop: 0
-      - Label: LowBranch (stand-in)
-        Class: 1
+      - Label: LowBranch
+        Class: 5
         SMin: 255
         SMax: 255.6
         XMin: -1
         XMax: 4.5
-        YMin: 1
-        YMax: 2.5
+        YMin: 0.5
+        YMax: 2
         WalkableTop: 0
-      - Label: FloatingLog (stand-in)
-        Class: 0
+      - Label: FloatingLog
+        Class: 4
         SMin: 270
         SMax: 270.6
         XMin: -4.5
         XMax: 4.5
-        YMin: 0
-        YMax: 0.5
+        YMin: -0.4
+        YMax: 0.4
         WalkableTop: 0
       Coins:
       - Kind: 0
@@ -159,7 +184,7 @@ MonoBehaviour:
         Amp: 0
         Period: 0
         Count: 0
-        Y: 0
+        Y: 0.4
       - Kind: 1
         S0: 140
         S1: 200
@@ -177,48 +202,71 @@ MonoBehaviour:
         Amp: 0
         Period: 0
         Count: 0
-        Y: 0
-      Crystals: []
+        Y: -1.1
+      - Kind: 0
+        S0: 276
+        S1: 286
+        X: 0
+        Step: 2.5
+        Amp: 0
+        Period: 0
+        Count: 0
+        Y: 0.4
+      Crystals:
+      - S: 235
+        X: -2
+        Y: -1.9
+        Always: 1
+      - S: 248
+        X: -2
+        Y: -1.75
+        Always: 1
       PowerUps: []
       Discoveries:
       - EntryId: D-04
-        S: 262
+        S: 255
         XMin: -3.5
         XMax: -0.5
-        Placeholder: 1
+        Placeholder: 0
         RequiredAbility: 1
-        Note: "Stand-in: with Deep Breath, pass x \u22123.5\u2026\u22120.5 at s 262
-          (the deep-dive exit). Part B replaces it with the real deep dive."
-      Traversal:
-      - Mode: 0
-        SMin: 30
-        SMax: 290
+        RequireDeepDive: 1
+        Vista: 0
+        Note: "Crossed during the Deep Breath dive (spec 103 \xA73.6)"
+      Traversal: []
+      Help:
+      - Move: 5
+        S: 60
+        XMin: -99
+        XMax: 99
+      - Move: 6
+        S: 115
+        XMin: -99
+        XMax: 99
+      Water:
+      - SMin: 6
+        SMax: 312
         XMin: -4.5
         XMax: 4.5
-        Value: 0
-        Note: "[Part B placeholder] Water volume: swimEnterDepth reached at 30, wade
-          out 290\u2013305"
-      - Mode: 0
-        SMin: 40
+        SurfaceY: 0
+      Currents:
+      - SMin: 40
         SMax: 120
-        XMin: -4.5
-        XMax: 4.5
-        Value: 1.5
-        Note: '[Part B placeholder] Lateral current +1.5 m/s (pushes right)'
-      - Mode: 0
-        SMin: 140
+        Lateral: 1.5
+        Forward: 0
+      - SMin: 140
         SMax: 200
-        XMin: -4.5
-        XMax: 4.5
-        Value: 3
-        Note: '[Part B placeholder] Rapids: forward current +3.0 m/s'
-      - Mode: 3
-        SMin: 214
+        Lateral: 0
+        Forward: 3
+      DeepDives:
+      - SMin: 214
         SMax: 222
         XMin: -3.5
         XMax: -0.5
-        Value: -2.5
-        Note: "[Part B placeholder] DeepDiveZone \u2192 Sunken Arch (needs Deep Breath);
-          path 222\u2013262, surfaces at x \u22122.0; 2 crystals"
-      Help: []
+        ExitS: 262
+        ExitX: -2
+        Note: "Sunken Arch: 2.5 m down under the rootstone arch; surfaces at s 262,
+          x \u22122.0"
+      Vines: []
+      Creatures: []
+      Curve: []
     ValidatedMask: 1

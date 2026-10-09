@@ -40,6 +40,20 @@ namespace JungleBooze.Gameplay.World
         /// <summary>Showcase rule (spec 103 §10.2): forced within this many picks after the start chunk.</summary>
         public int ShowcaseWindow = 5;
 
+        /// <summary>Validator human margins (spec 102 V3/V14/W5): lateral rate 8.0 m/s (73% of vLatMax) after a 0.10 s reaction.</summary>
+        public float HumanLateralRate = 8.0f;
+
+        public float HumanReactionTime = 0.10f;
+
+        /// <summary>W5: fraction of (swimVLatMax − |cx|) a human is expected to use.</summary>
+        public float HumanSwimMargin = 0.73f;
+
+        /// <summary>W4: no obstacle this close after water entry / before water exit, m.</summary>
+        public float WaterEntryClearance = 10f;
+
+        /// <summary>View-side curvature limit (radius ≥ 60 m, spec 102 §2.1), 1/m.</summary>
+        public float MaxCurvature = 1f / 60f;
+
         // Dynamic difficulty (§6.4).
         public float StartSkill = -0.3f;
         public float SkillRate = 0.3f;

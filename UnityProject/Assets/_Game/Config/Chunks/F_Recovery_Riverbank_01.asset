@@ -83,4 +83,10 @@ MonoBehaviour:
         Value: 0
         Note: Shallow edge on the right
       Help: []
+      Water: []
+      Currents: []
+      DeepDives: []
+      Vines: []
+      Creatures: []
+      Curve: []
     ValidatedMask: 1

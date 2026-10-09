@@ -28,6 +28,9 @@ namespace JungleBooze.Tests.EditMode.Movement
                 Hitbox = Load<HitboxConfigAsset>(FeelTestPaths.Hitbox),
                 Health = Load<HealthConfigAsset>(FeelTestPaths.Health),
                 Flow = Load<RunFlowConfigAsset>(FeelTestPaths.RunFlow),
+                Swim = AssetDatabase.LoadAssetAtPath<SwimConfigAsset>(JungleBooze.Editor.Expedition.ExpeditionPaths.Swim),
+                Vine = AssetDatabase.LoadAssetAtPath<VineConfigAsset>(JungleBooze.Editor.Expedition.ExpeditionPaths.Vine),
+                Canopy = AssetDatabase.LoadAssetAtPath<CanopyConfigAsset>(JungleBooze.Editor.Expedition.ExpeditionPaths.Canopy),
             };
         }
 

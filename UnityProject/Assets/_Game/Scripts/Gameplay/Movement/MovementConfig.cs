@@ -15,7 +15,10 @@ namespace JungleBooze.Gameplay.Movement
             JumpSlideConfig jumpSlide,
             HitboxConfig hitbox,
             HealthConfig health,
-            RunFlowConfig flow)
+            RunFlowConfig flow,
+            SwimConfig swim = null,
+            VineConfig vine = null,
+            CanopyConfig canopy = null)
         {
             Speed = (speed ?? throw new ArgumentNullException(nameof(speed))).Clone();
             Lateral = (lateral ?? throw new ArgumentNullException(nameof(lateral))).Clone();
@@ -23,6 +26,9 @@ namespace JungleBooze.Gameplay.Movement
             Hitbox = (hitbox ?? throw new ArgumentNullException(nameof(hitbox))).Clone();
             Health = (health ?? throw new ArgumentNullException(nameof(health))).Clone();
             Flow = (flow ?? throw new ArgumentNullException(nameof(flow))).Clone();
+            Swim = (swim ?? new SwimConfig()).Clone();
+            Vine = (vine ?? new VineConfig()).Clone();
+            Canopy = (canopy ?? new CanopyConfig()).Clone();
         }
 
         public RunSpeedConfig Speed { get; }
@@ -36,6 +42,15 @@ namespace JungleBooze.Gameplay.Movement
         public HealthConfig Health { get; }
 
         public RunFlowConfig Flow { get; }
+
+        /// <summary>Swimming (spec 103 §4).</summary>
+        public SwimConfig Swim { get; }
+
+        /// <summary>Vine swing (spec 103 §5).</summary>
+        public VineConfig Vine { get; }
+
+        /// <summary>Canopy beams (spec 103 §6).</summary>
+        public CanopyConfig Canopy { get; }
 
         /// <summary>Range checks. Returns problems (empty = valid). Setup time only (allocates).</summary>
         public List<string> Validate()
@@ -73,6 +88,19 @@ namespace JungleBooze.Gameplay.Movement
             if (arc.Airtime < 0.55f || arc.Airtime > 0.65f)
             {
                 problems.Add("Jump airtime " + arc.Airtime.ToString("0.000") + " s is outside 0.55–0.65 s (spec 101 §7).");
+            }
+
+            Positive(problems, "Swim.SpeedFactor", Swim.SpeedFactor);
+            Positive(problems, "Swim.Tau", Swim.Tau);
+            if (Swim.ExitDepth >= Swim.EnterDepth)
+            {
+                problems.Add("Swim.ExitDepth must be < EnterDepth (hysteresis).");
+            }
+
+            Positive(problems, "Vine.SwingTime", Vine.SwingTime);
+            if (!(Vine.ReleaseOpen < Vine.PerfectStart && Vine.PerfectStart <= Vine.PerfectEnd && Vine.PerfectEnd <= 1f))
+            {
+                problems.Add("Vine: need ReleaseOpen < PerfectStart ≤ PerfectEnd ≤ 1.");
             }
 
             return problems;

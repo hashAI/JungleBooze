@@ -103,7 +103,23 @@ MonoBehaviour:
         XMax: 99
         Placeholder: 0
         RequiredAbility: 0
+        RequireDeepDive: 0
+        Vista: 1
         Note: 
       Traversal: []
       Help: []
+      Water: []
+      Currents: []
+      DeepDives: []
+      Vines: []
+      Creatures: []
+      Curve:
+      - S: 140
+        Curvature: 0
+      - S: 150
+        Curvature: 0.0125
+      - S: 166
+        Curvature: 0.0125
+      - S: 173
+        Curvature: 0
     ValidatedMask: 1

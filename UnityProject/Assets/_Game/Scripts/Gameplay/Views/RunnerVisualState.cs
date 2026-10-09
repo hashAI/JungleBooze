@@ -33,5 +33,21 @@ namespace JungleBooze.Gameplay.Views
         public float SinceDodge;
 
         public int DodgeDirection;
+
+        // ---- Traversal (spec 103) ----
+
+        public MoveMode Mode;
+
+        public DivePhase Dive;
+
+        public bool Leaping;
+
+        public bool Submerged;
+
+        /// <summary>Vine angle while swinging, degrees (+ = forward).</summary>
+        public float SwingDeg;
+
+        /// <summary>Hand point on the vine (world) while swinging.</summary>
+        public Vector3 Hand;
     }
 }

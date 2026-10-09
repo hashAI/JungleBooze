@@ -30,6 +30,10 @@ namespace JungleBooze.Gameplay.Animation
         private bool _evLand;
         private bool _evLandHard;
         private bool _evLedge;
+        private bool _evLeap;
+        private bool _evSplash;
+        private float _bodyPitch;
+        private float _swimWeight;
         private float _sinceDodge = 99f;
         private int _dodgeDir;
         private float _sinceEdge = 99f;
@@ -72,6 +76,8 @@ namespace JungleBooze.Gameplay.Animation
             _roll = 0f;
             _anchor = 0f;
             _forwardLean = 0f;
+            _bodyPitch = 0f;
+            _swimWeight = 0f;
             _out = new RunnerAnimationOutput
             {
                 State = RunnerAnimState.Idle,
@@ -99,6 +105,12 @@ namespace JungleBooze.Gameplay.Animation
                     break;
                 case RunEventType.LedgeAssist:
                     _evLedge = true;
+                    break;
+                case RunEventType.Leap:
+                    _evLeap = true;
+                    break;
+                case RunEventType.Splash:
+                    _evSplash = true;
                     break;
                 case RunEventType.Hit:
                     if (e.Reason != (byte)HitKind.Crash)
@@ -135,9 +147,14 @@ namespace JungleBooze.Gameplay.Animation
             _sinceDodge += dt;
             _sinceEdge += dt;
 
-            ResolveState(s);
+            if (!ResolveTraversal(s))
+            {
+                ResolveState(s);
+            }
+
             UpdateRates(s, locoPhase);
             UpdateLean(s, dt);
+            UpdateBody(s, dt);
             ClearEvents();
         }
 
@@ -272,6 +289,112 @@ namespace JungleBooze.Gameplay.Animation
             }
         }
 
+        /// <summary>
+        /// Swim, dive, leap and vine poses (spec 103). Uses the available clips until asset-pipeline delivers swim
+        /// clips: Swim = Run at a slow rate on a pitched body, Dive = Fall pitched head-down, leap = Jump, the swing =
+        /// Vine_Grab then Vine_Hang. Returns false when the land rules apply.
+        /// </summary>
+        private bool ResolveTraversal(in RunnerVisualState s)
+        {
+            if (s.Dead)
+            {
+                return false;
+            }
+
+            if (s.Mode == MoveMode.Swing)
+            {
+                if (_state != RunnerAnimState.Grab && _state != RunnerAnimState.Hang)
+                {
+                    Enter(RunnerAnimState.Grab, _c.FadeToJump, 0.3f, 1.6f, true);
+                }
+                else if (_state == RunnerAnimState.Grab && _timeInState >= 0.22f)
+                {
+                    Enter(RunnerAnimState.Hang, 0.15f, 0f, 1f, false);
+                }
+
+                return true;
+            }
+
+            bool water = s.Mode == MoveMode.Swim || s.Mode == MoveMode.DeepDive;
+            if (!water)
+            {
+                if (_state == RunnerAnimState.Swim || _state == RunnerAnimState.Dive || _state == RunnerAnimState.Grab || _state == RunnerAnimState.Hang)
+                {
+                    // Out of the water or off the vine: back to the land states.
+                    if (s.Grounded)
+                    {
+                        Enter(RunnerAnimState.Locomotion, _c.FadeLandToRun, _c.LandingRunPhase, 1f, true);
+                    }
+                    else
+                    {
+                        Enter(_evJump ? RunnerAnimState.Jump : RunnerAnimState.Fall, _c.FadeToFall, 0f, _c.FallRate, true);
+                    }
+
+                    return true;
+                }
+
+                return false;
+            }
+
+            if (_evLeap)
+            {
+                float start = _c.JumpTakeoffFrame / FramesPerSecond / _c.JumpClipLength;
+                Enter(RunnerAnimState.Jump, _c.FadeToJump, start, 1f, true);
+                return true;
+            }
+
+            if (s.Leaping)
+            {
+                if (_state != RunnerAnimState.Jump && _state != RunnerAnimState.Fall)
+                {
+                    Enter(RunnerAnimState.Fall, _c.FadeToFall, 0f, _c.FallRate, false);
+                }
+
+                return true;
+            }
+
+            bool under = s.Mode == MoveMode.DeepDive || s.Dive != DivePhase.None;
+            if (under)
+            {
+                Enter(RunnerAnimState.Dive, 0.12f, 0f, 0.8f, false);
+            }
+            else
+            {
+                Enter(RunnerAnimState.Swim, _evSplash ? 0.08f : 0.18f, 0f, 0.65f, false);
+            }
+
+            return true;
+        }
+
+        private void UpdateBody(in RunnerVisualState s, float dt)
+        {
+            float pitch = 0f;
+            float swim = 0f;
+            if (!s.Dead)
+            {
+                switch (s.Mode)
+                {
+                    case MoveMode.Swim:
+                        swim = 1f;
+                        pitch = s.Leaping ? 20f : s.Dive == DivePhase.Down ? 115f : s.Dive == DivePhase.Under ? 90f : s.Dive == DivePhase.Up ? 55f : 72f;
+                        break;
+                    case MoveMode.DeepDive:
+                        swim = 1f;
+                        pitch = 95f;
+                        break;
+                    case MoveMode.Swing:
+                        // The body trails the vine a little (the rope carries the full angle).
+                        pitch = -0.35f * s.SwingDeg;
+                        break;
+                }
+            }
+
+            _bodyPitch = Damp(_bodyPitch, pitch, 0.08f, dt);
+            _swimWeight = Damp(_swimWeight, swim, 0.08f, dt);
+            _out.BodyPitchDeg = _bodyPitch;
+            _out.SwimWeight = _swimWeight;
+        }
+
         private void EnterGroundOrAir(in RunnerVisualState s, float fade)
         {
             if (s.Grounded)
@@ -400,6 +523,8 @@ namespace JungleBooze.Gameplay.Animation
             _evLand = false;
             _evLandHard = false;
             _evLedge = false;
+            _evLeap = false;
+            _evSplash = false;
         }
 
         internal static float Smoothstep(float a, float b, float x)

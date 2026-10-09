@@ -21,6 +21,8 @@ namespace JungleBooze.Gameplay.Views
         private float _landSquash;
         private float _deathTilt;
         private float _bobPhase;
+        private float _swim;
+        private float _swimPitch;
 
         public static CapsuleRunnerAvatar Create(Transform parent, Material body, Material accent)
         {
@@ -45,17 +47,24 @@ namespace JungleBooze.Gameplay.Views
                 _bobPhase += dt * Mathf.Max(4f, state.Speed) * 0.9f;
             }
 
-            transform.SetPositionAndRotation(state.Position, state.Facing);
+            // Water: the capsule lies forward (dives pitch head-down) and its centre sits on the body line (spec 103 §4).
+            bool water = state.Mode == MoveMode.Swim || state.Mode == MoveMode.DeepDive;
+            _swim = Damp(_swim, water && !state.Leaping ? 1f : 0f, 0.06f, dt);
+            float swimPitch = state.Mode == MoveMode.DeepDive ? 95f : state.Dive == DivePhase.Down ? 120f : state.Dive == DivePhase.Under ? 90f : state.Dive == DivePhase.Up ? 55f : 78f;
+            _swimPitch = Damp(_swimPitch, swimPitch, 0.06f, dt);
+            Vector3 position = state.Position - new Vector3(0f, _swim * BodyHeight * 0.5f, 0f);
+            transform.SetPositionAndRotation(position, state.Facing);
 
             float stumble = state.SinceStumble < 0.35f ? Mathf.Sin(state.SinceStumble / 0.35f * Mathf.PI) : 0f;
             float pitch = Mathf.Lerp(8f, -70f, _slideBlend) + (stumble * 18f) + (_deathTilt * 80f) + (_tuck * 12f);
+            pitch = Mathf.Lerp(pitch, _swimPitch, _swim) + (state.Mode == MoveMode.Swing ? -0.35f * state.SwingDeg : 0f);
             float roll = _lean + (state.SinceDodge < 0.2f ? -state.DodgeDirection * 10f * (1f - (state.SinceDodge / 0.2f)) : 0f);
             _pivot.localRotation = Quaternion.Euler(pitch, 0f, roll);
 
             float bob = state.Grounded && !state.Sliding ? Mathf.Abs(Mathf.Sin(_bobPhase)) * 0.06f : 0f;
             float squashY = 1f - (_landSquash * 0.25f) - (_tuck * 0.12f);
             float squashXZ = 1f + (_landSquash * 0.15f);
-            _pivot.localPosition = new Vector3(0f, bob + (_slideBlend * 0.15f), 0f);
+            _pivot.localPosition = new Vector3(0f, bob + (_slideBlend * 0.15f) + (_swim * BodyHeight * 0.5f), 0f);
             _body.localScale = new Vector3(0.5f * squashXZ, BodyHeight * 0.5f * squashY, 0.5f * squashXZ);
             _body.localPosition = new Vector3(0f, BodyHeight * 0.5f * squashY, 0f);
         }
@@ -83,6 +92,7 @@ namespace JungleBooze.Gameplay.Views
             _tuck = 0f;
             _landSquash = 0f;
             _deathTilt = 0f;
+            _swim = 0f;
             SetVisible(true);
         }
 

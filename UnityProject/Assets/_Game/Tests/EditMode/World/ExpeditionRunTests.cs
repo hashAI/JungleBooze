@@ -105,7 +105,7 @@ namespace JungleBooze.Tests.EditMode.World
             Assert.AreEqual(0, session.Director.EmergencyPicks);
             Assert.GreaterOrEqual(log.Chunks.Count, 13 + 8);
             Assert.AreEqual("F_Recovery_Riverbank_01/Default", log.Chunks[13], "forced Recovery after C13");
-            Assert.AreEqual(3, log.Stats.NewDiscoveryCount, "D-01 Falls Basin, D-02 Sailback (stand-in), D-03 Veil Grotto");
+            Assert.AreEqual(3, log.Stats.NewDiscoveryCount, "D-01 Falls Basin, D-02 Sailback (observed), D-03 Veil Grotto");
             Assert.GreaterOrEqual(log.Stats.TotalCoins, 150, "the first run affords Deep Breath (spec 103 §13)");
             Assert.GreaterOrEqual(log.Stats.Crystals, 3, "C3 risky crystal + 2 grotto crystals");
             Assert.GreaterOrEqual(log.Stats.SecretRoutes, 1, "Veil Grotto taken");
@@ -252,7 +252,7 @@ namespace JungleBooze.Tests.EditMode.World
             RunLog run2 = Drive(session, ShippedContent.Bot(session, RouteType.Secret, RouteType.Safe), 2100f);
             Assert.AreEqual(0, run2.Stats.NewDiscoveryCount);
             Assert.AreEqual(0, run2.Stats.DiscoveryCoins);
-            Assert.AreEqual(3, run2.Stats.Sightings);
+            Assert.AreEqual(5, run2.Stats.Sightings, "D-01, D-03 and three sailback groups (C8 flock, C9 perch, grotto roost)");
             Assert.AreEqual(0, run2.Toasts);
             Assert.AreEqual(0, content.FindDiscovery("D-01"));
         }

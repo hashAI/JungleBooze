@@ -162,15 +162,86 @@ namespace JungleBooze.Editor.Expedition
             return this;
         }
 
-        public ChunkLayoutBuilder Discovery(string entry, float s, float xMin = -Full, float xMax = Full, bool placeholder = false, AbilityFlags ability = AbilityFlags.None, string note = "")
+        public ChunkLayoutBuilder Discovery(string entry, float s, float xMin = -Full, float xMax = Full, bool placeholder = false, AbilityFlags ability = AbilityFlags.None, string note = "", bool deepDiveOnly = false, bool vista = false)
         {
-            _v.Discoveries.Add(new DiscoveryTrigger { EntryId = entry, S = s, XMin = xMin, XMax = xMax, Placeholder = placeholder, RequiredAbility = ability, Note = note });
+            _v.Discoveries.Add(new DiscoveryTrigger { EntryId = entry, S = s, XMin = xMin, XMax = xMax, Placeholder = placeholder, RequiredAbility = ability, Note = note, RequireDeepDive = deepDiveOnly, Vista = vista });
             return this;
         }
 
         public ChunkLayoutBuilder Zone(TraversalMode mode, float s0, float s1, float xMin, float xMax, float value, bool placeholder, string note)
         {
             _v.Traversal.Add(new TraversalZone { Mode = mode, SMin = s0, SMax = s1, XMin = xMin, XMax = xMax, Value = value, Note = (placeholder ? "[Part B placeholder] " : string.Empty) + note });
+            return this;
+        }
+
+        // ---- Spec 103 traversal (water heights are relative to the water surface) ----
+
+        public ChunkLayoutBuilder Water(float s0, float s1, float xMin, float xMax, float surface = 0f)
+        {
+            _v.Water.Add(new WaterVolume { SMin = s0, SMax = s1, XMin = xMin, XMax = xMax, SurfaceY = surface });
+            return this;
+        }
+
+        public ChunkLayoutBuilder Current(float s0, float s1, float lateral, float forward)
+        {
+            _v.Currents.Add(new WaterCurrent { SMin = s0, SMax = s1, Lateral = lateral, Forward = forward });
+            return this;
+        }
+
+        public ChunkLayoutBuilder DeepDive(float s0, float s1, float xMin, float xMax, float exitS, float exitX, string note)
+        {
+            _v.DeepDives.Add(new DeepDiveZone { SMin = s0, SMax = s1, XMin = xMin, XMax = xMax, ExitS = exitS, ExitX = exitX, Note = note });
+            return this;
+        }
+
+        /// <summary>FloatingLog −0.40…+0.40 around the surface (dive, leap or steer).</summary>
+        public ChunkLayoutBuilder FloatingLog(float s, float xMin = -Full, float xMax = Full, string label = null, float surface = 0f)
+        {
+            Clamp(s, ref xMin, ref xMax);
+            return Add(new CourseObstacle { Label = label ?? "FloatingLog @" + s, Class = ObstacleClass.FloatingLog, SMin = s, SMax = s + Depth, XMin = xMin, XMax = xMax, YMin = surface - 0.40f, YMax = surface + 0.40f });
+        }
+
+        /// <summary>LowBranch: bottom +0.50 above the water, up (dive or steer).</summary>
+        public ChunkLayoutBuilder LowBranch(float s, float xMin = -Full, float xMax = Full, string label = null, float surface = 0f)
+        {
+            Clamp(s, ref xMin, ref xMax);
+            return Add(new CourseObstacle { Label = label ?? "LowBranch @" + s, Class = ObstacleClass.LowBranch, SMin = s, SMax = s + Depth, XMin = xMin, XMax = xMax, YMin = surface + 0.50f, YMax = surface + 2.0f });
+        }
+
+        /// <summary>Snag: riverbed…+0.30 (leap or steer).</summary>
+        public ChunkLayoutBuilder Snag(float s, float xMin = -Full, float xMax = Full, string label = null, float surface = 0f)
+        {
+            Clamp(s, ref xMin, ref xMax);
+            float bed = FloorAt(s, (xMin + xMax) * 0.5f);
+            return Add(new CourseObstacle { Label = label ?? "Snag @" + s, Class = ObstacleClass.Snag, SMin = s, SMax = s + Depth, XMin = xMin, XMax = xMax, YMin = bed, YMax = surface + 0.30f });
+        }
+
+        /// <summary>Rock w @x, full height (steer or dodge; contact pushes to the free side).</summary>
+        public ChunkLayoutBuilder Rock(float s, float width, float centerX, string label = null, float surface = 0f)
+        {
+            float xMin = centerX - (width * 0.5f);
+            float xMax = centerX + (width * 0.5f);
+            float bed = FloorAt(s, centerX);
+            return Add(new CourseObstacle { Label = label ?? "Rock " + width.ToString("0.0") + " @" + s, Class = ObstacleClass.Rock, SMin = s, SMax = s + Depth, XMin = xMin, XMax = xMax, YMin = bed, YMax = surface + 2.0f });
+        }
+
+        public ChunkLayoutBuilder Vine(float anchorS, float x, float lipS, float landingS, float columnS0, float columnS1, bool releaseHelp, float anchorHeight = 8f, float length = 6f)
+        {
+            _v.Vines.Add(new VineAnchor { AnchorS = anchorS, X = x, AnchorHeight = anchorHeight, Length = length, LipS = lipS, LandingS = landingS, ColumnS0 = columnS0, ColumnS1 = columnS1, ReleaseHelp = releaseHelp });
+            return this;
+        }
+
+        public ChunkLayoutBuilder Creature(string entry, float s, float x, float y, int count, float spacing, float endDs, float endX, float endY, float launchDistance, bool ambient, string note)
+        {
+            _v.Creatures.Add(new CreatureSpawn { EntryId = entry, S = s, X = x, Y = y, Count = count, Spacing = spacing, EndDS = endDs, EndX = endX, EndY = endY, LaunchDistance = launchDistance, Ambient = ambient, Note = note });
+            return this;
+        }
+
+        /// <summary>View-side curvature key (1/m, + = right).</summary>
+        public ChunkLayoutBuilder Bend(float s, float curvature)
+        {
+            _v.Curve.Add(new CurveKey(s, curvature));
+            _v.Curve.Sort((a, b) => a.S.CompareTo(b.S));
             return this;
         }
 
