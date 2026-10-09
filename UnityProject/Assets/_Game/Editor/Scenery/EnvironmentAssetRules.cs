@@ -19,6 +19,10 @@ namespace JungleBooze.Editor.Scenery
         PoolTerrace,
         Ledge,
         PlantClump,
+        Travertine,
+        TravertineWater,
+        CanopyCrown,
+        ArchVines,
     }
 
     /// <summary>Which map of a texture set a file is (Poly Haven style suffixes).</summary>
@@ -41,7 +45,12 @@ namespace JungleBooze.Editor.Scenery
     ///                skipped (the builder merges LOD0). An empty named *_WaterfallMouth marks where a fall starts.
     ///   Stiltwoods/  [SW_]Stiltwood* (trunk + stilt-root fan, base at the origin), [SW_]LeafCards* (alpha cards)
     ///   Rootstone/   also [RS_]PoolTerrace* (terraced pool rims) and [RS_]Ledge* (lookout ledges).
+    ///   Rootstone/   also [RS_]TravertineTiers* (terraced travertine pools with Pool/Lip/Cascade anchors) and its
+    ///                *_Water mesh (the pool surfaces, drawn with the water material).
     ///   Plants/      [FP_]*_Clump.fbx: alpha-cut card clumps; atlas set = the name without "_Clump" (FP_Broadleaf).
+    ///                [FP_]CanopyCrown* (single crowns) and [FP_]ArchVines* (curtains in the hero arch's space).
+    ///                A model without a set of its own uses the set named like its FBX material; a mesh with several
+    ///                material slots gets one set per slot (FBX material order = slot order).
     ///   Backdrops/   backdrop_NN_name.png (RGBA matte-painting layers; NN = order, 01 = farthest)
     ///   Textures:    &lt;model or kit name&gt;_BaseColor|_diff, _Normal|_nor_gl (OpenGL), _ARM, _alpha, next to the
     ///                model or in a Textures/ subfolder. A model uses the set that shares its name, else the kit set
@@ -88,6 +97,16 @@ namespace JungleBooze.Editor.Scenery
 
             if (path.StartsWith(PlantsFolder + "/", StringComparison.Ordinal))
             {
+                if (name.StartsWith("canopycrown", StringComparison.Ordinal))
+                {
+                    return EnvironmentRole.CanopyCrown;
+                }
+
+                if (name.StartsWith("archvines", StringComparison.Ordinal))
+                {
+                    return EnvironmentRole.ArchVines;
+                }
+
                 return name.EndsWith("_clump", StringComparison.Ordinal) ? EnvironmentRole.PlantClump : EnvironmentRole.Unknown;
             }
 
@@ -96,6 +115,11 @@ namespace JungleBooze.Editor.Scenery
                 if (name.StartsWith("poolterrace", StringComparison.Ordinal) || name.StartsWith("pool_terrace", StringComparison.Ordinal))
                 {
                     return EnvironmentRole.PoolTerrace;
+                }
+
+                if (name.StartsWith("travertine", StringComparison.Ordinal))
+                {
+                    return name.EndsWith("_water", StringComparison.Ordinal) ? EnvironmentRole.TravertineWater : EnvironmentRole.Travertine;
                 }
 
                 if (name.StartsWith("ledge", StringComparison.Ordinal))
@@ -137,10 +161,25 @@ namespace JungleBooze.Editor.Scenery
             return EnvironmentRole.Unknown;
         }
 
-        /// <summary>Drops a kit prefix ("rs_", "sw_", "bd_", "env_") from a lower-case name.</summary>
+        /// <summary>Texture set name of an FBX material name: drops a material prefix ("MI_FP_Canopy" → "FP_Canopy").</summary>
+        public static string MaterialSetName(string materialName)
+        {
+            string[] prefixes = { "MI_", "M_", "MAT_", "Mat_" };
+            for (int i = 0; i < prefixes.Length; i++)
+            {
+                if (materialName.StartsWith(prefixes[i], StringComparison.Ordinal) && materialName.Length > prefixes[i].Length)
+                {
+                    return materialName.Substring(prefixes[i].Length);
+                }
+            }
+
+            return materialName;
+        }
+
+        /// <summary>Drops a kit prefix ("rs_", "sw_", "bd_", "env_", "fp_") from a lower-case name.</summary>
         public static string StripKitPrefix(string name)
         {
-            string[] prefixes = { "rs_", "sw_", "bd_", "env_" };
+            string[] prefixes = { "rs_", "sw_", "bd_", "env_", "fp_" };
             for (int i = 0; i < prefixes.Length; i++)
             {
                 if (name.StartsWith(prefixes[i], StringComparison.Ordinal))
@@ -229,6 +268,7 @@ namespace JungleBooze.Editor.Scenery
                 case EnvironmentRole.Bridge:
                 case EnvironmentRole.Outcrop:
                 case EnvironmentRole.Cliff:
+                case EnvironmentRole.Travertine:
                     return "rootstone";
                 case EnvironmentRole.Stiltwood:
                     return "stiltwood";

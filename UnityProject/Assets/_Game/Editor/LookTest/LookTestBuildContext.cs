@@ -66,7 +66,24 @@ namespace JungleBooze.Editor.LookTest
             LookTestMeshAccumulator target = piece.Material != null ? Batches.Get(segment, layer, label, piece.Material, castShadows, group) : standIn;
             for (int i = 0; i < piece.Parts.Count; i++)
             {
-                target.Append(piece.Parts[i].Mesh, placement * piece.Parts[i].Matrix, painter);
+                EnvironmentKit.Part part = piece.Parts[i];
+                Matrix4x4 matrix = placement * part.Matrix;
+                if (part.SlotMaterials != null)
+                {
+                    // One batch per material slot (for example FP_ElephantEar and FP_Bellflower of a framing clump).
+                    for (int slot = 0; slot < part.SlotMaterials.Length; slot++)
+                    {
+                        Material slotMaterial = part.SlotMaterials[slot] != null ? part.SlotMaterials[slot] : piece.Material;
+                        LookTestMeshAccumulator slotTarget = slotMaterial != null ? Batches.Get(segment, layer, label, slotMaterial, castShadows, group) : standIn;
+                        slotTarget?.Append(EnvironmentKit.SlotMesh(part.Mesh, slot), matrix, painter);
+                    }
+
+                    continue;
+                }
+
+                // Parts with their own texture set (multi-material models) go to their own batch.
+                LookTestMeshAccumulator partTarget = part.Material != null ? Batches.Get(segment, layer, label, part.Material, castShadows, group) : target;
+                partTarget?.Append(part.Mesh, matrix, painter);
             }
         }
 

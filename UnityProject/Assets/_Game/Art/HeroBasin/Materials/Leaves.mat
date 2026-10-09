@@ -90,7 +90,7 @@ Material:
     - _OcclusionStrength: 1
     - _RimStrength: 0
     - _RoughnessScale: 1
-    - _Translucency: 0.35
+    - _Translucency: 0.25
     - _VertexAO: 1
     - _WetDarken: 0.45
     - _WetFromVertexG: 0

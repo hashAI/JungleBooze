@@ -74,3 +74,25 @@ budget still holds. The real cost is overdraw from the layered sheets and cards,
 - The config asset keeps old values when defaults change: delete `LookTestConfig.asset` before Build Scene.
 - `RS_Outcrop.fbx` was first imported while the rule still generated Mesh LODs; its .meta has
   `generateMeshLods: 1`. That is harmless (the merge uses LOD0) but should be reimported once with the current rule.
+
+## Amendment: hero basin iteration 2 (2026-10-09)
+1. **Captures render HDR** (`LookTestBatch.Render`, look test and hero scene): URP sizes the camera's intermediate
+   colour buffer from its target texture, so the old ARGB32 target clamped every frame to LDR before tonemapping (no
+   bloom from the sun, highlights stuck at about 0.86). The device renders HDR to the screen, so the old captures
+   understated highlights. All look-test captures made before this date are LDR.
+2. **Art-directed key light** (`_keyAzimuthDeg/_keyElevationDeg`): the directional light can differ from the visible
+   sun. The atmosphere (fog in-scatter, shafts, sky glow) follows the visible sun; the arch and Pista are lit from the
+   left as in the keyframe. Equal angles = physically consistent.
+3. **Keyframe-matched grading LUT**: `tools/art/match_lut.py` writes a URP 32³ strip from per-channel histogram matching
+   of a LUT-free render against the keyframe (strength 0.6). Config path `_gradeLutPath`, applied with Color Lookup
+   after the hand grade. Rebuild the LUT after any lighting change.
+4. **Pista rim**: the project's URP asset has additional lights off, so the rim is an extra additive material slot
+   (`Rim Overlay` shader: Fresnel edge toward the sun), one extra draw per Pista renderer, hero scene only.
+5. **Contract additions** (`EnvironmentAssetRules`, tests): roles `Travertine` / `TravertineWater` (`RS_TravertineTiers*`,
+   anchors `Pool<t>`, `Lip<i>P<jj>`, `Cascade<k>L/R/F`), `CanopyCrown`, `ArchVines`; prefix `FP_` is stripped. A model
+   with no texture set of its own uses the set named after its FBX material (`MI_` prefix dropped); a mesh with several
+   material slots gets one set and one batch per slot (FBX material order = slot order); a model made of several meshes
+   with their own sets (`RS_HeroArch_A/_B`) gets one material per mesh. Environment materials are named after their
+   texture set, so pieces sharing an atlas share one material and one draw.
+6. Known export mismatch: `RS_TravertineTiers_Water.fbx` keeps Z-up mesh data with an identity node; the builder gives
+   it the tiers' axis turn when it stands upright (asset-pipeline to align the export).

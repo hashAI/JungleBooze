@@ -12,12 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d81ea05d899554a96b502f5b5ded12f7, type: 3}
   m_Name: HeroBasinConfig
   m_EditorClassIdentifier: JungleBooze.App::JungleBooze.App.HeroBasin.HeroBasinConfigAsset
-  _landscapePosition: {x: 1.3, y: 1.9, z: -4.7}
-  _landscapeEuler: {x: -2, y: -1, z: 0}
-  _landscapeFovDeg: 50
-  _portraitPosition: {x: 0.9, y: 2.2, z: -6.8}
-  _portraitEuler: {x: -9, y: 1, z: 0}
-  _portraitFovDeg: 70
+  _landscapePosition: {x: 0.76, y: 1.15, z: -2.8}
+  _landscapeEuler: {x: -1, y: -2, z: 0}
+  _landscapeFovDeg: 54
+  _portraitPosition: {x: 0.12, y: 1.4, z: -4.2}
+  _portraitEuler: {x: -6, y: 4, z: 0}
+  _portraitFovDeg: 66
   _farClipM: 4200
   _pistaPosition: {x: 0, y: 0, z: 0}
   _pistaYawDeg: 8
@@ -27,81 +27,83 @@ MonoBehaviour:
   _sunColor: {r: 1, g: 0.8, b: 0.56, a: 1}
   _sunIntensity: 3.6
   _skyExposure: 0.9
-  _ambientIntensity: 1.05
-  _fogColor: {r: 0.7, g: 0.78, b: 0.78, a: 1}
-  _fogSunColor: {r: 1, g: 0.88, b: 0.7, a: 1}
-  _fogDensity: 0.0011
+  _ambientIntensity: 0.6
+  _fogColor: {r: 0.72, g: 0.80, b: 0.84, a: 1}
+  _fogSunColor: {r: 1, g: 0.84, b: 0.62, a: 1}
+  _fogDensity: 0.0008
   _fogHeightFalloff: 0.02
   _fogBaseHeightM: -15
-  _fogStartM: 30
+  _fogStartM: 60
   _fogMaxOpacity: 0.6
-  _fogSunPower: 6
+  _fogSunPower: 10
   _mistColor: {r: 0.96, g: 0.95, b: 0.9, a: 1}
-  _mistOpacity: 0.24
+  _mistOpacity: 0.26
   _shaftColor: {r: 1, g: 0.8, b: 0.5, a: 1}
-  _shaftIntensity: 0.5
+  _shaftIntensity: 1.2
   _shafts:
-  - {x: -20, y: -10, z: 60, w: 90}
-  - {x: -8, y: -14, z: 80, w: 100}
-  - {x: -34, y: -4, z: 90, w: 100}
-  - {x: 2, y: -14, z: 110, w: 110}
-  - {x: -14, y: -12, z: 120, w: 110}
-  _shaftWidthM: {x: 6, y: 12}
-  _postExposure: 0.1
-  _contrast: 30
-  _saturation: 22
+  - {x: -40, y: 0, z: 26, w: 70}
+  - {x: -30, y: -2, z: 40, w: 80}
+  - {x: -52, y: 2, z: 42, w: 80}
+  - {x: -22, y: -4, z: 52, w: 90}
+  - {x: -12, y: -5, z: 30, w: 60}
+  _shaftWidthM: {x: 3, y: 7}
+  _postExposure: -0.2
+  _contrast: 38
+  _saturation: 5
   _whiteBalanceTemperature: 4
-  _whiteBalanceTint: -3
-  _splitShadows: {r: 0.4, g: 0.52, b: 0.55, a: 1}
-  _splitHighlights: {r: 0.95, g: 0.74, b: 0.44, a: 1}
-  _bloomThreshold: 0.95
-  _bloomIntensity: 0.7
-  _vignetteIntensity: 0.24
-  _waterShallowColor: {r: 0.08, g: 0.78, b: 0.74, a: 1}
-  _waterDeepColor: {r: 0.01, g: 0.4, b: 0.47, a: 1}
-  _basinWaterY: -14
+  _whiteBalanceTint: 5
+  _splitShadows: {r: 0.36, g: 0.52, b: 0.56, a: 1}
+  _splitHighlights: {r: 0.86, g: 0.74, b: 0.56, a: 1}
+  _bloomThreshold: 1.0
+  _bloomIntensity: 0.8
+  _vignetteIntensity: 0.36
+  _waterShallowColor: {r: 0.4, g: 1.2, b: 1.1, a: 1}
+  _waterDeepColor: {r: 0.05, g: 0.75, b: 0.78, a: 1}
+  _basinWaterY: -6
   _waterReflection: 0.3
   _waterOpacity: 0.93
   _waterShallowOpacity: 0.65
   _basinWater: {x: 15, y: 120, z: 160}
   _terraces:
-  - {x: 22, y: 168, z: -4.5, w: 30}
-  - {x: 8, y: 128, z: -8, w: 20}
-  - {x: 38, y: 124, z: -8.5, w: 18}
-  - {x: -8, y: 104, z: -10.5, w: 14}
-  - {x: 22, y: 92, z: -11, w: 15}
-  - {x: 50, y: 98, z: -10.5, w: 12}
-  - {x: 6, y: 70, z: -12.3, w: 10}
-  - {x: 34, y: 66, z: -12.5, w: 9}
-  _archFootA: {x: -95, y: -22, z: 250}
-  _archFootB: {x: 122, y: -22, z: 236}
-  _archTopY: 128
-  _archTint: {r: 0.96, g: 0.94, b: 0.88, a: 1}
+  - {x: 22, y: 150, z: 3.5, w: 26}
+  - {x: 10, y: 132, z: 1.2, w: 18}
+  - {x: 34, y: 128, z: 0.8, w: 17}
+  - {x: 16, y: 104, z: -1.2, w: 15}
+  - {x: 40, y: 98, z: -1.8, w: 12}
+  - {x: 2, y: 86, z: -2.8, w: 11}
+  - {x: 26, y: 76, z: -3.4, w: 12}
+  - {x: 12, y: 58, z: -4.4, w: 9}
+  - {x: 36, y: 52, z: -4.8, w: 8}
+  _archFootA: {x: -135, y: -14, z: 210}
+  _archFootB: {x: 112, y: -14, z: 196}
+  _archTopY: 106
+  _archTint: {r: 1.25, g: 1.32, b: 1.45, a: 1}
   _archCrowns: 60
   _leafTint: {r: 0.62, g: 0.78, b: 0.52, a: 1}
-  _leafTranslucency: 0.35
-  _forestMinDistanceM: 32
+  _leafTranslucency: 0.25
+  _forestMinDistanceM: 26
   _falls:
   - Top: {x: 60, y: 112, z: 330}
-    FootY: -4
+    FootY: 4
     WidthM: 22
     Layers: 4
     IntoPool: 0
-  - Top: {x: 22, y: 4.5, z: 196}
-    FootY: -4.1
-    WidthM: 52
+  - Top: {x: 15, y: 3.5, z: 76}
+    FootY: -1.5
+    WidthM: 24
     Layers: 4
     IntoPool: 1
   _kitPillars:
-  - {x: -150, y: 330, z: 120, w: 30}
+  - {x: 14, y: 262, z: 95, w: 160}
+  - {x: -122, y: 335, z: 120, w: 30}
   - {x: 185, y: 310, z: 105, w: 200}
   - {x: -95, y: 420, z: 150, w: 110}
   _ledgePiece: {x: 0.1, y: -1.72, z: 0.4, w: 15}
-  _basinFloorY: -18
-  _leftHills: {x: -50, y: -150, z: 10}
-  _rightHills: {x: 68, y: 150, z: 26}
-  _ledge: {x: 6, y: 2.6, z: 0}
-  _forestTrees: 420
+  _basinFloorY: -10
+  _leftHills: {x: -50, y: -150, z: 18}
+  _rightHills: {x: 68, y: 150, z: 34}
+  _ledge: {x: 6, y: 2.6, z: -1.4}
+  _forestTrees: 520
   _backdrops:
   - Texture: BD_F4e_Sky
     DistanceM: 3600
@@ -110,10 +112,10 @@ MonoBehaviour:
     BaseElevationDeg: -75
     Mirror: 0
     FogShare: 0
-    Exposure: 1
+    Exposure: 1.25
   - Texture: BD_F4e_FarRange
     DistanceM: 2800
-    AzimuthDeg: -38
+    AzimuthDeg: -50
     WidthDeg: 62
     BaseElevationDeg: -4
     Mirror: 0
@@ -126,14 +128,6 @@ MonoBehaviour:
     BaseElevationDeg: -4
     Mirror: 1
     FogShare: 0.25
-    Exposure: 1
-  - Texture: BD_MistBand
-    DistanceM: 2000
-    AzimuthDeg: 0
-    WidthDeg: 150
-    BaseElevationDeg: -8
-    Mirror: 0
-    FogShare: 0
     Exposure: 1
   - Texture: BD_F4e_MidPillars
     DistanceM: 1500
@@ -183,3 +177,26 @@ MonoBehaviour:
     Mirror: 1
     FogShare: 0.1
     Exposure: 1
+  _sunGlow: {x: 6, y: 300, z: 1.0, w: 8}
+  _rimLightIntensity: 2.5
+  _keyAzimuthDeg: -100
+  _keyElevationDeg: 35
+  _archMoss: 0.45
+  _fallWaterColor: {r: 0.42, g: 0.6, b: 0.62, a: 1}
+  _fallTranslucency: 0.6
+  _bloomScatter: 0.8
+  _fallEdgeBreakup: 0.65
+  _plantTint: {r: 0.62, g: 0.7, b: 0.6, a: 1}
+  _gradeLutContribution: 1
+  _heroTrees:
+  - {x: -24, y: 1, z: 26, w: 5}
+  - {x: -42, y: 16, z: 30, w: 8}
+  _rimPower: 3
+  _rimSunFacing: 0.8
+  _travertines:
+  - {x: 14, y: 54, z: 180, w: 1.5}
+  _travertineHeightScale: 0.6
+  _travertineTint: {r: 1.05, g: 1.1, b: 1.12, a: 1}
+  _travertineMoss: 0.65
+  _frameLeft: {x: -2.4, y: -1.2, z: 30, w: 1.2}
+  _frameRight: {x: 3.4, y: -1.0, z: -30, w: 1.35}

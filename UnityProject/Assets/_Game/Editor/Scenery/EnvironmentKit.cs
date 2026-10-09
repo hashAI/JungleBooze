@@ -57,6 +57,27 @@ namespace JungleBooze.Editor.Scenery
         {
             public Mesh Mesh;
             public Matrix4x4 Matrix;
+
+            /// <summary>Mesh object name without its LOD suffix (for example "RS_HeroArch_A").</summary>
+            public string Name;
+
+            /// <summary>
+            /// The part's own texture set when the model has several (`&lt;part&gt;_BaseColor` and so on, for example
+            /// RS_HeroArch_A / _B); empty when the part uses the piece's set.
+            /// </summary>
+            public TextureSet Textures;
+
+            /// <summary>Own material for <see cref="Textures"/>, or null to use the piece's material.</summary>
+            public Material Material;
+
+            /// <summary>
+            /// One texture set per material slot for meshes with several slots (FBX material order = slot order),
+            /// or null. Each slot is merged into its own batch.
+            /// </summary>
+            public TextureSet[] SlotTextures;
+
+            /// <summary>Materials for <see cref="SlotTextures"/> (same length), set by the material builder.</summary>
+            public Material[] SlotMaterials;
         }
 
         public struct TextureSet
@@ -158,6 +179,7 @@ namespace JungleBooze.Editor.Scenery
 
                 var piece = new Piece { Name = System.IO.Path.GetFileNameWithoutExtension(path), Path = path, Role = role };
                 Matrix4x4 toRoot = model.transform.worldToLocalMatrix;
+                List<string> fbxMaterials = FbxMaterialNames(path);
                 bool first = true;
                 foreach (MeshFilter filter in model.GetComponentsInChildren<MeshFilter>(true))
                 {
@@ -167,7 +189,21 @@ namespace JungleBooze.Editor.Scenery
                     }
 
                     Matrix4x4 matrix = toRoot * filter.transform.localToWorldMatrix;
-                    piece.Parts.Add(new Part { Mesh = filter.sharedMesh, Matrix = matrix });
+                    string partName = WithoutLod(filter.name);
+                    sets.TryGetValue(SetKey(path, partName.ToLowerInvariant()), out TextureSet partSet);
+                    bool ownPartSet = partSet.HasAny && !string.Equals(partName, piece.Name, System.StringComparison.OrdinalIgnoreCase);
+                    var part = new Part { Mesh = filter.sharedMesh, Matrix = matrix, Name = partName, Textures = ownPartSet ? partSet : default };
+                    int slots = filter.sharedMesh.subMeshCount;
+                    if (slots > 1 && fbxMaterials.Count == slots)
+                    {
+                        part.SlotTextures = new TextureSet[slots];
+                        for (int m = 0; m < slots; m++)
+                        {
+                            sets.TryGetValue(SetKey(path, fbxMaterials[m].ToLowerInvariant()), out part.SlotTextures[m]);
+                        }
+                    }
+
+                    piece.Parts.Add(part);
                     Bounds b = TransformBounds(matrix, filter.sharedMesh.bounds);
                     if (first)
                     {
@@ -215,6 +251,11 @@ namespace JungleBooze.Editor.Scenery
                 {
                     // Plants/README: the fern clump uses the FP_Fronds atlas.
                     piece.Textures = fronds;
+                }
+                else if (fbxMaterials.Count == 1 && sets.TryGetValue(SetKey(path, fbxMaterials[0].ToLowerInvariant()), out TextureSet named) && named.HasAny)
+                {
+                    // The set named like the model's only FBX material (FP_CanopyCrown_A uses FP_Canopy).
+                    piece.Textures = named;
                 }
 
                 kit._pieces.Add(piece);
@@ -322,6 +363,89 @@ namespace JungleBooze.Editor.Scenery
         private static string SetKey(string assetPath, string setName)
         {
             return EnvironmentAssetRules.SetFolder(assetPath) + "/" + setName;
+        }
+
+        private static readonly Dictionary<Mesh, Mesh[]> SlotMeshes = new Dictionary<Mesh, Mesh[]>();
+
+        /// <summary>A mesh with only material slot <paramref name="slot"/> of <paramref name="mesh"/> (cached; editor only).</summary>
+        public static Mesh SlotMesh(Mesh mesh, int slot)
+        {
+            if (!SlotMeshes.TryGetValue(mesh, out Mesh[] slots) || slots.Length != mesh.subMeshCount)
+            {
+                slots = new Mesh[mesh.subMeshCount];
+                SlotMeshes[mesh] = slots;
+            }
+
+            if (slots[slot] == null)
+            {
+                var copy = new Mesh { name = mesh.name + "_Slot" + slot, indexFormat = mesh.indexFormat };
+                copy.vertices = mesh.vertices;
+                copy.normals = mesh.normals;
+                copy.tangents = mesh.tangents;
+                copy.uv = mesh.uv;
+                copy.colors = mesh.colors;
+                var uv1 = new List<Vector4>();
+                mesh.GetUVs(1, uv1);
+                if (uv1.Count > 0)
+                {
+                    copy.SetUVs(1, uv1);
+                }
+
+                copy.triangles = mesh.GetTriangles(slot);
+                copy.RecalculateBounds();
+                slots[slot] = copy;
+            }
+
+            return slots[slot];
+        }
+
+        /// <summary>
+        /// Material names of a binary FBX in declaration order (Blender exports them in slot order). The importer
+        /// does not import materials (ADR 0008), so this is the only place the slot names survive. Empty if unknown.
+        /// </summary>
+        public static List<string> FbxMaterialNames(string assetPath)
+        {
+            var names = new List<string>();
+            string file = System.IO.Path.GetFullPath(assetPath);
+            if (!assetPath.EndsWith(".fbx", System.StringComparison.OrdinalIgnoreCase) || !System.IO.File.Exists(file))
+            {
+                return names;
+            }
+
+            byte[] data = System.IO.File.ReadAllBytes(file);
+            const string suffix = "\0\u0001Material";
+            // String properties are 'S' + uint32 length + bytes; an object name is "<name>\0\1<class>".
+            for (int p = 0; p + 5 < data.Length; p++)
+            {
+                if (data[p] != (byte)'S')
+                {
+                    continue;
+                }
+
+                int length = data[p + 1] | (data[p + 2] << 8) | (data[p + 3] << 16) | (data[p + 4] << 24);
+                if (length <= suffix.Length || length > 256 || p + 5 + length > data.Length)
+                {
+                    continue;
+                }
+
+                string value = System.Text.Encoding.ASCII.GetString(data, p + 5, length);
+                if (value.EndsWith(suffix, System.StringComparison.Ordinal))
+                {
+                    string name = EnvironmentAssetRules.MaterialSetName(value.Substring(0, value.Length - suffix.Length));
+                    if (name.Length > 0 && !names.Contains(name))
+                    {
+                        names.Add(name);
+                    }
+                }
+            }
+
+            return names;
+        }
+
+        private static string WithoutLod(string meshName)
+        {
+            int index = meshName.LastIndexOf("_LOD", System.StringComparison.OrdinalIgnoreCase);
+            return index > 0 ? meshName.Substring(0, index) : meshName;
         }
 
         private static bool IsLowerLod(string meshName)

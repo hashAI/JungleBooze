@@ -101,7 +101,7 @@ Material:
     - _WindStrength: 0.12
     - _WindVertexColor: 1
     m_Colors:
-    - _BaseColor: {r: 0.88, g: 1, b: 0.84, a: 1}
+    - _BaseColor: {r: 0.5456, g: 0.7, b: 0.504, a: 1}
     - _BounceColor: {r: 0.45, g: 0.41999996, b: 0.29999998, a: 0}
     - _Layer2Color: {r: 1, g: 1, b: 1, a: 1}
     - _Layer3Color: {r: 1, g: 1, b: 1, a: 1}

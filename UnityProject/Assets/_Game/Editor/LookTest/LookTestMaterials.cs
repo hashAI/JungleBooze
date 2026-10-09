@@ -302,27 +302,73 @@ namespace JungleBooze.Editor.LookTest
         /// </summary>
         public Material ForEnvironmentPiece(EnvironmentKit.Piece piece)
         {
-            if (piece == null || !piece.Textures.HasAny)
+            if (piece == null)
             {
                 return null;
             }
 
+            // Parts with their own texture set (for example RS_HeroArch_A / _B) get their own material, and parts
+            // with several material slots one material per slot (named after the slot's set, so pieces share them).
+            for (int i = 0; i < piece.Parts.Count; i++)
+            {
+                EnvironmentKit.Part part = piece.Parts[i];
+                if (part.Textures.HasAny)
+                {
+                    part.Material = ForEnvironmentSet("Env_" + part.Name, part.Textures, piece.Role);
+                }
+
+                if (part.SlotTextures != null)
+                {
+                    part.SlotMaterials = new Material[part.SlotTextures.Length];
+                    for (int slot = 0; slot < part.SlotTextures.Length; slot++)
+                    {
+                        EnvironmentKit.TextureSet set = part.SlotTextures[slot];
+                        if (set.HasAny)
+                        {
+                            part.SlotMaterials[slot] = ForEnvironmentSet("Env_" + SetName(set, part.Name + "_" + slot), set, piece.Role);
+                        }
+                    }
+                }
+
+                piece.Parts[i] = part;
+            }
+
+            // Named after the texture set, so pieces sharing an atlas (FP_CanopyCrown_A..D) share one material and batch.
+            return piece.Textures.HasAny ? ForEnvironmentSet("Env_" + SetName(piece.Textures, piece.Name), piece.Textures, piece.Role) : null;
+        }
+
+        /// <summary>The texture set's name from its albedo file ("FP_Canopy_BaseColor" → "FP_Canopy"), else the fallback.</summary>
+        private static string SetName(EnvironmentKit.TextureSet set, string fallback)
+        {
+            if (set.Albedo == null)
+            {
+                return fallback;
+            }
+
+            int length = EnvironmentAssetRules.TextureSetName(set.Albedo.name).Length;
+            return length > 0 && length <= set.Albedo.name.Length ? set.Albedo.name.Substring(0, length) : fallback;
+        }
+
+        private Material ForEnvironmentSet(string name, EnvironmentKit.TextureSet textures, EnvironmentRole role)
+        {
             var set = new LookTestAssets.TextureSet
             {
-                Albedo = piece.Textures.Albedo,
-                Normal = piece.Textures.Normal,
-                Arm = piece.Textures.Arm,
-                Alpha = piece.Textures.Alpha,
+                Albedo = textures.Albedo,
+                Normal = textures.Normal,
+                Arm = textures.Arm,
+                Alpha = textures.Alpha,
             };
-            Material m = Nature("Env_" + piece.Name, set, 1f, new Color(0.45f, 0.43f, 0.38f, 1f));
+            Material m = Nature(name, set, 1f, new Color(0.45f, 0.43f, 0.38f, 1f));
             m.SetFloat("_VertexAO", 1f);
-            switch (piece.Role)
+            switch (role)
             {
                 case EnvironmentRole.Stiltwood:
                     SurfaceResponse(m, _config.BarkMoss, _config.BarkRim, false);
                     break;
                 case EnvironmentRole.LeafCards:
                 case EnvironmentRole.PlantClump:
+                case EnvironmentRole.CanopyCrown:
+                case EnvironmentRole.ArchVines:
                     if (set.Alpha != null)
                     {
                         Foliage(m, set, 0.6f, 0.04f);

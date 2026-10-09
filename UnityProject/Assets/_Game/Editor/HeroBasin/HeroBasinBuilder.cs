@@ -67,7 +67,9 @@ namespace JungleBooze.Editor.HeroBasin
             ctx.Pool.SetFloat("_ShallowOpacity", h.WaterShallowOpacity);
             ctx.Pool.SetFloat("_SpecularStrength", 0.3f);
             ctx.Pool.SetFloat("_NormalStrength", 0.3f);
-            ctx.Waterfall.SetFloat("_Translucency", 0.45f);
+            ctx.Waterfall.SetFloat("_Translucency", h.FallTranslucency);
+            ctx.Waterfall.SetColor("_WaterColor", h.FallWaterColor);
+            ctx.Waterfall.SetFloat("_EdgeBreakup", h.FallEdgeBreakup);
             ctx.Boulder.SetFloat("_MossAmount", 0.6f);
             ctx.Boulder.SetFloat("_WetSmoothness", 0.5f);
             ctx.Rootstone.SetFloat("_WetSmoothness", 0.5f);
@@ -91,29 +93,48 @@ namespace JungleBooze.Editor.HeroBasin
             for (int i = 0; i < ctx.Kit.Pieces.Count; i++)
             {
                 ctx.Kit.Pieces[i].Material = materials.ForEnvironmentPiece(ctx.Kit.Pieces[i]);
-                if (ctx.Kit.Pieces[i].Material != null && ctx.Kit.Pieces[i].Role == EnvironmentRole.HeroArch)
+                if (ctx.Kit.Pieces[i].Role == EnvironmentRole.PlantClump && ctx.Kit.Pieces[i].Material != null)
                 {
-                    ctx.Kit.Pieces[i].Material.SetColor("_BaseColor", h.ArchTint);
-                    ctx.Kit.Pieces[i].Material.SetFloat("_MossAmount", 0.55f);
+                    ctx.Kit.Pieces[i].Material.SetColor("_BaseColor", ctx.Kit.Pieces[i].Material.GetColor("_BaseColor") * h.PlantTint);
                     EditorUtility.SetDirty(ctx.Kit.Pieces[i].Material);
+                }
+
+                if (ctx.Kit.Pieces[i].Role == EnvironmentRole.Travertine && ctx.Kit.Pieces[i].Material != null)
+                {
+                    ctx.Kit.Pieces[i].Material.SetColor("_BaseColor", h.TravertineTint);
+                    ctx.Kit.Pieces[i].Material.SetFloat("_MossAmount", h.TravertineMoss);
+                    EditorUtility.SetDirty(ctx.Kit.Pieces[i].Material);
+                }
+
+                if (ctx.Kit.Pieces[i].Role == EnvironmentRole.HeroArch)
+                {
+                    TintArch(ctx.Kit.Pieces[i].Material, h);
+                    for (int p = 0; p < ctx.Kit.Pieces[i].Parts.Count; p++)
+                    {
+                        TintArch(ctx.Kit.Pieces[i].Parts[p].Material, h);
+                    }
                 }
             }
 
             report.Add(ctx.Kit.Summary());
-            var plants = new PlantMaterials(materials, report);
+            var plants = new PlantMaterials(materials, report, h.PlantTint);
 
             ClearMeshes();
             LookTestMeshAccumulator.ClearCache();
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             Light sun = LookTestSceneBuilder.CreateSun(look);
+            sun.transform.rotation = Quaternion.LookRotation(h.KeyLightDirection, Vector3.up);
             LookTestSceneBuilder.ApplyEnvironment(look, sky, sun);
             Camera camera = LookTestSceneBuilder.CreateCamera(look);
             camera.farClipPlane = h.FarClipM;
             PoseCamera(camera, h, false, 2532f / 1170f);
             LookTestSceneBuilder.CreateVolume(look, VolumePath);
+            AddGradeLut(h);
             var atmosphereObject = new GameObject("Atmosphere");
             LookTestAtmosphere atmosphere = atmosphereObject.AddComponent<LookTestAtmosphere>();
-            atmosphere.Configure(look, dapple, sun);
+            // No light passed: the atmosphere's sun (fog in-scatter, shafts, sky glow) follows the visible sun of the
+            // config, not the art-directed key light.
+            atmosphere.Configure(look, dapple, null);
 
             var rng = new Pcg32Random((ulong)(uint)look.Seed, 4242UL);
             var world = new HeroBasinWorld(ctx, h, plants, rng, camera.transform.position);
@@ -140,6 +161,7 @@ namespace JungleBooze.Editor.HeroBasin
             if (pista != null)
             {
                 pista.transform.SetParent(root, true);
+                RimLight(h, pista.transform);
             }
 
             LookTestAssets.EnsureFolder(System.IO.Path.GetDirectoryName(ScenePath).Replace('\\', '/'));
@@ -154,6 +176,18 @@ namespace JungleBooze.Editor.HeroBasin
             AssetDatabase.SaveAssets();
             Debug.Log(LogPrefix + "Built " + ScenePath + System.Environment.NewLine + string.Join(System.Environment.NewLine, report));
             return report;
+        }
+
+        private static void TintArch(Material m, HeroBasinConfigAsset h)
+        {
+            if (m == null)
+            {
+                return;
+            }
+
+            m.SetColor("_BaseColor", h.ArchTint);
+            m.SetFloat("_MossAmount", h.ArchMoss);
+            EditorUtility.SetDirty(m);
         }
 
         public static HeroBasinConfigAsset EnsureConfig()
@@ -219,6 +253,14 @@ namespace JungleBooze.Editor.HeroBasin
             F("_bloomThreshold", h.BloomThreshold);
             F("_bloomIntensity", h.BloomIntensity);
             F("_vignetteIntensity", h.VignetteIntensity);
+            so.FindProperty("_acesTonemapping").boolValue = h.AcesTonemapping;
+            F("_splitBalance", h.SplitBalance);
+            so.FindProperty("_gradeShadows").vector4Value = h.GradeShadows;
+            so.FindProperty("_gradeMidtones").vector4Value = h.GradeMidtones;
+            so.FindProperty("_gradeHighlights").vector4Value = h.GradeHighlights;
+            F("_bloomScatter", h.BloomScatter);
+            C("_bloomTint", h.BloomTint);
+            F("_skyFogDistanceM", h.SkyFogDistanceM);
             C("_waterShallowColor", h.WaterShallowColor);
             C("_waterDeepColor", h.WaterDeepColor);
             so.ApplyModifiedPropertiesWithoutUndo();
@@ -249,6 +291,10 @@ namespace JungleBooze.Editor.HeroBasin
                 EnsureClamp(texture);
                 Material m = materials.BackdropLayer(i.ToString("00") + "_" + layer.Texture, texture, (int)RenderQueue.Transparent - 150 + i, layer.FogShare, 0.08f);
                 m.SetFloat("_Exposure", layer.Exposure);
+                // The painted sky carries the sun: an HDR core and halo toward the sun direction feed bloom.
+                bool sky = i == 0;
+                m.SetVector("_SunGlow", sky ? h.SunGlow : Vector4.zero);
+                m.SetColor("_SunGlowColor", h.SunGlowColor);
                 EditorUtility.SetDirty(m);
                 SourceSize(texture, out int sourceWidth, out int sourceHeight);
                 float heightDeg = layer.WidthDeg * sourceHeight / Mathf.Max(1f, sourceWidth);
@@ -306,6 +352,87 @@ namespace JungleBooze.Editor.HeroBasin
             height = texture.height;
             var importer = AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(texture)) as TextureImporter;
             importer?.GetSourceTextureWidthAndHeight(out width, out height);
+        }
+
+        // ---------------------------------------------------------------- Grade LUT and rim light
+
+        /// <summary>Adds the keyframe-matched grading LUT (URP Color Lookup) to the hero volume profile.</summary>
+        private static void AddGradeLut(HeroBasinConfigAsset h)
+        {
+            if (string.IsNullOrEmpty(h.GradeLutPath) || h.GradeLutContribution <= 0f)
+            {
+                return;
+            }
+
+            var importer = AssetImporter.GetAtPath(h.GradeLutPath) as TextureImporter;
+            if (importer == null)
+            {
+                Debug.LogWarning(LogPrefix + "Grade LUT not found: " + h.GradeLutPath);
+                return;
+            }
+
+            // URP Color Lookup: values are gamma-space colours, sampled as stored (no sRGB decode), no mips, exact.
+            if (importer.sRGBTexture || importer.mipmapEnabled || importer.textureCompression != TextureImporterCompression.Uncompressed
+                || importer.wrapMode != TextureWrapMode.Clamp || importer.npotScale != TextureImporterNPOTScale.None)
+            {
+                importer.sRGBTexture = false;
+                importer.mipmapEnabled = false;
+                importer.textureCompression = TextureImporterCompression.Uncompressed;
+                importer.wrapMode = TextureWrapMode.Clamp;
+                importer.filterMode = FilterMode.Bilinear;
+                importer.npotScale = TextureImporterNPOTScale.None;
+                importer.SaveAndReimport();
+            }
+
+            var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(h.GradeLutPath);
+
+            var profile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(VolumePath);
+            if (profile == null)
+            {
+                return;
+            }
+
+            UnityEngine.Rendering.Universal.ColorLookup lut = profile.Add<UnityEngine.Rendering.Universal.ColorLookup>(true);
+            lut.name = "ColorLookup";
+            lut.hideFlags = HideFlags.HideInInspector | HideFlags.HideInHierarchy;
+            AssetDatabase.AddObjectToAsset(lut, profile);
+            lut.texture.Override(texture);
+            lut.contribution.Override(h.GradeLutContribution);
+            EditorUtility.SetDirty(profile);
+            AssetDatabase.SaveAssets();
+        }
+
+        /// <summary>
+        /// The keyframe's backlit rim on Pista: an extra Rim Overlay material slot on each of her renderers (the slot
+        /// past the last submesh draws it again, additively). The project's URP asset has additional lights off, so a
+        /// rim point light would not render. Hero scene only; one extra draw per renderer.
+        /// </summary>
+        private static void RimLight(HeroBasinConfigAsset h, Transform pista)
+        {
+            if (h.RimLightIntensity <= 0f)
+            {
+                return;
+            }
+
+            Shader shader = Shader.Find("JungleBooze/Rim Overlay");
+            if (shader == null)
+            {
+                Debug.LogWarning(LogPrefix + "Rim Overlay shader missing: no rim on Pista.");
+                return;
+            }
+
+            var rim = new Material(shader) { name = "PistaRim" };
+            rim.SetColor("_RimColor", h.RimLightColor);
+            rim.SetFloat("_RimIntensity", h.RimLightIntensity);
+            rim.SetFloat("_RimPower", h.RimPower);
+            rim.SetFloat("_SunFacing", h.RimSunFacing);
+            LookTestAssets.EnsureFolder(MaterialFolder);
+            rim = LookTestAssets.SaveOrReplace(rim, MaterialFolder + "/PistaRim.mat");
+            foreach (Renderer renderer in pista.GetComponentsInChildren<Renderer>(true))
+            {
+                var list = new List<Material>(renderer.sharedMaterials) { rim };
+                renderer.sharedMaterials = list.ToArray();
+            }
         }
 
         // ---------------------------------------------------------------- Pista
@@ -380,11 +507,11 @@ namespace JungleBooze.Editor.HeroBasin
         /// <summary>The plant atlas materials (null when an atlas has not landed).</summary>
         internal sealed class PlantMaterials
         {
-            public PlantMaterials(LookTestMaterials materials, List<string> report)
+            public PlantMaterials(LookTestMaterials materials, List<string> report, Color tint)
             {
-                Broadleaf = Atlas(materials, "FP_Broadleaf", 0.55f, new Color(0.92f, 1f, 0.88f, 1f), report);
-                Fronds = Atlas(materials, "FP_Fronds", 0.65f, new Color(0.88f, 1f, 0.84f, 1f), report);
-                Bellcap = Atlas(materials, "FP_Bellcap", 0.5f, Color.white, report);
+                Broadleaf = Atlas(materials, "FP_Broadleaf", 0.55f, new Color(0.92f, 1f, 0.88f, 1f) * tint, report);
+                Fronds = Atlas(materials, "FP_Fronds", 0.65f, new Color(0.88f, 1f, 0.84f, 1f) * tint, report);
+                Bellcap = Atlas(materials, "FP_Bellcap", 0.5f, Color.white * tint, report);
             }
 
             public Material Broadleaf { get; }

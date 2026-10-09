@@ -230,28 +230,28 @@ MonoBehaviour:
   _skyExposure: 0.9
   _skyRotationDeg: 0
   _skyTint: {r: 0.92, g: 0.98, b: 1, a: 1}
-  _ambientIntensity: 1.05
+  _ambientIntensity: 0.6
   _bakeEnvironmentLighting: 1
   _fallbackSkyAmbient: {r: 0.55, g: 0.66, b: 0.72, a: 1}
   _fallbackEquatorAmbient: {r: 0.36, g: 0.42, b: 0.34, a: 1}
   _fallbackGroundAmbient: {r: 0.16, g: 0.15, b: 0.11, a: 1}
-  _fogColor: {r: 0.7, g: 0.78, b: 0.78, a: 1}
-  _fogSunColor: {r: 1, g: 0.88, b: 0.7, a: 1}
-  _fogDensity: 0.0011
+  _fogColor: {r: 0.72, g: 0.8, b: 0.84, a: 1}
+  _fogSunColor: {r: 1, g: 0.84, b: 0.62, a: 1}
+  _fogDensity: 0.0008
   _fogHeightFalloff: 0.02
   _fogBaseHeightM: -15
-  _fogStartM: 30
+  _fogStartM: 60
   _fogMaxOpacity: 0.6
-  _fogSunPower: 6
+  _fogSunPower: 10
   _skyFogDistanceM: 2400
   _dappleSizeM: 9
   _dappleLitFraction: 0.28
   _canopyAmbient: 0.5
   _canopyTint: {r: 0.88, g: 0.96, b: 0.8, a: 1}
   _shaftColor: {r: 1, g: 0.8, b: 0.5, a: 1}
-  _shaftIntensity: 0.5
+  _shaftIntensity: 1.2
   _mistColor: {r: 0.96, g: 0.95, b: 0.9, a: 1}
-  _mistOpacity: 0.24
+  _mistOpacity: 0.26
   _hdr: 1
   _msaaSamples: 4
   _shadowDistanceM: 45
@@ -259,24 +259,24 @@ MonoBehaviour:
   _shadowCascades: 1
   _softShadows: 1
   _acesTonemapping: 1
-  _postExposure: 0.1
-  _contrast: 30
-  _saturation: 22
+  _postExposure: -0.2
+  _contrast: 38
+  _saturation: 5
   _whiteBalanceTemperature: 4
-  _whiteBalanceTint: -3
-  _splitShadows: {r: 0.4, g: 0.52, b: 0.55, a: 1}
-  _splitHighlights: {r: 0.95, g: 0.74, b: 0.44, a: 1}
+  _whiteBalanceTint: 5
+  _splitShadows: {r: 0.36, g: 0.52, b: 0.56, a: 1}
+  _splitHighlights: {r: 0.86, g: 0.74, b: 0.56, a: 1}
   _splitBalance: 10
   _gradeShadows: {x: 0.96, y: 1.02, z: 1.04, w: -0.06}
   _gradeMidtones: {x: 1, y: 1.01, z: 0.98, w: 0}
   _gradeHighlights: {x: 1.04, y: 1, z: 0.94, w: 0.02}
-  _bloomThreshold: 0.95
-  _bloomIntensity: 0.7
-  _bloomScatter: 0.7
+  _bloomThreshold: 1
+  _bloomIntensity: 0.8
+  _bloomScatter: 0.8
   _bloomTint: {r: 1, g: 0.93, b: 0.8, a: 1}
-  _vignetteIntensity: 0.24
-  _waterShallowColor: {r: 0.08, g: 0.78, b: 0.74, a: 1}
-  _waterDeepColor: {r: 0.01, g: 0.4, b: 0.47, a: 1}
+  _vignetteIntensity: 0.36
+  _waterShallowColor: {r: 0.4, g: 1.2, b: 1.1, a: 1}
+  _waterDeepColor: {r: 0.05, g: 0.75, b: 0.78, a: 1}
   _waterOpacity: 0.78
   _waterNormalTilingPerM: 0.35
   _waterShallowOpacity: 0.42

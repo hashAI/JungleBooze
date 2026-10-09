@@ -24,6 +24,9 @@ namespace JungleBooze.Editor.HeroBasin
         private readonly Vector3 _eye;
         private Vector3? _mouth;
 
+        // Cascade feet that land on the basin water: (x, z, width). Foam is painted around them.
+        private readonly List<Vector3> _footFoam = new List<Vector3>();
+
         public HeroBasinWorld(LookTestBuildContext ctx, HeroBasinConfigAsset h, HeroBasinBuilder.PlantMaterials plants, IRandom rng, Vector3 eye)
         {
             _ctx = ctx;
@@ -41,7 +44,15 @@ namespace JungleBooze.Editor.HeroBasin
             var rock = new List<System.Action>();
             Arch(rock);
             Falls(rock);
-            Terraces(rock);
+            if (_ctx.Kit.Of(EnvironmentRole.Travertine).Count > 0)
+            {
+                Travertines(rock);
+            }
+            else
+            {
+                Terraces(rock);
+            }
+
             KitPillars(rock);
             for (int i = 0; i < rock.Count; i++)
             {
@@ -167,12 +178,127 @@ namespace JungleBooze.Editor.HeroBasin
                     positions[i, j] = new Vector3(x, water, z);
                     frames[i, j] = new LookTestMeshFactory.Frame { Normal = Vector3.up, Tangent = Vector3.right, Bitangent = Vector3.forward };
                     uvs[i, j] = new Vector2(x, z);
-                    colors[i, j] = new Color(1f - LookTestMath.Smooth(0.05f, 0.7f, depth), Mathf.Clamp01(depth / 3f), 0f, LookTestMath.Smooth(-0.4f, 0.15f, depth));
+                    float foam = Mathf.Max(1f - LookTestMath.Smooth(0.05f, 0.7f, depth), TerraceFoam(x, z));
+                    colors[i, j] = new Color(foam, Mathf.Clamp01(depth / 3f), 0f, LookTestMath.Smooth(-0.4f, 0.15f, depth));
                 }
             }
 
             Mesh surface = LookTestMeshFactory.Grid("BasinWater", positions, frames, uvs, colors);
             B.Get(Seg, "W", "Pools", _ctx.Pool, false, LookTestBatchSet.Group.Water).Append(surface, Matrix4x4.identity, null);
+        }
+
+        /// <summary>
+        /// Aerated water below the terraces (keyframe: white water at every step, foam lines drifting toward the
+        /// viewer): a ring of foam just outside each terrace rim on the camera side, and broken streaks that trail
+        /// downstream (toward the camera) and fade with distance. Vertex color R of the basin water; the Water shader
+        /// thresholds it with the lacy foam texture.
+        /// </summary>
+        private float TerraceFoam(float x, float z)
+        {
+            Vector4[] terraces = _h.Terraces;
+            float foam = 0f;
+            for (int i = 0; i < terraces.Length; i++)
+            {
+                Vector4 t = terraces[i];
+                float dx = x - t.x;
+                float dz = z - t.y;
+                float r = Mathf.Sqrt(dx * dx + dz * dz) / Mathf.Max(1f, t.w);
+                // Only the front (downstream) half: the falls spill toward the camera.
+                float front = LookTestMath.Smooth(0.1f, -0.5f, dz / Mathf.Max(1f, t.w * r));
+                float ring = LookTestMath.Smooth(0.9f, 1.15f, r) * (1f - LookTestMath.Smooth(1.3f, 1.8f, r));
+                float lines = 0.5f + 0.5f * Mathf.Sin(x * 0.45f + 1.7f * Mathf.Sin(z * 0.08f + i) + i * 2.1f);
+                float trail = (1f - LookTestMath.Smooth(1.1f, 2.6f, r)) * lines * lines;
+                foam = Mathf.Max(foam, front * Mathf.Max(ring * 0.9f, trail * 0.55f));
+            }
+
+            for (int i = 0; i < _footFoam.Count; i++)
+            {
+                Vector3 f = _footFoam[i];
+                float dx = x - f.x;
+                float dz = z - f.y;
+                float r = Mathf.Sqrt(dx * dx + dz * dz) / Mathf.Max(1f, f.z);
+                // White water at the foot, broken streaks drifting toward the camera (-z).
+                float pool = 1f - LookTestMath.Smooth(0.6f, 1.4f, r);
+                float lines = 0.5f + 0.5f * Mathf.Sin(x * 0.55f + 1.9f * Mathf.Sin(z * 0.11f + i) + i * 1.3f);
+                float trail = (1f - LookTestMath.Smooth(1f, 4f, r)) * LookTestMath.Smooth(0.5f, -2f, dz / Mathf.Max(1f, f.z)) * lines * lines;
+                foam = Mathf.Max(foam, Mathf.Max(pool, trail * 0.7f));
+            }
+
+            return foam;
+        }
+
+        /// <summary>
+        /// The travertine tiers (RS_TravertineTiers): turned so their cascades face the camera, apron on the basin
+        /// water, pool surfaces from RS_TravertineTiers_Water with the water material, and a fall at every spill notch
+        /// (Cascade&lt;k&gt;L/R on the lip, F at its foot), with foam where the front cascades meet the basin.
+        /// </summary>
+        private void Travertines(List<System.Action> rock)
+        {
+            EnvironmentKit.Piece tiers = _ctx.Kit.Of(EnvironmentRole.Travertine)[0];
+            List<EnvironmentKit.Piece> waters = _ctx.Kit.Of(EnvironmentRole.TravertineWater);
+            LookTestMeshAccumulator stone = B.Get(Seg, "L0", "Stones", _ctx.Boulder, true, LookTestBatchSet.Group.Rocks);
+            LookTestMeshAccumulator pools = B.Get(Seg, "W", "Pools", _ctx.Pool, false, LookTestBatchSet.Group.Water);
+            Vector4[] spots = _h.Travertines;
+            for (int i = 0; spots != null && i < spots.Length; i++)
+            {
+                Vector4 t = spots[i];
+                Vector3 toEye = _eye - new Vector3(t.x, 0f, t.y);
+                float yaw = Mathf.Atan2(toEye.x, toEye.z) * Mathf.Rad2Deg + t.z;
+                float sy = t.w * _h.TravertineHeightScale;
+                Matrix4x4 m = Matrix4x4.TRS(new Vector3(t.x, _h.BasinWaterY - 0.3f * sy, t.y), Quaternion.Euler(0f, yaw, 0f), new Vector3(t.w, sy, t.w));
+                rock.Add(() => _ctx.AppendPiece(tiers, m, stone, Seg, "L0", "Travertine", true, LookTestBatchSet.Group.Ground, _ctx.OpenWet));
+
+                var lips = new List<Vector3>();
+                foreach (KeyValuePair<string, Vector3> anchor in tiers.Anchors)
+                {
+                    if (anchor.Key.StartsWith("Lip", System.StringComparison.Ordinal))
+                    {
+                        lips.Add(m.MultiplyPoint3x4(anchor.Value));
+                    }
+                }
+
+                if (waters.Count > 0)
+                {
+                    // The water FBX (iteration 2 export) keeps Blender's Z-up in its mesh data with an identity node,
+                    // while the tiers carry the axis turn on their node: give the water the tiers' turn when it
+                    // stands upright. (Reported to asset-pipeline; harmless once the export matches.)
+                    Bounds wb = waters[0].Bounds;
+                    Matrix4x4 waterMatrix = wb.size.y > wb.size.z * 1.5f ? m * tiers.Parts[0].Matrix * waters[0].Parts[0].Matrix.inverse : m;
+                    // Shallow, clear tier pools; foam where the water reaches a lip.
+                    _ctx.AppendPiece(waters[0], waterMatrix, pools, Seg, "W", "Pools", false, LookTestBatchSet.Group.Water, (world, local, source) =>
+                    {
+                        float near = 99f;
+                        for (int k = 0; k < lips.Count; k++)
+                        {
+                            near = Mathf.Min(near, Vector2.Distance(new Vector2(world.x, world.z), new Vector2(lips[k].x, lips[k].z)));
+                        }
+
+                        return new Color(0.75f * (1f - LookTestMath.Smooth(0.4f, 2.2f, near)), 0.3f, 0f, 1f);
+                    });
+                }
+
+                for (int k = 0; k < 16; k++)
+                {
+                    if (!tiers.Anchors.TryGetValue("Cascade" + k + "L", out Vector3 l) || !tiers.Anchors.TryGetValue("Cascade" + k + "R", out Vector3 r)
+                        || !tiers.Anchors.TryGetValue("Cascade" + k + "F", out Vector3 f))
+                    {
+                        break;
+                    }
+
+                    Vector3 left = m.MultiplyPoint3x4(l);
+                    Vector3 right = m.MultiplyPoint3x4(r);
+                    Vector3 foot = m.MultiplyPoint3x4(f);
+                    Vector3 lip = (left + right) * 0.5f + Vector3.up * 0.05f;
+                    float width = Vector3.Distance(left, right);
+                    Vector3 run = foot - lip;
+                    run.y = 0f;
+                    LookTestLandmarks.Fall(_ctx, _rng, Seg, "Falls", lip, foot.y, width, _eye, Mathf.Clamp(run.magnitude, 0.3f, 4f), LookTestLandmarks.FallFoot.Pool, 2);
+                    if (foot.y < _h.BasinWaterY + 0.8f)
+                    {
+                        _footFoam.Add(new Vector3(foot.x, foot.z, width));
+                    }
+                }
+            }
         }
 
         private void Terraces(List<System.Action> rock)
@@ -275,6 +401,41 @@ namespace JungleBooze.Editor.HeroBasin
             }
         }
 
+        /// <summary>
+        /// A kit canopy crown (FP_CanopyCrown_A..D: main card plus two crossed cards, front +Z) centred at
+        /// <paramref name="centre"/>, <paramref name="height"/> tall, turned to the camera; false if none landed.
+        /// </summary>
+        private bool KitCrown(Vector3 centre, float height)
+        {
+            List<EnvironmentKit.Piece> crowns = _ctx.Kit.Of(EnvironmentRole.CanopyCrown);
+            if (crowns.Count == 0 || crowns[0].Material == null)
+            {
+                return false;
+            }
+
+            EnvironmentKit.Piece piece = crowns[_rng.NextInt(0, crowns.Count)];
+            Vector3 toEye = _eye - centre;
+            float yaw = Mathf.Atan2(toEye.x, toEye.z) * Mathf.Rad2Deg + _rng.NextFloat(-25f, 25f);
+            Vector3 foot = centre - Vector3.up * height * 0.5f;
+            _ctx.AppendPiece(piece, EnvironmentKit.Stand(piece, foot, yaw, height, 0f), null, Seg, "L3", "Kit crowns", false, LookTestBatchSet.Group.Trees, HeroBasinPlants.Open);
+            return true;
+        }
+
+        /// <summary>A framing plant cluster (FP_FrameLeft / FP_FrameRight) at (x, z, yaw, scale) on the ground.</summary>
+        private void FramePlant(string kind, Vector4 spot)
+        {
+            List<EnvironmentKit.Piece> clumps = _ctx.Kit.Of(EnvironmentRole.PlantClump);
+            for (int i = 0; i < clumps.Count; i++)
+            {
+                if (clumps[i].Name.IndexOf(kind, System.StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    var foot = new Vector3(spot.x, Height(spot.x, spot.y) - 0.1f, spot.y);
+                    _ctx.AppendPiece(clumps[i], Matrix4x4.TRS(foot, Quaternion.Euler(0f, spot.z, 0f), Vector3.one * spot.w), null, Seg, "L1", "Framing plants", false, LookTestBatchSet.Group.Plants, HeroBasinPlants.Open);
+                    return;
+                }
+            }
+        }
+
         /// <summary>Places a kit plant clump whose name contains <paramref name="kind"/>; false if none landed.</summary>
         private bool KitPlant(string kind, Vector3 foot, float yawDeg, float scale)
         {
@@ -373,8 +534,13 @@ namespace JungleBooze.Editor.HeroBasin
                     tops.AddRange(HeroBasinPlants.UpwardPoints(piece.Parts[i].Mesh, placement * piece.Parts[i].Matrix, 0.55f, 23));
                 }
 
-                // Vines and moss curtains hanging from the arch's underside (blade cards of the bellcap atlas).
-                if (_plants.Bellcap != null)
+                // Vine and moss curtains: the kit's FP_ArchVines (built in the arch's space), else blade cards.
+                List<EnvironmentKit.Piece> kitVines = _ctx.Kit.Of(EnvironmentRole.ArchVines);
+                if (kitVines.Count > 0 && kitVines[0].Material != null)
+                {
+                    _ctx.AppendPiece(kitVines[0], placement, null, Seg, "L1", "Arch vines", false, LookTestBatchSet.Group.Plants, HeroBasinPlants.Open);
+                }
+                else if (_plants.Bellcap != null)
                 {
                     LookTestMeshAccumulator vines = B.Get(Seg, "L1", "Arch vines", _plants.Bellcap, false, LookTestBatchSet.Group.Plants);
                     var under = new List<Vector3>();
@@ -442,8 +608,7 @@ namespace JungleBooze.Editor.HeroBasin
                     f.Top = _mouth.Value;
                 }
 
-                LookTestLandmarks.Fall(_ctx, _rng, Seg, "Falls", f.Top, f.FootY, f.WidthM, _eye, 1.5f,
-                    f.IntoPool ? LookTestLandmarks.FallFoot.Pool : LookTestLandmarks.FallFoot.Valley, f.Layers);
+                BrokenFall(f.Top, f.FootY, f.WidthM, f.Layers, f.IntoPool);
                 if (!f.IntoPool)
                 {
                     continue;
@@ -457,6 +622,65 @@ namespace JungleBooze.Editor.HeroBasin
                 Vector3 center = f.Top + away * (radius + 1f);
                 Mesh shelf = LookTestLandmarks.Pillar(_rng, new Vector3(center.x, 0f, center.z), _h.BasinFloorY - 2f, f.Top.y - 0.4f, radius, true, 22, 2.5f);
                 rock.Add(() => stone.Append(shelf, Matrix4x4.identity, _ctx.OpenWet));
+            }
+        }
+
+        /// <summary>
+        /// A hero fall as a broken curtain (keyframe: never one uniform slab): strands of varied width with gaps between
+        /// them and lips at slightly different heights, then one shared foot: impact foam (into a pool), spray, and a
+        /// mist plume that climbs a good part of the fall's height.
+        /// </summary>
+        private void BrokenFall(Vector3 top, float footY, float width, int layers, bool intoPool)
+        {
+            Vector3 toEye = _eye - top;
+            toEye.y = 0f;
+            toEye.Normalize();
+            Vector3 side = Vector3.Cross(Vector3.up, toEye);
+            float height = top.y - footY;
+            int strands = Mathf.Clamp(Mathf.RoundToInt(width / 9f), 1, 6);
+            var weights = new float[strands];
+            float total = 0f;
+            for (int i = 0; i < strands; i++)
+            {
+                weights[i] = _rng.NextFloat(0.35f, 1.6f);
+                total += weights[i];
+            }
+
+            // About a fifth of the width is gaps (rock showing between the strands).
+            float gapShare = strands > 1 ? 0.22f : 0f;
+            float gap = width * gapShare / Mathf.Max(1, strands - 1);
+            float x = -width * 0.5f;
+            for (int i = 0; i < strands; i++)
+            {
+                float w = width * (1f - gapShare) * weights[i] / total;
+                Vector3 lip = top + side * (x + w * 0.5f) + Vector3.up * _rng.NextFloat(-0.08f, 0.04f) * Mathf.Min(height, 20f) + toEye * _rng.NextFloat(-0.6f, 0.6f);
+                LookTestLandmarks.Fall(_ctx, _rng, Seg, "Falls", lip, footY, w, _eye, 1.5f, LookTestLandmarks.FallFoot.None, layers);
+                x += w + gap;
+            }
+
+            Vector3 foot = new Vector3(top.x, footY, top.z) + toEye * 1.5f;
+            if (intoPool)
+            {
+                B.Get(Seg, "W", "Pools", _ctx.Pool, false, LookTestBatchSet.Group.Water)
+                    .Append(LookTestMeshFactory.ImpactFoam(width * 0.7f), Matrix4x4.Translate(foot + Vector3.up * 0.08f + toEye * width * 0.15f), null);
+            }
+
+            LookTestMeshAccumulator mist = B.Get(Seg, "W", "Mist", _ctx.MistCard, false, LookTestBatchSet.Group.Water);
+            float plume = Mathf.Min(height * 0.85f, width * 2.2f);
+            for (int i = 0; i < 6; i++)
+            {
+                float w = width * _rng.NextFloat(0.35f, 0.8f);
+                float l = width * _rng.NextFloat(0.5f, 1.1f);
+                mist.AppendCard(foot + toEye * _rng.NextFloat(0.1f, 0.5f) * width + side * _rng.NextFloat(-0.5f, 0.5f) * width + Vector3.up * l * 0.35f, Vector3.up, w, l, _rng.NextFloat(0f, 10f), 1f);
+            }
+
+            // The plume: soft billows stacked up the face of the fall, widest near the foot.
+            for (int i = 0; i < 5; i++)
+            {
+                float t = i / 4f;
+                float w = width * Mathf.Lerp(1.5f, 0.8f, t);
+                mist.AppendCard(foot + toEye * width * 0.25f + side * _rng.NextFloat(-0.25f, 0.25f) * width + Vector3.up * plume * Mathf.Lerp(0.2f, 0.7f, t),
+                    Vector3.up, w, plume * Mathf.Lerp(0.6f, 0.45f, t), _rng.NextFloat(0f, 10f));
             }
         }
 
@@ -480,8 +704,11 @@ namespace JungleBooze.Editor.HeroBasin
             if (ledges.Count > 0)
             {
                 // The lookout ledge Pista stands on (RS_LedgeLookout), pivot at ground level.
+                // With a Stand anchor (ledge v2) Pista's feet go exactly on it; else the configured pivot position.
                 Vector4 l = _h.LedgePiece;
-                _ctx.AppendPiece(ledges[0], Matrix4x4.TRS(new Vector3(l.x, l.y, l.z), Quaternion.Euler(0f, l.w, 0f), Vector3.one), stone, Seg, "L2", "Ledge", true, LookTestBatchSet.Group.Ground, LookTestBuildContext.Open);
+                Quaternion turn = Quaternion.Euler(0f, l.w, 0f);
+                Vector3 pivot = ledges[0].Anchors.TryGetValue("Stand", out Vector3 stand) ? _h.PistaPosition - turn * stand : new Vector3(l.x, l.y, l.z);
+                _ctx.AppendPiece(ledges[0], Matrix4x4.TRS(pivot, turn, Vector3.one), stone, Seg, "L2", "Ledge", true, LookTestBatchSet.Group.Ground, LookTestBuildContext.Open);
                 first = 1;
             }
 
@@ -522,6 +749,11 @@ namespace JungleBooze.Editor.HeroBasin
 
                 float distance = Vector3.Distance(new Vector3(x, y, z), _eye);
                 float height = _rng.NextFloat(14f, 30f) * Mathf.Lerp(1f, 1.4f, distance / 300f);
+                // Keep the low sun visible (keyframe: it bursts through a gap in the left foliage).
+                if (BlocksSun(new Vector3(x, y + height * 0.6f, z), height * 0.7f))
+                {
+                    continue;
+                }
                 var foot = new Vector3(x, y - 0.5f, z);
                 if (palms != null && _rng.Chance(0.1f))
                 {
@@ -531,10 +763,25 @@ namespace JungleBooze.Editor.HeroBasin
                 else
                 {
                     wood.Append(LookTestMeshFactory.Trunk(_rng, height * 0.7f, 0.5f + height * 0.015f, 2f, 8, 8), Matrix4x4.Translate(foot), LookTestBuildContext.Open);
-                    crowns.Append(LookTestMeshFactory.Crown(_rng, height, distance < 90f ? 70 : 45, height * 0.5f), Matrix4x4.Translate(foot), Foliage(foot.y + height * 0.5f, height * 0.5f));
+                    if (!KitCrown(foot + Vector3.up * height * 0.45f, height * 0.7f))
+                    {
+                        crowns.Append(LookTestMeshFactory.Crown(_rng, height, distance < 90f ? 70 : 45, height * 0.5f), Matrix4x4.Translate(foot), Foliage(foot.y + height * 0.5f, height * 0.5f));
+                    }
                 }
 
                 placed++;
+            }
+
+            // Canopy wall segments (FP_Canopy_Clump) on the banks, front turned to the camera.
+            List<EnvironmentKit.Piece> walls = _ctx.Kit.Of(EnvironmentRole.PlantClump).FindAll(p => p.Name.IndexOf("canopy", System.StringComparison.OrdinalIgnoreCase) >= 0 && p.Material != null);
+            Vector4[] wallSpots = _h.CanopyWalls;
+            for (int i = 0; walls.Count > 0 && wallSpots != null && i < wallSpots.Length; i++)
+            {
+                Vector4 w = wallSpots[i];
+                var foot = new Vector3(w.x, Height(w.x, w.y) - 0.5f, w.y);
+                Vector3 toEye = _eye - foot;
+                float yaw = Mathf.Atan2(toEye.x, toEye.z) * Mathf.Rad2Deg + w.z;
+                _ctx.AppendPiece(walls[0], Matrix4x4.TRS(foot, Quaternion.Euler(0f, yaw, 0f), Vector3.one * w.w), null, Seg, "L3", "Canopy walls", false, LookTestBatchSet.Group.Trees, HeroBasinPlants.Open);
             }
 
             // Canopy mass under the crowns: lumpy forest so the hills never read as bare ground.
@@ -545,7 +792,8 @@ namespace JungleBooze.Editor.HeroBasin
                 float x = left ? _rng.NextFloat(-230f, -30f) : _rng.NextFloat(48f, 230f);
                 float z = _rng.NextFloat(20f, 300f);
                 float y = Height(x, z);
-                if (y < _h.BasinWaterY + 1f)
+                // Smooth lumps read as blobs up close: only where crowns hide them or distance softens them.
+                if (y < _h.BasinWaterY + 1f || Vector3.Distance(new Vector3(x, y, z), _eye) < _h.ForestMinDistanceM * 3f)
                 {
                     continue;
                 }
@@ -555,17 +803,41 @@ namespace JungleBooze.Editor.HeroBasin
             }
         }
 
+        /// <summary>True when a crown (centre, radius) would cover the sun as seen from the camera.</summary>
+        private bool BlocksSun(Vector3 centre, float radius)
+        {
+            Vector3 toSun = -_h.SunLightDirection.normalized;
+            Vector3 v = centre - _eye;
+            float along = Vector3.Dot(v, toSun);
+            if (along <= 0f)
+            {
+                return false;
+            }
+
+            // Clear a cone of about 7 degrees around the sun plus the crown's own radius.
+            float off = (v - toSun * along).magnitude;
+            return off < radius + along * 0.12f;
+        }
+
         private void Foreground()
         {
             // Left: a big tree, its crown silhouetted against the low sun (frames the top-left corner).
             LookTestMeshAccumulator wood = B.Get(Seg, "L2", "Wood", _ctx.Bark, true, LookTestBatchSet.Group.Trees);
             LookTestMeshAccumulator crowns = B.Get(Seg, "L3", "Hero tree crowns", _ctx.Leaves, true, LookTestBatchSet.Group.Trees);
-            var treeFoot = new Vector3(-19f, Height(-19f, 4f) - 0.5f, 4f);
-            wood.Append(LookTestMeshFactory.Trunk(_rng, 26f, 1.2f, 2f, 14, 18), Matrix4x4.Translate(treeFoot), LookTestBuildContext.Open);
-            crowns.Append(LookTestMeshFactory.Crown(_rng, 26f, 70, 5f), Matrix4x4.Translate(treeFoot + new Vector3(-3f, 5f, 0f)), Foliage(treeFoot.y + 20f, 10f));
-            var tree2 = new Vector3(-30f, Height(-30f, 24f) - 0.5f, 24f);
-            wood.Append(LookTestMeshFactory.Trunk(_rng, 30f, 1.3f, 2f, 14, 18), Matrix4x4.Translate(tree2), LookTestBuildContext.Open);
-            crowns.Append(LookTestMeshFactory.Crown(_rng, 30f, 140, 9f), Matrix4x4.Translate(tree2), Foliage(tree2.y + 18f, 12f));
+            Vector4[] trees = _h.HeroTrees;
+            for (int i = 0; trees != null && i < trees.Length; i++)
+            {
+                Vector4 t = trees[i];
+                var foot = new Vector3(t.x, Height(t.x, t.y) - 0.5f, t.y);
+                wood.Append(LookTestMeshFactory.Trunk(_rng, t.z, 1.2f + 0.1f * i, 2f, 14, 18), Matrix4x4.Translate(foot), LookTestBuildContext.Open);
+                if (!KitCrown(foot + Vector3.up * t.z * 0.55f, t.z * 0.75f))
+                {
+                    crowns.Append(LookTestMeshFactory.Crown(_rng, t.z, Mathf.RoundToInt(15f * t.w), t.w), Matrix4x4.Translate(foot), Foliage(foot.y + t.z * 0.65f, t.z * 0.4f));
+                }
+            }
+
+            FramePlant("frameleft", _h.FrameLeft);
+            FramePlant("frameright", _h.FrameRight);
 
             if (_plants.Broadleaf != null)
             {
@@ -611,7 +883,9 @@ namespace JungleBooze.Editor.HeroBasin
                     float x = _rng.Chance(0.5f) ? _rng.NextFloat(-16f, -1.2f) : _rng.NextFloat(1.2f, 9f);
                     float z = _rng.NextFloat(-7f, 12f);
                     float y = Height(x, z);
-                    if (y < -3f)
+                    // Keep the camera's view of Pista and the ledge clear: no fern between the lens and her.
+                    bool inFront = z < 3f && Mathf.Abs(x - _eye.x) < 4.5f;
+                    if (y < -3f || inFront)
                     {
                         continue;
                     }
@@ -657,8 +931,9 @@ namespace JungleBooze.Editor.HeroBasin
                 LookTestLandmarks.Billows(mist, _rng, foot + Vector3.up * falls[i].WidthM * 0.4f, 3, falls[i].WidthM, new Vector2(falls[i].WidthM * 1.6f, falls[i].WidthM * 2.4f), new Vector2(falls[i].WidthM * 0.6f, falls[i].WidthM));
             }
 
-            LookTestLandmarks.Billows(mist, _rng, _h.ArchFootA + Vector3.up * 20f, 3, 20f, new Vector2(60f, 90f), new Vector2(25f, 40f));
-            LookTestLandmarks.Billows(mist, _rng, _h.ArchFootB + Vector3.up * 20f, 3, 20f, new Vector2(60f, 90f), new Vector2(25f, 40f));
+            // Low mist around the arch feet: kept under the sun (tall billows there washed out the sky and hid the sun).
+            LookTestLandmarks.Billows(mist, _rng, _h.ArchFootA + Vector3.up * 10f, 3, 16f, new Vector2(40f, 60f), new Vector2(12f, 20f));
+            LookTestLandmarks.Billows(mist, _rng, _h.ArchFootB + Vector3.up * 10f, 3, 16f, new Vector2(40f, 60f), new Vector2(12f, 20f));
         }
 
         private static LookTestMeshAccumulator.Painter Foliage(float baseY, float height)

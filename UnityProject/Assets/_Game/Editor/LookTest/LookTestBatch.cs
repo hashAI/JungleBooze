@@ -227,10 +227,14 @@ namespace JungleBooze.Editor.LookTest
         /// <summary>Renders <paramref name="camera"/> at <paramref name="size"/> with MSAA 4x into a new RGB24 texture (caller destroys it).</summary>
         internal static Texture2D Render(Camera camera, Vector2Int size)
         {
-            var descriptor = new RenderTextureDescriptor(size.x, size.y, RenderTextureFormat.ARGB32, 24)
+            // An HDR target: URP sizes its intermediate colour buffer from the camera's target texture, so an
+            // ARGB32 target made the whole frame LDR (sky and highlights clamped at 1 before tonemapping, no bloom
+            // from the sun), unlike the device, which renders HDR to the screen. Post writes tonemapped linear values;
+            // the blit below encodes them to sRGB.
+            var descriptor = new RenderTextureDescriptor(size.x, size.y, RenderTextureFormat.ARGBHalf, 24)
             {
                 msaaSamples = 4,
-                sRGB = true,
+                sRGB = false,
             };
             var target = new RenderTexture(descriptor);
             target.Create();
